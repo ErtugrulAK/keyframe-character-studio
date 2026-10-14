@@ -18,7 +18,17 @@
   /* R5-02 — docked panel layer of the editor stack. */
   z-index: var(--kcs-layer-panel);
   box-shadow: -6px 0 24px rgba(0, 0, 0, 0.4);
-  transition: width 240ms ease, min-width 240ms ease, flex-basis 240ms ease, transform 240ms ease, opacity 240ms ease, border-color 240ms ease, box-shadow 240ms ease;
+  /* The edge itself is NOT a browser-side layout transition.
+     A `transition: width` moves the panel inside the frame's own style/layout
+     step while the stage camera — a projection of the stage box — can only learn
+     the new box from an asynchronous ResizeObserver notification, which Chromium
+     may deliver a frame late: one painted frame of new stage geometry with old
+     camera compensation, i.e. a visible counter-move of the authored world.
+     The dock edge is therefore eased frame by frame in JS and committed with the
+     camera through `commitWorkspaceLayout` (see `useDockedPanelEdge`), which
+     overrides width/min-width/flex-basis inline only while it travels. The
+     non-geometric polish this panel keeps is declared further down, in the
+     themed rule that is the last word on this element. */
   overflow: hidden;
   user-select: none;
   font-size: var(--font-size-caption);
@@ -1878,7 +1888,11 @@
   background: var(--kcs-panel);
   border-left-color: var(--kcs-border-quiet);
   box-shadow: -8px 0 20px rgba(0, 0, 0, .18);
-  transition: transform 240ms ease, opacity 240ms ease, visibility 240ms ease, width 240ms ease, min-width 240ms ease, flex-basis 240ms ease;
+  /* The last word on this element's transition. The geometry (width, min-width,
+     flex-basis) is deliberately absent: the dock edge is eased and committed
+     frame by frame with the camera (see `useDockedPanelEdge`), so the browser
+     must never animate the box the camera is a projection of. */
+  transition: transform 240ms ease, opacity 240ms ease, visibility 240ms ease;
 }
 
 .motion-design-right-sidebar.is-hidden {

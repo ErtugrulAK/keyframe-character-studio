@@ -1,13 +1,23 @@
 import React, { useEffect, useState } from 'react';
+import { panelEdgeStyle } from '../../utils/workspaceLayout';
 import { OutlinerPanel } from './OutlinerPanel';
 import { DetailsPanel } from './DetailsPanel';
 import './PropertyInspector.css';
 
 interface PropertyInspectorProps {
   isHidden: boolean;
+  /**
+   * The panel's border-box width while its edge is travelling, or null at rest.
+   * The stylesheet owns both resting widths; this only overrides them for the
+   * frames of a dock toggle, and it is committed together with the camera by
+   * `useDockedPanelEdge`.
+   */
+  edgeWidth?: number | null;
+  /** The docked panel element itself, so the shell can animate its edge. */
+  panelRef?: React.Ref<HTMLElement>;
 }
 
-export const PropertyInspector: React.FC<PropertyInspectorProps> = ({ isHidden }) => {
+export const PropertyInspector: React.FC<PropertyInspectorProps> = ({ isHidden, edgeWidth = null, panelRef }) => {
   const [outlinerHeight, setOutlinerHeight] = useState<number>(240);
   useEffect(() => {
     const constrainForViewport = () => {
@@ -43,9 +53,11 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({ isHidden }
   return (
     <aside
       id="right-inspector-panel"
+      ref={panelRef}
       className={`motion-design-right-sidebar ${isHidden ? 'is-hidden' : ''}`}
       aria-hidden={isHidden}
       inert={isHidden ? true : undefined}
+      style={panelEdgeStyle(edgeWidth)}
     >
       <div
         className="sidebar-dock-pane outliner-dock"

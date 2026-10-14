@@ -12,6 +12,13 @@ import { test, expect, type Page } from '@playwright/test';
  * runs until the layout has settled). The stage box provably animates during the
  * sampling window, so any frame whose world point moved is a real transient
  * drift rather than a start/end comparison.
+ *
+ * Coverage: the right inspector (hide, show, and double mid-edge reversals in
+ * both directions), the left toolbar (hide and show), repeated chrome toggles,
+ * the R5-03 timeline ease, and the inspector at a short, a clamped-narrow and a
+ * wide viewport. The panel's own edge is checked in the same pass: on a
+ * single-direction toggle it must visit intermediate widths in ONE monotone
+ * direction and leave no inline width behind.
  */
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const CAMERA_CENTER = { x: 300, y: 240 };
@@ -44,6 +51,8 @@ interface Frame {
   stageWidth: number;
   stageHeight: number;
   cameraZoom: string;
+  /** The right inspector's own docked edge while it travels. */
+  inspectorWidth: number;
   /** The timeline panel's own animated edge, and the handle pinned to it. */
   timelineHeight: number;
   panelTop: number;
@@ -94,24 +103,42 @@ async function settle(page: Page): Promise<void> {
 }
 
 /**
+ * A toggle the sampling window drives itself: either at an elapsed time (`at`)
+ * or that many milliseconds after the previous toggle actually landed
+ * (`afterMs`). The relative form is what makes a reversal land mid-edge even
+ * when a loaded page takes a long time to reach the first frame.
+ */
+interface ScheduledToggle { at?: number; afterMs?: number; label: string }
+
+/** Normalizes a single toggle label into the schedule form. */
+const schedule = (toggle: string | ScheduledToggle[]): ScheduledToggle[] => (
+  typeof toggle === 'string' ? [{ at: 80, label: toggle }] : toggle
+);
+
+/**
  * Sample the world points on every PAINTED frame, starting a few frames BEFORE
- * the toggle and ending once the layout has settled past `durationMs`.
+ * the first toggle and ending once the layout has settled past `durationMs`.
+ *
+ * Every toggle in the schedule is clicked by the page itself, at its own elapsed
+ * time, so a second toggle can land while the first edge is still travelling and
+ * no Playwright round trip can slip between a click and the sample that follows
+ * it.
  *
  * The sample is taken from a task scheduled after the frame's resize-observer
  * step (rAF → setTimeout 0), which is the only place that reads exactly the
  * values the user saw: a plain rAF callback runs *before* the stage measures its
  * new box, so it would report the previous frame's transform and invent drift.
- * The page drives the click itself so the transition cannot start between a
- * Playwright round trip and the first sample.
  */
-async function sampleTransition(page: Page, toggleLabel: string, durationMs = 600): Promise<Frame[]> {
-  return page.evaluate(({ toggleLabel: label, durationMs: duration, points }) => new Promise<Frame[]>((resolve) => {
+async function sampleTransition(page: Page, toggle: string | ScheduledToggle[], durationMs = 600): Promise<Frame[]> {
+  const toggles = schedule(toggle);
+  return page.evaluate(({ toggles, durationMs: duration, points }) => new Promise<Frame[]>((resolve) => {
     const svg = document.querySelector<SVGSVGElement>('.stage-svg');
     const stage = document.querySelector('.stage-canvas-container');
     if (!svg || !stage) throw new Error('camera surface unavailable');
     const frames: Frame[] = [];
     const started = performance.now();
-    let clicked = false;
+    let nextToggle = 0;
+    let nextAt = toggles.length > 0 ? (toggles[0].at ?? 80) : Number.POSITIVE_INFINITY;
     const step = () => {
       const matrix = svg.getScreenCTM();
       if (!matrix) throw new Error('screen CTM unavailable');
@@ -132,23 +159,26 @@ async function sampleTransition(page: Page, toggleLabel: string, durationMs = 60
         stageWidth: stageBox.width,
         stageHeight: stageBox.height,
         cameraZoom: document.querySelector('.stage-canvas-container')?.getAttribute('data-camera-zoom') ?? '',
+        inspectorWidth: document.querySelector('.motion-design-right-sidebar')!.getBoundingClientRect().width,
         timelineHeight: panelBox.height,
         panelTop: panelBox.top,
         handleCentreY: handleBox.top + handleBox.height / 2,
       });
       const elapsed = performance.now() - started;
-      if (!clicked && elapsed >= 80) {
+      if (nextToggle < toggles.length && elapsed >= nextAt) {
+        const { label } = toggles[nextToggle];
         const toggle = document.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`);
         if (!toggle) throw new Error(`no toggle for ${label}`);
         toggle.click();
-        clicked = true;
+        nextToggle += 1;
+        nextAt = elapsed + (toggles[nextToggle]?.afterMs ?? 0);
       }
       if (elapsed < duration) requestAnimationFrame(() => setTimeout(step, 0));
       else resolve(frames);
     };
     requestAnimationFrame(() => setTimeout(step, 0));
   }), {
-    toggleLabel,
+    toggles,
     durationMs,
     points: {
       alpha: { x: CAMERA_CENTER.x + ALPHA.x, y: CAMERA_CENTER.y + ALPHA.y },
@@ -228,17 +258,41 @@ function expectStable(label: string, frames: Frame[]): void {
   });
 }
 
+/**
+ * The inspector's own edge EASES in one direction and never counter-moves: the
+ * panel visited intermediate widths (it did not teleport to the target) and the
+ * whole travel is monotone. The reversal case is deliberately excluded — a
+ * mid-edge toggle is meant to reverse.
+ */
+function expectMonotonePanelEdge(label: string, frames: Frame[], direction: 'grow' | 'shrink'): void {
+  const widths = frames.map((frame) => frame.inspectorWidth);
+  const distinct = new Set(widths.map((width) => Math.round(width))).size;
+  expect(distinct, `${label}: the panel edge teleported instead of easing`).toBeGreaterThanOrEqual(3);
+  const travelled = Math.abs(widths[widths.length - 1] - widths[0]);
+  expect(travelled, `${label}: the panel edge never moved`).toBeGreaterThan(80);
+  for (let index = 1; index < widths.length; index += 1) {
+    const step = widths[index] - widths[index - 1];
+    const counter = direction === 'shrink' ? step > 0.5 : step < -0.5;
+    expect(
+      counter,
+      `${label}: the panel edge counter-moved on frame ${index} by ${step.toFixed(2)}px`,
+    ).toBe(false);
+  }
+}
+
 test('the right inspector never counter-moves the world while it animates', async ({ page }) => {
   await seed(page);
 
   const hide = await sampleTransition(page, 'Hide Inspector');
   reportFrames('inspector hide', hide);
   expectStable('inspector hide', hide);
+  expectMonotonePanelEdge('inspector hide', hide, 'shrink');
   await settle(page);
 
   const show = await sampleTransition(page, 'Show Inspector');
   reportFrames('inspector show', show);
   expectStable('inspector show', show);
+  expectMonotonePanelEdge('inspector show', show, 'grow');
   await settle(page);
 });
 
@@ -320,4 +374,89 @@ test('R5-03 — the timeline eases between collapsed and expanded without moving
   await settle(page);
   const expandedHeight = await page.evaluate(() => document.querySelector('.sequencer-timeline')!.getBoundingClientRect().height);
   expect(expandedHeight.toFixed(1), 'expanding did not restore the authored height').toBe('320.0');
+});
+
+/** The inspector's resting geometry: its border-box width and inline override. */
+async function inspectorBox(page: Page): Promise<{ width: number; inlineWidth: string; inlineBasis: string }> {
+  return page.evaluate(() => {
+    const node = document.querySelector<HTMLElement>('.motion-design-right-sidebar')!;
+    return {
+      width: node.getBoundingClientRect().width,
+      inlineWidth: node.style.width,
+      inlineBasis: node.style.flexBasis,
+    };
+  });
+}
+
+/**
+ * Toggles that land while the previous edge is still travelling. A reversal
+ * returns the panel to the width it started from, so the sample has to carry the
+ * excursion itself: each schedule below reverses twice (at 120ms and 320ms into
+ * consecutive 240ms edges), which keeps several frames inside an excursion even
+ * when a loaded page only paints a handful of frames across the window.
+ */
+test('mid-edge reversals of the inspector never drift the world', async ({ page }) => {
+  await seed(page);
+
+  const hideThenShowThenHide = await sampleTransition(page, [
+    { at: 80, label: 'Hide Inspector' },
+    { afterMs: 120, label: 'Show Inspector' },
+    { afterMs: 200, label: 'Hide Inspector' },
+  ], 1200);
+  reportFrames('inspector reversals hide->show->hide', hideThenShowThenHide);
+  expectStable('inspector reversals hide->show->hide', hideThenShowThenHide);
+  await settle(page);
+  expect((await inspectorBox(page)).width, 'the reversals did not land on the collapsed width').toBe(0);
+
+  const showThenHideThenShow = await sampleTransition(page, [
+    { at: 80, label: 'Show Inspector' },
+    { afterMs: 120, label: 'Hide Inspector' },
+    { afterMs: 200, label: 'Show Inspector' },
+  ], 1200);
+  reportFrames('inspector reversals show->hide->show', showThenHideThenShow);
+  expectStable('inspector reversals show->hide->show', showThenHideThenShow);
+  await settle(page);
+  expect((await inspectorBox(page)).width, 'the reversals did not land on the docked width').toBeCloseTo(360, 1);
+});
+
+/**
+ * The same contract at the viewport shapes that change the panel's docked width
+ * (the `min(360px, max(250px, 34vw))` clamp) and the stage's room to crop: a
+ * short window, a window narrow enough for the clamp to bite, and a wide one.
+ * The panel's resting width must come back to exactly the stylesheet's value —
+ * the ease leaves no inline override behind, and never a rounded copy of it.
+ */
+test('chrome transitions never drift the world on short, narrow or wide viewports', async ({ page }) => {
+  const viewports = [
+    { width: 1280, height: 620 },
+    { width: 760, height: 700 },
+    { width: 1920, height: 1080 },
+  ];
+  for (const viewport of viewports) {
+    const label = `${viewport.width}x${viewport.height}`;
+    await page.setViewportSize(viewport);
+    await seed(page);
+    await settle(page);
+    const before = await inspectorBox(page);
+    expect(before.inlineWidth, `${label}: the stylesheet must own the resting width`).toBe('');
+    expect(before.inlineBasis, `${label}: the stylesheet must own the resting flex basis`).toBe('');
+    if (viewport.width === 1280) expect(before.width, `${label}: docked width`).toBeCloseTo(360, 1);
+
+    const hide = await sampleTransition(page, 'Hide Inspector');
+    reportFrames(`inspector hide @${label}`, hide);
+    expectStable(`inspector hide @${label}`, hide);
+    expectMonotonePanelEdge(`inspector hide @${label}`, hide, 'shrink');
+    await settle(page);
+    expect((await inspectorBox(page)).width, `${label}: collapsed width`).toBe(0);
+
+    const show = await sampleTransition(page, 'Show Inspector');
+    reportFrames(`inspector show @${label}`, show);
+    expectStable(`inspector show @${label}`, show);
+    expectMonotonePanelEdge(`inspector show @${label}`, show, 'grow');
+    await settle(page);
+
+    const after = await inspectorBox(page);
+    expect(after.inlineWidth, `${label}: the ease left an inline width behind`).toBe('');
+    expect(after.width, `${label}: the docked width did not come back exactly`).toBeCloseTo(before.width, 2);
+  }
 });

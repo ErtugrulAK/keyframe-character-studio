@@ -12,6 +12,7 @@ import { stackingOrder } from '../../utils/stackingOrder';
 import { resolveMarqueeSelection, resolveStageSelectionTarget } from '../../utils/layerGrouping';
 import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
+import { REMEASURE_STAGE_BOX_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT } from '../../utils/workspaceLayout';
 import { buildFreeformPath, normalizeFreeformPoints } from '../../utils/freeform';
 import { useFreeformDraw } from '../../hooks/useFreeformDraw';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
@@ -125,6 +126,12 @@ export const StageCanvas: React.FC = () => {
    */
   const applyStageBox = useCallback((box: StageBox, reanchor: boolean) => {
     const previous = stageBoxRef.current;
+    // A frame-committed edge (see `commitWorkspaceLayout`) has already folded
+    // this exact box into the camera; re-committing it would re-render for
+    // nothing. The observer stays the fallback for boxes nobody committed.
+    if (previous && !reanchor
+      && previous.left === box.left && previous.top === box.top
+      && previous.width === box.width && previous.height === box.height) return;
     stageBoxRef.current = box;
     setStageBox(box);
     const center = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
@@ -780,7 +787,7 @@ export const StageCanvas: React.FC = () => {
           : view));
         return;
       }
-      if (type === 'remeasure-stage-box') {
+      if (type === REMEASURE_STAGE_BOX_COMMAND) {
         // Layout chrome (the timeline workspace) resizing announces itself in the
         // task that resized the DOM. The camera is a projection of the stage box,
         // so folding the new box in HERE — before the frame is painted — is what
@@ -796,8 +803,8 @@ export const StageCanvas: React.FC = () => {
       const nextZoom = clampZoom(zoomRef.current * (type === 'zoom-in' ? 1.1 : 0.9));
       setZoomLevel(nextZoom);
     };
-    window.addEventListener('canvas-viewport-command', handleViewportCommand);
-    return () => window.removeEventListener('canvas-viewport-command', handleViewportCommand);
+    window.addEventListener(WORKSPACE_LAYOUT_COMMAND_EVENT, handleViewportCommand);
+    return () => window.removeEventListener(WORKSPACE_LAYOUT_COMMAND_EVENT, handleViewportCommand);
   }, [applyStageBox, readStageBox]);
 
   const [isDropTargetHover, setIsDropTargetHover] = useState<boolean>(false);

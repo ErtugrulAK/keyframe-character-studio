@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAnimator } from '../../context/useAnimator';
+import { panelEdgeStyle } from '../../utils/workspaceLayout';
 import { ProjectDrawer } from './drawers/ProjectDrawer';
 import { MediaDrawer } from './drawers/MediaDrawer';
 import { ElementsDrawer } from './drawers/ElementsDrawer';
@@ -16,9 +17,18 @@ type ActiveNavCategory = 'project' | 'media' | 'texts' | 'shapes';
 
 export interface LeftToolbarProps {
   isHidden?: boolean;
+  /**
+   * The dock's border-box width while its edge is travelling, or null at rest.
+   * The stylesheet owns both resting widths; this only overrides them for the
+   * frames of a dock toggle, and it is committed together with the camera by
+   * `useDockedPanelEdge`.
+   */
+  edgeWidth?: number | null;
+  /** The docked panel element itself, so the shell can animate its edge. */
+  panelRef?: React.Ref<HTMLElement>;
 }
 
-export const LeftToolbar: React.FC<LeftToolbarProps> = ({ isHidden = false }) => {
+export const LeftToolbar: React.FC<LeftToolbarProps> = ({ isHidden = false, edgeWidth = null, panelRef }) => {
   const { activeTool } = useAnimator();
   const [activeCategory, setActiveCategory] = useState<ActiveNavCategory>('media');
   // UI-only category state remains local so collapse never changes the active tool.
@@ -27,9 +37,11 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({ isHidden = false }) =>
   return (
     <aside
       id="left-toolbar-panel"
+      ref={panelRef}
       className={`left-toolbar-container${isHidden ? ' hidden' : ''}${isCapturing ? ' tool-capturing' : ''}`}
       aria-hidden={isHidden}
       inert={isHidden ? true : undefined}
+      style={panelEdgeStyle(edgeWidth)}
     >
 
       <div className="left-sidebar-nav">

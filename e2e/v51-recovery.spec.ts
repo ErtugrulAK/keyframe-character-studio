@@ -75,19 +75,31 @@ test.describe('KCS V5.1 consolidated recovery', () => {
     await seed(page);
     const sidebar = page.locator('.motion-design-right-sidebar');
     const transition = await sidebar.evaluate((node) => getComputedStyle(node).transition);
-    expect(transition).toContain('width 0.24s');
+    // The dock's geometry is eased and committed frame by frame with the stage
+    // camera (`useDockedPanelEdge`), so the browser must never animate the panel's
+    // own box: a `transition: width` here is exactly the one-frame camera
+    // compensation lag the transition contract forbids. The non-geometric polish
+    // (the 12px slide, the fade, the edge colours) keeps its 240ms.
+    expect(transition).not.toContain('width');
+    expect(transition).not.toContain('flex-basis');
     expect(transition).toContain('transform 0.24s');
+    expect(transition).toContain('opacity 0.24s');
 
     await page.getByRole('button', { name: 'Hide Inspector' }).click();
     // R3-02: the panel visibility flags and the handles they position live on the
     // editor SHELL, not on the workspace row the timeline resize changes.
     await expect(page.locator('.app-container')).toHaveClass(/inspector-hidden/u);
     await expect(page.getByRole('button', { name: 'Show Inspector' })).toBeVisible();
+    // The edge travels to the collapsed width and hands the width back to the
+    // stylesheet when it settles (that handback is why an inline width is only
+    // ever visible while the edge is moving).
     await expect.poll(() => sidebar.evaluate((node) => Math.round(node.getBoundingClientRect().width))).toBe(0);
+    await expect.poll(() => sidebar.evaluate((node) => node.style.width)).toBe('');
 
     await page.getByRole('button', { name: 'Show Inspector' }).click();
     await expect(page.locator('.app-container')).not.toHaveClass(/inspector-hidden/u);
     await expect(page.getByRole('button', { name: 'Hide Inspector' })).toBeVisible();
     await expect.poll(() => sidebar.evaluate((node) => Math.round(node.getBoundingClientRect().width))).toBeGreaterThan(0);
+    await expect.poll(() => sidebar.evaluate((node) => node.style.width)).toBe('');
   });
 });

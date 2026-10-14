@@ -1,7 +1,7 @@
 // Keyframe Studio - 2D Motion Sequencer Timeline Component
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { flushSync } from 'react-dom';
 import { useAnimator } from '../../context/useAnimator';
+import { commitWorkspaceLayout, createFrameEase, type FrameEase } from '../../utils/workspaceLayout';
 import { type TrackChannel, type AnimationChannel } from '../../types/animator';
 import { computeMaxFrame, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/timelineMetrics';
 import { resolveAuthoredLocalTransform } from '../../utils/channelKeyframeGroups';
@@ -629,7 +629,6 @@ export const SequencerTimeline: React.FC = () => {
   const collapsedRef = useRef(isTimelineCollapsed);
   // oxlint-disable-next-line react/refs
   collapsedRef.current = isTimelineCollapsed;
-  const edgeFrameRef = useRef<number | null>(null);
   const resizeStartRef = useRef<{ x: number; y: number; height: number; width: number }>({
     x: 0,
     y: 0,
@@ -638,22 +637,6 @@ export const SequencerTimeline: React.FC = () => {
   });
   const resizeFrameRef = useRef<number | null>(null);
   const pendingResizeRef = useRef<{ height?: number; width?: number }>({});
-
-  /**
-   * Commits a workspace size and folds the stage's new box into the camera in
-   * the SAME frame.
-   *
-   * The camera is a projection of the stage box: a resize that reached the DOM
-   * and was only measured by the stage's ResizeObserver afterwards painted one
-   * frame of the authored world against a box it no longer had, then snapped
-   * back — the timeline jolt. Committing the size and re-measuring the stage in
-   * one task closes that window; the observer stays as the safety net for every
-   * other layout change (window resize, sidebar toggles, drawers).
-   */
-  const commitWorkspaceLayout = useCallback((apply: () => void) => {
-    flushSync(apply);
-    window.dispatchEvent(new CustomEvent('canvas-viewport-command', { detail: { type: 'remeasure-stage-box' } }));
-  }, []);
 
   /**
    * The tallest the panel may be right now: the authored bound, capped by the
@@ -686,7 +669,7 @@ export const SequencerTimeline: React.FC = () => {
     };
     window.addEventListener('resize', handleWindowResize);
     return () => window.removeEventListener('resize', handleWindowResize);
-  }, [commitWorkspaceLayout, timelineHeightCeiling]);
+  }, [timelineHeightCeiling]);
 
   /**
    * Applies at most one workspace size per frame: the pointer can move several
@@ -709,7 +692,7 @@ export const SequencerTimeline: React.FC = () => {
       }
       if (pending.width !== undefined) setOutlinerWidth(pending.width);
     });
-  }, [commitWorkspaceLayout]);
+  }, []);
 
   const beginResize = (axis: 'rows' | 'columns') => (e: React.MouseEvent) => {
     if (e.button !== 0 || isTimelineCollapsed) return;
@@ -723,41 +706,26 @@ export const SequencerTimeline: React.FC = () => {
    * R5-03 — collapse and expand EASE the panel's edge, and the camera is
    * corrected in the SAME task as every frame's height write.
    *
-   * A browser-side `transition: height` moves the edge during the frame's own
-   * style/layout step, which leaves the stage's corrected camera to a
-   * ResizeObserver notification that arrives a frame late whenever the main
-   * thread is busy — one painted frame of the authored world against a box it no
-   * longer had, which is the transient drift this round's spec samples for. The
-   * ease is therefore driven from here and committed through
-   * `commitWorkspaceLayout`, the same authority the height drag uses: the size
-   * and the stage's re-measure land in one task, inside the frame's callback,
-   * before anything is painted. Nothing about the camera projection is animated
-   * — only chrome geometry is.
-   *
-   * The easing is monotone (ease-out cubic), so the edge never overshoots and
-   * never counter-moves, and the last frame writes the exact target height.
+   * The ease itself is the shared workspace authority's (`createFrameEase`), and
+   * every frame commits through `commitWorkspaceLayout`: the size and the
+   * stage's re-measure land in one task, inside the frame's callback, before
+   * anything is painted. Nothing about the camera projection is animated — only
+   * chrome geometry is. The curve is monotone (ease-out cubic), so the edge never
+   * overshoots and never counter-moves, and the last frame writes the exact
+   * target height.
    */
+  const edgeEaseRef = useRef<FrameEase | null>(null);
+  const writeEdgeHeight = useCallback((height: number) => {
+    commitWorkspaceLayout(() => setEdgeHeight(height));
+  }, []);
+
   const animateTimelineEdge = useCallback((to: number) => {
-    if (edgeFrameRef.current !== null) {
-      cancelAnimationFrame(edgeFrameRef.current);
-      edgeFrameRef.current = null;
-    }
-    const from = edgeHeightRef.current;
-    if (from === to) return;
-    let started: number | null = null;
-    const step = (now: number) => {
-      started = started ?? now;
-      const progress = Math.min(1, (now - started) / TIMELINE_EDGE_TRANSITION_MS);
-      const eased = 1 - (1 - progress) ** 3;
-      const height = progress < 1 ? from + (to - from) * eased : to;
-      commitWorkspaceLayout(() => setEdgeHeight(height));
-      edgeFrameRef.current = progress < 1 ? requestAnimationFrame(step) : null;
-    };
-    edgeFrameRef.current = requestAnimationFrame(step);
-  }, [commitWorkspaceLayout]);
+    const ease = edgeEaseRef.current ?? (edgeEaseRef.current = createFrameEase(writeEdgeHeight, writeEdgeHeight));
+    ease.start(edgeHeightRef.current, to, TIMELINE_EDGE_TRANSITION_MS);
+  }, [writeEdgeHeight]);
 
   useEffect(() => () => {
-    if (edgeFrameRef.current !== null) cancelAnimationFrame(edgeFrameRef.current);
+    edgeEaseRef.current?.cancel();
   }, []);
 
   const toggleTimelineCollapsed = () => {

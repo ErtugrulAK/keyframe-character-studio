@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnimatorProvider } from './context/AnimatorContext';
 import { EditorContextMenuProvider } from './context/EditorContextMenuContext';
@@ -10,12 +10,13 @@ import { StageCanvas } from './components/Canvas/StageCanvas';
 import { PropertyInspector } from './components/Inspector/PropertyInspector';
 import { SequencerTimeline } from './components/Timeline/SequencerTimeline';
 import { LiveDirectorPanel } from './components/Broadcast/LiveDirectorPanel';
+import { useDockedPanelEdge } from './hooks/useDockedPanelEdge';
 
 import './kcsEditorTheme.css';
 const MainAppContent: React.FC = () => {
   const { appMode } = useAnimator();
-  const [isLeftToolbarVisible, setIsLeftToolbarVisible] = useState(true);
-  const [isInspectorVisible, setIsInspectorVisible] = useState(true);
+  const leftToolbar = useDockedPanelEdge(true);
+  const inspector = useDockedPanelEdge(true);
 
   // R2-07 — the browser's native context menu is suppressed for the whole
   // editor: canvas, layer list, sequence tabs, toolbar, timeline, Details and
@@ -42,39 +43,47 @@ const MainAppContent: React.FC = () => {
      * still owns the two panel visibility flags whose edge geometry the handles
      * read, and the panel geometry tokens they measure.
      */
-    <div className={`app-container ${isLeftToolbarVisible ? '' : 'left-toolbar-hidden'} ${isInspectorVisible ? '' : 'inspector-hidden'}`}>
+    <div className={`app-container ${leftToolbar.visible ? '' : 'left-toolbar-hidden'} ${inspector.visible ? '' : 'inspector-hidden'}`}>
       <HeaderBar />
       {appMode === 'edit' && <AuthoringToolbar />}
       <div className="main-layout">
-        {appMode === 'edit' && <LeftToolbar isHidden={!isLeftToolbarVisible} />}
+        {appMode === 'edit' && (
+          <LeftToolbar
+            isHidden={!leftToolbar.visible}
+            edgeWidth={leftToolbar.edgeWidth}
+            panelRef={leftToolbar.panelRef}
+          />
+        )}
         <StageCanvas />
         {appMode === 'edit' && (
           <PropertyInspector
-            isHidden={!isInspectorVisible}
+            isHidden={!inspector.visible}
+            edgeWidth={inspector.edgeWidth}
+            panelRef={inspector.panelRef}
           />
         )}
         {appMode === 'edit' && (
           <button
             type="button"
             className="sidebar-handle left-toolbar-toggle"
-            aria-label={isLeftToolbarVisible ? 'Hide Left Toolbar' : 'Show Left Toolbar'}
-            aria-expanded={isLeftToolbarVisible}
+            aria-label={leftToolbar.visible ? 'Hide Left Toolbar' : 'Show Left Toolbar'}
+            aria-expanded={leftToolbar.visible}
             aria-controls="left-toolbar-panel"
-            onClick={() => setIsLeftToolbarVisible((visible) => !visible)}
+            onClick={leftToolbar.toggle}
           >
-            {isLeftToolbarVisible ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+            {leftToolbar.visible ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
           </button>
         )}
         {appMode === 'edit' && (
           <button
             type="button"
             className="sidebar-handle inspector-dock-toggle"
-            aria-label={isInspectorVisible ? 'Hide Inspector' : 'Show Inspector'}
-            aria-expanded={isInspectorVisible}
+            aria-label={inspector.visible ? 'Hide Inspector' : 'Show Inspector'}
+            aria-expanded={inspector.visible}
             aria-controls="right-inspector-panel"
-            onClick={() => setIsInspectorVisible((visible) => !visible)}
+            onClick={inspector.toggle}
           >
-            {isInspectorVisible ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            {inspector.visible ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
         )}
       </div>

@@ -522,8 +522,17 @@
   position: relative;
   width: 56px;
   flex: 0 0 56px;
-  transition: width 240ms ease, min-width 240ms ease, flex-basis 240ms ease,
-    transform 240ms ease, opacity 240ms ease, visibility 240ms ease,
+  /* The dock's geometry is NOT a browser-side layout transition — the same
+     contract the right inspector states: a `transition: width` moves the panel
+     inside the frame's own style/layout step, while the stage camera (a
+     projection of the stage box) can only learn the new box from an asynchronous
+     ResizeObserver notification that Chromium may deliver a frame late, which
+     paints one frame of new stage geometry with old camera compensation. The dock
+     edge is eased frame by frame in JS and committed with the camera through
+     `commitWorkspaceLayout` (see `useDockedPanelEdge`), which overrides
+     width/min-width/flex-basis inline only while it travels. What remains here is
+     the non-geometric polish. */
+  transition: transform 240ms ease, opacity 240ms ease, visibility 240ms ease,
     border-color 240ms ease, box-shadow 240ms ease !important;
 }
 
@@ -743,11 +752,14 @@
   --left-drawer-width: 280px;
 }
 
-/* The parent owns visibility; a hidden dock relinquishes every layout pixel. */
+/* The parent owns visibility; a hidden dock relinquishes every layout pixel.
+   The geometry is deliberately NOT `!important`: while the edge travels,
+   `useDockedPanelEdge` overrides it inline (a frame-committed width), and an
+   `!important` stylesheet declaration would win over that inline style. */
 .left-toolbar-container.hidden {
-  width: 0 !important;
-  min-width: 0 !important;
-  flex-basis: 0 !important;
+  width: 0;
+  min-width: 0;
+  flex-basis: 0;
   overflow: hidden;
   opacity: 0;
   transform: translateX(-12px);

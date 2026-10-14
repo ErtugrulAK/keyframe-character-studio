@@ -47,6 +47,30 @@ describe('ShortcutReferenceDialog', () => {
     }
   });
 
+  it('filters the one table by label, category or the keys themselves', () => {
+    openDialog();
+    const filter = screen.getByRole('textbox', { name: 'Filter shortcuts' });
+    expect(filter).toBeTruthy();
+
+    fireEvent.change(filter, { target: { value: 'ungroup' } });
+    expect(screen.getAllByText('Ungroup selected layer').length).toBe(1);
+    expect(screen.queryByText('Undo')).toBeNull();
+
+    // A category name narrows to that band, and a gesture token narrows to the
+    // binding: both walk the same keymap the rows were rendered from.
+    fireEvent.change(filter, { target: { value: 'transform and arrange' } });
+    expect(screen.getAllByText('Rotate 90° clockwise').length).toBe(1);
+    expect(screen.queryByText('Ungroup selected layer')).toBeNull();
+
+    fireEvent.change(filter, { target: { value: 'shift+v' } });
+    expect(screen.getAllByText('Flip vertical').length).toBe(1);
+    expect(screen.queryByText('Flip horizontal')).toBeNull();
+
+    fireEvent.change(filter, { target: { value: 'nothing matches this' } });
+    expect(screen.getByText(/No shortcut matches/)).toBeTruthy();
+    expect(document.querySelectorAll('.shortcut-reference-row')).toHaveLength(0);
+  });
+
   it('labels the keys for the platform it detects', () => {
     const platform = detectShortcutPlatform();
     openDialog();

@@ -13,17 +13,25 @@
  * disabled, so the strip never reflows around the selection.
  *
  * R4-10 — the bands are the command groups a motion editor reads left to right
- * (selection/navigation, creation, Boolean, grouping, arrange, view). The hitbox
- * takes its size from the shared control-height token so it cannot drift from
- * the rest of the editor's controls, and the glyph size is declared once, for
- * every band.
+ * (selection/navigation, creation, Boolean, grouping, align, distribute,
+ * rotate/flip, arrange, view). The hitbox takes its size from the shared
+ * control-height token so it cannot drift from the rest of the editor's controls,
+ * and the glyph size is declared once, for every band.
+ *
+ * R5-12 — the strip's rhythm: bands are separated by a hairline divider with
+ * more air around it than between the commands of one band, so the eye groups a
+ * band before it reads a single icon, and the whole strip still keeps its fixed
+ * height (only the stage box may move with it, never the authored world). A band
+ * that is a command SET (six align edges, two distribute axes) is one trigger
+ * with a menu — see the menu block at the end of this file — which is what keeps
+ * the strip compact without wrapping it.
  */
 .authoring-toolbar {
   display: flex;
   align-items: center;
   flex: 0 0 auto;
   flex-wrap: nowrap;
-  gap: 6px;
+  gap: 8px;
   height: 40px;
   min-height: 40px;
   padding: 0 12px;
@@ -47,8 +55,8 @@
 .authoring-toolbar-divider {
   flex: 0 0 auto;
   width: 1px;
-  height: 20px;
-  margin: 0 3px;
+  height: 18px;
+  margin: 0 4px;
   background: var(--kcs-border-default);
 }
 

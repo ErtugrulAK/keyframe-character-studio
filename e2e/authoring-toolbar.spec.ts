@@ -192,7 +192,7 @@ test('the vector bands align, distribute, rotate and flip the selection as one a
   expect(await snapshot(page)).toContain('"scaleY":-1');
 });
 
-
+test('view-only tools never write the document', async ({ page }) => {
   await seed(page);
   const before = await snapshot(page);
   const undoWasDisabled = await page.locator('button[title="Undo"]').isDisabled();

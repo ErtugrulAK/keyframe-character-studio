@@ -1,7 +1,13 @@
-/* The keyboard shortcut reference: the shortcut table, rendered.
-   Same dialog language as the editor's other modals (backdrop, elevated
-   surface, one close control), with a two-column list per category so the key
-   column stays aligned down the panel. */
+/*
+ * The keyboard shortcut reference (R5-13).
+ *
+ * The panel is the shortcut table rendered: a category grid over one keymap, with
+ * every binding drawn as a keycap chip in the platform's own labels. The layout
+ * is deliberately compact — the whole table fits without scrolling at the
+ * default viewport, so the reference reads as one page rather than a long list —
+ * and the filter in the header is a view over the same rows, never a second
+ * source of bindings.
+ */
 
 .shortcut-reference-backdrop {
   position: fixed;
@@ -18,8 +24,8 @@
 .shortcut-reference {
   display: flex;
   flex-direction: column;
-  width: min(720px, 100%);
-  max-height: min(640px, 88vh);
+  width: min(880px, 100%);
+  max-height: min(720px, 90vh);
   border: 1px solid var(--kcs-border-subtle);
   border-radius: var(--kcs-radius-panel);
   background: var(--kcs-bg-elevated);
@@ -29,11 +35,15 @@
 
 .shortcut-reference-header {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-md) var(--space-md) var(--space-sm);
+  padding: var(--space-md);
   border-bottom: 1px solid var(--kcs-border-subtle);
+}
+
+.shortcut-reference-heading {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .shortcut-reference-header h2 {
@@ -47,6 +57,49 @@
   margin: 4px 0 0;
   color: var(--kcs-text-muted);
   font-size: var(--font-size-caption);
+}
+
+/* The filter is a view control, so it reads as an input: one chip-width field
+   that never grows past the header it shares with the close button. */
+.shortcut-reference-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 240px;
+  height: var(--kcs-control-sm);
+  padding: 0 8px;
+  border: 1px solid var(--kcs-border-default);
+  border-radius: var(--kcs-radius-control);
+  background: var(--kcs-bg-input);
+  color: var(--kcs-text-muted);
+}
+
+.shortcut-reference-filter > svg {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+}
+
+.shortcut-reference-filter:focus-within {
+  border-color: var(--kcs-focus);
+  color: var(--kcs-text-secondary);
+}
+
+.shortcut-reference-filter input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--kcs-text-primary);
+  font-family: inherit;
+  font-size: var(--font-size-caption);
+}
+
+.shortcut-reference-filter input::placeholder {
+  color: var(--kcs-text-muted);
 }
 
 .shortcut-reference-close {
@@ -84,18 +137,39 @@
 .shortcut-reference-body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--space-sm) var(--space-md);
+  align-content: start;
+  gap: var(--space-md);
   padding: var(--space-md);
   overflow-y: auto;
 }
 
+.shortcut-reference-empty {
+  margin: 0;
+  color: var(--kcs-text-muted);
+  font-size: var(--font-size-body);
+}
+
 .shortcut-reference-group h3 {
-  margin: 0 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  margin: 0 0 6px;
   color: var(--kcs-text-label);
   font-size: var(--font-size-caption);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+/* The row count of the band: what the filter left, at a glance. */
+.shortcut-reference-count {
+  padding: 1px 6px;
+  border-radius: var(--kcs-radius-control);
+  background: var(--kcs-bg-active-muted);
+  color: var(--kcs-text-muted);
+  font-size: var(--font-size-caption);
+  font-weight: 600;
 }
 
 .shortcut-reference-group dl {
@@ -105,16 +179,21 @@
 
 .shortcut-reference-row {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-sm);
-  padding: 5px 0;
+  padding: 6px 0;
   border-bottom: 1px solid var(--kcs-border-subtle);
 }
 
 .shortcut-reference-row dt {
+  min-width: 0;
   color: var(--kcs-text-secondary);
   font-size: var(--font-size-body);
+}
+
+.shortcut-reference-name {
+  display: block;
 }
 
 .shortcut-reference-detail,
@@ -133,12 +212,21 @@
 .shortcut-reference-row dd {
   display: flex;
   flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 4px;
   margin: 0;
 }
 
+/* Keycap chips: one shape for a letter, a chord and a special key, so a row's
+   keys line up down the column whatever they spell. */
 .shortcut-reference-row kbd {
-  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
   border: 1px solid var(--kcs-border-default);
   border-bottom-width: 2px;
   border-radius: var(--kcs-radius-control);
@@ -146,5 +234,6 @@
   color: var(--kcs-text-primary);
   font-family: var(--font-family-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   font-size: var(--font-size-caption);
+  line-height: 1;
   white-space: nowrap;
 }

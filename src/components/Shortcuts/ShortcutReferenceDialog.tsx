@@ -1,9 +1,10 @@
-import React, { useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
-import { X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { useDialogFocusRestoration, useDialogFocusTrap } from '../../hooks/useDialogFocusRestoration';
 import {
   detectShortcutPlatform,
+  formatShortcutCommand,
   formatShortcutGesture,
   SHORTCUT_CATEGORY_LABELS,
   SHORTCUT_CATEGORY_ORDER,
@@ -19,27 +20,51 @@ interface ShortcutReferenceDialogProps {
 /**
  * The keyboard shortcut reference.
  *
- * It renders the ONE shortcut table (`utils/shortcuts`), so it can never
- * disagree with what the editor actually binds, and it is grouped by the
- * categories the table declares. Every key label is platform-formatted: a
- * Windows/Linux user reads `Ctrl+G` and a macOS user reads `⌘G`, from the same
- * gesture token.
+ * It renders the ONE shortcut table (`utils/shortcuts`) — labels, categories,
+ * gestures and scopes all come from there, so the panel can never disagree with
+ * what the editor binds — and every key is drawn as a platform-formatted chip: a
+ * Windows/Linux user reads `Ctrl+Shift+←` and a macOS user reads `⇧⌘←` from the
+ * same gesture token.
  *
- * Commands owned by a focused control (the timeline's keyframe keys) are listed
- * too, under Timeline, because the reference is about what the keyboard does —
- * the list says where each one is live.
+ * The panel is a filter over that table, not a second copy of it: typing narrows
+ * the rows by label, detail, category or the formatted keys themselves. Commands
+ * owned by a focused control (the timeline's keyframe keys) are listed too,
+ * under Timeline, because the reference is about what the keyboard does — the
+ * row says where each one is live.
  */
 export const ShortcutReferenceDialog: React.FC<ShortcutReferenceDialogProps> = ({ isOpen, onClose }) => {
   const closeRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const [filter, setFilter] = useState('');
   useDialogFocusRestoration(isOpen, closeRef);
   // Escape closes through the caller's handler; Tab wraps the dialog's own stops.
   useDialogFocusTrap(isOpen, dialogRef, onClose);
 
-  if (!isOpen) return null;
-
   const platform = detectShortcutPlatform();
   const platformLabel = platform === 'mac' ? 'macOS keys' : 'Windows / Linux keys';
+  const query = filter.trim().toLowerCase();
+
+  // Filtering walks the table, so a match on a key label (`shift+h`) or on a
+  // category name finds the same rows the user would look for by hand.
+  const matches = useMemo(() => SHORTCUT_COMMANDS.filter((command) => {
+    if (!query) return true;
+    const haystack = [
+      command.label,
+      command.detail ?? '',
+      SHORTCUT_CATEGORY_LABELS[command.category],
+      formatShortcutCommand(command.id, platform),
+    ];
+    return haystack.some((text) => text.toLowerCase().includes(query));
+  }), [platform, query]);
+
+  if (!isOpen) return null;
+
+  const groups = SHORTCUT_CATEGORY_ORDER
+    .map((category) => ({
+      category,
+      commands: matches.filter((command) => command.category === category),
+    }))
+    .filter((group) => group.commands.length > 0);
 
   return ReactDOM.createPortal(
     <div className="shortcut-reference-backdrop" onMouseDown={onClose}>
@@ -52,10 +77,20 @@ export const ShortcutReferenceDialog: React.FC<ShortcutReferenceDialogProps> = (
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header className="shortcut-reference-header">
-          <div>
+          <div className="shortcut-reference-heading">
             <h2 id="shortcut-reference-title">Keyboard shortcuts</h2>
             <p className="shortcut-reference-platform">{platformLabel} · typing in a field never triggers a command</p>
           </div>
+          <label className="shortcut-reference-filter">
+            <Search aria-hidden="true" />
+            <input
+              type="text"
+              aria-label="Filter shortcuts"
+              placeholder="Filter shortcuts…"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+            />
+          </label>
           <button
             type="button"
             className="shortcut-reference-close"
@@ -68,31 +103,33 @@ export const ShortcutReferenceDialog: React.FC<ShortcutReferenceDialogProps> = (
         </header>
 
         <div className="shortcut-reference-body">
-          {SHORTCUT_CATEGORY_ORDER.map((category) => {
-            const commands = SHORTCUT_COMMANDS.filter((command) => command.category === category);
-            if (commands.length === 0) return null;
-            return (
-              <section key={category} className="shortcut-reference-group" aria-label={SHORTCUT_CATEGORY_LABELS[category]}>
-                <h3>{SHORTCUT_CATEGORY_LABELS[category]}</h3>
-                <dl>
-                  {commands.map((command) => (
-                    <div key={command.id} className="shortcut-reference-row">
-                      <dt>
-                        {command.label}
-                        {command.detail && <span className="shortcut-reference-detail">{command.detail}</span>}
-                        {command.scope === 'timeline' && <span className="shortcut-reference-scope">timeline focus</span>}
-                      </dt>
-                      <dd>
-                        {command.gestures.map((gesture) => (
-                          <kbd key={gesture}>{formatShortcutGesture(gesture, platform)}</kbd>
-                        ))}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-            );
-          })}
+          {groups.length === 0 && (
+            <p className="shortcut-reference-empty">No shortcut matches “{filter.trim()}”.</p>
+          )}
+          {groups.map(({ category, commands }) => (
+            <section key={category} className="shortcut-reference-group" aria-label={SHORTCUT_CATEGORY_LABELS[category]}>
+              <h3>
+                {SHORTCUT_CATEGORY_LABELS[category]}
+                <span className="shortcut-reference-count">{commands.length}</span>
+              </h3>
+              <dl>
+                {commands.map((command) => (
+                  <div key={command.id} className="shortcut-reference-row">
+                    <dt>
+                      <span className="shortcut-reference-name">{command.label}</span>
+                      {command.scope === 'timeline' && <span className="shortcut-reference-scope">timeline focus</span>}
+                      {command.detail && <span className="shortcut-reference-detail">{command.detail}</span>}
+                    </dt>
+                    <dd>
+                      {command.gestures.map((gesture) => (
+                        <kbd key={gesture}>{formatShortcutGesture(gesture, platform)}</kbd>
+                      ))}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
         </div>
       </div>
     </div>,

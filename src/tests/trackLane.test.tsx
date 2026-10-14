@@ -136,6 +136,48 @@ describe('M6 — TrackLane canonical render', () => {
     expect(props.onSetFrame).toHaveBeenCalledWith(25);
   });
 
+  test('6b: R5-05 — a diamond press arms the drag without moving the frame cursor', () => {
+    const track = makeTrack({
+      channels: { x: [pk('x0', 25, 1)] },
+    });
+    const { container, props } = renderLane(track);
+    fireEvent.pointerDown(container.querySelector('.keyframe-diamond')!, {
+      button: 0, pointerId: 1, clientX: 250, clientY: 40,
+    });
+    expect(props.onStartDragKf).toHaveBeenCalledTimes(1);
+    // The press only ARMS the gesture: the cursor is revealed by the click, so a
+    // gesture that turns into a drag never moved it.
+    expect(props.onSetFrame).not.toHaveBeenCalled();
+  });
+
+  test('6c: R5-05 — the click a completed drag leaves behind moves neither the selection nor the cursor', () => {
+    const track = makeTrack({
+      channels: { x: [pk('x0', 25, 1)] },
+    });
+    const { container, props } = renderLane(track);
+    const diamond = container.querySelector('.keyframe-diamond')!;
+    // The press selects the grabbed key; the browser then still fires a click on
+    // the captured element even though the pointer travelled.
+    fireEvent.pointerDown(diamond, { button: 0, pointerId: 1, clientX: 250, clientY: 40 });
+    expect(props.onSelectKeyframe).toHaveBeenCalledWith('x0');
+    props.onSelectKeyframe.mockClear();
+    fireEvent.click(diamond, { button: 0, clientX: 268, clientY: 40 });
+    expect(props.onSelectKeyframe).not.toHaveBeenCalled();
+    expect(props.onSetFrame).not.toHaveBeenCalled();
+  });
+
+  test('6d: R5-05 — a press that did not travel is still the click that reveals its frame', () => {
+    const track = makeTrack({
+      channels: { x: [pk('x0', 25, 1)] },
+    });
+    const { container, props } = renderLane(track);
+    const diamond = container.querySelector('.keyframe-diamond')!;
+    fireEvent.pointerDown(diamond, { button: 0, pointerId: 1, clientX: 250, clientY: 40 });
+    fireEvent.click(diamond, { button: 0, clientX: 251, clientY: 40 });
+    expect(props.onSelectKeyframe).toHaveBeenCalledWith('x0');
+    expect(props.onSetFrame).toHaveBeenCalledWith(25);
+  });
+
   test('7: right-click opens menu; Delete Keyframe deletes the frame group at that frame', () => {
     const track = makeTrack({
       channels: {

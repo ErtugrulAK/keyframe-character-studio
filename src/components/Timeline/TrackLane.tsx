@@ -214,13 +214,20 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
    * end of a DRAG. A drag moves the selection it started from, so the click the
    * browser fires afterwards must not collapse that set to the key under the
    * pointer. A press that did not travel is a click and selects as it always has.
+   *
+   * R5-05: the frame cursor travels with the same decision. What a click reveals
+   * (the frame of the key it landed on) is a READ of the key under the pointer,
+   * and after a drag that key is somewhere else: following it would move the
+   * playhead to wherever the drag released, so the whole reveal is suppressed
+   * together with the selection it belongs to.
    */
-  const handleKeyframeClick = (event: React.MouseEvent, id: string, additive: boolean) => {
+  const handleKeyframeClick = (event: React.MouseEvent, id: string, additive: boolean, frame: number) => {
     const origin = keyPressOriginRef.current;
     keyPressOriginRef.current = null;
     if (origin && Math.abs(event.clientX - origin) > KEYFRAME_DRAG_THRESHOLD_PX) return;
     if (additive) onToggleKeyframe(id);
     else onSelectKeyframe(id);
+    onSetFrame(frame);
   };
 
   /**
@@ -286,7 +293,7 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               className={`ue-prop-diamond ${isSelected ? 'selected' : ''}`}
               data-keyframe-id={keyframe.id}
               style={{ left: `${keyframe.frame * frameWidth}px`, color: meta.color } as React.CSSProperties}
-              onClick={(e) => { e.stopPropagation(); handleKeyframeClick(e, keyframe.id, isAdditiveSelection(e)); onSetFrame(keyframe.frame); }}
+              onClick={(e) => { e.stopPropagation(); handleKeyframeClick(e, keyframe.id, isAdditiveSelection(e), keyframe.frame); }}
               onPointerDown={(e) => {
                 e.stopPropagation();
                 beginKeyframePress(e, keyframe.id);
@@ -299,7 +306,6 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
                   clientX: e.clientX,
                   captureTarget: e.currentTarget,
                 });
-                onSetFrame(keyframe.frame);
               }}
               onMouseEnter={() => onHoverKf({ frame: keyframe.frame, label: `${meta.label}: ${valueLabel}` })}
               onMouseLeave={() => onHoverKf(null)}
@@ -374,7 +380,7 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               className={`keyframe-diamond ${isKfSelected ? 'selected' : ''}`}
               data-keyframe-id={representativeId}
               style={{ left: `${group.frame * frameWidth}px`, color: track.color }}
-              onClick={(e) => { e.stopPropagation(); handleKeyframeClick(e, representativeId, isAdditiveSelection(e)); onSelectPart(track.partId, e.shiftKey); onSetFrame(group.frame); }}
+              onClick={(e) => { e.stopPropagation(); handleKeyframeClick(e, representativeId, isAdditiveSelection(e), group.frame); onSelectPart(track.partId, e.shiftKey); }}
               onPointerDown={(e) => {
                 // Canonical frame-group diamonds drag the WHOLE frame group (all
                 // channel keyframes at this frame stay together), or the whole
@@ -411,7 +417,7 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               className={`keyframe-diamond ${isKfSelected ? 'selected' : ''}`}
               data-keyframe-id={kf.id}
               style={{ left: `${kf.frame * frameWidth}px`, color: track.color }}
-              onClick={(e) => { e.stopPropagation(); handleKeyframeClick(e, kf.id, isAdditiveSelection(e)); onSelectPart(track.partId, e.shiftKey); onSetFrame(kf.frame); }}
+              onClick={(e) => { e.stopPropagation(); handleKeyframeClick(e, kf.id, isAdditiveSelection(e), kf.frame); onSelectPart(track.partId, e.shiftKey); }}
               onPointerDown={(e) => {
                 e.stopPropagation();
                 beginKeyframePress(e, kf.id);

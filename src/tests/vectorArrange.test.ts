@@ -6,6 +6,7 @@ import {
   collectArrangeTargets,
   planAlign,
   planDistribute,
+  planDistributeByGap,
   planFlip,
   planRotate,
   type ArrangePlan,
@@ -298,5 +299,109 @@ describe('collectArrangeTargets', () => {
 
     const broken = rect('b', 0, 0, { baseTransform: { x: Number.NaN, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } });
     expect(collectArrangeTargets([...parts, broken], ['a', 'b'], worldAt([...parts, broken])).map((target) => target.id)).toEqual(['a']);
+  });
+});
+
+describe('planDistributeByGap (equal edge spacing)', () => {
+  /** The gaps between consecutive boxes along the axis, in order. */
+  const gapsOf = (parts: CharacterPart[], ids: string[], axis: 'horizontal' | 'vertical') => {
+    const edges = boxesOf(parts, ids)
+      .map((box) => (axis === 'horizontal'
+        ? { lead: box!.minX, trail: box!.maxX }
+        : { lead: box!.minY, trail: box!.maxY }))
+      .sort((a, b) => a.lead - b.lead);
+    const gaps: number[] = [];
+    for (let index = 1; index < edges.length; index += 1) gaps.push(edges[index].lead - edges[index - 1].trail);
+    return gaps;
+  };
+
+  it('evens three equal-size boxes’ edge gaps, holding the outer span', () => {
+    const parts = [rect('a', 0), rect('b', 40), rect('c', 400)];
+    const plan = planDistributeByGap(targetsOf(parts, ['a', 'b', 'c']), 'horizontal')!;
+
+    // Only the middle box moves; the two extremes hold their outer edges.
+    expect(Object.keys(plan)).toEqual(['b']);
+    expect(plan.b).toEqual({ x: 200 });
+
+    const distributed = applyPlan(parts, plan);
+    expect(gapsOf(distributed, ['a', 'b', 'c'], 'horizontal')).toEqual([80, 80]);
+    const boxes = boxesOf(distributed, ['a', 'b', 'c']);
+    expect(boxes[0]!.minX).toBeCloseTo(-60, 6);
+    expect(boxes[2]!.maxX).toBeCloseTo(460, 6);
+  });
+
+  it('is the right policy for DIFFERENT widths, where centre spacing is uneven', () => {
+    // The outer boxes differ in width too (a is 120 wide, c is 60 wide).
+    const parts = [
+      rect('a', 0),
+      rect('b', 100, 0, { baseTransform: { x: 100, y: 0, rotation: 0, scaleX: 0.5, scaleY: 1, opacity: 1 } }),
+      rect('c', 400, 0, { baseTransform: { x: 400, y: 0, rotation: 0, scaleX: 0.5, scaleY: 1, opacity: 1 } }),
+    ];
+
+    const gapPlan = planDistributeByGap(targetsOf(parts, ['a', 'b', 'c']), 'horizontal')!;
+    expect(gapPlan).toEqual({ b: { x: 215 } });
+    expect(gapsOf(applyPlan(parts, gapPlan), ['a', 'b', 'c'], 'horizontal')).toEqual([125, 125]);
+
+    // The centre policy spaces the CENTRES evenly, which leaves visually
+    // different edge gaps — the two policies are genuinely different commands.
+    const centrePlan = planDistribute(targetsOf(parts, ['a', 'b', 'c']), 'horizontal')!;
+    expect(centrePlan).toEqual({ b: { x: 200 } });
+    const centreGaps = gapsOf(applyPlan(parts, centrePlan), ['a', 'b', 'c'], 'horizontal');
+    expect(centreGaps[0]).toBeCloseTo(110, 6);
+    expect(centreGaps[1]).toBeCloseTo(140, 6);
+  });
+
+  it('evens vertical edge gaps for boxes of different heights', () => {
+    const parts = [
+      rect('a', 0, 0),
+      rect('b', 0, 100, { baseTransform: { x: 0, y: 100, rotation: 0, scaleX: 1, scaleY: 0.5, opacity: 1 } }),
+      rect('c', 0, 400),
+    ];
+    const plan = planDistributeByGap(targetsOf(parts, ['a', 'b', 'c']), 'vertical')!;
+    expect(plan.b).toEqual({ y: 200 });
+    expect(gapsOf(applyPlan(parts, plan), ['a', 'b', 'c'], 'vertical')).toEqual([155, 155]);
+  });
+
+  it('evens five irregularly placed boxes', () => {
+    const parts = [rect('a', -300), rect('b', -90), rect('c', -20), rect('d', 210), rect('e', 500)];
+    const plan = planDistributeByGap(targetsOf(parts, ['a', 'b', 'c', 'd', 'e']), 'horizontal')!;
+    const gaps = gapsOf(applyPlan(parts, plan), ['a', 'b', 'c', 'd', 'e'], 'horizontal');
+    expect(gaps).toHaveLength(4);
+    gaps.forEach((gap) => expect(gap).toBeCloseTo(gaps[0], 6));
+  });
+
+  it('uses rotated layers’ evaluated world boxes', () => {
+    const parts = [
+      rect('a', 0),
+      rect('b', 100),
+      rect('c', 400, 0, { baseTransform: { x: 400, y: 0, rotation: 90, scaleX: 1, scaleY: 1, opacity: 1 } }),
+    ];
+    // c is 120 wide, turned 90° → it occupies a 60-wide world box: 370…430.
+    const plan = planDistributeByGap(targetsOf(parts, ['a', 'b', 'c']), 'horizontal')!;
+    expect(gapsOf(applyPlan(parts, plan), ['a', 'b', 'c'], 'horizontal')).toEqual([95, 95]);
+  });
+
+  it('treats a group as ONE item and an external layer as another', () => {
+    const container: CharacterPart = { ...rect('g', 0), type: 'custom_freeform', isGroup: true, points: [] };
+    const parts = [
+      container,
+      rect('c1', 0, 0, { parentId: 'g' }),
+      rect('c2', 200, 0, { parentId: 'g' }),
+      rect('d', 600),
+      rect('e', 900),
+    ];
+    const plan = planDistributeByGap(targetsOf(parts, ['g', 'd', 'e']), 'horizontal')!;
+    // The container is measured by the art inside it and moves as one unit.
+    expect(Object.keys(plan)).toEqual(['d']);
+    expect(plan.d).toEqual({ x: 550 });
+    expect(gapsOf(applyPlan(parts, plan), ['g', 'd', 'e'], 'horizontal')).toEqual([230, 230]);
+  });
+
+  it('needs three measurable layers and writes nothing for an already-even row', () => {
+    expect(planDistributeByGap(targetsOf([rect('a', 0), rect('b', 300)], ['a', 'b']), 'horizontal')).toBeNull();
+
+    const even = [rect('a', 0), rect('b', 360), rect('c', 720)];
+    const plan = planDistributeByGap(targetsOf(even, ['a', 'b', 'c']), 'horizontal')!;
+    expect(plan).toEqual({});
   });
 });

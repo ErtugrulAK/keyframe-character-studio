@@ -10,9 +10,34 @@ import { rotateAboutWorldPivot, selectionFrameCenterWorld, type WorldPoint } fro
 import { resolveCornerResize, resolveEdgeResize, type CornerBounds, type CornerId, type EdgeId } from '../../utils/cornerResize';
 import { stackingOrder } from '../../utils/stackingOrder';
 import { resolveMarqueeSelection, resolveStageSelectionTarget } from '../../utils/layerGrouping';
+import { collectArrangeTargets } from '../../utils/vectorArrange';
+import {
+  collectLayerSnapCandidates,
+  collectStageSnapCandidates,
+  resolveSnap,
+  unionWorldBounds,
+  SNAP_THRESHOLD_SCREEN_PX,
+  type SnapGuide,
+  type SnapLine,
+} from '../../utils/layoutGeometry';
+import type { PartWorldBounds } from '../../utils/bounds';
+import {
+  STAGE_CROP_HANDLES,
+  editorPointToStageSpace,
+  isStageCropHandle,
+  isStagePointInsideRect,
+  resizeStageCropRect,
+  stageCropHandleCenters,
+  stageCropRectFromDrag,
+  stageSpaceToEditorRect,
+  translateStageCropRect,
+  type StageCropHandle,
+  type StageCropRect,
+} from '../../utils/stageCrop';
 import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
-import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
+import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter, type CoordinatePoint } from '../../utils/projectCoordinates';
 import { buildFreeformPath, normalizeFreeformPoints } from '../../utils/freeform';
+import { resolveBondGroup } from '../../utils/partBinding';
 import { useFreeformDraw } from '../../hooks/useFreeformDraw';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
 import { FreeformTangentOverlay } from './overlays/FreeformTangentOverlay';
@@ -64,6 +89,10 @@ export const StageCanvas: React.FC = () => {
     addCustomPart,
     updatePartMedia,
     showGrid,
+    snapEnabled,
+    cropMode,
+    cropRegion,
+    setCropRegion,
     totalFrames,
     projectResolution,
     appMode,
@@ -200,11 +229,11 @@ export const StageCanvas: React.FC = () => {
   }, [applyStageBox, readStageBox]);
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale_corner_tl' | 'scale_corner_tr' | 'scale_corner_bl' | 'scale_corner_br' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'shape_create' | 'child_frame_scale' | 'child_frame_rotate' | null>(null);
+  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale_corner_tl' | 'scale_corner_tr' | 'scale_corner_bl' | 'scale_corner_br' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'shape_create' | 'child_frame_scale' | 'child_frame_rotate' | 'crop_new' | 'crop_move' | 'crop_resize' | null>(null);
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [shapeCreationStart, setShapeCreationStart] = useState<{ clientX: number; clientY: number; svgX: number; svgY: number } | null>(null);
   const [shapeCreationPreview, setShapeCreationPreview] = useState<{ type: NonNullable<typeof pendingShapeType>; bounds: ReturnType<typeof getShapeCreationBounds> } | null>(null);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; mediaCenter?: { x: number; y: number }; partId?: string; initialChildScaleX?: number; initialChildScaleY?: number; initialChildRot?: number; corner?: CornerId; localBounds?: CornerBounds; pivot?: WorldPoint }>({
+  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; mediaCenter?: { x: number; y: number }; partId?: string; initialChildScaleX?: number; initialChildScaleY?: number; initialChildRot?: number; corner?: CornerId; localBounds?: CornerBounds; pivot?: WorldPoint; cropAnchor?: { x: number; y: number }; cropInitial?: StageCropRect; cropHandle?: StageCropHandle }>({
     x: 0,
     y: 0,
     initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
@@ -230,6 +259,18 @@ export const StageCanvas: React.FC = () => {
   const [dragInitialAngle, setDragInitialAngle] = useState<number>(0);
   const [dragInitialLocalX, setDragInitialLocalX] = useState<number>(1);
   const [dragInitialLocalY, setDragInitialLocalY] = useState<number>(1);
+  /** The smart guides of the snap that is active right now (empty while free). */
+  const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
+
+  /**
+   * The snap context of the live translate drag, captured ONCE at pointerdown:
+   * the moving item's evaluated world box and every candidate line. Both are
+   * frozen for the gesture because the drag writes the moving layers on every
+   * move — re-measuring them mid-drag would make the moving box (and therefore
+   * the snap) chase its own writes. `pxPerWorld` is the camera scale at the
+   * moment the drag began, so the screen-pixel threshold stays stable.
+   */
+  const dragSnapRef = useRef<{ bounds: PartWorldBounds; candidates: SnapLine[]; pxPerWorld: number } | null>(null);
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const selectedTransform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
@@ -266,6 +307,17 @@ export const StageCanvas: React.FC = () => {
       return { svgX: point.x, svgY: point.y };
     },
     [zoomLevel, cameraView]
+  );
+
+  // The crop region is authored in STAGE space (origin at the stage's top-left),
+  // so the pointer is converted through the same camera transform every other
+  // gesture uses and then translated by the stage origin.
+  const clientToStage = useCallback(
+    (clientX: number, clientY: number): CoordinatePoint => {
+      const { svgX, svgY } = clientToSVG(clientX, clientY);
+      return editorPointToStageSpace({ x: svgX, y: svgY }, projectResolution);
+    },
+    [clientToSVG, projectResolution],
   );
 
   // Freeform drawing state machine (active only while the tool is selected).
@@ -347,6 +399,45 @@ export const StageCanvas: React.FC = () => {
     const transform = getComputedTransform(dragTargetId, currentFrame);
     if (!transform) return;
 
+    // The snap context for this gesture, frozen now: the moving item's evaluated
+    // world box (the union of the selection's group-aware boxes) and every
+    // candidate line. `SNAP_THRESHOLD_SCREEN_PX` is a SCREEN radius; the camera
+    // scale converts it to world units so the feel is identical at any zoom.
+    const dragSelectionIds = selectedPartIds.includes(dragTargetId) ? canvasSelectionIds : [dragTargetId];
+    const worldOf = (id: string) => getComputedTransform(id, currentFrame);
+    const movingTargets = collectArrangeTargets(characterParts, dragSelectionIds, worldOf);
+    const movingBounds = movingTargets.length > 0
+      ? unionWorldBounds(movingTargets.map((target) => target.bounds))
+      : null;
+    // ONE space for the whole snap: `getLayerWorldBounds` measures in the
+    // project-relative world (`transform.x` is the offset from the stage centre),
+    // and the stage box in that same space is simply ±half the resolution. The
+    // overlay converts to the editor camera when it DRAWS a guide, never here.
+    const stageBounds: PartWorldBounds = {
+      minX: -projectResolution.width / 2,
+      minY: -projectResolution.height / 2,
+      maxX: projectResolution.width / 2,
+      maxY: projectResolution.height / 2,
+    };
+    const candidates = [
+      ...collectStageSnapCandidates(stageBounds),
+      ...collectLayerSnapCandidates({
+        parts: characterParts,
+        // The layers the gesture really moves: the arrangement targets PLUS every
+        // layer bonded to them. A bond carries its partners by the same world
+        // delta (`updateCurrentTransform`), so a partner is leaving the box a
+        // snap would lock onto — it must not be a candidate, exactly like the
+        // containers that carry the moving layers.
+        movingIds: movingTargets.flatMap((target) => resolveBondGroup(characterParts, target.id)),
+        worldOf,
+        isVisible: (part) => tracks.find((track) => track.partId === part.id)?.editVisible !== false,
+      }),
+    ];
+    dragSnapRef.current = movingBounds
+      ? { bounds: movingBounds, candidates, pxPerWorld: Math.max(1e-6, zoomLevel * (cameraView?.baseScale ?? 1)) }
+      : null;
+    setSnapGuides([]);
+
     startBatchInteraction();
     setIsDragging(true);
     setDragMode('translate');
@@ -360,6 +451,35 @@ export const StageCanvas: React.FC = () => {
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    // The crop mode owns the stage pointer while it is armed: a press on a handle
+    // resizes the region, a press inside it moves it, and a press anywhere else
+    // starts a new one. The document is untouched — the region is applied only by
+    // the explicit `Apply crop` command.
+    if (cropMode && appMode !== 'broadcast' && e.button === 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      const handleElement = (e.target as Element).closest?.('[data-crop-handle]');
+      const rawHandle = handleElement?.getAttribute('data-crop-handle') ?? null;
+      const handle = isStageCropHandle(rawHandle) ? rawHandle : null;
+      const point = clientToStage(e.clientX, e.clientY);
+      const resizeHandle = handle && cropRegion ? handle : null;
+      setIsDragging(true);
+      setDragMode(resizeHandle
+        ? 'crop_resize'
+        : cropRegion && isStagePointInsideRect(point, cropRegion)
+          ? 'crop_move'
+          : 'crop_new');
+      setDragStart({
+        x: e.clientX,
+        y: e.clientY,
+        initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+        cropAnchor: point,
+        cropInitial: cropRegion ?? undefined,
+        cropHandle: resizeHandle ?? undefined,
+      });
+      return;
+    }
+
     if (activeTool === 'freeform_draw' && appMode !== 'broadcast' && e.button === 0) {
       e.preventDefault();
       e.stopPropagation();
@@ -498,6 +618,32 @@ export const StageCanvas: React.FC = () => {
         return;
       }
 
+      // Crop authoring: the region is rewritten on every move and the DOCUMENT is
+      // never touched — no batch interaction is open, so no history entry can be
+      // produced by drawing or resizing the region.
+      if (dragMode === 'crop_new' || dragMode === 'crop_move' || dragMode === 'crop_resize') {
+        const point = clientToStage(e.clientX, e.clientY);
+        const initial = dragStart.cropInitial;
+        if (dragMode === 'crop_new') {
+          setCropRegion(stageCropRectFromDrag(dragStart.cropAnchor ?? point, point, projectResolution));
+          return;
+        }
+        if (!initial) return;
+        if (dragMode === 'crop_move') {
+          const anchor = dragStart.cropAnchor ?? point;
+          setCropRegion(translateStageCropRect(
+            initial,
+            { x: point.x - anchor.x, y: point.y - anchor.y },
+            projectResolution,
+          ));
+          return;
+        }
+        if (dragStart.cropHandle) {
+          setCropRegion(resizeStageCropRect(initial, dragStart.cropHandle, point, projectResolution));
+        }
+        return;
+      }
+
       if (dragMode === 'pan') {
         const clientX = e.clientX;
         const clientY = e.clientY;
@@ -580,12 +726,31 @@ export const StageCanvas: React.FC = () => {
           groupDragMovedRef.current = true;
           suppressClickSelectRef.current = groupBodyDragRef.current !== null;
         }
+        // Snap the PROPOSED world delta onto the frozen candidate lines. X and Y
+        // resolve independently, so a corner lock is two axis snaps; the guides
+        // are the matched lines the overlay draws. Snapping changes only the
+        // authored transform delta — never the camera.
+        const snapContext = dragSnapRef.current;
+        let snappedDx = deltaX;
+        let snappedDy = deltaY;
+        if (snapContext) {
+          const resolution = resolveSnap({
+            movingBounds: snapContext.bounds,
+            delta: { x: deltaX, y: deltaY },
+            candidates: snapContext.candidates,
+            thresholdWorld: SNAP_THRESHOLD_SCREEN_PX / snapContext.pxPerWorld,
+            enabled: snapEnabled,
+          });
+          snappedDx = resolution.delta.x;
+          snappedDy = resolution.delta.y;
+          setSnapGuides(resolution.guides);
+        }
         // ONE contract: updateCurrentTransform takes WORLD x/y and converts to
         // container-local per part (and propagates bonds). Passing the primary
         // part's world position moves the whole selection when it is multi.
         updateCurrentTransform({
-          x: dragStart.initialTransform.x + deltaX,
-          y: dragStart.initialTransform.y + deltaY,
+          x: dragStart.initialTransform.x + snappedDx,
+          y: dragStart.initialTransform.y + snappedDy,
         });
         return;
       }
@@ -665,7 +830,7 @@ export const StageCanvas: React.FC = () => {
       }
     },
     // The pointer-up effect owns the current mouse-up callback; adding the later-declared callback here would create a declaration cycle.
-    [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, updateCurrentTransform, shapeCreationStart, pendingShapeType, isScaleLocked]
+    [isDragging, dragMode, dragStart, clientToSVG, clientToStage, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, updateCurrentTransform, shapeCreationStart, pendingShapeType, isScaleLocked, snapEnabled, setCropRegion, projectResolution]
   );
 
   const handleMouseUp = useCallback((commitShape: boolean = true) => {
@@ -712,6 +877,11 @@ export const StageCanvas: React.FC = () => {
     // gesture refs only retire here.
     groupBodyDragRef.current = null;
     groupDragMovedRef.current = false;
+
+    // The snap guides are chrome of the live gesture: they go the moment the
+    // drag does, along with the frozen context that produced them.
+    dragSnapRef.current = null;
+    setSnapGuides([]);
 
     if (isDragging) endBatchInteraction();
     setIsDragging(false);
@@ -924,7 +1094,7 @@ export const StageCanvas: React.FC = () => {
 
   return (
     <div
-      className={`stage-canvas-container ${isPanning ? 'panning' : ''} ${activeTool === 'pan' ? 'hand-tool' : 'select-tool'} ${isDragging ? 'interaction-dragging' : ''}`}
+      className={`stage-canvas-container ${isPanning ? 'panning' : ''} ${activeTool === 'pan' ? 'hand-tool' : 'select-tool'} ${isDragging ? 'interaction-dragging' : ''} ${cropMode ? 'crop-mode' : ''}`}
       data-camera-zoom={zoomLevel}
       ref={containerRef}
       onMouseDown={handleMouseDown}
@@ -1144,6 +1314,107 @@ export const StageCanvas: React.FC = () => {
                 vectorEffect="non-scaling-stroke"
                 pointerEvents="none"
               />
+
+              {/* Stage crop / region of interest. The region is authored in stage
+                  space and drawn here in the editor camera; the eight handles are
+                  the pointer targets of the resize gesture. Nothing here writes
+                  the document — `Apply crop` does, as one undo step. */}
+              {cropMode && appMode !== 'broadcast' && (() => {
+                const handleSize = 9 * zScale;
+                const half = handleSize / 2;
+                const region = cropRegion ? stageSpaceToEditorRect(cropRegion, projectResolution) : null;
+                const centers = region ? stageCropHandleCenters(region) : null;
+                return (
+                  <g className="stage-crop-overlay" data-crop-active="true">
+                    {region && (
+                      <>
+                        <path
+                          className="stage-crop-dimmer"
+                          d={`M-300000,-300000 L300000,-300000 L300000,300000 L-300000,300000 Z M${region.x},${region.y} L${region.x},${region.y + region.height} L${region.x + region.width},${region.y + region.height} L${region.x + region.width},${region.y} Z`}
+                          fillRule="evenodd"
+                          pointerEvents="none"
+                        />
+                        <rect
+                          className="stage-crop-region"
+                          x={region.x}
+                          y={region.y}
+                          width={region.width}
+                          height={region.height}
+                          strokeWidth={2 * zScale}
+                          pointerEvents="none"
+                        />
+                        <text
+                          className="stage-crop-size"
+                          x={region.x}
+                          y={region.y - 6 * zScale}
+                          fontSize={11 * zScale}
+                          pointerEvents="none"
+                        >
+                          {`${Math.round(region.width)} × ${Math.round(region.height)}`}
+                        </text>
+                        {centers && STAGE_CROP_HANDLES.map((handle) => {
+                          const center = centers[handle];
+                          return (
+                            <rect
+                              key={handle}
+                              className={`stage-crop-handle stage-crop-handle-${handle}`}
+                              data-crop-handle={handle}
+                              x={center.x - half}
+                              y={center.y - half}
+                              width={handleSize}
+                              height={handleSize}
+                            />
+                          );
+                        })}
+                      </>
+                    )}
+                    {!region && (
+                      <text
+                        className="stage-crop-hint"
+                        x={EDITOR_CAMERA_CENTER.x}
+                        y={EDITOR_CAMERA_CENTER.y}
+                        fontSize={12 * zScale}
+                        textAnchor="middle"
+                        pointerEvents="none"
+                      >
+                        Drag a region on the stage, then apply the crop
+                      </text>
+                    )}
+                  </g>
+                );
+              })()}
+
+              {/* Smart guides of the live snap: decorative chrome, no pointer
+                  events, gone the instant the snap is no longer active. The
+                  candidate values are project-relative world coordinates, so the
+                  overlay adds the editor camera origin to draw them. */}
+              {snapGuides.length > 0 && (
+                <g className="snap-guides" pointerEvents="none" aria-hidden="true">
+                  {snapGuides.map((guide) => (guide.axis === 'x'
+                    ? (
+                      <line
+                        key={`snap-x-${guide.value}`}
+                        className="snap-guide"
+                        x1={EDITOR_CAMERA_CENTER.x + guide.value}
+                        y1={0}
+                        x2={EDITOR_CAMERA_CENTER.x + guide.value}
+                        y2={EDITOR_CAMERA_VIEWBOX.height}
+                        strokeWidth={1 / zoomLevel}
+                      />
+                    )
+                    : (
+                      <line
+                        key={`snap-y-${guide.value}`}
+                        className="snap-guide"
+                        x1={0}
+                        y1={EDITOR_CAMERA_CENTER.y + guide.value}
+                        x2={EDITOR_CAMERA_VIEWBOX.width}
+                        y2={EDITOR_CAMERA_CENTER.y + guide.value}
+                        strokeWidth={1 / zoomLevel}
+                      />
+                    )))}
+                </g>
+              )}
 
               {/* Interactive Transform Gizmo (Only in Edit Mode when not hard-hidden) */}
               {appMode !== 'broadcast' && (

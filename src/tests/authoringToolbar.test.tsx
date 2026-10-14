@@ -23,6 +23,19 @@ const animatorCtx = {
   setActiveTool: vi.fn(),
   showGrid: false,
   setShowGrid: vi.fn(),
+  snapEnabled: true,
+  setSnapEnabled: vi.fn(),
+  cropMode: false,
+  setCropMode: vi.fn(),
+  cropRegion: null as { x: number; y: number; width: number; height: number } | null,
+  setCropRegion: vi.fn(),
+  clearStageCropRegion: vi.fn(),
+  applyStageCrop: vi.fn(() => true),
+  cropStageToSelection: vi.fn(() => true),
+  cropStageToVisibleContent: vi.fn(() => true),
+  stageCropBlockReason: null as string | null,
+  canCropStageToSelection: false,
+  canCropStageToVisibleContent: false,
   selectedPartId: null as string | null,
   selectedPartIds: [] as string[],
   setSelectedPartId: vi.fn(),
@@ -64,6 +77,11 @@ describe('AuthoringToolbar', () => {
     animatorCtx.showGrid = false;
     animatorCtx.characterParts = [];
     animatorCtx.tracks = [];
+    animatorCtx.cropMode = false;
+    animatorCtx.cropRegion = null;
+    animatorCtx.stageCropBlockReason = null;
+    animatorCtx.canCropStageToSelection = false;
+    animatorCtx.canCropStageToVisibleContent = false;
     setSelection([], null);
     vi.clearAllMocks();
   });
@@ -90,6 +108,19 @@ describe('AuthoringToolbar', () => {
     expect(animatorCtx.setShowGrid).toHaveBeenCalledWith(false);
   });
 
+  it('toggles canvas snapping through the shared context flag the stage reads', () => {
+    animatorCtx.snapEnabled = true;
+    renderToolbar();
+
+    const snap = screen.getByRole('button', { name: 'Toggle snapping' });
+    expect(snap).toHaveAttribute('aria-pressed', 'true');
+    // It lives in the View band beside the grid, as presentation state.
+    expect(within(screen.getByRole('group', { name: 'View controls' })).getByRole('button', { name: 'Toggle snapping' })).toBe(snap);
+
+    fireEvent.click(snap);
+    expect(animatorCtx.setSnapEnabled).toHaveBeenCalledWith(false);
+  });
+
   it('sends zoom and reset view down the established camera command channel', () => {
     renderToolbar();
     const dispatched: string[] = [];
@@ -109,7 +140,7 @@ describe('AuthoringToolbar', () => {
 
   it('never writes the document for view-only tools', () => {
     renderToolbar();
-    for (const name of ['Select', 'Pan', 'Toggle grid', 'Zoom in', 'Zoom out', 'Reset view']) {
+    for (const name of ['Select', 'Pan', 'Toggle grid', 'Toggle snapping', 'Zoom in', 'Zoom out', 'Reset view']) {
       fireEvent.click(screen.getByRole('button', { name }));
     }
     expect(animatorCtx.setCharacterParts).not.toHaveBeenCalled();
@@ -238,7 +269,7 @@ describe('AuthoringToolbar', () => {
     // rather than implied by pixels.
     const bands = [
       'Canvas tools', 'Create', 'Boolean operations', 'Layer group',
-      'Align', 'Distribute', 'Rotate and flip', 'Arrange', 'View controls',
+      'Align', 'Distribute', 'Rotate and flip', 'Arrange', 'Crop', 'Crop to content', 'View controls',
     ];
     expect(screen.getAllByRole('group').map((group) => group.getAttribute('aria-label'))).toEqual(bands);
 
@@ -303,6 +334,34 @@ describe('AuthoringToolbar', () => {
     expect(animatorCtx.updateCurrentTransform).toHaveBeenCalledTimes(1);
     expect(animatorCtx.updateCurrentTransform).toHaveBeenCalledWith({ x: 0 }, 'b');
     expect(screen.queryByRole('menu', { name: 'Align' })).toBeNull();
+  });
+
+  it('offers the equal-spacing distribute commands in the existing Distribute band', () => {
+    animatorCtx.characterParts = [
+      shape('a'),
+      shape('b', { baseTransform: { x: 40, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } }),
+      shape('c', { baseTransform: { x: 400, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } }),
+    ];
+    setSelection(['a', 'b', 'c'], 'b');
+    renderToolbar();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Distribute' }));
+    const menu = screen.getByRole('menu', { name: 'Distribute' });
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Distribute horizontally',
+      'Distribute vertically',
+      'Distribute horizontal spacing',
+      'Distribute vertical spacing',
+    ]);
+
+    // The equal-spacing command is the SAME write path and ONE batch; the middle
+    // box takes the even gap while the extremes hold the span.
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Distribute horizontal spacing' }));
+    expect(animatorCtx.startBatchInteraction).toHaveBeenCalledTimes(1);
+    expect(animatorCtx.endBatchInteraction).toHaveBeenCalledTimes(1);
+    expect(animatorCtx.updateCurrentTransform).toHaveBeenCalledTimes(1);
+    expect(animatorCtx.updateCurrentTransform).toHaveBeenCalledWith({ x: 200 }, 'b');
+    expect(screen.queryByRole('menu', { name: 'Distribute' })).toBeNull();
   });
 
   it('rotates and flips the selection with the same authority, disabled without one', () => {
@@ -385,6 +444,61 @@ describe('AuthoringToolbar', () => {
     }
     // Reset is idempotent and never carries a zoom step with it.
     expect(dispatched).toEqual(['reset-view', 'reset-view']);
+  });
+
+  it('arms crop mode, applies the region and runs both crop-to-content commands', () => {
+    animatorCtx.characterParts = [shape('a')];
+    setSelection(['a'], 'a');
+    animatorCtx.canCropStageToSelection = true;
+    animatorCtx.canCropStageToVisibleContent = true;
+
+    const view = renderToolbar();
+    const mode = screen.getByRole('button', { name: 'Crop / region of interest' });
+    expect(mode).toHaveAttribute('aria-pressed', 'false');
+    // Nothing to apply or clear until a region exists.
+    expect(screen.getByRole('button', { name: 'Apply crop' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Clear crop region' })).toBeDisabled();
+
+    fireEvent.click(mode);
+    expect(animatorCtx.setCropMode).toHaveBeenCalledWith(true);
+
+    animatorCtx.cropMode = true;
+    animatorCtx.cropRegion = { x: 100, y: 50, width: 400, height: 300 };
+    view.rerender(<AuthoringToolbar />);
+    expect(screen.getByRole('button', { name: 'Crop / region of interest' })).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply crop' }));
+    expect(animatorCtx.applyStageCrop).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Clear crop region' }));
+    expect(animatorCtx.clearStageCropRegion).toHaveBeenCalledTimes(1);
+
+    // Both auto-crop modes are offered, explicitly naming the frame they measure.
+    fireEvent.click(screen.getByRole('button', { name: 'Crop to content' }));
+    const menu = screen.getByRole('menu', { name: 'Crop to content' });
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Crop to current selection at current frame',
+      'Crop to visible content at current frame',
+    ]);
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Crop to current selection at current frame' }));
+    expect(animatorCtx.cropStageToSelection).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Crop to content' }));
+    fireEvent.click(within(screen.getByRole('menu', { name: 'Crop to content' }))
+      .getByRole('menuitem', { name: 'Crop to visible content at current frame' }));
+    expect(animatorCtx.cropStageToVisibleContent).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables a crop that cannot move a stage-anchored layer and explains why', () => {
+    animatorCtx.characterParts = [shape('a', { anchor: 'top-left' })];
+    setSelection(['a'], 'a');
+    animatorCtx.stageCropBlockReason = 'A layer pinned by a stage anchor cannot be moved by a crop. Set its anchor to None first.';
+    animatorCtx.cropRegion = { x: 100, y: 50, width: 400, height: 300 };
+    renderToolbar();
+
+    const apply = screen.getByRole('button', { name: 'Apply crop' });
+    expect(apply).toBeDisabled();
+    expect(apply).toHaveAttribute('title', animatorCtx.stageCropBlockReason);
+    expect(screen.getByRole('button', { name: 'Crop to content' })).toBeDisabled();
   });
 
   it('offers Ungroup for a container and keeps Group disabled while only one layer is selected', () => {

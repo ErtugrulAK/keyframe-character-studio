@@ -1,66 +1,65 @@
-# OMP final response — manual QA round five remediation
+# OMP final response — ae-inspired layout, crop and snapping (stacked on PR #9)
 
-Status: **round 5 implemented and validated on the frozen revision `0e81ff3`; PR #9 updated. Not merged.**
+Status: **the branch is implemented, validated on a frozen revision, pushed and open as PR #10 (stacked on
+PR #9). Nothing merged. PR #9 was not touched.**
 
 ## What was delivered
 
-Fifteen round-5 findings (R5-01…R5-15) were remediated on `fix/manual-qa-round1-remediation` in ten commits,
-on top of the already-recorded round-1 (A–J), round-2 (R2-01…R2-12), round-3 (R3-01…R3-13) and round-4
-(R4-01…R4-16) work:
+The AE-inspired layout/crop/snapping work (seven commits on `feat/ae-layout-crop-snapping`) was committed,
+gated, pushed and handed off:
 
-- `ff17cad` — R5-05: the frame cursor write moved into the one drag-aware click authority
-  (`handleKeyframeClick`), so a keyframe drag no longer moves the playhead.
-- `8b2abb3` — R5-08: `resolveMarqueeSelection` folds marquee hits through `resolveStageSelectionTarget` and
-  drops geometryless containers, so a box over grouped children normalizes to the group and an empty gap
-  selects nothing.
-- `0e310dd` + `56fef66` — R5-03: the timeline edge eases from the frame commit (`animateTimelineEdge`,
-  180ms monotone ease-out cubic) instead of a CSS `height` transition, which had measured **5.883px** of
-  transient world drift.
-- `43e02e2` — R5-01/R5-02: handles ride each panel's outer boundary, and the editor's stack is declared once
-  as `--kcs-layer-*` tokens (the header had trapped the Export dropdown and the GIF panel in its own
-  stacking context at the handle layer); R5-04/R5-06/R5-07: the selected keyframe is the filled diamond
-  alone, a disabled arrow reads disabled, a property strip is a neutral `[◀][+][▶]`.
-- `5d58f04` — R5-14/R5-15: `Position [X][Y]` plus one `[Rotation][Scale][Opacity]` row, with `Reset 0°`,
-  `Add Keyframe` and the paint-order strip removed (the lock stays as one glyph, and arrange moved to the
-  toolbar's own group). The model is untouched.
-- `50404a8` — R5-09/R5-10/R5-11: one pure planner (`src/utils/vectorArrange.ts`) plus one writer
-  (`useVectorArrangeAuthoring`) through the ONE `updateCurrentTransform` path in one batch, so each command
-  is one undo step; four commands carry keys, align and distribute are toolbar-only.
-- `0e81ff3` — R5-12/R5-13: nine announced toolbar bands, and a shortcut reference that filters the one
-  keymap table instead of copying it.
-- `1168cee` — the round record (`reports/progress_171_manual_qa_round_five_remediation.md`) and the
-  changelog; `556fdc8` is the part-one changelog record.
+- `0bf21c3` — one shared layout geometry authority (`src/utils/layoutGeometry.ts`) plus the equal-EDGE-GAP
+  distribution policy `planDistributeByGap` beside the unchanged Round-5 centre-based `planDistribute`.
+- `802cebc` — smart snapping and guides: screen-radius threshold (`SNAP_THRESHOLD_SCREEN_PX = 8`), stage plus
+  other visible outermost-layer candidates, independent X/Y, smallest screen-delta win with a deterministic
+  tie-break, the candidate set frozen at pointerdown, a group as ONE aggregate target, one undo entry per drag,
+  and a `Toggle snapping` switch in the View band (armed by default).
+- `913f3a3` — the stage crop / region of interest: one authority (`src/utils/stageCrop.ts`), one command surface
+  (`src/hooks/useStageCropAuthoring.ts`), the toolbar's `Crop` + `Crop to content` bands and the stage overlay.
+  Plus the carried-over stage-snap coordinate-space fix (the guide was drawn 660px from the geometry and the
+  lock target was wrong).
+- `3c62d85`, `decc14e`, `9fd713a`, `55ed8c7` — what the gate found: the authoring-toolbar spec that still
+  asserted the nine pre-crop bands; a real snap-target defect (a BONDED partner moves with the drag, so it must
+  not be a candidate) that the pre-existing `layer-binding` spec caught; the named-sequence spec that measures a
+  pure pointer delta and now switches snapping off for that measurement; and the new threshold test's two
+  ambiguity causes.
 
 ## Validation
 
-On the frozen revision `0e81ff3` (isolated ports only; 5173/5000 never touched) `npm run check` passed as one
-command (oxlint clean, `tsc -b` clean, **165 files / 2,478 tests**, production build succeeded), the
-state-consistency check passed, `npm audit --audit-level=low` found 0 vulnerabilities and `git diff --check`
-was clean.
+On the frozen revision `55ed8c7` (isolated ports only; 5173/5000 never touched): `npm run build` green
+(2,075 modules), `npm run validate:ograf` green, `PORT=5014 npm run qa:release` green (2 passed),
+`PORT=5014 npm run qa:v6` green (3 passed), `npm run check` green as one command (oxlint, `tsc -b`,
+**168 files / 2,533 tests**, production build), `node scripts/check-state-consistency.mjs` **PASS (50 checks)**,
+`npm audit --audit-level=low` **0 vulnerabilities**, `git diff --check` clean.
 
-The FULL Chromium suite (396 tests, `--retries=0`, 8 workers) was run three times: **393 / 3 failed**,
-**394 / 2 failed**, **394 / 2 failed** — every failure in the load-sensitive camera-drift family
-(`camera-invariance.spec.ts:300`, `camera-transition-stability.spec.ts:231` and `:259`). The same specs run
-**9 passed / 0 failed** at 2 workers and **4 passed / 0 failed** at 8 workers, with `worstDelta=0.000px` on
-all 12 traces each time. The two `Show Inspector` samples are one-frame ALPHA client-x excursions of exactly
-**-28.859px** (half the stage box's width delta for the frame one step earlier) against the spec's 1px bound.
-They are **reported, not suppressed**: no tolerance was widened, no retry added, no sleep inserted, no test
-skipped and no spec byte changed, and the assertion plus the CSS `width` transition it measures are both
-untouched by this round. A clean full-suite run has not been observed at this revision, and the comparison
-against the pre-round-5 revision under the same load was out of scope — the record states the reproducibility
-change for the reviewer's decision before the merge. The one-file carries the complete tables.
+The neighbouring Playwright specs (12 files, 8 workers) ran **73 passed / 2 failed**, and the FULL Chromium
+suite (`CI=1 PORT=5014 … --retries=0`, 404 tests, 8 workers) ran **402 passed / 2 failed** — in all three full
+runs the only remaining failures are the pre-existing, load-sensitive `Show Inspector` camera samples
+(`camera-transition-stability.spec.ts:231` and `:259`), a one-frame ALPHA client-x excursion of **28.859px**
+against the spec's 1px bound, with `magnificationSpread=0.00000` on every trace.
+
+Reported, not hidden: in isolation on this revision those two samples are NOT clean — `inspector show`
+reproduces a **9.109px** excursion at 2 workers (7 passed / 2 failed) and at 8 workers (8 passed / 1 failed),
+where the Round-5 record measured `0.000px` in isolation. The spec, its 1px bound, `expectStable` and the
+`.property-inspector` `transition: width 240ms ease` it measures are untouched by this branch, and no
+comparison against the pre-branch revision was made (the Round-5 worktree and the canonical checkout are
+read-only for this task), so the change in isolation behaviour is reported **without attribution**. No
+tolerance was widened, no retry added, no sleep inserted and no test skipped.
 
 ## Pull request
 
-**#9 — OPEN, not merged** (`https://github.com/ErtugrulAK/keyframe-character-studio/pull/9`). Head
-`1168ceea0fe409f153221749b3e0b890316835cf` (`1168cee`), pushed as a fast-forward with an explicit refspec —
-no force, no rebase; mergeable **MERGEABLE**, merge state **CLEAN**; CI **CI Pipeline** run
-**`38550570067`** (`pull_request`) — **success**.
+**#10 — OPEN, not merged**, stacked on PR #9: `https://github.com/ErtugrulAK/keyframe-character-studio/pull/10`,
+base `fix/manual-qa-round1-remediation`, head `feat/ae-layout-crop-snapping`. Head
+`cd8fe7c5f16e174ad8a5a7c5a42524e873eb0263` (`cd8fe7c`), pushed with an explicit refspec — no force, no rebase;
+mergeable **MERGEABLE**; CI **CI Pipeline** run **`38565624999`** (`pull_request`) — **success**.
+
+**PR #9 is OPEN and untouched**: no commit, push, rebase or merge happened on its branch or worktree.
 
 ## Live surfaces
 
-The 5173 QA preview keeps serving this worktree (vite listener pid 50876) at the pushed head — the
-branch-only `src/utils/vectorArrange.ts` answers 200 there — and **API 5000 (pid 18280) was never stopped or
-restarted**. No merge, no tag, no release and no npm publication happened, and the canonical checkout was
-never written to. The user's retest against 5173 is the merge gate; the exact retest list is in
-`chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.
+5173 still serves the **Round-5 worktree** (`keyframe-character-studio-omp-manual-qa-r1`, vite listener pid
+50876, HTTP 200) — the user's QA surface for the pending Round 5 retest; it was deliberately NOT switched to
+this branch. **API 5000 (pid 18280, `/api/health` 200) was never stopped or restarted.** No merge, no tag, no
+release and no npm publication happened, no dependency/package/lockfile/workflow byte changed, and the
+canonical checkout was never written to. The one-file carries the complete tables, the feature semantics and
+the retest checklist.

@@ -49,6 +49,8 @@ export interface EditorShortcutCommands {
   exitGroupDrillIn?: () => boolean;
   /** Clears the timeline's keyframe selection; true when there was one. */
   clearKeyframeSelection?: () => boolean;
+  /** Leaves the stage crop mode (dropping the region first); true when it did. */
+  cancelStageCrop?: () => boolean;
   setIsPlaying?: React.Dispatch<React.SetStateAction<boolean>>;
   appMode?: AppMode;
   openShortcutReference?: () => void;
@@ -101,6 +103,7 @@ export const useKeyboardShortcuts = ({
   flipSelection,
   exitGroupDrillIn,
   clearKeyframeSelection,
+  cancelStageCrop,
   setIsPlaying,
   appMode,
   openShortcutReference,
@@ -201,6 +204,12 @@ export const useKeyboardShortcuts = ({
             cancelShapeCreation();
             return;
           }
+          // The crop mode is the next thing Escape may leave: it drops the
+          // region the pointer described, or the mode itself.
+          if (cancelStageCrop?.()) {
+            event.preventDefault();
+            return;
+          }
           // The drawing tool owns Escape while it is armed: its own listener
           // cancels the stroke and exits the tool, so the chain stops here.
           if (activeToolRef.current === 'freeform_draw') return;
@@ -280,6 +289,7 @@ export const useKeyboardShortcuts = ({
     flipSelection,
     exitGroupDrillIn,
     clearKeyframeSelection,
+    cancelStageCrop,
     setIsPlaying,
     appMode,
     openShortcutReference,

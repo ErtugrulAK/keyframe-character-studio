@@ -5,26 +5,34 @@ import {
   AlignEndHorizontal,
   AlignEndVertical,
   AlignHorizontalSpaceAround,
+  AlignHorizontalSpaceBetween,
   AlignStartHorizontal,
   AlignStartVertical,
   AlignVerticalSpaceAround,
+  AlignVerticalSpaceBetween,
   ArrowDown,
   ArrowUp,
+  Check,
   Circle,
   Compass,
+  Crop,
   FlipHorizontal2,
   FlipVertical2,
   Grid,
   Group,
   Hand,
+  Magnet,
+  Maximize,
   MousePointer2,
   PenTool,
   RotateCcw,
   RotateCw,
   Square,
+  SquareDashed,
   Type,
   Ungroup,
   Unlink,
+  X,
   ZoomIn,
   ZoomOut,
   type LucideIcon,
@@ -89,12 +97,14 @@ const dispatchViewportCommand = (type: 'zoom-in' | 'zoom-out' | 'reset-view') =>
  *
  * The strip is organised as the command bands a motion editor reads left to
  * right — selection/navigation, creation, Boolean, grouping, align, distribute,
- * rotate/flip, arrange, view — and each band is one `role="group"`, so the
+ * rotate/flip, arrange, crop, view — and each band is one `role="group"`, so the
  * structure is announced, not just painted. Every control reads and writes the
- * authority the rest of the app uses: `activeTool`/`showGrid` from the animator
- * context, shape creation through `armShapeCreation`, camera commands through the
- * shared command channel, the shared z-index write path, the shared Boolean and
- * layer-group authorities, and the ONE vector arrange authority
+ * authority the rest of the app uses: `activeTool`/`showGrid`/`snapEnabled`/
+ * `cropMode` from
+ * the animator context, shape creation through `armShapeCreation`, camera
+ * commands through the shared command channel, the shared z-index write path, the shared Boolean and
+ * layer-group authorities, the stage-crop commands (`createStageCropActions`,
+ * the ONE vector arrange authority
  * (`useVectorArrangeAuthoring`) for align, distribute, rotate and flip. It owns
  * no document state of its own, so a view-only tool cannot touch the project, and
  * it holds no second copy of any command.
@@ -126,6 +136,18 @@ export const AuthoringToolbar: React.FC = () => {
     setActiveTool,
     showGrid,
     setShowGrid,
+    snapEnabled,
+    setSnapEnabled,
+    cropMode,
+    setCropMode,
+    cropRegion,
+    applyStageCrop,
+    clearStageCropRegion,
+    cropStageToSelection,
+    cropStageToVisibleContent,
+    stageCropBlockReason,
+    canCropStageToSelection,
+    canCropStageToVisibleContent,
     selectedPartId,
     characterParts,
     armShapeCreation,
@@ -348,11 +370,13 @@ export const AuthoringToolbar: React.FC = () => {
           icon={AlignHorizontalSpaceAround}
           disabled={!arrange.canDistribute}
           title={arrange.canDistribute
-            ? 'Even out the spacing of the selection (the outer two layers hold the span)'
+            ? 'Even out the selection (the outer two layers hold the span)'
             : 'Distribute needs three or more layers with measurable geometry'}
           items={[
             { id: 'horizontal', label: 'Distribute horizontally', icon: AlignHorizontalSpaceAround, run: () => arrange.distribute('horizontal') },
             { id: 'vertical', label: 'Distribute vertically', icon: AlignVerticalSpaceAround, run: () => arrange.distribute('vertical') },
+            { id: 'horizontal-spacing', label: 'Distribute horizontal spacing', icon: AlignHorizontalSpaceBetween, run: () => arrange.distributeGap('horizontal') },
+            { id: 'vertical-spacing', label: 'Distribute vertical spacing', icon: AlignVerticalSpaceBetween, run: () => arrange.distributeGap('vertical') },
           ]}
         />
       </div>
@@ -451,6 +475,83 @@ export const AuthoringToolbar: React.FC = () => {
 
       <span className="authoring-toolbar-divider" aria-hidden="true" />
 
+      {/*
+        Stage crop / region of interest. The mode and the region are TRANSIENT
+        authoring state (the stage draws the region and its handles); the band
+        arms the mode, applies the region as ONE undoable command, and drops it.
+        Both convenience commands measure the EVALUATED visual bounds at the
+        CURRENT AUTHORED FRAME — their labels say so, because a layer whose
+        position animates away from the region will still leave the new frame at
+        the frames that move it.
+      */}
+      <div className="authoring-toolbar-group" role="group" aria-label="Crop">
+        <button
+          type="button"
+          className={`authoring-toolbar-button${cropMode ? ' active' : ''}`}
+          aria-label="Crop / region of interest"
+          aria-pressed={cropMode}
+          title={cropMode
+            ? 'Crop mode is on — drag a region on the stage, then apply it'
+            : 'Turn on crop mode to author a region of interest on the stage'}
+          onClick={() => setCropMode(!cropMode)}
+        >
+          <Crop />
+        </button>
+        <button
+          type="button"
+          className="authoring-toolbar-button"
+          aria-label="Apply crop"
+          disabled={!cropRegion || Boolean(stageCropBlockReason)}
+          title={stageCropBlockReason
+            ?? (cropRegion
+              ? `Crop the stage to ${cropRegion.width}×${cropRegion.height} and keep the scene where it sits`
+              : 'Draw a crop region on the stage first')}
+          onClick={() => applyStageCrop()}
+        >
+          <Check />
+        </button>
+        <button
+          type="button"
+          className="authoring-toolbar-button"
+          aria-label="Clear crop region"
+          disabled={!cropRegion}
+          title={cropRegion ? 'Drop the region without cropping the stage' : 'There is no crop region to clear'}
+          onClick={() => clearStageCropRegion()}
+        >
+          <X />
+        </button>
+      </div>
+
+      <span className="authoring-toolbar-divider" aria-hidden="true" />
+
+      <div className="authoring-toolbar-group" role="group" aria-label="Crop to content">
+        <ToolbarMenu
+          label="Crop to content"
+          icon={Maximize}
+          disabled={!canCropStageToSelection && !canCropStageToVisibleContent}
+          title={stageCropBlockReason
+            ?? (canCropStageToSelection || canCropStageToVisibleContent
+              ? 'Crop the stage to the evaluated bounds measured at this frame'
+              : 'Cropping to content needs a selection or visible content with measurable bounds')}
+          items={[
+            {
+              id: 'crop-to-selection',
+              label: 'Crop to current selection at current frame',
+              icon: SquareDashed,
+              run: cropStageToSelection,
+            },
+            {
+              id: 'crop-to-visible-content',
+              label: 'Crop to visible content at current frame',
+              icon: Maximize,
+              run: cropStageToVisibleContent,
+            },
+          ]}
+        />
+      </div>
+
+      <span className="authoring-toolbar-divider" aria-hidden="true" />
+
       <div className="authoring-toolbar-group" role="group" aria-label="View controls">
         <button
           type="button"
@@ -461,6 +562,18 @@ export const AuthoringToolbar: React.FC = () => {
           onClick={() => setShowGrid(!showGrid)}
         >
           <Grid />
+        </button>
+        <button
+          type="button"
+          className={`authoring-toolbar-button${snapEnabled ? ' active' : ''}`}
+          aria-label="Toggle snapping"
+          aria-pressed={snapEnabled}
+          title={snapEnabled
+            ? 'Snapping is on — turn it off to place layers freely'
+            : 'Snapping is off — turn it on to align to the stage and other layers'}
+          onClick={() => setSnapEnabled(!snapEnabled)}
+        >
+          <Magnet />
         </button>
         <button
           type="button"

@@ -192,6 +192,28 @@ describe('vector authoring commands', () => {
     expect(groupRight).toBeCloseTo(h.worldX(c) + 60, 6);
   });
 
+  it('evens edge gaps from the Distribute band, in one undoable command', () => {
+    const h = renderHarness();
+    const [a, b, c] = seed(h, [[0, 0], [40, 0], [400, 0]]);
+    select(h, [a, b, c]);
+    const before = h.document();
+
+    runFromMenu('Distribute', 'Distribute horizontal spacing');
+    // The middle box takes the even gap (80 world units on each side).
+    expect(h.worldX(b)).toBeCloseTo(200, 6);
+    expect(h.worldX(a)).toBeCloseTo(0, 6);
+    expect(h.worldX(c)).toBeCloseTo(400, 6);
+    const after = h.document();
+
+    // ONE entry, exact redo.
+    act(() => { h.ctx().undo(); });
+    expect(h.document()).toBe(before);
+    expect(h.worldX(b)).toBeCloseTo(40, 6);
+    act(() => { h.ctx().redo(); });
+    expect(h.document()).toBe(after);
+    expect(h.worldX(b)).toBeCloseTo(200, 6);
+  });
+
   it('leaves the document untouched when the selection cannot use a command', () => {
     const h = renderHarness();
     const [a] = seed(h, [[0, 0]]);

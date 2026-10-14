@@ -1,402 +1,244 @@
-# KCS — ChatGPT upload one-file: MANUAL QA ROUND 5 REMEDIATION (R5-01…R5-15)
+# KCS — ChatGPT upload one-file: AE-INSPIRED LAYOUT, CROP AND SNAPPING (stacked on PR #9)
 
 Generated from the current `chatgpt_handoff/latest/` bundle plus `latest/OMP_FINAL_RESPONSE.md`.
-Single current truth: **round 5 is implemented and validated on the frozen revision; PR #9 is updated and
-NOT merged; the user retest on 5173 is the merge gate.** Nothing was released, tagged or published.
+Single current truth: **the branch is implemented, validated on a frozen revision, pushed and open as PR #10,
+stacked on PR #9. Nothing is merged, PR #9 was not touched, and 5173 still serves the Round-5 worktree.**
 
 ---
 
 ## 1. Where this work lives
 
-- Canonical stable checkout (untouched, still on `main` @ `8e2df61`, clean): `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
-- Worktree that carries this work: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-manual-qa-r1`
-- Branch: `fix/manual-qa-round1-remediation`, base `origin/main` at `8e2df61`
-- Branch head: `1168ceea0fe409f153221749b3e0b890316835cf` (`1168cee`), pushed to `origin` by a
-  **fast-forward** (`42acf1e..1168cee`), explicit refspec, no force, no rebase
-- **Validated code + tests head: `0e81ff3`** (`0e81ff36…`). `1168cee` adds the round record and the
-  changelog only — no product source, test, package, workflow or config byte
-- Rounds covered: round 1 A–J, round 2 R2-01…R2-12, round 3 R3-01…R3-13, round 4 R4-01…R4-16,
-  round 5 R5-01…R5-15
+- Canonical stable checkout (untouched, still on `main` @ `8e2df61`, clean):
+  `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
+- Worktree that carries this work: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-ae-layout`
+- Branch `feat/ae-layout-crop-snapping`, base `origin/fix/manual-qa-round1-remediation` @ `04eee5e` (PR #9's
+  head), head `cd8fe7c5f16e174ad8a5a7c5a42524e873eb0263` (`cd8fe7c`), pushed with an explicit refspec as a new
+  branch — no force, no rebase, no history rewrite
+- **Validated code revision: `55ed8c7`**; `cd8fe7c` adds the record and the changelog only
+- **PR #10 — OPEN, not merged** (`https://github.com/ErtugrulAK/keyframe-character-studio/pull/10`), base
+  `fix/manual-qa-round1-remediation`, head `feat/ae-layout-crop-snapping`, mergeable **MERGEABLE**, CI
+  **CI Pipeline** run **`38565624999`** (`pull_request`) — **success**
+- **PR #9 — OPEN and untouched** (`https://github.com/ErtugrulAK/keyframe-character-studio/pull/9`, head
+  `1168cee`): no commit, push, rebase, merge or worktree change on its side
+- Commits (newest first): `cd8fe7c` (record + changelog + bundle mirror), `55ed8c7` (threshold test), `9fd713a`
+  (the snapping-driven drag contracts in two specs), `decc14e` (a bonded partner is not a snap target),
+  `3c62d85` (the toolbar band contract), `913f3a3` (stage crop + the snap coordinate-space fix), `802cebc`
+  (smart snapping and guides), `0bf21c3` (layout geometry authority + equal-spacing distribution)
 
-Round-5 commits, in order:
+## 2. The features the source video asked for, and what they do
 
-| Commit | Finding(s) |
-| --- | --- |
-| `ff17cad` | R5-05 — a timeline keyframe drag no longer moves the playhead |
-| `8b2abb3` | R5-08 — a marquee over grouped children normalizes to the group |
-| `0e310dd` | R5-03 (first attempt — CSS `height` transition) |
-| `556fdc8` | docs — round-five part-one changelog record |
-| `56fef66` | R5-03 (shipped fix — frame-committed JS ease, replacing the CSS version) |
-| `43e02e2` | R5-01, R5-02, R5-04, R5-06, R5-07 — panel-boundary handles, the declared editor stack, keyframe control visuals |
-| `5d58f04` | R5-14, R5-15 — compact Transform Details, paint order off the panel |
-| `50404a8` | R5-09, R5-10, R5-11 — align, distribute, rotate, flip |
-| `0e81ff3` | R5-12, R5-13 — nine toolbar bands, shortcut-reference redesign |
-| `1168cee` | docs — the round-five record (this file's companion) |
+**2.1 One layout geometry authority** — `src/utils/layoutGeometry.ts` owns the union of evaluated boxes, their
+centre and the world translation of a box; the vector arrange planner imports them instead of keeping a private
+copy, so align, distribute and snapping cannot disagree about where a layer is. Every box is the canonical
+evaluator's (`getLayerWorldBounds`), so a rotated or non-uniformly scaled layer and a group container measure
+correctly.
 
----
+**2.2 TWO distribution policies, both kept**
 
-## 2. R5-01 … R5-15 — root cause → fix → where it is proven
+| Policy | Reference | Rule | Command |
+| --- | --- | --- | --- |
+| `planDistribute` (Round 5, unchanged) | box CENTRES | interior centres at an even step, extremes fixed | `Distribute horizontal` / `Distribute vertical` |
+| `planDistributeByGap` (this branch) | EDGE GAPS | the outer two boxes' outer edges hold the span, interior EDGE GAPS equalised | `Distribute horizontal spacing` / `Distribute vertical spacing` |
 
-**R5-01 — a panel show/hide handle sat over the panel's own content.** *Root cause:* the handle was
-anchored to the inner content of the panel it collapses, so a label, a card or a row could end up
-underneath it. *Fix:* each handle is anchored outside the panel it collapses — the drawer's RIGHT edge,
-the inspector's LEFT edge — while its vertical anchor stays the workspace row's top edge, so a timeline
-resize still cannot move it (R3-02 / R4-01 unchanged). *Proven by:* `e2e/panel-edge-handles.spec.ts`
-(327 lines) — placement and pointer reachability of every docked surface; `e2e/left-toolbar-collapse.spec.ts`
-migrated to the moved handle.
+They are separate commands because neither is expressible as the other without changing a shipped result: with
+boxes of different widths the centre policy and the gap policy give different (both correct) layouts, and gap
+spacing is the look a motion designer expects for unequal boxes.
 
-**R5-02 — the header painted over its own dropdowns.** *Root cause:* the header was a flex item carrying the
-same `z-index: 100` the handle layer used. Its z-index counted even while unpositioned, so it became a
-stacking context at the handle layer and **trapped the Export dropdown and the GIF panel inside itself**;
-the handle then won the tie on DOM order and painted over them. *Fix:* the editor states its stack once, as
-tokens in `src/kcsEditorTheme.css` — `--kcs-layer-panel: 90`, `--kcs-layer-handle: 100`,
-`--kcs-layer-chrome: 200`, `--kcs-layer-chrome-overlay: 300` (dialogs/menus/toasts stay at 1000+). The
-docked panels keep the value they already had (90); the header moves 100 → 300. *Proven by:*
-`e2e/panel-edge-handles.spec.ts`.
+**2.3 Smart snapping and guides**
 
-**R5-03 — collapsing the timeline teleported its edge (and drifted the world while it did).** *Root cause:*
-a browser-side `transition: height` moves the edge during the frame's own style/layout step, which leaves
-the stage's corrected camera to a `ResizeObserver` notification that can arrive a frame late under load —
-measured at **5.883px** of transient world drift. *Fix:* the ease lives in the timeline (`animateTimelineEdge`,
-`TIMELINE_EDGE_TRANSITION_MS = 180ms`, monotone ease-out cubic) and **every frame commits through the same
-`commitWorkspaceLayout` authority** the height drag uses. *Proven by:* the R5-03 assertions in
-`e2e/camera-transition-stability.spec.ts` — the edge visits intermediate heights, moves in ONE direction the
-whole way, and the edge handle stays within 2px of the moving edge on every frame.
+- **Targets:** the stage box plus the box of every other VISIBLE outermost layer. A group snaps as ONE
+  aggregate item (its children are never independent candidates), a container that carries the moving layer
+  drops out (it would be the moving item's own box), and a BONDED partner is excluded because a bond moves it
+  by the same world delta — it is leaving the box a snap would lock onto.
+- **Threshold:** `SNAP_THRESHOLD_SCREEN_PX = 8`, a SCREEN radius converted through the camera scale at
+  pointerdown, so the feel is identical at 25%, 100% and 400%.
+- **Priority:** X and Y resolve INDEPENDENTLY (a corner lock is two axis snaps), the SMALLEST screen-delta
+  candidate wins, and ties break deterministically by candidate order — stage first, then the layers in
+  stacking order. A moving box competes with its own lines too (left/centre/right, top/middle/bottom), so a
+  drag can legitimately lock its far edge as well as its leading edge.
+- **Context and cost:** the candidate set and the moving box are frozen at pointerdown (the drag writes the
+  moving layers on every move); snapping writes authored transforms, never the camera; the gesture keeps its
+  single batch interaction, so one drag is one undo entry.
+- **Surface:** a `Toggle snapping` switch beside the grid in the toolbar's View band, **armed by default**, and
+  a decorative, pointer-events-none guide overlay that disappears with the snap or the drag.
 
-**R5-04 — a selected keyframe showed a second square.** *Root cause:* a `.selected` box-shadow ring drawn
-around the key's **18px hit target**. *Fix:* the ring is deleted; keyboard focus keeps its ring through
-`:focus-visible`. The hit target is unchanged — only the redundant paint is gone. *Proven by:*
-`e2e/timeline-keyframe-controls.spec.ts`.
+**2.4 The coordinate-space fix this branch carries.** The stage bounds were built in EDITOR space
+(`EDITOR_CAMERA_CENTER ± resolution/2`) while the moving box and the layer candidates were measured in the
+project-relative world that `transform.x`/`transform.y` are authored in. A stage lock therefore either never
+fired or drew its guide **660px** away from the geometry (660 = `EDITOR_CAMERA_CENTER.x` − stage half-width,
+960) and locked the layer to a 240-offset world centre instead of the stage edge. Candidates, the moving box
+and the stage box now live in ONE space (`±half the resolution`, the world), and the overlay adds the editor
+camera origin only when it DRAWS. Proven load-bearing by a temporary probe (reverting it reproduced both the
+660px offset and the wrong lock target); the probe is not in the tree. `e2e/ae-layout-snapping.spec.ts` asserts
+the drawn guide's own `x1` is `300 − 960 = −660`.
 
-**R5-05 — a keyframe drag moved the playhead.** *Root cause:* every keyframe diamond's `onClick` carried an
-unconditional `onSetFrame(...)` beside `handleKeyframeClick`, and a real drag ends with a browser `click` on
-the pointer-captured element — so the closure read the key's **post-drag** frame. The property diamond's
-`onPointerDown` also wrote the cursor at press time. *Fix:* the cursor write moved inside the single
-drag-aware click authority `handleKeyframeClick` (which already suppressed a post-drag click's selection);
-a travelled press suppresses the cursor write with it, a press that never moved is still the click that
-reveals its frame, and the prop diamond's `pointerdown` no longer writes the cursor at all. *Proven by:*
-§4 below and `src/tests/trackLane.test.tsx`.
+## 3. Stage crop / region of interest
 
-**R5-06 — a disabled endpoint arrow looked interactive.** *Root cause:* it kept a not-allowed cursor.
-*Fix:* the normal disabled language — greyed, `disabled`, named `"(none)"`, no forbidden cursor. *Proven by:*
-`e2e/timeline-keyframe-controls.spec.ts`.
+One authority (`src/utils/stageCrop.ts`), one command surface (`src/hooks/useStageCropAuthoring.ts`) shared by
+the toolbar band and the stage overlay, so both cannot disagree about what a crop does or what it costs in
+history.
 
-**R5-07 — a property row's strip borrowed the channel colour.** *Fix:* the strip is the neutral `[◀][+][▶]`
-trio — a plain `+` where a coloured keyframe glyph sat, no coloured tick, no tinted label. The channel colour
-stays on the lane diamonds and their connector; hierarchy, indentation and row/lane alignment are unchanged.
-*Proven by:* `e2e/timeline-keyframe-controls.spec.ts`.
+- **Geometry:** the new stage size IS the region's size, and the region is clamped into the stage first — a
+  crop can never hide pixels outside the new frame.
+- **One uniform shift:** `dx = w/2 − roi.x − roi.w/2`, `dy = h/2 − roi.y − roi.h/2`, applied ONLY to the ROOT
+  layers — exactly the layers the evaluator composes against nothing (`parentId ?? booleanGroupId`, only when
+  that container exists). A child is container-local, so its container already carries it and shifting it twice
+  would move it twice: world placement is preserved exactly.
+- **Every frame moves with it:** every `x`/`y` channel keyframe of a shifted layer across every sequence scope
+  (`templateId`), and the legacy composite `keyframes[].transform.x/y` list, so no frame of any authored
+  sequence is left on the old origin.
+- **Untouched:** rotation, scale, opacity, masks/mattes, groups, parent transforms, trim path, media and
+  `imageContentBounds` — a crop is a reposition, not a re-parent.
+- **A refusal, not a silent loss:** a root layer with `anchor !== 'none'` makes the command REFUSE with an
+  explanation ("A layer pinned by a stage anchor cannot be moved by a crop. Set its anchor to None first."),
+  because the evaluator pins that layer's position; the Apply control is disabled with that reason as its title.
+- **TWO crop-to-content modes, both CURRENT-FRAME:** "Crop to current selection at current frame" (the
+  collective evaluated box of the selection, folded through the same target logic the arrange commands use) and
+  "Crop to visible content at current frame" (the evaluated box of every layer whose track is not hidden for
+  editing). Both measure the EVALUATED bounds at the CURRENT authored frame and say so in their labels, because
+  a layer that animates away from the region leaves the new frame at the frames that move it. **No
+  all-animation-frames auto-crop was added** — it needs a bounds-over-all-frames pass this branch does not
+  have, and shipping it under the same label would be a lie.
+- **History and state:** the armed mode and the on-screen region are TRANSIENT authoring state — drawing or
+  resizing a region is not undoable — and `Apply crop` is exactly ONE batch interaction: one undo entry that
+  restores the previous stage size AND the previous positions together. A zero-area or full-stage region is a
+  no-op with no history entry.
+- **Authoring surface:** the region is authored in stage space (origin at the stage's top-left) and drawn back
+  through the editor camera with eight resize handles, a dimmer outside the region and a live size readout; the
+  pointer targets a handle by its drawn element, so the handle table and the hit test cannot drift. `Escape`
+  drops the region, then leaves the mode, ahead of the freeform tool's own listener.
 
-**R5-08 — a marquee over grouped children selected the children (and an empty gap could select the group).**
-*Root cause:* the canvas committed the RAW `getPartsInMarquee` hit list, so `selectedPartIds` became the
-children and the overlays drew child frames; and `getPartsInMarquee` measured the geometryless container
-through the synthetic ±32 `fallbackBounds()`, which is why an empty gap selected the group. *Fix:*
-`resolveMarqueeSelection` (`src/utils/layerGrouping.ts`) folds every hit through the existing
-`resolveStageSelectionTarget` — the same authority the canvas click uses — with the selection that was live
-when the box began, and drops `isGroup` containers from the raw hits. *Proven by:* §5 below.
+## 4. Export parity
 
-**R5-09 / R5-10 / R5-11 — align, distribute, rotate and flip did not exist.** *Fix:* one pure planner plus
-one writer, so a command is exactly one undo step — see §3 for the full semantics. *Proven by:*
-`src/tests/vectorArrange.test.ts`, `src/tests/vectorArrangeCommands.test.tsx`, `src/tests/shortcuts.test.ts`,
-`e2e/authoring-toolbar.spec.ts`.
+The crop writes ONLY the fields the OGraf export already reads — the layer `x`/`y` channels, the static
+`baseTransform`, and the project resolution that `src/ograf/compiler.ts` reads as `sceneData.width` /
+`sceneData.height` — and touches no export-only structure (media, `imageContentBounds`, masks/mattes). No
+crop-specific export path exists, so the exporter reads the shifted document through its existing authority, and
+a snapped/distributed document is likewise unchanged in kind. Evidence on this revision: the OGraf release gate
+(`npm run validate:ograf` plus `e2e/ograf-editor-export.spec.ts` and `e2e/ograf-phase2d-interoperability.spec.ts`
+via `PORT=5014 npm run qa:release`) is green, and every OGraf spec of the full Chromium suite is green.
 
-**R5-12 — the toolbar's structure was unannounced and its bands were uneven.** *Fix:* the strip is organised
-into the **nine** command bands a motion editor reads left to right — canvas tools, create, Boolean, layer
-group, align, distribute, rotate and flip, arrange, view — and every band is one `role="group"` with its own
-accessible name. A band whose commands are variants along one axis (six align edges, two distribute axes) is
-ONE trigger that opens a menu; a band of distinct one-shot commands (rotate CCW/CW, flip H/V) keeps one
-button per command. The toolbar owns no document state and holds no second copy of any command. *Proven by:*
-`e2e/authoring-toolbar.spec.ts`, `src/tests/authoringToolbar.test.tsx`.
+## 5. What the gate found, and what was done about it (nothing weakened)
 
-**R5-13 — the shortcut reference was a second copy of the keymap.** *Fix:* it is now a FILTER over the one
-shortcut table (`utils/shortcuts`): typing narrows rows by label, detail, category or the formatted keys;
-each category is a labelled section with its row count; each gesture is a platform-formatted chip (Windows/Linux
-reads `Ctrl+Shift+←`, macOS reads `⇧⌘←`); a command owned by a focused control is listed under Timeline with
-its scope named; an empty result says so. It uses the shared focus trap and opener restoration.
-*Proven by:* `src/tests/shortcutReferenceDialog.test.tsx`.
+The first FULL suite run on the pushed-before revision reported **399 passed / 5 failed**: the two documented
+camera samples plus THREE failures this branch caused or exposed. Two were real defects and one was an
+ambiguous new test; none was reported as red, skipped, retried, padded with a sleep, or fixed by widening a
+tolerance.
 
-**R5-14 — the Transform section was repetitive.** *Fix:* `Position [X][Y]` followed by ONE row of
-`[Rotation][Scale][Opacity]`, three cells on one fractional grid that keep their own column at every
-inspector width (a quarter narrower than the stacked rows, still one line at the 250px dock floor).
-Removed: `Reset 0°` (a second control writing the field's own value), `Add Keyframe` (keyframing is the
-timeline property row's authority), and the labelled `Locked`/`Free` button — the aspect lock stays
-reachable as one compact glyph in the Scale cell's header, because removing it outright would make a free,
-non-uniform canvas corner drag unreachable. The model is untouched: `scaleX` and `scaleY` remain independent
-channels with their own lanes and keyframes. *Proven by:* `e2e/inspector-transform-details.spec.ts`,
-`src/tests/transformPresentation.test.tsx`.
+1. **`e2e/authoring-toolbar.spec.ts` — a missed callsite** (`3c62d85`): the spec still asserted the NINE
+   pre-crop bands; the feature adds `Crop` and `Crop to content`. The count and the order now carry them, and
+   the per-band check matches the label EXACTLY because `Crop` is a prefix of `Crop to content`. Everything
+   else still runs (one hitbox/glyph size across every control, the tool and grid state, no Bind/Unbind). 9/9.
+2. **`e2e/layer-binding.spec.ts:137` — a real snap-target defect, fixed in the product** (`decc14e`): the
+   dragged child's target left edge came 4.98 world units (≈ 2.9 screen px, inside the 8px radius) from its
+   BONDED PARTNER's frozen left edge, and the snap locked onto it — a lock to a box the partner was itself
+   leaving, since a bond moves its partners by the same world delta (`updateCurrentTransform` propagates them).
+   The snap moving set now expands through `utils/partBinding`'s `resolveBondGroup`, exactly as it already
+   drops the containers that carry a moving layer. The pre-existing spec passes **unchanged** and is the
+   regression proof.
+3. **`e2e/named-sequence-v2.spec.ts:29` — a spec that measures a pure pointer delta** (`9fd713a`): it drags a
+   shape 40px down and requires exactly that pose delta, but the shape is created on the stage centre, so its
+   own top edge lands on the stage's centre line at the end of the drag — a legitimate lock — and the spec read
+   the snapped pose (0.939px off). It now asserts the default and switches snapping OFF for that one
+   measurement, with a comment saying why; every assertion is unchanged.
+4. **`e2e/ae-layout-snapping.spec.ts`'s new threshold test — two causes of ambiguity** (`9fd713a`, `55ed8c7`):
+   (a) it converted through the camera scale twice for a single drag, and the stage box is measured
+   asynchronously, so the two reads could disagree; (b) the REAL cause — a moving box also carries its own
+   centre and far edge, and at the zoom the `-` keys actually reach, Alpha's RIGHT edge crosses the stage's
+   CENTRE line during the very drag the test used. The failure named it: `guides=[x=300]` (the viewBox centre)
+   with a 23.05px gap instead of 16px. Whether it fired depended on how many zoom steps landed, and that is
+   timing-dependent: the zoom handler reads `zoomRef`, which the render updates, so 13 `-` presses collapsed to
+   4 effective steps (`0.9^4 = 0.6561`) under load and reached `clampZoom`'s floor of `0.3` without it. The
+   test now isolates ONE candidate — a single layer seeded at (0, −200), dragged toward the stage's LEFT edge,
+   the miss measured from the rendered layer box and the rendered artboard in the same frame — so "4 screen
+   pixels lock, 16 do not" holds at whatever zoom the camera settles on, and its failure message carries the
+   guide's line, both edges, the measured miss, the zoom and px-per-unit. Verified 3/3 green under the exact
+   load that reproduced it (8 workers, `--repeat-each=3` over the snapping spec and seven heavy neighbours:
+   192 passed, only the camera pair failing).
+5. **Incidental, pre-existing, NOT fixed (out of scope):** the zoom-handler/`zoomRef` collapse described in
+   (4) — recorded because it is what made an otherwise deterministic test look flaky.
 
-**R5-15 — the layer's paint order was repeated in Details.** *Fix:* the raw `Index 1` readout and the second
-Bring Forward / Send Backward strip are gone; arrange lives on the authoring toolbar's own group, which
-writes the same `handleZIndexChange` path, and the now-dead `TransformZIndexCard` plus the prop it fed are
-deleted. *Proven by:* `e2e/layer-index-persistence.spec.ts` now observes the STAGE'S PAINT ORDER and drives
-the toolbar's Arrange group — the same write path, a stronger observable.
+## 6. The gate and the exact numbers
 
----
-
-## 3. VECTOR COMMAND SEMANTICS (R5-09, R5-10, R5-11)
-
-Two modules, one authority each:
-
-- `src/utils/vectorArrange.ts` — **pure planning only**. It decides the world-space patch every target
-  receives and writes nothing.
-- `src/hooks/useVectorArrangeAuthoring.ts` — writes that plan through the ONE transform write path
-  (`updateCurrentTransform`: world space in, container-local out) inside ONE batch interaction, so a command
-  is exactly one undo step and one history entry, on animated and static layers alike.
-
-**What a target is.** A **layer** of the canonical selection, measured in world space by
-`getLayerWorldBounds` — the group-aware measurement the grouping authority already uses, so a container is
-arranged by the box its children define and the two can never disagree. A layer whose ancestor is ALSO
-selected is dropped from the plan: the ancestor already carries it and writing both would move it twice.
-The ancestor relationship is read from `utils/partBinding`, the one place `parentId`/`booleanGroupId`
-precedence is defined.
-
-| Command | Reference / pivot | Rule |
-| --- | --- | --- |
-| ALIGN (6 edges) | the COLLECTIVE selection bounds | only the aligned axis is written, so the other axis cannot drift; a target already on the edge receives NO write, so a property that did not move creates no keyframe. There is no reference-object ("key object") authority in this editor; inventing one here would be a second selection rule. |
-| DISTRIBUTE (2 axes) | needs **≥ 3** measurable targets | ordered by box CENTRE, ties broken by layer id; the two extreme targets keep their positions (the span never changes); every interior centre sits at an even step, `first + (last − first) · i / (n − 1)`. Distribution by centres, not by gaps — defined for overlapping layers too. |
-| ROTATE ±90° | the COLLECTIVE selection centre | one pivot for the whole selection turns it as one rigid body; each new place comes from `rotateAboutWorldPivot` — the same pivot-rotation authority the canvas gizmo uses — evaluated against the transform captured BEFORE the command, so the pivot cannot drift. |
-| FLIP H/V | the COLLECTIVE selection centre | world placement preserved: a single target flips in place about its own visual centre, a multi-selection mirrors as one picture. The sign law is `utils/mirror`'s (`scaleX`/`scaleY`/`rotation` negate), applied about the origin line then translated onto the flip axis, so a rotated, non-uniformly scaled layer mirrors exactly instead of approximately. |
-
-**Keys** (four of the commands carry a binding; chosen so no plain tool letter is claimed and no binding is
-a prefix of another):
-
-| Gesture | Command |
-| --- | --- |
-| `mod+shift+arrowleft` | Rotate 90° counter-clockwise |
-| `mod+shift+arrowright` | Rotate 90° clockwise |
-| `shift+h` | Flip horizontal |
-| `shift+v` | Flip vertical |
-
-Align and distribute are deliberately **toolbar-only**: their target depends on the measurable selection (an
-align of two layers and a distribute of three are different commands with the same intent), so a single
-letter would have to guess. They are absent from the shortcut reference rather than documented with a fake
-key.
-
----
-
-## 4. KEY-DRAG / PLAYHEAD PROOF (R5-05)
-
-`e2e/timeline-keyframe-gesture.spec.ts` drives the real editor with the authoring cursor scrubbed to
-**frame 18** between two keyframes, and asserts `.playhead-line[data-frame]`:
-
-1. a **single-key** drag released **before** the playhead keeps the cursor at `18` during the drag, at the
-   release AND after further pointer movement (which changes nothing);
-2. a **two-key** drag **crossing** the playhead and released **after** it does the same;
-3. one `Ctrl+Z` returns both keys to their pre-drag frames.
-
-Unit level: `src/tests/trackLane.test.tsx` (42 lines added) pins the click authority — a travelled press
-suppresses the cursor write, a press that never moved still reveals its frame.
-
-The defect's shape, stated once: the browser fires a `click` on the pointer-captured element after a real
-drag, so an unconditional `onSetFrame` in that handler reads the key's **post-drag** frame; and a
-`pointerdown` that writes the cursor moves it at press time. Both writes now live in the one drag-aware
-click authority, and the prop diamond's `pointerdown` writes nothing.
-
----
-
-## 5. GROUP-SELECTION NORMALIZATION PROOF (R5-08)
-
-`e2e/group-interaction.spec.ts` (142 lines added) asserts against the real DOM:
-
-1. a marquee across the grouped children selects the **group**: ONE container frame, drawn from the
-   click-selected frame's exact geometry (children aggregate), and **no child-level frame**;
-2. the same box dragged across the **empty gap between the children** selects **nothing** — the
-   `fallbackBounds()` placeholder is no longer a candidate rectangle;
-3. a marquee across a **nested** child normalizes to the **outermost** container;
-4. the two explicit drill-in paths still select the layer itself and draw its OWN frame — a canvas
-   **double-click** and a click on the child's row in the timeline Outliner.
-
-All four fail on the unfixed commit. Unit level: `src/tests/layerGrouping.test.ts` (51 lines added) pins
-`resolveMarqueeSelection` — the fold through `resolveStageSelectionTarget`, the `isGroup` drop, and the
-selection captured before the press clears it.
-
----
-
-## 6. CAMERA-INVARIANT TRANSITION PROOF (R5-03) — and the round's one open item
-
-**What R5-03 proves (green).** `e2e/camera-transition-stability.spec.ts` samples the client position of
-authored world points on EVERY animation frame across a chrome transition and requires every frame to hold
-the world within **1px** of the first sample and the magnification within `0.002`. The R5-03 section added by
-this round asserts the timeline edge specifically: it visits intermediate heights, travels in ONE direction
-with no counter-motion, and the edge handle stays within 2px of the moving edge on every frame. The measured
-traces of the timeline collapse and expand — and of every other toggle — report `worstDelta=0.000px`.
-
-**The open item, reported exactly as measured.** The FULL Chromium suite contains 396 tests and runs on **8
-workers**. Three runs of it on the frozen revision `0e81ff3`:
-
-| Run | Command | Result |
-| --- | --- | --- |
-| 1 (already on record) | `CI=1 PORT=5013 npx playwright test --retries=0` | **393 passed / 3 failed** — `e2e/camera-invariance.spec.ts:300`, `e2e/camera-transition-stability.spec.ts:231`, `e2e/camera-transition-stability.spec.ts:259` |
-| 2 (this record) | same | **394 passed / 2 failed** — `:231`, `:259` |
-| 3 (this record) | same | **394 passed / 2 failed** — `:231`, `:259` |
-| Isolation A | `… playwright test e2e/camera-transition-stability.spec.ts e2e/camera-invariance.spec.ts --retries=0` (2 workers, 9 tests) | **9 passed / 0 failed**; all 12/12 traces `worstDelta=0.000px` |
-| Isolation B | `… playwright test e2e/camera-transition-stability.spec.ts --workers=8 --retries=0` (8 workers, 4 tests) | **4 passed / 0 failed**; all 12/12 traces `worstDelta=0.000px` |
-
-The two failing samples, exactly as the reporter printed them:
-
-```
-inspector show: frame 6 t=150.9ms alpha x drifted -28.859px (stage 885.3px)      [run 2, spec line 231]
-repeat Show Inspector: frame 5 t=137.8ms alpha x drifted -28.859px (stage 1221.3px)  [run 2, spec line 259]
-inspector show: frame 6 t=154.2ms alpha x drifted -28.859px (stage 885.3px)      [run 3, spec line 231]
-repeat Show Inspector: frame 6 t=160.3ms alpha x drifted -28.859px (stage 1221.3px)  [run 3, spec line 259]
-```
-
-with `worstDelta=28.859px` and `magnificationSpread=0.00000` on both samples in both runs, against the
-spec's `<= 1px` bound. Every other trace in every run — `inspector hide`, `repeat Hide Inspector`, the left
-toolbar, the timeline collapse and expand — reported `worstDelta=0.000px`, and the magnification never moved
-on any frame of any run.
-
-**What the number is.** `28.859px` is exactly half of `57.71875px`, the stage box's own width delta for the
-frame one step earlier (`944 → 886.28125` and `1280 → 1222.28125`; the sample reads the box later in the same
-frame, at `885.3` / `1221.3`). The panel is on the right, so the stage's right edge gives up the width and the
-stage's centre moves left by half of it — the arithmetic of a world point painted at the box's centre while
-the box has already narrowed. It is the same class of transient R5-03 measured on the timeline's CSS
-`height` transition (5.883px there, because the timeline's per-frame delta is smaller): one painted frame of
-the authored world against a box it no longer had, because the correction rides a `ResizeObserver`
-notification that can land after the paint when the main thread is busy.
-
-**What this record does and does not claim.**
-
-- The failing assertion (`expectStable`, `DRIFT_TOLERANCE_PX = 1`) and the two failing tests are the
-  **pre-round-5 text**; this round only ADDED a timeline section to that spec and extended `movingFrames` to
-  also treat a height change as an animation. The inspector samples' stage height is constant (`281.0`).
-- The measured transition — `.property-inspector`'s `transition: width 240ms ease, …` — is **unchanged** by
-  this round: `43e02e2` changed only that rule's `z-index` from the literal `90` to `--kcs-layer-panel`,
-  whose value is also `90`.
-- It is **invisible in isolation** at 2 and at 8 workers with `worstDelta=0.000px`, and it reproduces in
-  **every** full-suite run at this revision (3/3) at the same offset — a higher reproducibility than the
-  round-4 record, where the same command's repeated full run was clean and the single sample appeared once
-  (`camera-transition-stability.spec.ts:238`) and did not return.
-- **No tolerance was widened, no retry added, no sleep inserted and no test skipped**; the spec bytes are
-  untouched, as directed. The reviewer sees it as an open item, not as a passing gate: a clean full-suite run
-  at this revision has not been observed.
-- The one diagnostic this record does **not** contain: a full-suite run on the pre-round-5 revision under the
-  same 8-worker load, which would need another checkout (out of this part's scope). So the record shows the
-  reproducibility change without attributing it.
-
----
-
-## 7. FPS/TIMEBASE CONTRACT (literal, unchanged)
-
-```
-FPS/TIMEBASE CONTRACT (KCS) — the ONE mapping between frames and time.
-
-  seconds = frame / fps        frame = seconds * fps
-
-- The project FPS is an authored TIME MAPPING, not a redraw budget. Changing
-  the FPS of a document re-maps frames to seconds; it never changes what the
-  viewer sees, and it never changes the animation's wall-clock duration unless
-  the frame count changes with it.
-- The monitor / browser refresh rate has no effect on the authored duration:
-  playback integrates elapsed wall-clock time and steps the playhead by whole
-  authored frames (see `usePlayback`).
-- The FPS is a positive whole number of frames per second. Fractional rates
-  such as 59.94 are NOT supported and are never faked: the Lottie importer
-  rounds `fr` and reports LOTTIE_FRACTIONAL_FPS, and the editor offers
-  24/30/60/120 FPS with 60 as the new-document default.
-- The OGraf package carries the same `fps` on SceneData and asks for it in
-  `renderRequirements.frameRate.ideal`; the generated runtime advances by
-  elapsed time (`|targetFrame - startFrame| / fps * 1000` ms → progress), so an
-  exported graphic keeps its wall-clock duration in a host whose own timeline
-  FPS differs.
-- The timeline's duration control writes `round(seconds * fps)` frames, so the
-  seconds the user types are the seconds the animation lasts, at every rate.
-- Any GIF/video export must map `frameDelayMs = 1000 / fps` per authored frame
-  for the same reason: frame count × delay = wall-clock duration, independent of
-  the encoding cadence.
-```
-
-**Reality Hub timing note.** A Reality Hub Timeline FPS does not have to match the KCS FPS for timing to stay
-correct — only the graphic's frame count and its own FPS define its duration, and the generated runtime
-advances by elapsed time, so a host running a different timeline rate still plays the graphic for the
-authored wall-clock duration.
-
----
-
-## 8. UNDO TRANSACTION CONTRACT (unchanged by round 5)
-
-- **One continuous gesture = ONE undo entry.** The transaction opens on the press (`startBatchInteraction`)
-  and closes on the release, the cancel or the loss of pointer capture (`endBatchInteraction`).
-- **A discrete action stays its own entry.** Batching never merges two actions into one.
-- **A vector arrange command is one entry**: the whole plan is written inside ONE batch interaction through
-  `updateCurrentTransform`, on animated and static layers alike (R5-09…R5-11).
-- **A panel or timeline RESIZE is UI state and never enters document history at all** — including the R5-03
-  frame-committed ease, which commits layout, not the document.
-- **A set delete is one entry** (R4-04), and `endBatchInteraction` is idempotent when no transaction is open.
-
----
-
-## 9. TESTS — the full validation on the frozen revision `0e81ff3`
-
-Isolated ports only (`PORT=5013` → API 5013, UI 5188); `npm run dev` was never used; 5173/5000 were never
-bound, stopped or restarted.
+Isolated ports only (`PORT=5014` → API 5014, UI 5188 under `CI=1`); `npm run dev` was never used; 5173 and 5000
+were never bound, stopped or restarted.
 
 | Command | Result |
 | --- | --- |
-| `npm run check` (single command: lint + `tsc -b` + `vitest run` + build) | **green** — oxlint clean, typecheck clean, **165 files / 2,478 tests** passed, 0 failed, 0 skipped, production build succeeded (2,072 modules) |
-| `node scripts/check-state-consistency.mjs` | **PASS** (48 checks on `0e81ff3`; 50 once this round's record joins the bundle) |
+| `npm run build` | green — `tsc -b` clean, production build succeeded (2,075 modules) |
+| `npm run validate:ograf` | green — `fixtures/ograf/minimal.ograf.json: valid OGraf v1 manifest` |
+| `PORT=5014 npm run qa:release` | green — 2 passed |
+| `PORT=5014 npm run qa:v6` | green — 3 passed |
+| Neighbouring Playwright specs (12 files, 8 workers) | **73 passed / 2 failed** — only the camera pair |
+| `npm run check` (one command) | **green** — oxlint clean, `tsc -b` clean, **168 files / 2,533 tests passed, 0 failed, 0 skipped**, production build succeeded |
+| `node scripts/check-state-consistency.mjs` | **PASS (50 checks)** — 52 once this record joined the bundle |
 | `npm audit --audit-level=low` | **0 vulnerabilities** |
-| `git diff --check` | **clean** |
-| **FULL Chromium** `CI=1 PORT=5013 npx playwright test --retries=0` (run 2, 396 tests, 8 workers) | 394 passed / **2 failed** — see §6 |
-| **FULL Chromium** `CI=1 PORT=5013 npx playwright test --retries=0` (run 3, 396 tests, 8 workers) | 394 passed / **2 failed** — see §6 |
-| `CI=1 PORT=5013 npx playwright test e2e/camera-transition-stability.spec.ts e2e/camera-invariance.spec.ts --retries=0` | **9 passed / 0 failed**, `worstDelta=0.000px` on 12/12 traces |
-| `CI=1 PORT=5013 npx playwright test e2e/camera-transition-stability.spec.ts --workers=8 --retries=0` | **4 passed / 0 failed**, `worstDelta=0.000px` on 12/12 traces |
-| (already green on this revision) `npx tsc -b`, `npm run lint`, `npm test`, `npm run build`, `npm run validate:ograf`, `PORT=5013 npm run qa:release` (2) , `PORT=5013 npm run qa:v6` (3) | all pass |
+| `git diff --check` | clean (exit 0), and clean over `802cebc..HEAD` |
+| FULL Chromium suite (`CI=1 PORT=5014 … --retries=0`, 404 tests, 8 workers) | run 1 `3c62d85`: **399 / 5 failed**; run 2 `9fd713a`: **401 / 3 failed**; run 3 `55ed8c7`: **402 passed / 2 failed** |
 
-Round-4's own numbers are unchanged and still stand for that round: **163 files / 2,438 tests**, and the
-FULL Chromium **379 passed / 0 failed / 0 flaky** on its repeated run. The delta to today's 165 files /
-2,478 tests is round 5's new specs and cases.
+### The two remaining failures, exactly as measured
 
----
+`e2e/camera-transition-stability.spec.ts:231` (`inspector show`) and `:259` (`repeat Show Inspector`) — the
+pre-existing, load-sensitive family the Round-5 record already carries. Final run: `:231` → `inspector show:
+frame 6 t=143.2ms alpha x drifted -28.859px (stage 885.3px)`; `:259` → `repeat Show Inspector: frame 5
+t=144.3ms alpha x drifted -28.859px (stage 1221.3px)`. Earlier runs measured `9.109px` at `:231` and
+`28.859px` at `:259`. Every trace in every run reported `magnificationSpread=0.00000`, and every other trace
+(`inspector hide`, `repeat Hide Inspector`, the toolbar samples, the timeline samples) reported
+`worstDelta=0.000px`.
 
-## 10. PR #9, CI, live surfaces, and what was NOT done
+**Isolation on this revision is WORSE than the Round-5 record, and is reported as such:** running only
+`e2e/camera-invariance.spec.ts e2e/camera-transition-stability.spec.ts` gave **2 workers 7 passed / 2 failed**
+and **8 workers 8 passed / 1 failed**, both with a **9.109px** excursion on `inspector show`, where the Round-5
+record measured `0.000px` in isolation at both worker counts. Nothing on this branch touches the measured
+transition — the spec, its `DRIFT_TOLERANCE_PX = 1` bound, `expectStable` and the `.property-inspector`
+`transition: width 240ms ease` rule are untouched, and the stage geometry the traces print
+(`944x281 -> 584x281`, `1280x281 -> 920x281`) is identical to the Round-5 record's. **No comparison against
+the pre-branch revision was made**: the Round-5 worktree and the canonical checkout are read-only for this
+task and no second checkout was created, so the change in isolation behaviour is reported **without
+attribution** for the reviewer's decision. No tolerance was widened, no retry added, no sleep inserted, no test
+skipped and no spec byte changed.
 
-- **PR #9 — OPEN, not merged:** `https://github.com/ErtugrulAK/keyframe-character-studio/pull/9`, base `main`.
-- Head `1168ceea0fe409f153221749b3e0b890316835cf` (`1168cee`) on `origin`; mergeable **MERGEABLE**;
-  merge state **CLEAN**. The push was a fast-forward (`42acf1e..1168cee`) with an explicit refspec — **no
-  force push, no `--force-with-lease`, no rebase, no history rewrite, no branch deletion**.
-- CI **CI Pipeline** run **`38550570067`** (`pull_request`) on that head — conclusion **success**,
-  job `Build, Lint & Test Verification` green in 1m20s
-  (`https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38550570067`).
-- **Live preview 5173:** HTTP 200, served from THIS worktree at the pushed head. The listener is
-  `node … keyframe-character-studio-omp-manual-qa-r1\node_modules\.bin\..\vite\bin\vite.js --host --port 5173`
-  (pid **50876**), and branch-only modules answer 200 there — `/src/utils/vectorArrange.ts` (the round-5
-  arrange authority, which does not exist on `main`) and `/src/tests/vectorArrange.test.ts`.
-- **API 5000:** pid **18280** (`server/index.js`), never stopped or restarted; `/api/health` 200.
-- **No merge, no release:** PR #9 was not merged; no tag was created, moved or deleted; no GitHub release was
-  published or finalized; nothing was published to npm; no dependency, package, lockfile, workflow or OMP
-  global config changed.
-- **The canonical checkout was never written to** — it is still on `main` @ `8e2df61` and clean.
-- **Scope guard held:** the GIF export keeps its 60 FPS cap, no video export exists, the Mac ZIP and Reality
-  Hub timing items remain final manual QA pending with no product change, and the FPS/timebase is untouched.
-- **The handoff refresh that carries this file is a docs-only commit on top of `1168cee`** (documentation
-  only — no product source, test, package or workflow byte), so the **validated code+record head is
-  `1168cee` and its green CI run is `38550570067`**.
+## 7. Standing contracts (unchanged by this branch)
 
----
+- **FPS/TIMEBASE:** one mapping between frames and time (`src/utils/timebase.ts`); playback is elapsed-time
+  driven, so a monitor's refresh rate cannot change a duration. The GIF export keeps its 60 FPS cap; there is
+  no video export.
+- **Undo transaction:** one continuous gesture = ONE undo entry (opened on the press, closed on release,
+  cancel or lost pointer capture). Every command of this branch respects it: a snap, a distribute, a crop and
+  both crop-to-content commands each produce exactly one entry.
+- **Reality Hub timing** and the macOS ZIP item remain final manual-QA pending with no product change.
 
-## 11. USER RETEST LIST (the merge gate)
+## 8. PR, CI, live surfaces, and what was NOT done
 
-Please retest on `http://localhost:5173/` (this worktree):
+- Pushed with an explicit refspec (`git push -u origin HEAD:refs/heads/feat/ae-layout-crop-snapping`) — no
+  force, no `--force-with-lease`, no rebase, no history rewrite.
+- **PR #10 — OPEN, not merged**, stacked on PR #9, base `fix/manual-qa-round1-remediation`, head
+  `feat/ae-layout-crop-snapping`, head `cd8fe7c5f16e174ad8a5a7c5a42524e873eb0263`, mergeable **MERGEABLE**;
+  CI **CI Pipeline** run **`38565624999`** (`pull_request`) — **success**
+- **PR #9 — OPEN, untouched, not merged**; its branch, worktree and pushed head are unchanged.
+- **5173 keeps serving the ROUND-5 worktree** (vite listener pid 50876, HTTP 200) — the user's QA surface and
+  the merge gate for PR #9 — and was deliberately NOT switched to this branch.
+- **API 5000** (pid 18280, `/api/health` 200) was never stopped or restarted.
+- NOT done: no merge of anything; no all-animation-frames auto-crop; no re-pointing of 5173; no fix of the two
+  pre-existing camera samples; no fix of the zoom-key collapse; no tag, release, npm publication,
+  dependency/package/lockfile/workflow/OMP-config change, and no write to the canonical checkout.
 
-- **Round 1 — A, B, C, D, E, F, G, H, I, J**
-- **Round 2 — R2-01 … R2-12**
-- **Round 3 — R3-01 … R3-13**
-- **Round 4 — R4-01 … R4-16**
-- **Round 5 — R5-01 … R5-15**, in particular: both panel handles at a very short window height and a very
-  narrow window width (R5-01); the Export dropdown and the GIF panel opened while both handles are on screen
-  (R5-02); the timeline edge easing on collapse/expand with its handle glued to the moving edge (R5-03);
-  a selected keyframe showing the filled diamond only, with `Tab`-focus still ringing it (R5-04); a keyframe
-  drag released before, across and after the playhead — the playhead must not move (R5-05); a disabled
-  `[◀]`/`[▶]` endpoint arrow (R5-06); a property row's neutral `[◀][+][▶]` (R5-07); a marquee across grouped
-  children and then across the empty gap between them (R5-08); Align and Distribute on two and three layers,
-  `Ctrl+Shift+←`/`→` rotate, `Shift+H`/`Shift+V` flip, each undone by one `Ctrl+Z` (R5-09…R5-11); the nine
-  toolbar bands left to right (R5-12); `?` opening the filterable shortcut reference (R5-13); the compact
-  Position/Rotation/Scale/Opacity rows at the narrow inspector width (R5-14); no paint-order readout or Bring
-  Forward strip in Details, arrange on the toolbar instead (R5-15).
+## 9. User retest checklist (for PR #10's review; the 5173 retest still belongs to PR #9)
 
----
+1. **Layout** — select three layers of DIFFERENT widths and run `Distribute horizontal spacing`: the two edge
+   gaps become equal, the outer boxes' outer edges do not move, and it is ONE undo step. Then run
+   `Distribute horizontal`: the interior box's CENTRE is evenly spaced (the Round-5 behaviour, kept).
+2. **Snapping** — with `Toggle snapping` armed (the View band's default), drag a layer near the stage's edge,
+   near its centre line and near another layer's edge: a guide appears and the layer locks. Turn the switch off
+   and the same drags are free. A dragged GROUP locks as one box, and a BONDED partner is never a target.
+3. **Crop** — arm `Crop / region of interest`, drag a region and check the dimmer, the eight handles and the
+   size readout; `Apply crop` (one undo step) sets the stage to the region and keeps the scene where it sat,
+   with every sequence scope's keyframes moved with it; `Clear crop region` drops the region without cropping;
+   a layer pinned by a stage anchor refuses with an explanation; `Crop to content` offers the current selection
+   and the visible content at the CURRENT frame.
+4. **Export** — the OGraf ZIP of a cropped, snapped and distributed scene still matches the editor.
 
-## 12. Upload
+## 10. Upload
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`. No other file in the `latest` bundle needs to be
 uploaded.

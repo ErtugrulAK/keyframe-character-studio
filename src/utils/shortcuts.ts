@@ -69,6 +69,17 @@
  * plain arrow walking, and no binding in this table is a prefix of another.
  *
  * Deliberately NOT adopted:
+ *   - A temporary "suspend snapping" modifier for the translate drag. The snap
+ *     radius and the toggle are enough, and every candidate modifier is already
+ *     spoken for or dangerous: `mod` (Ctrl/Cmd) is the editor's "do not start a
+ *     drag" gesture (the stage's pointer-down bails on it), `shift` is the
+ *     scale-lock modifier the corner/edge resize reads, `alt` is claimed by the
+ *     OS and the browser (Alt-drag starts a window move on Windows and a link
+ *     download on the web), and a bare letter is not readable while a pointer
+ *     gesture owns the keyboard. Snapping is therefore a toggle, not a hold:
+ *     the View band's magnet control (`Toggle snapping`) is the one switch, and
+ *     it is a UI control rather than a keymap entry, so this table keeps its
+ *     "one gesture, one command" invariant.
  *   - A key for Align (six edges) and Distribute (two axes). Both are
  *     multi-item commands whose target depends on the measurable selection — an
  *     align of two layers and a distribute of three are different commands with

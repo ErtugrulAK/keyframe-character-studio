@@ -263,7 +263,13 @@ tolerance was widened, no retry added, no sleep inserted, no test skipped and no
   body states that it stacks on PR #9 and that PR #9 was not touched.
 - PR #9 itself is OPEN, its branch and worktree were not modified, and nothing was merged.
 
-__(PR NUMBER / URL / HEAD SHA / MERGEABILITY / CI)__
+- **PR #10 — OPEN, not merged** — `https://github.com/ErtugrulAK/keyframe-character-studio/pull/10`, base
+  `fix/manual-qa-round1-remediation`, head `feat/ae-layout-crop-snapping`; the reported head is
+  `cd8fe7c5f16e174ad8a5a7c5a42524e873eb0263` (`cd8fe7c`), mergeable **MERGEABLE**, CI **CI Pipeline** run
+  **`38565624999`** (`pull_request`) concluded **success**. The handoff-refresh commit on top of that head is
+  docs-only (this record, the changelog mirror and the bundle), and a document cannot carry the SHA of the
+  commit that contains it, so the reviewed code revision is unchanged: `55ed8c7`.
+- The PR body states that it stacks on PR #9 and that PR #9 was not touched.
 
 ## 9. Live surfaces
 

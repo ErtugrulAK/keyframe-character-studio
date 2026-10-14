@@ -134,3 +134,60 @@
   opacity: 0.9;
   stroke-dasharray: 4, 3;
 }
+
+/*
+ * Stage crop / region of interest. The dimmer is the area OUTSIDE the region
+ * (the region itself stays as authored, so the user crops against the real
+ * pixels); the handles are the resize targets of the crop gesture.
+ */
+.stage-canvas-container.crop-mode {
+  cursor: crosshair;
+}
+
+.stage-crop-dimmer {
+  fill: rgba(0, 0, 0, 0.5);
+}
+
+.stage-crop-region {
+  fill: none;
+  stroke: var(--accent-teal);
+  stroke-dasharray: 6, 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.stage-crop-size {
+  fill: var(--accent-teal);
+  font-weight: 700;
+  user-select: none;
+}
+
+.stage-crop-hint {
+  fill: rgba(255, 255, 255, 0.65);
+  user-select: none;
+}
+
+.stage-crop-handle {
+  fill: #0b1220;
+  stroke: var(--accent-teal);
+  vector-effect: non-scaling-stroke;
+}
+
+.stage-crop-handle-nw,
+.stage-crop-handle-se {
+  cursor: nwse-resize;
+}
+
+.stage-crop-handle-ne,
+.stage-crop-handle-sw {
+  cursor: nesw-resize;
+}
+
+.stage-crop-handle-n,
+.stage-crop-handle-s {
+  cursor: ns-resize;
+}
+
+.stage-crop-handle-e,
+.stage-crop-handle-w {
+  cursor: ew-resize;
+}

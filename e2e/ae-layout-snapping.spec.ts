@@ -123,6 +123,42 @@ test('equal-spacing distribution evens edge gaps, holds the span, and is one his
  */
 const SNAP_SEED = () => [layer('a', 'Alpha', -200, -200), layer('b', 'Bravo', 0)];
 
+/**
+ * The stage's own snap targets, and the space they live in.
+ *
+ * The candidate lines and the drawing of the guide must be expressed in ONE
+ * space — the project-relative world the layers are authored in — or a stage
+ * lock either never fires or draws its line somewhere the geometry is not. The
+ * guide's own `x1` says which space it used: the editor camera draws the stage
+ * centre at its viewBox centre (300, 240), so a guide on the stage's LEFT edge
+ * (world −960) must be drawn at x = −660.
+ */
+test('locks a layer onto the stage edge, and draws the guide in the geometry’s own space', async ({ page }) => {
+  await seed(page, [layer('a', 'Alpha', 0, 200)]);
+  await selectLayers(page, ['Alpha']);
+
+  // Aim 3 world units short of the stage's left edge (−960), i.e. the layer's own
+  // left edge lands at −957: inside the radius, and no other candidate is near.
+  await dragByWorld(page, 'a', -897);
+  const guides = page.locator('.snap-guide');
+  await expect(guides).toHaveCount(1);
+  const line = Number(await guides.first().getAttribute('x1'));
+  expect(Math.abs(line - (300 - 960))).toBeLessThanOrEqual(0.5);
+
+  await page.mouse.up();
+
+  // The layer is ON the stage edge: its box starts where the artboard starts.
+  const artboard = await page.evaluate(() => {
+    const rect = document.querySelector('svg.stage-svg clipPath#artboard-clip rect')!;
+    const svg = document.querySelector('svg.stage-svg') as SVGSVGElement;
+    const matrix = svg.getScreenCTM()!;
+    const point = new DOMPoint(Number(rect.getAttribute('x')), Number(rect.getAttribute('y'))).matrixTransform(matrix);
+    return { x: point.x, width: Number(rect.getAttribute('width')) * Math.hypot(matrix.a, matrix.b) };
+  });
+  const alpha = await boxOf(page, 'a');
+  expect(Math.abs(alpha.x - artboard.x)).toBeLessThanOrEqual(1);
+});
+
 test('snapping locks the moving layer onto another layer’s edge, with a guide for the gesture', async ({ page }) => {
   await seed(page, SNAP_SEED());
   await selectLayers(page, ['Alpha']);

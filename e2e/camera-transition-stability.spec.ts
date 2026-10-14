@@ -177,6 +177,12 @@ function reportFrames(label: string, frames: Frame[]): void {
   ));
   const worst = Math.max(...drift);
   const zoomSpread = Math.max(...frames.map((frame) => Math.abs(frame.a - baseline.a)));
+  if (label.startsWith('timeline')) {
+    console.log(
+      `[transition] ${label} | trace t:stageH:a:alphaX:betaY = `
+      + frames.map((frame) => `${frame.t.toFixed(0)}:${frame.stageHeight.toFixed(0)}:${frame.a.toFixed(4)}:${frame.alpha.x.toFixed(2)}:${frame.beta.y.toFixed(2)}`).join(' '),
+    );
+  }
   console.log(
     `[transition] ${label} | frames=${frames.length} | animating=${movingFrames(frames).length} `
     + `| stage ${baseline.stageWidth.toFixed(1)}x${baseline.stageHeight.toFixed(1)}`

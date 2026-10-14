@@ -12,20 +12,17 @@
   position: relative;
   font-family: var(--font-mono);
   /*
-   * R5-03 — the panel edge animates, the world does not.
-   *
-   * The height is layout chrome: collapsing and expanding used to teleport the
-   * edge. The panel now eases to its new height, and the camera keeps following
-   * the MEASURED stage box every frame of the transition (the stage's
-   * ResizeObserver commits the corrected transform inside each frame), so the
-   * authored world stays exactly where it is while the edge and the handles
-   * pinned to it travel. The transition is deliberately on the panel's own
-   * height only — never on `.stage-svg`'s transform, which is what made the
-   * camera projection itself ease and drift in round 1.
+   * R5-03 — the panel's height is chrome, and its edge EASES between collapsed
+   * and expanded. The motion is driven from the component (`animateTimelineEdge`)
+   * and committed through `commitWorkspaceLayout`, so every frame's size and the
+   * stage's corrected camera land in the same task, before the frame paints —
+   * a browser-side `transition: height` here would move the edge before any
+   * script could measure the new box and let the world drift for a frame
+   * whenever the ResizeObserver notification arrived late. Nothing about the
+   * camera projection is animated: never put a transition on `.stage-svg`'s
+   * transform, which is what made the projection itself ease and drift in
+   * round 1.
    */
-  transition: height var(--kcs-motion-standard) ease;
-  /* The collapsed band has a CONCRETE height — only a real length can transition. */
-  --timeline-collapsed-height: 39px;
 }
 
 /* ── RESIZER (panel height, dragged by its top edge) ──
@@ -56,15 +53,6 @@
 .sequencer-timeline.is-resizing-rows .resizer-handle-pill {
   background: var(--kcs-accent);
   width: 60px;
-}
-
-/*
- * R5-03: the drag writes a new height on every frame, so the panel must follow
- * the pointer EXACTLY — the collapse/expand ease is for the discrete edge
- * control only, never for a live drag.
- */
-.sequencer-timeline.is-resizing-rows {
-  transition: none;
 }
 
 /* ── COLUMN RESIZER (outliner width) ──
@@ -140,12 +128,10 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 /*
  * Collapsed: the panel keeps only its header band (sequence tabs + the restore
  * control). The authored height is NOT touched, so expanding restores exactly
- * the height the user left behind. The band's height is the pane's one concrete
- * length (its top border plus the tabs bar), which is also what lets collapsing
- * and expanding EASE between two real heights instead of jumping.
+ * the height the user left — the panel's rendered height is the component's
+ * `edgeHeight`, which eases to the collapsed strip (TIMELINE_COLLAPSED_HEIGHT).
  */
 .sequencer-timeline.is-collapsed {
-  height: var(--timeline-collapsed-height);
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
 }
 .sequencer-timeline.is-collapsed .timeline-header,

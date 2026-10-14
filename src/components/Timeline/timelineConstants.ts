@@ -49,6 +49,21 @@ export const OUTLINER_DEFAULT_WIDTH = 280;
 export const OUTLINER_MIN_WIDTH = 180;
 export const OUTLINER_MAX_WIDTH = 520;
 
+/**
+ * The collapsed strip, in the panel's own border-box units: its 1px top border
+ * plus the 38px sequence-tabs bar it keeps (`.timeline-template-tabs-bar`). It is
+ * a real length, not `auto`, because that is what lets the edge EASE between the
+ * collapsed and the authored height.
+ */
+export const TIMELINE_COLLAPSED_HEIGHT = 39;
+
+/**
+ * R5-03 — how long the collapse/expand edge takes. Short enough to read as one
+ * motion of the same edge, long enough that the eye follows the strip instead of
+ * seeing it jump.
+ */
+export const TIMELINE_EDGE_TRANSITION_MS = 180;
+
 export const clampPanelSize = (value: number, min: number, max: number): number => (
   Math.min(max, Math.max(min, Math.round(value)))
 );

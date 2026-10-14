@@ -29,7 +29,7 @@ import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { TimeRuler } from './TimeRuler';
 import { TrackLane, type KeyframePress } from './TrackLane';
-import { CHANNEL_META, clampPanelSize, KEYFRAME_DRAG_THRESHOLD_PX, OUTLINER_DEFAULT_WIDTH, OUTLINER_MAX_WIDTH, OUTLINER_MIN_WIDTH, resolveTimelineHeightCeiling, TIMELINE_DEFAULT_HEIGHT, TIMELINE_MIN_HEIGHT } from './timelineConstants';
+import { CHANNEL_META, clampPanelSize, KEYFRAME_DRAG_THRESHOLD_PX, OUTLINER_DEFAULT_WIDTH, OUTLINER_MAX_WIDTH, OUTLINER_MIN_WIDTH, resolveTimelineHeightCeiling, TIMELINE_COLLAPSED_HEIGHT, TIMELINE_DEFAULT_HEIGHT, TIMELINE_EDGE_TRANSITION_MS, TIMELINE_MIN_HEIGHT } from './timelineConstants';
 import { copyKeyframeGroupData, type KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
 import { TrackOutlinerRow } from './TrackOutlinerRow';
 import { frameToSeconds, secondsToFrame } from '../../utils/timebase';
@@ -610,12 +610,26 @@ export const SequencerTimeline: React.FC = () => {
    * outliner column width is its sibling. Both are in-memory UI state like every
    * other panel size in this editor, which keeps no layout persistence
    * authority of its own.
+   *
+   * R5-03: `edgeHeight` is where the panel's edge actually IS right now — the
+   * authored height while expanded, the eased value while collapsing or
+   * expanding, the collapsed strip while collapsed. Every write of the authored
+   * height writes it too, so it can never disagree with what a drag or a window
+   * clamp asked for.
    */
   const [timelineHeight, setTimelineHeight] = useState<number>(TIMELINE_DEFAULT_HEIGHT);
+  const [edgeHeight, setEdgeHeight] = useState<number>(TIMELINE_DEFAULT_HEIGHT);
   const [isTimelineCollapsed, setIsTimelineCollapsed] = useState<boolean>(false);
   const [outlinerWidth, setOutlinerWidth] = useState<number>(OUTLINER_DEFAULT_WIDTH);
   const [resizeAxis, setResizeAxis] = useState<'rows' | 'columns' | null>(null);
   const timelineRef = useRef<HTMLElement>(null);
+  const edgeHeightRef = useRef(edgeHeight);
+  // oxlint-disable-next-line react/refs
+  edgeHeightRef.current = edgeHeight;
+  const collapsedRef = useRef(isTimelineCollapsed);
+  // oxlint-disable-next-line react/refs
+  collapsedRef.current = isTimelineCollapsed;
+  const edgeFrameRef = useRef<number | null>(null);
   const resizeStartRef = useRef<{ x: number; y: number; height: number; width: number }>({
     x: 0,
     y: 0,
@@ -658,12 +672,17 @@ export const SequencerTimeline: React.FC = () => {
   timelineHeightRef.current = timelineHeight;
 
   // A window that got shorter re-clamps the authored height, so the panel never
-  // sits at a size the layout silently refuses.
+  // sits at a size the layout silently refuses. Collapsed, only the authored
+  // height moves: the strip stays the strip and expanding honours the new bound.
   useEffect(() => {
     const handleWindowResize = () => {
       const ceiling = timelineHeightCeiling();
       if (timelineHeightRef.current <= ceiling) return;
-      commitWorkspaceLayout(() => setTimelineHeight(ceiling));
+      const collapsed = collapsedRef.current;
+      commitWorkspaceLayout(() => {
+        setTimelineHeight(ceiling);
+        if (!collapsed) setEdgeHeight(ceiling);
+      });
     };
     window.addEventListener('resize', handleWindowResize);
     return () => window.removeEventListener('resize', handleWindowResize);
@@ -684,7 +703,10 @@ export const SequencerTimeline: React.FC = () => {
     if (pending.height === undefined && pending.width === undefined) return;
     pendingResizeRef.current = {};
     commitWorkspaceLayout(() => {
-      if (pending.height !== undefined) setTimelineHeight(pending.height);
+      if (pending.height !== undefined) {
+        setTimelineHeight(pending.height);
+        setEdgeHeight(pending.height);
+      }
       if (pending.width !== undefined) setOutlinerWidth(pending.width);
     });
   }, [commitWorkspaceLayout]);
@@ -697,10 +719,53 @@ export const SequencerTimeline: React.FC = () => {
     setResizeAxis(axis);
   };
 
+  /**
+   * R5-03 — collapse and expand EASE the panel's edge, and the camera is
+   * corrected in the SAME task as every frame's height write.
+   *
+   * A browser-side `transition: height` moves the edge during the frame's own
+   * style/layout step, which leaves the stage's corrected camera to a
+   * ResizeObserver notification that arrives a frame late whenever the main
+   * thread is busy — one painted frame of the authored world against a box it no
+   * longer had, which is the transient drift this round's spec samples for. The
+   * ease is therefore driven from here and committed through
+   * `commitWorkspaceLayout`, the same authority the height drag uses: the size
+   * and the stage's re-measure land in one task, inside the frame's callback,
+   * before anything is painted. Nothing about the camera projection is animated
+   * — only chrome geometry is.
+   *
+   * The easing is monotone (ease-out cubic), so the edge never overshoots and
+   * never counter-moves, and the last frame writes the exact target height.
+   */
+  const animateTimelineEdge = useCallback((to: number) => {
+    if (edgeFrameRef.current !== null) {
+      cancelAnimationFrame(edgeFrameRef.current);
+      edgeFrameRef.current = null;
+    }
+    const from = edgeHeightRef.current;
+    if (from === to) return;
+    let started: number | null = null;
+    const step = (now: number) => {
+      started = started ?? now;
+      const progress = Math.min(1, (now - started) / TIMELINE_EDGE_TRANSITION_MS);
+      const eased = 1 - (1 - progress) ** 3;
+      const height = progress < 1 ? from + (to - from) * eased : to;
+      commitWorkspaceLayout(() => setEdgeHeight(height));
+      edgeFrameRef.current = progress < 1 ? requestAnimationFrame(step) : null;
+    };
+    edgeFrameRef.current = requestAnimationFrame(step);
+  }, [commitWorkspaceLayout]);
+
+  useEffect(() => () => {
+    if (edgeFrameRef.current !== null) cancelAnimationFrame(edgeFrameRef.current);
+  }, []);
+
   const toggleTimelineCollapsed = () => {
+    const collapsing = !isTimelineCollapsed;
     // Collapsing changes the stage box too, so it commits through the same
     // authority as a drag: the world must not jolt for one frame.
-    commitWorkspaceLayout(() => setIsTimelineCollapsed((collapsed) => !collapsed));
+    commitWorkspaceLayout(() => setIsTimelineCollapsed(collapsing));
+    animateTimelineEdge(collapsing ? TIMELINE_COLLAPSED_HEIGHT : timelineHeight);
   };
 
   useEffect(() => {
@@ -810,7 +875,7 @@ export const SequencerTimeline: React.FC = () => {
       ref={timelineRef}
       data-shortcut-scope="timeline"
       className={`sequencer-timeline ${isTimelineCollapsed ? 'is-collapsed' : ''} ${resizeAxis === 'rows' ? 'is-resizing-rows' : ''}`}
-      style={isTimelineCollapsed ? undefined : { height: `${timelineHeight}px` }}
+      style={{ height: `${edgeHeight}px` }}
       data-collapsed={isTimelineCollapsed ? 'true' : 'false'}
       data-testid="sequencer-timeline"
     >

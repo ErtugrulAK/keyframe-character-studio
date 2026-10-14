@@ -85,13 +85,15 @@ test('the toolbar is a compact strip that drives the shared tool and grid state'
 
   // R4-10 / R5-12 — the command bands are announced in one order, and
   // Bind/Unbind is no longer one of the strip's controls (the bond model itself
-  // is untouched).
-  await expect(bar.getByRole('group')).toHaveCount(9);
+  // is untouched). The stage-crop feature added the two crop bands between the
+  // arrange band and the view band.
+  await expect(bar.getByRole('group')).toHaveCount(11);
   for (const name of [
     'Canvas tools', 'Create', 'Boolean operations', 'Layer group',
-    'Align', 'Distribute', 'Rotate and flip', 'Arrange', 'View controls',
+    'Align', 'Distribute', 'Rotate and flip', 'Arrange', 'Crop', 'Crop to content', 'View controls',
   ]) {
-    await expect(bar.getByRole('group', { name })).toBeVisible();
+    // `exact` because the `Crop` band's label is a prefix of `Crop to content`.
+    await expect(bar.getByRole('group', { name, exact: true })).toBeVisible();
   }
   await expect(page.getByRole('button', { name: 'Bind selected layers' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Unbind selected layer' })).toHaveCount(0);

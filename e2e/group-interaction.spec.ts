@@ -642,3 +642,145 @@ test('H — no grouped selection ever draws the container placeholder square', a
   expect(regrouped).toHaveLength(1);
   expect(regrouped[0].width).toBeGreaterThan(300);
 });
+
+/**
+ * A selection box drawn over the client rects of `partIds` (plus a margin), as
+ * the user would drag it on the empty canvas. The margin keeps the press off the
+ * layers themselves — the box starts on the background, which is what arms the
+ * marquee at all.
+ */
+const marqueeAroundChildren = async (page: Page, partIds: string[], margin = 30): Promise<void> => {
+  const union = await page.evaluate((ids) => {
+    const rects = ids.map((id) => document.querySelector(`[data-part-id="${id}"]`)!.getBoundingClientRect());
+    return {
+      left: Math.min(...rects.map((rect) => rect.left)),
+      top: Math.min(...rects.map((rect) => rect.top)),
+      right: Math.max(...rects.map((rect) => rect.right)),
+      bottom: Math.max(...rects.map((rect) => rect.bottom)),
+    };
+  }, partIds);
+  const canvas = (await page.locator('.stage-canvas-container').boundingBox())!;
+  await page.mouse.move(Math.max(canvas.x + 2, union.left - margin), Math.max(canvas.y + 2, union.top - margin));
+  await page.mouse.down();
+  await page.mouse.move(union.right + margin, union.bottom + margin, { steps: 10 });
+  await page.mouse.up();
+};
+
+/**
+ * R5-08 — the canvas marquee and the canvas click must draw the SAME selection:
+ * a box over grouped children normalizes to the group container (the state AND
+ * the overlays agree), a gap between the children selects nothing at all, and
+ * the two explicit drill-in paths keep selecting the layer itself.
+ */
+test('R5-08 — a marquee over grouped children normalizes to the group container', async ({ page }) => {
+  await seed(page, [shape('a', 'Alpha', -120, 0), shape('b', 'Beta', 120, 0)]);
+  await groupPair(page);
+
+  // Baseline 1: a plain click on a child selects the container (R4-09).
+  await page.locator('[data-part-id="b"]').first().click();
+  await expect(page.getByTestId('group-aggregate-box')).toHaveCount(1);
+  const byClick = await drawnFrames(page);
+  expect(byClick).toHaveLength(1);
+
+  // Baseline 2: the child's OWN frame, through the explicit Outliner path —
+  // which stays allowed and is what "no child border" is measured against.
+  await selectRow(page, 'Alpha');
+  await expect(page.getByTestId('group-aggregate-box')).toHaveCount(0);
+  const byOutliner = await drawnFrames(page);
+  expect(byOutliner).toHaveLength(1);
+  expect(byClick[0].width).toBeGreaterThan(byOutliner[0].width);
+
+  // Drop the selection, then enclose BOTH children with a selection box.
+  await clickBetweenChildren(page);
+  await expect(page.locator('.actor-node.primary-selected')).toHaveCount(0);
+  await marqueeAroundChildren(page, ['a', 'b']);
+
+  // The STATE is the container and nothing else...
+  await expect(page.locator('.actor-node.primary-selected')).toHaveText(/Group/);
+  await expect(page.locator('.actor-node.selected')).toHaveCount(1);
+  // ...and the OVERLAYS agree exactly: the click-selected container frame, with
+  // no child-level frame anywhere.
+  expect(await drawnFrames(page)).toEqual(byClick);
+  await expect(page.getByTestId('group-aggregate-box')).toHaveCount(1);
+});
+
+test('R5-08 — a marquee over the empty gap between grouped children selects nothing', async ({ page }) => {
+  // Small children far apart: the gap between them is inside the container's
+  // aggregate box (and holds the container's own origin), but on no geometry.
+  await seed(page, [shape('a', 'Alpha', -220, 0), shape('b', 'Beta', 220, 0)]);
+  await groupPair(page);
+  // Precondition: the container IS selected, so the box has something to lose.
+  await expect(page.getByTestId('group-aggregate-box')).toHaveCount(1);
+
+  const gap = await page.evaluate(() => {
+    const first = document.querySelector('[data-part-id="a"]')!.getBoundingClientRect();
+    const second = document.querySelector('[data-part-id="b"]')!.getBoundingClientRect();
+    return {
+      left: first.right,
+      right: second.left,
+      top: Math.min(first.top, second.top),
+      bottom: Math.max(first.bottom, second.bottom),
+    };
+  });
+  expect(gap.right - gap.left, 'the seeded gap is not a real gap').toBeGreaterThan(60);
+
+  const inset = 8;
+  await page.mouse.move(gap.left + inset, gap.top + inset);
+  await page.mouse.down();
+  await page.mouse.move(gap.right - inset, gap.bottom - inset, { steps: 8 });
+  await page.mouse.up();
+
+  // The box enclosed no layer — and it did NOT reach the container through its
+  // geometryless placeholder square.
+  await expect(page.locator('.actor-node.primary-selected')).toHaveCount(0);
+  await expect(page.locator('.actor-node.selected')).toHaveCount(0);
+  await expect(page.getByTestId('group-aggregate-box')).toHaveCount(0);
+});
+
+test('R5-08 — a marquee normalizes a nested child to the OUTERMOST container', async ({ page }) => {
+  await seed(page, [shape('a', 'Alpha', -120, 0), shape('b', 'Beta', 120, 0), shape('c', 'Gamma', 260, 0)]);
+  await groupPair(page); // inner > { Alpha, Beta }
+  // outer > { inner, Gamma }
+  await page.locator('.actor-node', { hasText: 'Gamma' }).first().click();
+  await page.locator('.actor-node[data-group-container="true"]').first().click({ modifiers: ['Control'] });
+  await page.getByRole('button', { name: 'Group layers', exact: true }).click();
+  await expect(page.locator('.actor-node[data-group-container="true"]')).toHaveCount(2);
+
+  // Baseline: the INNER container's own frame.
+  await page.locator('.actor-node[data-group-container="true"].nested-node').first().click();
+  const innerFrame = await drawnFrames(page);
+  expect(innerFrame).toHaveLength(1);
+
+  // Drop the selection, then enclose only the DEEP child.
+  await clickBetweenChildren(page);
+  await expect(page.locator('.actor-node.primary-selected')).toHaveCount(0);
+  await marqueeAroundChildren(page, ['a'], 12);
+
+  // The outermost container is the target...
+  await expect(page.locator('.actor-node[data-group-container="true"]:not(.nested-node)').first())
+    .toHaveClass(/primary-selected/);
+  // ...and its frame is strictly wider than the inner container's, because it
+  // framed Gamma as well: it really is the OUTER box.
+  const outerFrame = await drawnFrames(page);
+  expect(outerFrame).toHaveLength(1);
+  expect(outerFrame[0].width).toBeGreaterThan(innerFrame[0].width + 50);
+});
+
+test('R5-08 — a drilled-in child keeps child-level selection for a marquee', async ({ page }) => {
+  await seed(page, [shape('a', 'Alpha', -120, 0), shape('b', 'Beta', 120, 0)]);
+  await groupPair(page);
+
+  // The explicit drill-in path: a canvas double-click enters the group.
+  await page.locator('[data-part-id="b"]').first().dblclick();
+  await expect(page.locator('.actor-node.primary-selected')).toHaveText(/Beta/);
+  await expect(page.getByTestId('group-aggregate-box')).toHaveCount(0);
+
+  // A box over the group's children now targets the LAYERS: the user is already
+  // working inside the container, so the children keep their own frames.
+  await marqueeAroundChildren(page, ['a', 'b']);
+  await expect(page.locator('.actor-node.selected')).toHaveCount(2);
+  await expect(page.locator('.actor-node.selected', { hasText: 'Alpha' })).toHaveCount(1);
+  await expect(page.locator('.actor-node.selected', { hasText: 'Beta' })).toHaveCount(1);
+  expect(await drawnFrames(page)).toHaveLength(2);
+  await expect(page.getByTestId('group-aggregate-box')).toHaveCount(0);
+});

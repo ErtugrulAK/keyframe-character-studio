@@ -12,6 +12,7 @@ import {
   getGroupChildren,
   getGroupDescendants,
   groupSelectionBlockReason,
+  resolveMarqueeSelection,
   resolveOutermostGroupAncestor,
   resolveStageSelectionTarget,
   ungroupBlockReason,
@@ -144,6 +145,56 @@ describe('layer group authoring', () => {
       expect(resolveStageSelectionTarget(parts, 'leaf', ['otherChild'])).toBe('outer');
       // ...but it stays inside its own group.
       expect(resolveStageSelectionTarget(parts, 'otherChild', ['otherChild'])).toBe('otherChild');
+    });
+  });
+
+  /**
+   * R5-08 — the marquee folds into the SAME canonical selection a click does: a
+   * box over grouped children normalizes to the container, never to the children,
+   * and a geometryless container is never hit directly (so a gap between its
+   * children cannot select it).
+   */
+  describe('marquee selection', () => {
+    const nested = [
+      makePart('outer', 0, { isGroup: true }),
+      makePart('inner', 0, { isGroup: true, parentId: 'outer' }),
+      makePart('leaf', 10, { parentId: 'inner' }),
+      makePart('sibling', 30, { parentId: 'inner' }),
+      makePart('lone', 60, { parentId: 'outer' }),
+      makePart('free', 90),
+    ];
+
+    it('normalizes a box over grouped children to the group container', () => {
+      expect(resolveMarqueeSelection(nested, ['leaf', 'sibling'], [])).toEqual(['outer']);
+      // ...and to the OUTERMOST container for a nested group.
+      expect(resolveMarqueeSelection(nested, ['inner', 'leaf'], [])).toEqual(['outer']);
+    });
+
+    it('keeps sibling groups as separate members of the selection', () => {
+      const parts = [
+        ...nested,
+        makePart('other', 0, { isGroup: true }),
+        makePart('otherChild', 10, { parentId: 'other' }),
+      ];
+      expect(resolveMarqueeSelection(parts, ['leaf', 'otherChild'], [])).toEqual(['outer', 'other']);
+      // ...and an ungrouped layer stays itself.
+      expect(resolveMarqueeSelection(parts, ['free', 'leaf'], [])).toEqual(['free', 'outer']);
+    });
+
+    it('never hits a geometryless container directly', () => {
+      // Only the container's own id is in the hit list: a gap between children.
+      expect(resolveMarqueeSelection(nested, ['inner', 'outer'], [])).toEqual([]);
+    });
+
+    it('targets the children once the selection already lives inside the group', () => {
+      expect(resolveMarqueeSelection(nested, ['leaf', 'sibling'], ['sibling'])).toEqual(['leaf', 'sibling']);
+      // ...while a selection that IS the container stays the container.
+      expect(resolveMarqueeSelection(nested, ['leaf', 'lone'], ['outer'])).toEqual(['outer']);
+    });
+
+    it('deduplicates the hits of one container and ignores unknown ids', () => {
+      expect(resolveMarqueeSelection(nested, ['leaf', 'sibling', 'leaf', 'ghost'], [])).toEqual(['outer']);
+      expect(resolveMarqueeSelection(nested, [], [])).toEqual([]);
     });
   });
 

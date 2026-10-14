@@ -154,6 +154,42 @@ export const resolveStageSelectionTarget = (
   return insideGroup ? partId : outermost;
 };
 
+/**
+ * R5-08 — the canvas marquee's hit list folded into the canonical selection.
+ *
+ * The box hit-tests real layer geometry, so a hit is a LAYER, and a marquee that
+ * encloses grouped children must land on the same thing a click on those
+ * children lands on — the group container. It therefore resolves every hit
+ * through `resolveStageSelectionTarget`, with the selection that was live when
+ * the box began standing in for "what am I working inside": the two gesture
+ * kinds can never disagree about container versus child, and nothing here is a
+ * second rule.
+ *
+ * A geometryless container (`isGroup`) is dropped from the hits entirely. It
+ * owns no geometry, so its only candidate box would be `getPartLocalBounds`'s
+ * placeholder square around its own origin — and an empty gap BETWEEN its
+ * children would then select the container out of thin air. A container enters
+ * the selection the one legitimate way: by normalizing the child hit inside it.
+ */
+export const resolveMarqueeSelection = (
+  parts: CharacterPart[],
+  hitIds: string[],
+  selectionIds: string[],
+): string[] => {
+  const byId = new Map(parts.map((part) => [part.id, part]));
+  const targets: string[] = [];
+  const seen = new Set<string>();
+  for (const hitId of hitIds) {
+    const hit = byId.get(hitId);
+    if (!hit || hit.isGroup) continue;
+    const target = resolveStageSelectionTarget(parts, hitId, selectionIds);
+    if (seen.has(target)) continue;
+    seen.add(target);
+    targets.push(target);
+  }
+  return targets;
+};
+
 
 // ─── Fold math ────────────────────────────────────────────────────────────
 

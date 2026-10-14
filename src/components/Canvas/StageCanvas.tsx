@@ -9,7 +9,7 @@ import { getSelectionFrameBounds } from '../../utils/selectionFrame';
 import { rotateAboutWorldPivot, selectionFrameCenterWorld, type WorldPoint } from '../../utils/rotationGesture';
 import { resolveCornerResize, resolveEdgeResize, type CornerBounds, type CornerId, type EdgeId } from '../../utils/cornerResize';
 import { stackingOrder } from '../../utils/stackingOrder';
-import { resolveStageSelectionTarget } from '../../utils/layerGrouping';
+import { resolveMarqueeSelection, resolveStageSelectionTarget } from '../../utils/layerGrouping';
 import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
 import { buildFreeformPath, normalizeFreeformPoints } from '../../utils/freeform';
@@ -219,6 +219,13 @@ export const StageCanvas: React.FC = () => {
   const groupBodyDragRef = useRef<string | null>(null);
   const groupDragMovedRef = useRef(false);
   const suppressClickSelectRef = useRef(false);
+  /**
+   * R5-08 — the selection that was live when the marquee box began, captured
+   * before the empty-canvas press clears it. The box resolves its hits against
+   * exactly the set a click at that moment would have resolved against, so the
+   * container-versus-child decision is the same for both gestures.
+   */
+  const marqueeSelectionOriginRef = useRef<string[]>([]);
 
   const [dragInitialAngle, setDragInitialAngle] = useState<number>(0);
   const [dragInitialLocalX, setDragInitialLocalX] = useState<number>(1);
@@ -399,6 +406,10 @@ export const StageCanvas: React.FC = () => {
     ) {
       handleSelectPart(null);
       setFocusModeNodeId(null);
+      // R5-08: remembered BEFORE the press clears the selection — the box's
+      // container-versus-child decision reads the set that was live on the way
+      // down, exactly like a click's does.
+      marqueeSelectionOriginRef.current = canvasSelectionIds;
       const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
       setIsDragging(true);
       setDragMode('marquee');
@@ -672,7 +683,7 @@ export const StageCanvas: React.FC = () => {
     }
 
     if (dragMode === 'marquee' && marqueeRect) {
-      const selected = getPartsInMarquee(
+      const hits = getPartsInMarquee(
         characterParts,
         (id) => getComputedTransform(id, currentFrame),
         marqueeRect,
@@ -684,6 +695,11 @@ export const StageCanvas: React.FC = () => {
           && (!booleanOperandEditingGroupId || !part.booleanOperandIds?.length)
         ),
       );
+      // R5-08: the box's hits become the CANONICAL selection — a container when
+      // the children it enclosed belong to one (and no child border is drawn for
+      // a normalized group), the layers themselves only when the user is already
+      // working inside the group.
+      const selected = resolveMarqueeSelection(characterParts, hits, marqueeSelectionOriginRef.current);
       if (selected.length > 0) {
         setSelectedPartIds(selected);
         setSelectedPartId(selected[selected.length - 1]);

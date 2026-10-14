@@ -40,6 +40,8 @@ import { useProjectState } from '../hooks/useProjectState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { createLayerGroupingActions } from '../hooks/useLayerGrouping';
 import { createVectorArrangeActions } from '../hooks/useVectorArrangeAuthoring';
+import { createStageCropActions } from '../hooks/useStageCropAuthoring';
+import type { StageCropRect } from '../utils/stageCrop';
 import { resolveOutermostGroupAncestor } from '../utils/layerGrouping';
 import { selectAllLayers } from '../utils/layerSelection';
 import { ShortcutReferenceDialog } from '../components/Shortcuts/ShortcutReferenceDialog';
@@ -164,6 +166,28 @@ export interface AnimatorContextType {
   /** The canvas snapping (smart guides) master switch; the View band toggles it. */
   snapEnabled: boolean;
   setSnapEnabled: (enabled: boolean) => void;
+  /**
+   * Stage crop / region of interest. The mode and the region on screen are
+   * TRANSIENT authoring state — they are not part of the document and never
+   * enter the history stack; only `Apply Crop` writes the document, as one
+   * undo entry that restores the previous dimensions and positions together.
+   */
+  cropMode: boolean;
+  setCropMode: (enabled: boolean) => void;
+  cropRegion: StageCropRect | null;
+  setCropRegion: React.Dispatch<React.SetStateAction<StageCropRect | null>>;
+  /** Drops the region on screen without touching the document. */
+  clearStageCropRegion: () => void;
+  /** Applies the region on screen: new stage size + one uniform scene shift. */
+  applyStageCrop: () => boolean;
+  /** Crops to the current selection, measured at the current authored frame. */
+  cropStageToSelection: () => boolean;
+  /** Crops to all canvas-visible content, measured at the current authored frame. */
+  cropStageToVisibleContent: () => boolean;
+  /** Why the crop commands are unavailable right now, or `null`. */
+  stageCropBlockReason: string | null;
+  canCropStageToSelection: boolean;
+  canCropStageToVisibleContent: boolean;
   addPropertyKeyframe: (trackId: string, channel: AnimationChannel, frame: number, value: number, easing?: EasingType) => void;
   updatePropertyKeyframeValue: (trackId: string, channel: AnimationChannel, keyframeId: string, value: number) => void;
   updatePropertyKeyframeTemporalHandles: (trackId: string, channel: AnimationChannel, keyframeId: string, patch: { bezierIn?: { x: number; y: number }; bezierOut?: { x: number; y: number } }) => void;
@@ -221,6 +245,13 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // document state, so it lives beside scale-lock on the provider; the View band
   // toggles it and the stage's translate gesture reads it.
   const [snapEnabled, setSnapEnabled] = useState<boolean>(true);
+
+  // Stage crop / region of interest. The armed mode and the region the pointer
+  // has described are transient authoring state: they never enter a history
+  // snapshot, so drawing or resizing a region is not undoable — only `Apply
+  // Crop` is, and it writes the whole crop as one entry.
+  const [cropMode, setCropMode] = useState<boolean>(false);
+  const [cropRegion, setCropRegion] = useState<StageCropRect | null>(null);
 
   const [coordinateSystem, setCoordinateSystem] = useState<SceneCoordinateSystem>('project-unit-center-v1');
 
@@ -524,6 +555,29 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     showToast,
   });
 
+  /**
+   * The stage-crop commands the Crop band and the crop overlay run. They are the
+   * SAME authority (one implementation, `createStageCropActions`), built from the
+   * provider's own locals, and every crop is one batch interaction — one undo
+   * entry that restores the previous stage size AND the previous positions.
+   */
+  const stageCrop = createStageCropActions({
+    currentFrame,
+    characterParts,
+    tracks,
+    selectedPartId,
+    selectedPartIds,
+    projectResolution,
+    getComputedTransform,
+    startBatchInteraction,
+    endBatchInteraction,
+    setCharacterParts,
+    setTracks,
+    setProjectResolution,
+    onRegionApplied: () => setCropRegion(null),
+    showToast,
+  });
+
   useKeyboardShortcuts({
     selectedPartId,
     undo,
@@ -536,6 +590,23 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setActiveTool,
     activeTool,
     cancelShapeCreation: pendingShapeType ? clearShapeCreation : undefined,
+    /**
+     * Escape leaves the crop mode: it drops the region the pointer described,
+     * or leaves the mode itself when there is none. It runs after the armed
+     * creation gesture (which owns Escape while it is armed) and before the
+     * freeform tool's own listener.
+     */
+    cancelStageCrop: () => {
+      if (cropRegion) {
+        setCropRegion(null);
+        return true;
+      }
+      if (cropMode) {
+        setCropMode(false);
+        return true;
+      }
+      return false;
+    },
     exitBooleanOperandEditing: () => {
       if (!booleanOperandEditingGroupId) return false;
       setBooleanOperandEditingGroupId(null);
@@ -673,6 +744,17 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isScaleLocked,
         snapEnabled,
         setSnapEnabled,
+        cropMode,
+        setCropMode,
+        cropRegion,
+        setCropRegion,
+        clearStageCropRegion: () => setCropRegion(null),
+        applyStageCrop: () => stageCrop.applyCropRegion(cropRegion),
+        cropStageToSelection: stageCrop.cropToSelection,
+        cropStageToVisibleContent: stageCrop.cropToVisibleContent,
+        stageCropBlockReason: stageCrop.blockReason,
+        canCropStageToSelection: stageCrop.canCropToSelection,
+        canCropStageToVisibleContent: stageCrop.canCropToVisibleContent,
         tracks,
         setTracks,
         characterParts,

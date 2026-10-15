@@ -1,206 +1,181 @@
-# KCS QA aggregation — PR #9 + PR #10 combined into PR #11
+# KCS — PR #11 Combined Manual QA Remediation
 
-QA aggregation only. `qa/pr9-pr10-combined` is built from the **current head of PR #9** and replays
-**only PR #10's own commits** on top, so the two open pull requests can be exercised together on one
-branch and one live preview. No new feature work, no fix for the user's pending findings, no merge, no
-release.
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.
 
-Worktree: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-combined-qa`
-Canonical repo (untouched, still on `main` @ `8e2df61`, clean):
-`C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
+This current task record supersedes the earlier aggregation-only bundle. Historical reports and root mirrors remain under latest/ unchanged; they are not repeated here.
 
-Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`. No other file in the latest bundle needs to be uploaded.
+## README.md
+
+# PR #11 Combined Manual QA Remediation Handoff
+
+This task-specific bundle supersedes the earlier aggregation-only handoff. The approved scope is the user's combined PR #9/#10 manual QA findings on `qa/pr9-pr10-combined`, not a merge or release.
+
+## Current engineering record
+
+- Worktree: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-combined-qa`.
+- PR #11: https://github.com/ErtugrulAK/keyframe-character-studio/pull/11 — OPEN; user retest remains the gate.
+- `OMP_FINAL_RESPONSE.md` records findings, root causes, fixes, affine transform math, property-channel authority, snap-guide invariant, GIF timing decision, observed validation, service state, the approved canonical metadata exception and the numbered retest procedure.
+- PR #9 and #10 remain OPEN with unchanged heads `fac2bc1` and `74603de`.
+- No merge, release, tag, npm publication, rebase, force push or API 5000 restart.
+
+Local gates passed: 173 files / 2598 unit tests, 99 focused Chromium, 415 full Chromium with zero failed/flaky and retries 0, release QA 2/2, V6 QA 3/3, state consistency 52 checks, and audit zero vulnerabilities. Code commit `679f54f30ee172e08b0d0e94b4561f2a74c87a9f` has successful CI run [38744301819](https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38744301819). Live 5173 now serves the validated combined worktree (listener 48984); API 5000 remains healthy on unchanged listener 2308. The documents-only refresh adds no runtime changes; its own head/CI is reported separately on delivery.
+## Record precedence
+
+The remediation record and manifest are the current task authority. Other documents retained here are historical snapshots or exact mirrors of root documents. Their old validation counts and next-session narratives are context, not current remediation results. No root document, historical report or mirrored roadmap was modified for this task.
+
+
+## Upload
+
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`. The one-file is regenerated from this scoped handoff before delivery; do not upload individual bundle files.
+
 
 ---
 
-## 1. Integration graph
+## OMP_FINAL_RESPONSE.md
 
-```
-BASE        04eee5e8   merge-base(fac2bc1, 74603de)
-P9 head     fac2bc1    origin/fix/manual-qa-round1-remediation   (PR #9, OPEN)
-P10 head    74603de    origin/feat/ae-layout-crop-snapping       (PR #10, OPEN)
-P11 head    ce04dd0    qa/pr9-pr10-combined  (validated code + tests head, pushed)
-```
+# PR #11 Combined Manual QA Remediation
 
-`P10` does **not** contain `P9` (verified: `git log --oneline fac2bc1..74603de` lists exactly the nine
-`BASE..P10` commits). The branch was therefore created from `origin/fix/manual-qa-round1-remediation`
-(`fac2bc1`) — not from `main`, not from `P10` — and only PR #10's *own* commits were replayed.
+## Scope and protected boundaries
 
-### Replayed commits (PR #10-only, `BASE..P10`, products + tests only)
+Worktree: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-combined-qa`.
+Branch: `qa/pr9-pr10-combined`. Starting head: `784a8c235372f6f984f32e744894bfbb3c086f80`.
+Only the approved findings are addressed. No merge, release, tag, npm publication, rebase, force push, branch deletion, dependency change, workflow change, or API 5000 restart.
+PR #9 remains OPEN at `fac2bc191724165540cf0f7cc53b7941d737919d`; PR #10 remains OPEN at `74603dea5f57d1d586e3ec8c97bf09c304c4ca8a`. Neither history was changed.
 
-| # | original | replayed on `qa/pr9-pr10-combined` | subject |
-| - | -------- | --------------------------------- | ------- |
-| 1 | `0bf21c3` | `2409e23` | feat: add shared layout geometry authority and equal-spacing distribution |
-| 2 | `802cebc` | `b84e476` | feat: add smart snapping and guides |
-| 3 | `913f3a3` | `bce84d1` | feat: add stage crop and region of interest |
-| 4 | `3c62d85` | `30056e0` | test: migrate the authoring toolbar band contract to the crop bands |
-| 5 | `decc14e` | `ee602c4` | fix: keep the layers a drag carries out of the snap targets |
-| 6 | `9fd713a` | `226dade` | test: pin the snapping-driven drag contracts in the affected specs |
-| 7 | `55ed8c7` | `ce04dd0` | test: measure the snap threshold against the stage edge alone |
+## Findings, root causes, and fixes
 
-**Deliberately NOT replayed:** `cd8fe7c` (docs: record the ae-inspired layout crop and snapping features)
-and `74603de` (docs: refresh the ae-inspired layout crop and snapping handoff) — both are PR #10-era
-documentation snapshots that would ship a stale state. The combined record is produced fresh here
-instead.
+### 1. Persistent primitive creation
 
-Cherry-picks carried `-x`, so every replayed commit records its original SHA in its message.
+The StageCanvas mouse-up completion cleared the armed creation tool. Completion now retires only the current gesture/preview. Rectangle, Square, Circle, Triangle, Star, Rhombus, Parallelogram and the shared primitive path remain armed; Escape or another tool exits. Each completed shape keeps its own existing history transaction. Free Draw retains its separate multi-vertex Enter/double-click commit and Escape-cancel lifecycle.
 
-## 2. Conflicts and resolutions
+### 2. Property channel semantics
 
-Exactly **one** conflict, and it is an additive one.
+Legacy composite projection created apparent child-property keys from unchanged full poses. The canonical legacy-to-channel conversion now uses the owned authored base pose: moving channels and held overrides different from that base survive, while provably unchanged composite fields do not become authored channels. Explicit canonical held keys are never pruned. Static full-hold scopes and unknown-base legacy data remain intact.
 
-`git diff --name-only 04eee5e fac2bc1` ∩ `git diff --name-only 04eee5e 74603de` = `CHANGELOG.md`,
-`chatgpt_handoff/**` (all of it skipped with the two docs-only commits) and **one source file**:
-`src/components/Canvas/StageCanvas.tsx`. That is the only place where the two lineages touch code.
+Evaluation, migration, import/export, timeline projection, navigation and authoring use the same conversion. Untagged legacy keys and explicit `Sequence` keys share one semantic scope during conversion/deduplication, preventing interpolation loss after reload. Position/X/Y reflect the actual canonical channel keys; Rotation, Scale and Opacity no longer inherit aggregate keys. Explicit Rotation keys remain independent. Layer aggregate navigation follows the real projected frames. The existing **Add Composite Keyframe** command intentionally still captures the full pose; it is not a Position-only command. Inspector edits do not create a second keyframing authority.
 
-| step | file | conflict | resolution | reason |
-| ---- | ---- | -------- | ---------- | ------ |
-| `913f3a3` (crop) | `src/components/Canvas/StageCanvas.tsx`, import block | `HEAD` added `import { REMEASURE_STAGE_BOX_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT } from '../../utils/workspaceLayout'`; the pick added `type CoordinatePoint` to the existing `projectCoordinates` import | **both kept** — one `projectCoordinates` line carrying `type CoordinatePoint`, plus the `workspaceLayout` line | purely additive: PR #10 needs `CoordinatePoint` for `clientToStage`, PR #9 needs the two shared command constants; neither replaces the other |
+### 3. Rotated-child group resize
 
-`802cebc` (snapping) and `decc14e` (snap targets) auto-merged — the snap context is inserted into the
-translate-drag body and the camera guard lives on the `applyStageBox` measurement path, so the two hunks
-never overlap. No other commit conflicted.
+The old scalar TRS fold applied group anisotropic scaling along a rotated child's local axes. For an old group box and new group box, the resize uses the existing solve-frame mapping: `p_new = anchor + diag(sx, sy) * (p_old - anchor)`. The fixed opposite edge/corner is the anchor. Every child world matrix is `W_child = W_parent * L_child`; the shared affine inverse maps world edits back into the original parent space.
 
-**Nothing was reverted to make anything apply.** The conflict rule ("never revert the current PR #9
-camera fix back to the older PR #10 state; preserve the PR #10 feature") never had to be invoked,
-because the only overlap was an import list.
+A 90-degree child can exchange the scale-axis reading, but an arbitrary 30-degree child under unequal world-axis scaling generally produces shear. The user explicitly approved extending the existing transform authority to represent this exactly. A derived affine matrix is carried through evaluation, rendering, geometry/bounds, hit interaction, selection/gizmos, masks/mattes, boolean/freeform geometry and OGraf runtime output. No new persisted transform field or parallel resize engine was introduced; authored local rotation is preserved. World x/y denote the actual affine origin. Inspector and bonded edits share the canonical world-to-local conversion and a correctly rebuilt post-edit parent matrix, avoiding double movement/stale affine state.
 
-## 3. Combined proof — both sides are present
+Regression coverage includes 90/30-degree children, nested groups, negative scales, horizontal/vertical/corner transforms, fixed opposite anchors, undo/redo, and deep sheared-parent inspector/bonded edits. The corner browser oracle now independently multiplies fixture matrices instead of repeating the obsolete TRS assumption; existing tolerances are unchanged.
 
-### PR #9 side (manual-QA rounds 1–5 + the camera-transition blocker fix)
+Production review also found that serializing individual affine helpers with `.toString()` leaked minified outer identifiers into exported OGraf modules (`ReferenceError: Lt is not defined`). All existing affine functions now come from one self-contained `createWorldAffineAlgebra` factory, embedded as a whole in runtime output. An in-memory real production-minification regression checks independently known deep affine geometry. Actual built-UI export/host smoke loaded `graphic.mjs` with status 200, painted one layer, and matched the serialized world origin exactly.
 
-| Claim | Evidence on `qa/pr9-pr10-combined` |
-| ----- | --------------------------------- |
-| Frame-committed layout authority | `src/utils/workspaceLayout.ts` (`WORKSPACE_LAYOUT_COMMAND_EVENT`, `REMEASURE_STAGE_BOX_COMMAND`, `commitWorkspaceLayout`, `createFrameEase`, `panelEdgeStyle`, `PANEL_EDGE_TRANSITION_MS`) |
-| `useDockedPanelEdge` | `src/hooks/useDockedPanelEdge.ts` present; both docked panels (`LeftToolbar`, `PropertyInspector`) take `edgeWidth` + `panelRef` and write `panelEdgeStyle(edgeWidth)` |
-| The `StageCanvas` frame-commit guard | line 158: `// A frame-committed edge (see commitWorkspaceLayout) has already folded` … `if (previous && !reanchor && previous.left === box.left && previous.top === box.top && previous.width === box.width && previous.height === box.height) return;` |
-| Shared event names actually wired | `if (type === REMEASURE_STAGE_BOX_COMMAND)` (line 954) and `window.addEventListener(WORKSPACE_LAYOUT_COMMAND_EVENT, …)` / matching `removeEventListener` (lines 970–971) |
-| Right inspector off browser-side geometry transitions | `src/components/Inspector/PropertyInspector.css` rule `.motion-design-right-sidebar`: `transition: transform 240ms ease, opacity 240ms ease, visibility 240ms ease;` with the comment that width/min-width/flex-basis are deliberately absent; the only other mentions of `width` next to `transition` in that file are comments |
-| Left dock off browser-side geometry transitions | `src/components/Toolbar/LeftToolbar.css` rule `.left-toolbar-container` (the element `panelRef` is attached to): the P9 fix replaced `transition: width 240ms ease, min-width 240ms ease, flex-basis 240ms ease, …` with `transition: transform 240ms ease, opacity 240ms ease, visibility 240ms ease, …`; and `.left-toolbar-container.hidden` lost its `!important` on width/min-width/flex-basis so the inline travelling width can win. (The file also keeps legacy `.left-drawer-panel` rules that still list a width transition — that class has **no** consumer in `src/**` outside the stylesheet, so it is not in the DOM and cannot animate the measured box; it is pre-existing in `04eee5e` and was left alone, deliberately, to keep the QA branch byte-identical to PR #9 outside the replay.) |
-| Right inspector + left dock fix | `useDockedPanelEdge` consumed by both panels (above) |
-| Key-drag playhead separation | `src/components/Timeline/SequencerTimeline.tsx`: `.playhead-line` in `MARQUEE_BLOCKERS`, the "how close to the playhead line a press still counts as on the playhead" band, and the geometric playhead-column exclusion for the marquee |
-| Group marquee normalization | `src/utils/layerGrouping.ts`: `resolveMarqueeSelection` + `normalizeDegrees` and the rotated-child guard |
-| Round-5 vector arrange | `src/utils/vectorArrange.ts`: `planDistribute` present alongside PR #10's `planDistributeByGap` |
-| Compact Transform Details | inspector Transform Details work rides in the P9 lineage (`src/components/Inspector/PropertyInspector.tsx`) |
-| Rounds 1–5 records | `reports/progress_165_pre_qa_repository_cleanup.md` … `reports/progress_171_manual_qa_round_five_remediation.md`, `reports/progress_173_camera_transition_blocker_remediation.md` — unchanged by this task |
+### 4. Snap-guide invariant
 
-### PR #10 side (AE layout / crop / snapping / distribution)
+The snap resolver now returns the committed line and the perpendicular extent covering the moving and target bounds. A stage-reference guide spans the relevant moving band instead of an arbitrary full canvas. StageCanvas renders the same resolved geometry in editor coordinates in the same drag update as the snapped transform. X and Y remain independent; switching candidates, unsnapping and mouse-up retire the corresponding guides. Thin accent guides remain pointer-events none.
 
-| Claim | Evidence on `qa/pr9-pr10-combined` |
-| ----- | --------------------------------- |
-| Equal-gap distribution | `src/utils/vectorArrange.ts` → `planDistributeByGap` (line 215), on top of the shared bounds maths |
-| Snapping resolver + guides | `src/utils/layoutGeometry.ts` → `resolveSnap`, `collectLayerSnapCandidates`, `collectStageSnapCandidates`, `SNAP_THRESHOLD_SCREEN_PX`, `SnapGuide`/`SnapLine`; `StageCanvas` freezes the snap context at pointerdown (`dragSnapRef`) and renders `snap-guides` as `pointerEvents="none"` chrome |
-| Toggle snapping | `AuthoringToolbar.tsx` `aria-label="Toggle snapping"`; `snapEnabled` from the animator context gating `resolveSnap` |
-| Crop / ROI authoring | `src/utils/stageCrop.ts` (`STAGE_CROP_HANDLES`, `isStageCropHandle`, `stageCropRectFromDrag`, `resizeStageCropRect`, `translateStageCropRect`, `isStagePointInsideRect`, `stageSpaceToEditorRect`, `editorPointToStageSpace`) + `src/hooks/useStageCropAuthoring.ts`; overlay drawn in `StageCanvas` with `data-crop-active` / `data-crop-handle` |
-| `Apply crop` | `AuthoringToolbar.tsx` line 503 `aria-label="Apply crop"`, disabled until a region exists; the region writes **nothing** until applied |
-| Two crop-to-content modes | `AuthoringToolbar.tsx` group `aria-label="Crop to content"` with `crop-to-selection` ("Crop to current selection at current frame") and `crop-to-visible-content` ("Crop to visible content at current frame") |
-| Export parity | `useStageCropAuthoring.applyCropRegion` commits through `setCharacterParts` + `setProjectResolution` as **one** batch interaction, i.e. the crop is a document edit on the same resolution/transform authority the export reads — not a viewport change. Asserted end to end by `e2e/ae-layout-crop.spec.ts`: after `Apply crop` the artboard becomes the region, the inter-layer geometry is preserved, and one `Control+z` restores both the stage size and the placement (redo exact) |
+Invariant: a resolved authored-axis correction has its corresponding rendered guide; guide position and extent come from that result, not a separately recomputed candidate. Tests cover result-to-render geometry, both axes, stage references, switching and cleanup. A pre-existing browser helper issued zoom keys faster than the camera commit; it now waits for the observed DOM zoom after each action, without sleeps, retries or threshold changes.
 
-### The checks the brief called out specifically
+### 5. Direct toolbar and distribution naming
 
-- **The PR #10 replay did NOT overwrite the camera fix.** `git diff fac2bc1 HEAD -- src/components/Canvas/StageCanvas.tsx` contains **no deletion of any P9-introduced line**: every removed line is one PR #10 rewrote (`projectCoordinates` import line, the `dragMode`/`dragStart` type unions, the raw `initialTransform.x + deltaX` pair, the `useCallback` dependency list, the container `className`). The guards were re-verified by grep at lines 158–162, 954, 970–971 (table above).
-- **The snapping `StageCanvas` changes did NOT break camera invariance.** The snap path only rewrites the *authored* transform delta (`snappedDx`/`snappedDy` feed `updateCurrentTransform`) and explicitly comments "Snapping changes only the authored transform delta — never the camera"; the camera path (`applyStageBox` + `commitWorkspaceLayout`) is untouched. Proven by measurement: `e2e/camera-invariance.spec.ts` and `e2e/camera-transition-stability.spec.ts` are green in the full suite with `worstDelta=0.000px` / `worstDrift=0.000px` on every sampled trace and world drift `dx=0.000 dy=0.000`.
-- **Toolbar conflicts caused NO feature loss.** `AuthoringToolbar.tsx` is touched by PR #10 only (no P9 change to that file), so the crop band, the crop-to-content menu and the snapping toggle all landed whole; `git diff fac2bc1 HEAD -- src/components/Toolbar/AuthoringToolbar.tsx` is exactly PR #10's diff. `e2e/authoring-toolbar.spec.ts` was migrated, not weakened, by `30056e0`.
-- **No duplicate geometry authority.** `layoutGeometry.ts` holds the one union/centre formula (`unionWorldBounds`, `worldBoundsCenter`) + the one snap formula (`resolveSnap`); `vectorArrange.ts` imports from it (`import { unionWorldBounds, worldBoundsCenter } from './layoutGeometry'`), `useStageCropAuthoring.ts` imports `unionWorldBounds` from it, and `SNAP_THRESHOLD_SCREEN_PX` is defined in `layoutGeometry.ts` alone — the only other files mentioning it are `StageCanvas.tsx` (consumer) and `src/tests/layoutGeometry.test.ts`. `src/utils/layerGrouping.ts` does keep a small **local, pre-existing** `unionWorldBounds` helper (present at `04eee5e`, untouched by PR #10) that PR #10 did not introduce and did not replace; PR #10 added exactly one shared authority and no second copy of it.
-- **The Undo contracts still hold.** `e2e/camera-transition-stability.spec.ts` records `undoDisabled=false` on every drift sample and the full suite is green; crop is one undo step with exact redo (`ae-layout-crop.spec.ts`); distribution is "one history entry" (`ae-layout-snapping.spec.ts`).
+Normal desktop shows direct Align Left / Horizontal Centers / Right / Top / Vertical Centers / Bottom, Distribute Horizontal / Vertical, Rotate CCW / CW, and Flip Horizontal / Vertical buttons. There is no normal-desktop Align/Distribute dropdown. Center Horizontally / Vertically retain the existing center-based distribution policy under explicit names. Distribute Horizontal / Vertical retain equal visual edge-gap policy; no behavior/name swap.
 
-## 4. Validation on `ce04dd0` (isolated ports only)
+Existing world visual bounds, group aggregates, outer-span preservation and one-undo distribution authority remain. Different sizes and rotated layers retain correct geometry. The toolbar fits measured 1280px and 1440px desktop widths without horizontal overflow.
 
-| Command | Result |
-| ------- | ------ |
-| `npx tsc -b --pretty false` | exit 0, no diagnostics |
-| `npm run lint` (oxlint) | exit 0, clean |
-| `npm test` (vitest) | **169 files / 2537 tests passed**, 0 failed |
-| `npm run build` | built clean (chunk-size advisory only, pre-existing) |
-| `npm run validate:ograf` | `fixtures/ograf/minimal.ograf.json: valid OGraf v1 manifest` |
-| `PORT=5016 npm run qa:release` | **2 passed** (release gate, `KCS_RELEASE_GATE=1`, UI 5189 / API 5016) |
-| `PORT=5016 npm run qa:v6` | **3 passed** (`KCS_V6_QA=1`, UI 5187 / API 5016) |
-| `npm run check` | green (lint + tsc + 2537 tests + build) |
-| `node scripts/check-state-consistency.mjs` | **PASS (52 checks)** |
-| `npm audit --audit-level=low` | **0 vulnerabilities** |
-| `git diff --check` | clean |
+### 6. GIF panel and 120 sampling
 
-Focused Chromium (`CI=1 PORT=5016`, `--project=chromium --workers=4 --retries=0`) over
-`camera-transition-stability`, `camera-invariance`, `timeline-keyframe-gesture`, `group-interaction`,
-`authoring-toolbar`, `ae-layout-crop`, `ae-layout-snapping`, `ograf-editor-export`, `gif-export`:
-**50 passed / 0 failed**.
+The compact dialog uses the existing floating-panel outside-press authority, viewport max-height/scrolling and a collapsed format disclosure. Inside clicks keep it open; outside clicks and Escape close it. Export cancellation on unmount remains intact. The measured dialog height changed from 304.625px to 259.875px.
 
-**FULL Chromium suite** — `CI=1 PORT=5016 npx playwright test --project=chromium --workers=8
---retries=0`: **406 passed / 0 failed / 0 flaky** (3.8m). 398 of them are the PR #9-green set; the
-round adds 8 from the replayed PR #10 specs.
+120 FPS is a **sampling-grid option**, not a claim that GIF viewers present at exact 120 FPS. GIF delays are centiseconds, and Chromium maps delays at or below 10ms to 100ms: https://github.com/chromium/chromium/blob/main/third_party/blink/renderer/platform/graphics/deferred_image_decoder.cc . Emitted frames therefore have at least 2cs delay (at most 50 presented frames/s). The plan uses `totalCS = max(2, round(durationSeconds * 100))`, chooses at most 900 frames and at most `floor(totalCS / 2)`, samples across the complete authored duration on the requested grid, and quantizes cumulative delay boundaries to sum to totalCS. The frame cap no longer truncates long animations. Duration accuracy is the nearest centisecond, with the unavoidable 20ms minimum for extremely short clips. A one-second 120-sampling export is 50 frames / 1.00s, not a sped-up animation. Tests check exact delay sum, long duration/frame cap, and actual downloaded half-second GIF movement and 50cs total delay.
 
-Camera contract, measured on that run: `DRIFT_TOLERANCE_PX` unchanged at **1px**, no retry, no sleep, no
-skip, no widened tolerance. Sampled numbers:
+### 7. Inspector keyframing controls
 
-- dock transitions: `[transition] repeat Show Left Toolbar | frames=35 | animating=29 | worstDelta=0.000px | magnificationSpread=0.00000`; the same `0.000px` for repeat Hide, Hide/Show Inspector, the inspector reversals, the timeline collapse/expand and all three viewports.
-- repeated toggles: `[camera-drift] inspector toggled 10x | alpha dx=0.00 dy=0.00 | beta dx=0.00 dy=0.00 | node dx=0.00 dy=0.00` (and the same for the left toolbar, the timeline resize and the panned-camera samples).
-- timeline height drag: `frames=146 | timelineHeight 320.0->441.0 | worstDrift=0.000px | perFrameDrift=0.00,…` (every frame `0.00`).
-- corner-anchor resize: `opposite drift world dx=0.000 dy=0.000 (px dx=0.00 dy=0.00)`.
+Duplicate Trim Path and mask Add/Remove Keyframe controls and their unused callback forwarding were removed. The Inspector keyframes view is read-only projection/navigation rather than an additional add/delete/frame-timing editor. Value and path editing remain. Animation data is not deleted; timeline/property tree `[previous][add/remove][next]` remains the keyframing authority.
 
-5173 and 5000 were never bound by any test: the isolated run uses UI **5188** and API **5016**
-(`CI=1` ⇒ `isIsolatedQaRun` ⇒ port 5188), and `npm run dev` was never used.
+### 8. Routine toasts and panel handles
 
-## 5. Pull request #11
+Routine rotate/flip/align/distribute success toasts were removed; arrange already had no routine success toast. Blocked/unavailable feedback, errors, real warnings and significant export/save feedback remain. The 20x46px sidebar hit targets now straddle the empty panel boundary gutters; panel text/cards are not covered. Existing top anchoring, frame-committed camera motion and overlay/GIF/Export z-index remain unchanged.
 
-- Number/URL: **#11** — `https://github.com/ErtugrulAK/keyframe-character-studio/pull/11`
-- Base `main`, head `qa/pr9-pr10-combined`, title `qa: combine manual-qa remediation and AE layout features`
-- Validated code + tests head: **`ce04dd0a4972b69b4635e2d20995c642f6a67d14`** (`ce04dd0`)
-- Pushed with an explicit refspec — `git push -u origin HEAD:refs/heads/qa/pr9-pr10-combined` — no force, no rebase, no history rewrite
-- Mergeability: **`mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`**, `state: OPEN`, not a draft
-- CI: workflow **CI Pipeline**, run id **38583648143** (`https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38583648143`), head `ce04dd0`, **conclusion `success`** (Build, Lint & Test Verification green: OGraf fixture, lint, tsc, vitest, production build). The docs-refresh commit for this record rides on top and its own run is recorded on the PR.
-- **PR #9 and PR #10 are unchanged and not merged** — #9 is still `OPEN` at head `fac2bc1`, #10 is still `OPEN` at head `74603de`; neither was closed, edited or pushed to by this task.
+### 9. Shortcut Reference
 
-## 6. Live surfaces
+Category cards/icons, stronger category/title/description hierarchy and distinct keycaps replace the flat list. Search/filter and Windows/macOS display continue to consume the single command authority in `src/utils/shortcuts.ts`; category decoration does not duplicate shortcut data. Grid rows preserve content height rather than clipping cards. Actual 1280x540 viewport smoke showed a contained, scrollable dialog, zero clipped cards, and two matches for `flip`.
 
-- 5173 now serves THIS worktree: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-combined-qa`.
-  - vite listener PID **before: 50876** (the PR #9 worktree, `…-omp-manual-qa-r1`); **after: 17568** (bash wrapper 37868). Only the 5173 listener tree was stopped; 5173 answers **HTTP 200**.
-  - Module-freshness proof over HTTP (both sides served by the same 5173): `GET /src/utils/workspaceLayout.ts` → 200, `GET /src/hooks/useDockedPanelEdge.ts` → 200 (**PR #9 side**); `GET /src/utils/layoutGeometry.ts` → 200, `GET /src/utils/stageCrop.ts` → 200 (**PR #10 side**). `GET /src/components/Canvas/StageCanvas.tsx` → 200 and its body contains `WORKSPACE_LAYOUT_COMMAND_EVENT`, `REMEASURE_STAGE_BOX_COMMAND` and `frame-committed` (PR #9) **and** `resolveSnap`, `stageCrop` (PR #10) — the one file both lineages touch serves both fixes.
-- API 5000 is **unchanged**: pid **18280** before and after, `/api/health` → 200. Never stopped, restarted or rebound.
-- No merge, no tag, no GitHub release, no npm publication, no dependency/lockfile/workflow/OMP-config change. The canonical checkout was never written to.
+## Accepted behavior and regression policy
 
-## 7. Combined manual QA list (5173 — the merge gate for PR #11)
+Equal horizontal/vertical visual spacing, snapping-off cleanup, group snapping, ROI/crop Clear/Escape/Apply, camera and timeline contracts are retained. Crop implementation was not changed to solve a misunderstood test procedure. No assertion weakening, retry, arbitrary sleep, skip or camera-tolerance widening was used. Obsolete source-text/mock-wiring tests and absence/one-shot UI assumptions were removed instead of re-pinned. The named-sequence drag test now explicitly exits persistent creation with Escape before testing movement.
 
-PR #9 side:
+## Validation ledger
 
-1. Show/hide the right inspector repeatedly — the scene must not slide; toggle it again mid-animation both ways; it must reverse from where it is (no jump, no second animation).
-2. Repeat with the left dock, and toggle a sidebar while the timeline edge is still moving.
-3. Check the inspector at a narrow and a wide window — the resting width must match what it was before.
-4. Re-run the rounds 1–5 items you can still reach: right inspector / left dock behaviour, keyframe drag next to the playhead, group marquee selection, Round-5 vector arrange, compact Transform Details.
+Observed before final browser gate: `npm run check` passed (lint, TypeScript build, unit tests and production build); 173 unit files / 2598 tests passed. `npx tsc --noEmit` and `npm run validate:ograf` passed. Focused Chromium: 99 passed, zero failures, workers 8 / retries 0. Camera worst delta 0.000px and magnification spread 0.00000; deep corner opposite-anchor drift zero. `npm audit --audit-level=low`: zero vulnerabilities. State consistency: PASS, 52 checks. Production build retains its existing large-chunk advisory.
 
-PR #10 side:
+The first full Chromium run had 413 passed / 2 failed: the named-sequence workflow still assumed one-shot drawing and an older manual-QA test asserted that Align Left did not exist. These obsolete workflow assumptions were corrected while retaining geometry assertions. The final complete run passed **415 / 415, zero failed, zero flaky**, in 3.4 minutes with `CI=1 PORT=5017`, Chromium, workers 8, retries 0. `PORT=5017 npm run qa:release` passed 2/2; `PORT=5017 npm run qa:v6` passed 3/3. These gates exercised the working-tree remediation while HEAD was still the starting 784a8c2 revision; the committed code revision is recorded separately below. Release QA only validated exports; it did not publish a release.
 
-5. Distribution: select 3+ layers, distribute on an axis — the edge gaps must come out equal, the overall span must be held, and one undo must restore everything.
-6. Snapping: toggle snapping off/on; drag a layer onto another layer's edge and onto the stage edge — it must lock with a guide; confirm the guide disappears on release; at two different zooms, a 4px miss locks and a 16px miss does not.
-7. Crop: arm crop, drag a region, resize one handle (the opposite edge must stay put), move the region, press Escape (it must drop without cropping); then `Apply crop` — the stage becomes the region and every layer keeps its pixel measured from the new origin; check one undo restores the stage size **and** the placement, and redo is exact.
-8. Crop-to-content: use both entries of the `Crop to content` menu at the current frame.
-9. Export: run the OGraf export after a crop and confirm the cropped resolution/placement is what ships.
+Validated code/tests commit: `679f54f30ee172e08b0d0e94b4561f2a74c87a9f`, pushed normally to PR #11 only. CI Pipeline run [38744301819](https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38744301819) completed successfully, including manifest validation, lint, TypeScript, unit/integration tests and production build. The scoped documents-only refresh rides above this tested code; its final head/CI is reported separately on delivery to avoid a self-referential document hash.
 
-### Pending findings — NOT fixed by this task (carried as open only)
+## Live and repository incident disclosure
 
-- sidebar toggle handle placement aesthetics;
-- GIF panel too long;
-- GIF panel should close on click-outside;
-- GIF max FPS should be 120;
-- property rows should show keyframes only on the channels actually animated/changed;
-- Align / Center / Distribute should be direct toolbar icons, not dropdowns;
-- Distribute behaviour to be revisited against the Boxy reference;
-- remove the unnecessary top-right action toasts;
-- Shortcut Reference visual redesign;
-- remove the Add/Remove Keyframe controls from the Inspector (e.g. Trim Path);
-- resizing a group that contains a rotated child with a horizontal edge scales the child on the wrong axis.
+With explicit user approval, live 5173 was frozen at starting head 784a8c2 in a temporary snapshot while remediation and isolated tests ran. Only after the full local gates and code CI succeeded was that listener stopped and the combined worktree started as persistent service `kcs-pr11-final-qa-5173` (service wrapper 45300, actual listener **48984**). HTTP 200; served source includes the affine factory and direct toolbar from the combined worktree. Actual Chromium smoke found the direct buttons, no page errors, and the compact GIF dialog with selectable 120 sampling and Escape dismissal (259.875px height); the editor screenshot was inspected. API 5000 remains listener **2308**, health HTTP 200; it has never been restarted. The final documents commit changes no runtime code.
 
-A single remediation prompt will follow after the user finishes PR #10 manual QA.
+An affine subagent accidentally wrote canonical `src/utils/matte.ts`, then restored its HEAD bytes, and also performed an unauthorized index refresh. Work stopped and the incident was reported. Canonical HEAD/index/raw/filtered file hashes all match `96d0b4ad2bed3326f8ff4f8e5df552c2ec93a3b5`; content and staged diffs are empty. A user-approved one-file `git add --refresh` did not clear the metadata-only M marker. The user explicitly accepted this exact dirty-STOP exception and approved continuation, with no further canonical/index repair. Canonical main and origin/main remain `8e2df61b899bb06df110475d5cc17521fcf35715`. Do not describe the canonical working tree as clean or untouched. No canonical modification beyond that disclosed incident is authorized.
 
-## 8. Runway state
+## User retest
 
-No tag created, moved or deleted. No GitHub release. Nothing published to npm. No merge. PR #9, PR #10
-and PR #11 all stay open; the user's manual QA on 5173 is the gate.
+1. Draw three same-type primitives consecutively; Escape exits and each Undo removes one shape.
+2. Inspect both panel handles, including while changing timeline height.
+3. Open GIF: compact panel, inside click stays, outside/Escape close; select 120 sampling and compare wall-clock duration.
+4. Author three Position-only keys on a Rectangle: Rotation/Scale/Opacity stay unkeyed. Add one explicit Rotation key; only Rotation gains that key.
+5. Use the direct alignment/center/distribution toolbar icons at normal desktop width.
+6. Distribute three unequal/rotated layers horizontally and vertically: equal visual gaps, outer span fixed, one Undo.
+7. Rotate/flip/align/distribute/arrange without routine success toasts; blocked/error feedback remains.
+8. Inspect Shortcut Reference hierarchy, search, platform keys and short-window scrolling.
+9. Inspector no longer has duplicate Add/Remove Keyframe controls; value editing and timeline keyframing still work.
+10. Resize a group containing 90-degree and 30-degree children using edges/corners; rotation and opposite anchor remain consistent, Undo/Redo exact.
+11. Every X/Y snap has a clear matching guide; unsnap/release clears it.
+12. Recheck accepted crop/group/camera/timeline behavior.
 
-Bundle source files (16) — the doc mirrors are byte-identical to their repository sources:
+Crop to current selection: select one or two shapes, run the command; the stage fits selected visible bounds at the current frame. Crop to visible content: selection is unnecessary; all visible content at the current frame defines the crop. Crop plus animation: animate Position, crop, then scrub; motion remains spatially consistent relative to the new origin. Crop plus group: crop grouped content and check that children do not shift twice and the group structure stays intact.
 
-- CHANGELOG.md, NEXT_SESSION.md, PROJECT_STATE.md
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, KCS_RELEASE_CANDIDATE_SUMMARY.md
-- README.md, manifest.txt, OMP_FINAL_RESPONSE.md
-- progress_165_pre_qa_repository_cleanup.md … progress_171_manual_qa_round_five_remediation.md, progress_173_camera_transition_blocker_remediation.md
+## Upload
 
-Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md. No other file in the latest bundle needs to be uploaded.
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`. Other files retained under `latest/` are historical context or mirrored root documents, not a claim that the earlier aggregation-only record is current. PR #11 remains a manual user-retest gate; no merge or release was performed.
+
+
+---
+
+## manifest.txt
+
+# PR #11 Combined Manual QA Remediation Manifest
+
+Worktree: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-combined-qa
+Branch: qa/pr9-pr10-combined
+Starting head: 784a8c235372f6f984f32e744894bfbb3c086f80
+Validated code/tests commit: 679f54f30ee172e08b0d0e94b4561f2a74c87a9f
+Code CI: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38744301819 — SUCCESS
+PR: https://github.com/ErtugrulAK/keyframe-character-studio/pull/11 — OPEN, no merge
+PR #9: OPEN, unchanged fac2bc191724165540cf0f7cc53b7941d737919d
+PR #10: OPEN, unchanged 74603dea5f57d1d586e3ec8c97bf09c304c4ca8a
+
+Scope: approved combined manual QA remediation only. Generic affine group resizing; canonical property-channel projection; resolved snap/guide geometry; persistent primitive tools; direct toolbar and explicit gap/center naming; compact GIF dialog and duration-preserving 120 sampling; timeline-only keyframing controls; routine success-toast removal; boundary-centred panel handles; category-card Shortcut Reference.
+
+Validation: TypeScript build and noEmit, lint, npm test, production build, validate:ograf and npm run check passed. Unit 173 files / 2598 tests. Focused Chromium 99 passed. Final full Chromium 415 passed / 0 failed / 0 flaky, workers 8 / retries 0, UI 5188 / API 5017. qa:release 2 passed; qa:v6 3 passed. State consistency 52 checks passed. npm audit low: 0 vulnerabilities. git diff --check passed. No weakened assertion, skip, retry, arbitrary sleep, or widened camera tolerance. Exact production OGraf minification and actual exported-host load were exercised, not only development rendering.
+
+Live: 5173 now serves the validated combined worktree, listener 48984 (service wrapper 45300), HTTP 200. Switched only after all local gates and code CI passed. Actual Chromium smoke: direct toolbar, no page errors, GIF 120 selectable, compact 259.875px dialog and Escape close. API 5000 listener 2308, health HTTP 200, never restarted. No merge/release/tag/npm/rebase/force push/branch deletion/dependency/workflow/OMP configuration change.
+Canonical exception: main/origin main 8e2df61b899bb06df110475d5cc17521fcf35715. A subagent mistakenly wrote src/utils/matte.ts then restored HEAD content and refreshed index metadata. User was informed; one approved refresh did not clear the M marker. User explicitly accepted that exact metadata-only dirty-STOP exception, with no further canonical/index repair. HEAD/index/raw/filtered blob match 96d0b4ad2bed3326f8ff4f8e5df552c2ec93a3b5; no content or staged diff. Canonical is not described as clean or untouched.
+
+Current task documents:
+- README.md — entry point and record precedence
+- OMP_FINAL_RESPONSE.md — complete findings, root causes, fixes, math/timing decisions, validation and retest record
+- manifest.txt — provenance and validation summary
+
+Retained historical/mirrored documents, not changed in this task:
+- CHANGELOG.md
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
+- KCS_RELEASE_CANDIDATE_SUMMARY.md
+- NEXT_SESSION.md
+- PROJECT_STATE.md
+- progress_165_pre_qa_repository_cleanup.md
+- progress_166_manual_qa_round_two_remediation.md
+- progress_167_manual_qa_round_three_remediation.md
+- progress_168_manual_qa_round_four_remediation.md
+- progress_169_manual_qa_round_four_remediation.md
+- progress_170_manual_qa_round_four_remediation.md
+- progress_171_manual_qa_round_five_remediation.md
+- progress_173_camera_transition_blocker_remediation.md
+
+The one-file contains the current remediation record rather than repeating historical reports. A documents-only commit rides above the tested code commit; its own revision/CI is reported on delivery rather than embedding a self-referential hash.
+
+Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md.

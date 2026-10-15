@@ -1,30 +1,28 @@
-# KCS — PR #11 Combined Manual QA Remediation + Final Micro-Polish
+# KCS — PR #11 Main Integration + Mode-Swap Fade Fix
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.
 
-This current task record supersedes the earlier aggregation-only bundle. Historical reports and root mirrors remain under latest/ unchanged; they are not repeated here.
+This record supersedes the earlier remediation bundles for delivery: the PR #9/#10/#11 lineage is integrated into main and the gate-caught fade regression is fixed. Historical reports and root mirrors remain under latest/ unchanged; they are not repeated here.
 
 ## README.md
 
-# PR #11 Combined Manual QA Remediation Handoff
+# PR #11 Main Integration + Mode-Swap Fade Fix Handoff
 
-This task-specific bundle supersedes the earlier aggregation-only handoff. The approved scope is the user's combined PR #9/#10 manual QA findings on `qa/pr9-pr10-combined`, not a merge or release.
+This task-specific bundle carries the MAIN INTEGRATION round: the user-approved fast-forward integration of the PR #9/#10/#11 UI lineage into `main`, the merge-gate regression it surfaced, and the targeted fix delivered above it.
 
 ## Current engineering record
 
-- Worktree: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-combined-qa`.
-- Status: **FINAL MICRO-POLISH READY — 5173 READY FOR THE LAST 6-ITEM USER RETEST — NO MERGE.**
-- PR #11: https://github.com/ErtugrulAK/keyframe-character-studio/pull/11 — OPEN; user retest remains the gate.
-- `OMP_FINAL_RESPONSE.md` records findings, root causes, fixes, affine transform math, property-channel authority, snap-guide invariant, GIF timing decision, observed validation, service state, the approved canonical metadata exception and the numbered retest procedure.
-- PR #9 and #10 remain OPEN with unchanged heads `fac2bc1` and `74603de`.
-- No merge, release, tag, npm publication, rebase, force push or API 5000 restart.
+- Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`; integration validated in the detached worktree `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\main-2b14fa5` (full dependency install, own runtime SQLite DB).
+- Status: **MAIN INTEGRATED — GATE GREEN ON CODE HEAD `73fc000` — 5173 CUT OVER TO THE CANONICAL `main` CHECKOUT.**
+- `main` is at or after `73fc000`, matching `origin/main`; the documents-only record rides above the gate-tested code head. No merge commit, no rebase, no force push.
+- Release tags `v1.1.0-rc.1` and `v1.1.0-public-controls` are unchanged; no npm publication. PR #9/#10/#11 handles are untouched.
+- `OMP_FINAL_RESPONSE.md` carries the integration addendum (root cause, bisect, fix design, gate ledger, canonical sync disclosure); `reports/progress_176_main_integration_mode_swap_fix.md` is the round record.
 
-Local gates passed (latest V3.7 final micro-polish head, 2026-10-15): 173 files / 2601 unit tests and FULL Chromium **436 passed / 0 failed / 0 flaky** on the isolated QA config (UI 5188; API 5000 never touched), state consistency 56 checks, audit 0. Earlier rounds on this branch: PR #11 round — unit 2598 / full 415 / 0 / 0 at code commit `679f54f` with CI run [38744301819](https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38744301819); V3.6 — unit 2599 / full 426 / 0 / 0 with CI run [38785555323](https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38785555323). Live 5173 serves this same combined worktree (listener 48984) and shows the V3.7 head, visually verified at 1440×900; API 5000 remains healthy on unchanged listener 2308. The V3.7 documents-only refresh adds no runtime changes; its head/CI is reported in `manifest.txt` on delivery.
+Local gates passed (code head `73fc000`, 2026-10-16): tsc/lint/build clean; unit 173 files / 2602 tests; `timeline-marquee` 6/6 twice in isolation (workers 1, retries 0); `npm run qa:release` passed for the candidate SHA; FULL Chromium **436 passed / 0 failed / 0 flaky** (workers 8, retries 0, isolated UI 5188 / API 5017; live API 5000 never touched). Earlier rounds on this lineage keep their records: V3.7 2601/436, V3.6 2599/426, first round 2598/415.
 
 ## Record precedence
 
-The remediation record and manifest are the current task authority. Other documents retained here are historical snapshots or exact mirrors of root documents. Their old validation counts and next-session narratives are context, not current remediation results. No root document, historical report or mirrored roadmap was modified for this task.
-
+The integration addendum in `OMP_FINAL_RESPONSE.md`, the manifest and `progress_176` are the current task authority. The remediation records retained here are historical snapshots or exact mirrors of root documents; their old validation counts, canonical-position claims and next-session narratives are context, not current state.
 
 ## Upload
 
@@ -75,6 +73,18 @@ The user's V3.6 retest passed six surfaces and rejected the residual polish item
 Gate on the V3.7 head: tsc/lint/build clean; unit 173 files / 2601 tests; FULL Chromium **436 / 0 failed / 0 flaky** (workers 8, retries 0, isolated UI 5188 / API 5017; live API 5000 untouched); state consistency 56 checks; audit 0. New pins: `e2e/micro-polish-v37.spec.ts` (8 tests — band separation, glyph distinctness, rail compaction + restraint, inset keyboard ring vs clean pointer focus, crossfade + reduced motion, rapid-switch camera identity, sheet layout, handle family) and three parameterised 120-sampling rows in `e2e/gif-export.spec.ts`.
 
 Final user retest (6 items): (1) toolbar grouping + Center icon acceptable; (2) rail buttons and both collapse handles look cleaner; (3) no outer focus frame, Tab still visible as a subtle inset ring; (4) Edit ↔ Broadcast transition smooth, no stage/camera jump; (5) Shortcut Reference compact/readable; (6) GIF 0.5s/1s/2s at 120 shows 25/50/100 frames with 0.50/1.00/2.00 s total. If these pass: STOP polish — PR #11 is ready for a separate MAIN INTEGRATION + VERSION CHECKPOINT task. **NO MERGE in this task.**
+
+## Main integration addendum — 2026-10-16
+
+The user approved continuing the MAIN INTEGRATION task with a targeted fix for the failure this task's own merge gate surfaced. Full record: `reports/progress_176_main_integration_mode_swap_fix.md`.
+
+Integration: the PR #9/#10/#11 UI lineage (branch `qa/pr9-pr10-combined`, V3.4 manual-QA rounds through the V3.7 final micro-polish, head `2b14fa5`) was integrated into `main` by fast-forward-only pushes; `main` is at or after `73fc000`, matching `origin/main`. No merge commit, no rebase, no force push; tags unchanged; no npm publication; PR handles untouched. Validation ran in the isolated detached worktree `.worktrees/main-2b14fa5` under the canonical repo root, with its own `npm ci` install and runtime DB.
+
+Regression the gate caught and the fix: two `timeline-marquee` specs failed deterministically on `2b14fa5` while the V3.6 head `d972a24` was 6/6 green — commit-bisected to the style-only commit `4774b5f`. Measured cause: the `kcs-mode-enter` chrome fade is a mount animation, so it also played on the app's first paint; during it the timeline's playhead-follow scroll fired against the unsettled initial layout (clicking the frame-40 key scrolled the grid `scrollLeft` 0 → 711) and the marquee press landed outside the grid (elementFromPoint: `.ue-outliner-list`). Fix `73fc000` keeps the fade as the transition it was designed to be: `useBroadcast` raises `modeSwapActive` only on a real Edit ↔ Broadcast change, the app shell carries `kcs-mode-swap` on `.app-container` while it is set and lowers it on the enter animation's own `animationend`, and the CSS animation plus the reduced-motion exemption are scoped under that class. No timer, no playhead-logic change, no test-coordinate change, no sleep/skip/retry/tolerance hack; the 180 ms fade is visually identical. Behaviour proof: computed `animationName` `none` on first mount, `kcs-mode-enter` on both swap directions, class lowered after the animation. New permanent pin in `src/tests/useBroadcast.test.ts`.
+
+Gate ledger on code head `73fc000`: tsc/oxlint/build clean; unit 173 files / 2602 tests; `timeline-marquee` 6/6 twice in isolation (workers 1, retries 0); `npm run qa:release` — release gate passed for the candidate SHA; FULL Chromium 436 passed / 0 failed / 0 flaky (workers 8, retries 0, isolated UI 5188 / API 5017; live API 5000 never touched).
+
+Canonical sync supersedes the 8e2df61 position claim and the metadata-only dirty-STOP exception stated above: the `matte.ts` marker was proven content-free (HEAD/index/worktree blob all `96d0b4ad2bed3326f8ff4f8e5df552c2ec93a3b5`), the stale index was rebuilt from HEAD (metadata-only), and the approved fast-forward checkout resolved the marker; canonical main/origin/main carry the delivered head and the tracked tree is clean. The untracked local research file on the canonical tree is the user's and was not touched. Live surfaces: 5173 now serves the canonical `main` checkout; API 5000 (listener 2308) was never restarted.
 
 ## Findings, root causes, and fixes
 
@@ -171,37 +181,39 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`. Other files retained un
 
 ## manifest.txt
 
-# PR #11 Combined Manual QA Remediation + Final Micro-Polish Manifest
+# PR #11 Main Integration + Mode-Swap Fade Fix Manifest
 
-Worktree: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-combined-qa
-Branch: qa/pr9-pr10-combined
-Starting head: 784a8c235372f6f984f32e744894bfbb3c086f80
-Validated code/tests commits: 679f54f (PR #11 round), 08e52c7 (UI polish V3.6) and the V3.7 final micro-polish round, same branch
-Code CI: first two rounds SUCCESS (runs 38744301819 and 38785555323); V3.7 head CI is reported on delivery above the identical tested runtime
-PR: https://github.com/ErtugrulAK/keyframe-character-studio/pull/11 — OPEN, no merge
-PR #9: OPEN, unchanged fac2bc191724165540cf0f7cc53b7941d737919d
-PR #10: OPEN, unchanged 74603dea5f57d1d586e3ec8c97bf09c304c4ca8a
+Repository: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio (main; validation in the isolated detached worktree .worktrees/main-2b14fa5)
+Lineage: qa/pr9-pr10-combined (V3.4 manual QA through V3.7 micro-polish), integrated head 2b14fa5
+Validated code/tests commits: 679f54f (PR #11 round), 08e52c7 (UI polish V3.6), the V3.7 final micro-polish round, and the integration fix 73fc000a54c6c50ce21b71822c16a954a27399c4
+Code CI: PR-round runs 38744301819 and 38785555323 SUCCESS; the integration head ran the full local gate (release gate passed for the exact SHA)
+Integration: main fast-forward-only to 2b14fa5 then 73fc000, matching origin/main; no merge commit, no rebase, no force push
+PR #9/#10/#11: handles unchanged by this task; the lineage itself is on main
 
-Scope: approved combined manual QA remediation only. First round: generic affine group resizing; canonical property-channel projection; resolved snap/guide geometry; persistent primitive tools; direct toolbar and explicit gap/center naming; compact GIF dialog and duration-preserving 120 sampling; timeline-only keyframing controls; routine success-toast removal; boundary-centred panel handles; category-card Shortcut Reference. V3.6 polish (2026-10-15): armed-draw crosshair cursor; single dock-width token contract (56/304/372); single-close GIF panel with tooltip-carried format facts; documented align/distribute command set and order; free non-uniform corner resize with Shift aspect toggle; focus-visible pointer/keyboard select policy; quiet mode segment; dense one-line shortcut rows; LAN restored-project provenance chip. V3.7 final micro-polish (2026-10-15): announced Align/Center/Distribute/Rotate-Flip band grouping with a four-arrow both-axes Center glyph; compact restrained rail (42px items, 18px icons, one label voice, light active surface + accent bar) and quiet boundary-tab handles of one family; ONE inset focus-visible authority; presentation-only 180ms Edit/Broadcast chrome crossfade (reduced-motion honoured, camera-exact rapid switching); dense single-column Shortcut Reference sheet; GIF control renamed Sampling rate after verifying 0.5s/1s/2s at 120 encode 25/50/100 frames at the 2 cs delay floor with preserved wall-clock duration. No feature, timeline, mask or matte work; no behaviour changes.
 
-Validation: V3.7 head — TypeScript build and noEmit, lint, npm test, production build, validate:ograf and npm run check passed. Unit 173 files / 2601 tests. Full Chromium 436 passed / 0 failed / 0 flaky, workers 8 / retries 0, isolated UI 5188 / API 5017 (live API 5000 never touched). State consistency 56 checks passed. npm audit low: 0. No weakened assertion, skip, retry, arbitrary sleep, or widened camera tolerance. New permanent pins: e2e/micro-polish-v37.spec.ts (8 tests), three 120-sampling browser rows in e2e/gif-export.spec.ts, and two GIF delay-floor unit tests. V3.6 round: unit 2599, full Chromium 426 / 0 / 0, pin e2e/ui-polish-v36.spec.ts. First round additionally: focused Chromium 99; full 415 / 0 / 0; qa:release 2; qa:v6 3; exact production OGraf minification and exported-host load exercised.
+Scope: main integration of the PR #9/#10/#11 UI lineage, plus the targeted remediation of the regression the merge gate caught (first-paint chrome fade unsettling the timeline's initial layout). The underlying lineages they integrate: first round — generic affine group resizing; canonical property-channel projection; resolved snap/guide geometry; persistent primitive tools; direct toolbar and explicit gap/center naming; compact GIF dialog and duration-preserving 120 sampling; timeline-only keyframing controls; routine success-toast removal; boundary-centred panel handles; category-card Shortcut Reference. V3.6 polish (2026-10-15): armed-draw crosshair cursor; single dock-width token contract (56/304/372); single-close GIF panel with tooltip-carried format facts; documented align/distribute command set and order; free non-uniform corner resize with Shift aspect toggle; focus-visible pointer/keyboard select policy; quiet mode segment; dense one-line shortcut rows; LAN restored-project provenance chip. V3.7 final micro-polish (2026-10-15): announced Align/Center/Distribute/Rotate-Flip band grouping with a four-arrow both-axes Center glyph; compact restrained rail (42px items, 18px icons, one label voice, light active surface + accent bar) and quiet boundary-tab handles of one family; ONE inset focus-visible authority; presentation-only 180ms Edit/Broadcast chrome crossfade (reduced-motion honoured, camera-exact rapid switching); dense single-column Shortcut Reference sheet; GIF control renamed Sampling rate after verifying 0.5s/1s/2s at 120 encode 25/50/100 frames at the 2 cs delay floor with preserved wall-clock duration.
 
-Live: 5173 serves this same combined worktree including the V3.7 head, listener 48984 (service wrapper 45300), HTTP 200; it was never stopped. The V3.7 surface was additionally verified visually in a real browser at 1440x900 (grouped toolbar with the new Center glyph, compact rail, boundary-flush handles, dense shortcut sheet, restored chip). API 5000 listener 2308, health HTTP 200, never restarted. No merge/release/tag/npm/rebase/force push/branch deletion/dependency/workflow/OMP configuration change.
-Canonical exception: main/origin main 8e2df61b899bb06df110475d5cc17521fcf35715. A subagent mistakenly wrote src/utils/matte.ts then restored HEAD content and refreshed index metadata. User was informed; one approved refresh did not clear the M marker. User explicitly accepted that exact metadata-only dirty-STOP exception, with no further canonical/index repair. HEAD/index/raw/filtered blob match 96d0b4ad2bed3326f8ff4f8e5df552c2ec93a3b5; no content or staged diff. Canonical is not described as clean or untouched.
+Validation: integration head 73fc000 — TypeScript build and noEmit, lint, npm test (173 files / 2602 tests), production build and validate:ograf passed; timeline-marquee 6/6 twice in isolation (workers 1, retries 0); npm run qa:release passed for the exact candidate SHA; FULL Chromium 436 passed / 0 failed / 0 flaky (workers 8, retries 0, isolated UI 5188 / API 5017; live API 5000 never touched). Same no-weakening policy as earlier rounds: no assertion relax, skip, retry, arbitrary sleep or widened camera tolerance; new permanent pin in src/tests/useBroadcast.test.ts. V3.7 head — unit 173 files / 2601 tests; full Chromium 436 / 0 / 0; state consistency 56 checks; npm audit low 0; pins e2e/micro-polish-v37.spec.ts (8 tests), three 120-sampling browser rows in e2e/gif-export.spec.ts, two GIF delay-floor unit tests. V3.6 round: unit 2599, full Chromium 426 / 0 / 0, pin e2e/ui-polish-v36.spec.ts. First round additionally: focused Chromium 99; full 415 / 0 / 0; qa:release 2; qa:v6 3; exact production OGraf minification and exported-host load exercised.
+
+Live: 5173 now serves the canonical main checkout (documented cutover in this round's report); API 5000 listener 2308, health HTTP 200, never restarted. No release, tag, npm, rebase, force push, branch deletion, dependency, workflow or OMP configuration change.
+Canonical sync: main/origin main carry the delivered head. The disclosed metadata-only matte.ts marker was proven content-free (HEAD/index/worktree blob 96d0b4ad2bed3326f8ff4f8e5df552c2ec93a3b5), the stale index was rebuilt from HEAD (metadata-only operation), and the approved fast-forward checkout resolved it; the tracked canonical tree is clean. The untracked EFFECTCRAFT_DEEP_ARCHITECTURE_RESEARCH.md is the user's local file and was not touched.
 
 Current task documents:
 - README.md — entry point and record precedence
-- OMP_FINAL_RESPONSE.md — complete findings, root causes, fixes, math/timing decisions, validation and retest record
+- OMP_FINAL_RESPONSE.md — complete findings, root causes, fixes, math/timing decisions, validation and retest record, with the Main integration addendum (2026-10-16)
 - manifest.txt — provenance and validation summary
 - progress_174_combined_pr9_pr10_ui_polish_v36.md — the V3.6 nine-findings remediation record
 - progress_175_pr11_final_micro_polish_v37.md — the V3.7 final micro-polish record
+- progress_176_main_integration_mode_swap_fix.md — the main integration and mode-swap fade fix record
 
-Retained historical/mirrored documents, not changed in this task:
+Current mirrors of root state documents (re-copied from root after this round):
 - CHANGELOG.md
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
-- KCS_RELEASE_CANDIDATE_SUMMARY.md
 - NEXT_SESSION.md
 - PROJECT_STATE.md
+
+Retained historical documents, not changed in this task:
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
+- KCS_RELEASE_CANDIDATE_SUMMARY.md
 - progress_165_pre_qa_repository_cleanup.md
 - progress_166_manual_qa_round_two_remediation.md
 - progress_167_manual_qa_round_three_remediation.md

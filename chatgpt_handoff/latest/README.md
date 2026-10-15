@@ -1,22 +1,20 @@
-# PR #11 Combined Manual QA Remediation Handoff
+# PR #11 Main Integration + Mode-Swap Fade Fix Handoff
 
-This task-specific bundle supersedes the earlier aggregation-only handoff. The approved scope is the user's combined PR #9/#10 manual QA findings on `qa/pr9-pr10-combined`, not a merge or release.
+This task-specific bundle carries the MAIN INTEGRATION round: the user-approved fast-forward integration of the PR #9/#10/#11 UI lineage into `main`, the merge-gate regression it surfaced, and the targeted fix delivered above it.
 
 ## Current engineering record
 
-- Worktree: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-combined-qa`.
-- Status: **FINAL MICRO-POLISH READY — 5173 READY FOR THE LAST 6-ITEM USER RETEST — NO MERGE.**
-- PR #11: https://github.com/ErtugrulAK/keyframe-character-studio/pull/11 — OPEN; user retest remains the gate.
-- `OMP_FINAL_RESPONSE.md` records findings, root causes, fixes, affine transform math, property-channel authority, snap-guide invariant, GIF timing decision, observed validation, service state, the approved canonical metadata exception and the numbered retest procedure.
-- PR #9 and #10 remain OPEN with unchanged heads `fac2bc1` and `74603de`.
-- No merge, release, tag, npm publication, rebase, force push or API 5000 restart.
+- Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`; integration validated in the detached worktree `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\main-2b14fa5` (full dependency install, own runtime SQLite DB).
+- Status: **MAIN INTEGRATED — GATE GREEN ON CODE HEAD `73fc000` — 5173 CUT OVER TO THE CANONICAL `main` CHECKOUT.**
+- `main` is at or after `73fc000`, matching `origin/main`; the documents-only record rides above the gate-tested code head. No merge commit, no rebase, no force push.
+- Release tags `v1.1.0-rc.1` and `v1.1.0-public-controls` are unchanged; no npm publication. PR #9/#10/#11 handles are untouched.
+- `OMP_FINAL_RESPONSE.md` carries the integration addendum (root cause, bisect, fix design, gate ledger, canonical sync disclosure); `reports/progress_176_main_integration_mode_swap_fix.md` is the round record.
 
-Local gates passed (latest V3.7 final micro-polish head, 2026-10-15): 173 files / 2601 unit tests and FULL Chromium **436 passed / 0 failed / 0 flaky** on the isolated QA config (UI 5188; API 5000 never touched), state consistency 56 checks, audit 0. Earlier rounds on this branch: PR #11 round — unit 2598 / full 415 / 0 / 0 at code commit `679f54f` with CI run [38744301819](https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38744301819); V3.6 — unit 2599 / full 426 / 0 / 0 with CI run [38785555323](https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38785555323). Live 5173 serves this same combined worktree (listener 48984) and shows the V3.7 head, visually verified at 1440×900; API 5000 remains healthy on unchanged listener 2308. The V3.7 documents-only refresh adds no runtime changes; its head/CI is reported in `manifest.txt` on delivery.
+Local gates passed (code head `73fc000`, 2026-10-16): tsc/lint/build clean; unit 173 files / 2602 tests; `timeline-marquee` 6/6 twice in isolation (workers 1, retries 0); `npm run qa:release` passed for the candidate SHA; FULL Chromium **436 passed / 0 failed / 0 flaky** (workers 8, retries 0, isolated UI 5188 / API 5017; live API 5000 never touched). Earlier rounds on this lineage keep their records: V3.7 2601/436, V3.6 2599/426, first round 2598/415.
 
 ## Record precedence
 
-The remediation record and manifest are the current task authority. Other documents retained here are historical snapshots or exact mirrors of root documents. Their old validation counts and next-session narratives are context, not current remediation results. No root document, historical report or mirrored roadmap was modified for this task.
-
+The integration addendum in `OMP_FINAL_RESPONSE.md`, the manifest and `progress_176` are the current task authority. The remediation records retained here are historical snapshots or exact mirrors of root documents; their old validation counts, canonical-position claims and next-session narratives are context, not current state.
 
 ## Upload
 

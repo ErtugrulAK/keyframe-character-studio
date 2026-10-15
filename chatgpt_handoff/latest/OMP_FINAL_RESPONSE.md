@@ -40,6 +40,18 @@ Gate on the V3.7 head: tsc/lint/build clean; unit 173 files / 2601 tests; FULL C
 
 Final user retest (6 items): (1) toolbar grouping + Center icon acceptable; (2) rail buttons and both collapse handles look cleaner; (3) no outer focus frame, Tab still visible as a subtle inset ring; (4) Edit ↔ Broadcast transition smooth, no stage/camera jump; (5) Shortcut Reference compact/readable; (6) GIF 0.5s/1s/2s at 120 shows 25/50/100 frames with 0.50/1.00/2.00 s total. If these pass: STOP polish — PR #11 is ready for a separate MAIN INTEGRATION + VERSION CHECKPOINT task. **NO MERGE in this task.**
 
+## Main integration addendum — 2026-10-16
+
+The user approved continuing the MAIN INTEGRATION task with a targeted fix for the failure this task's own merge gate surfaced. Full record: `reports/progress_176_main_integration_mode_swap_fix.md`.
+
+Integration: the PR #9/#10/#11 UI lineage (branch `qa/pr9-pr10-combined`, V3.4 manual-QA rounds through the V3.7 final micro-polish, head `2b14fa5`) was integrated into `main` by fast-forward-only pushes; `main` is at or after `73fc000`, matching `origin/main`. No merge commit, no rebase, no force push; tags unchanged; no npm publication; PR handles untouched. Validation ran in the isolated detached worktree `.worktrees/main-2b14fa5` under the canonical repo root, with its own `npm ci` install and runtime DB.
+
+Regression the gate caught and the fix: two `timeline-marquee` specs failed deterministically on `2b14fa5` while the V3.6 head `d972a24` was 6/6 green — commit-bisected to the style-only commit `4774b5f`. Measured cause: the `kcs-mode-enter` chrome fade is a mount animation, so it also played on the app's first paint; during it the timeline's playhead-follow scroll fired against the unsettled initial layout (clicking the frame-40 key scrolled the grid `scrollLeft` 0 → 711) and the marquee press landed outside the grid (elementFromPoint: `.ue-outliner-list`). Fix `73fc000` keeps the fade as the transition it was designed to be: `useBroadcast` raises `modeSwapActive` only on a real Edit ↔ Broadcast change, the app shell carries `kcs-mode-swap` on `.app-container` while it is set and lowers it on the enter animation's own `animationend`, and the CSS animation plus the reduced-motion exemption are scoped under that class. No timer, no playhead-logic change, no test-coordinate change, no sleep/skip/retry/tolerance hack; the 180 ms fade is visually identical. Behaviour proof: computed `animationName` `none` on first mount, `kcs-mode-enter` on both swap directions, class lowered after the animation. New permanent pin in `src/tests/useBroadcast.test.ts`.
+
+Gate ledger on code head `73fc000`: tsc/oxlint/build clean; unit 173 files / 2602 tests; `timeline-marquee` 6/6 twice in isolation (workers 1, retries 0); `npm run qa:release` — release gate passed for the candidate SHA; FULL Chromium 436 passed / 0 failed / 0 flaky (workers 8, retries 0, isolated UI 5188 / API 5017; live API 5000 never touched).
+
+Canonical sync supersedes the 8e2df61 position claim and the metadata-only dirty-STOP exception stated above: the `matte.ts` marker was proven content-free (HEAD/index/worktree blob all `96d0b4ad2bed3326f8ff4f8e5df552c2ec93a3b5`), the stale index was rebuilt from HEAD (metadata-only), and the approved fast-forward checkout resolved the marker; canonical main/origin/main carry the delivered head and the tracked tree is clean. The untracked local research file on the canonical tree is the user's and was not touched. Live surfaces: 5173 now serves the canonical `main` checkout; API 5000 (listener 2308) was never restarted.
+
 ## Findings, root causes, and fixes
 
 ### 1. Persistent primitive creation

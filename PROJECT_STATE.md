@@ -16,6 +16,11 @@ Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candi
 
 The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` branch remains a preserved archive candidate.
 
+## Combined PR #9 + #10 manual QA — UI polish V3.6 remediation — 2026-10-15
+
+- Nine UI findings from the combined-round retest fixed on `qa/pr9-pr10-combined` (worktree `keyframe-character-studio-omp-combined-qa`), each browser-measured before and after: armed-draw crosshair cursor; one shared dock-width token contract (rail 56 / drawer 304 / inspector 372); GIF panel with a single close affordance and tooltip-carried format facts; the documented align/distribute command set in the documented order (the centre-spacing duplicate left the UI); **free non-uniform corner resize with the Shift aspect toggle** (Inspector lock defaults unlocked); KCS-styled select focus rings (no white browser ring on pointer focus); quiet mode segment (glow, bounce and inline paint gone); dense one-line shortcut rows; and a restore-provenance chip for the LAN cross-PC case. Record: `reports/progress_174_combined_pr9_pr10_ui_polish_v36.md`.
+- Gate on the final head: tsc/lint/build clean, unit 173 files / 2599 tests, FULL Chromium **426 passed / 0 failed / 0 flaky** on the isolated QA config; new pin `e2e/ui-polish-v36.spec.ts`. The live surfaces (5173 vite serving this worktree, API 5000) were never stopped; PR #9/#10 merge decisions stay with the user.
+
 ## Manual QA Round 4 remediation — 2026-10-13
 
 - **Same branch/worktree** as rounds 1–3 (branch `fix/manual-qa-round1-remediation`, worktree `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-manual-qa-r1`, base `origin/main` at `8e2df61`). Sixteen further findings (R4-01…R4-16) were fixed in sixteen commits ending at `fec0c03`, plus two part-four commits on top: `9280335` (two specs migrated to the contracts round 4 replaced) and `d545cfc` (the round record, `reports/progress_170_manual_qa_round_four_remediation.md`).

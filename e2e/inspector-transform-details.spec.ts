@@ -100,13 +100,16 @@ test('R5-14 — TRANSFORM is a Position row plus one compact Rotation/Scale/Opac
   await expect(details.getByRole('button', { name: /Keyframe/ })).toHaveCount(0);
 
   // ...and the aspect lock itself is still reachable, as one compact glyph.
+  // V3.6: FREE is the resting state — the corner drag scales both axes
+  // independently until the user opts into the persistent uniform lock.
   const lock = page.getByRole('button', { name: 'Lock aspect ratio' });
+  await expect(lock).toHaveAttribute('aria-pressed', 'false');
+  await expect(lock).toHaveAttribute('title', /Aspect ratio free/);
+  await lock.click();
   await expect(lock).toHaveAttribute('aria-pressed', 'true');
   await expect(lock).toHaveAttribute('title', /Aspect ratio locked/);
   await lock.click();
   await expect(lock).toHaveAttribute('aria-pressed', 'false');
-  await lock.click();
-  await expect(lock).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('R5-14 — the compact trio stays on one row at the narrowest inspector width', async ({ page }) => {
@@ -118,7 +121,7 @@ test('R5-14 — the compact trio stays on one row at the narrowest inspector wid
   const atDefault = await compactTrio(page);
   expect(atDefault.cells).toHaveLength(3);
 
-  // The dock width floor: `min(360px, max(250px, 34vw))` resolves to 250px.
+  // The dock width floor: `min(--right-inspector-width, max(250px, 34vw))` resolves to 250px.
   await page.setViewportSize({ width: 640, height: 900 });
   const inspectorWidth = () => page.evaluate(() => Math.round(document.querySelector('.motion-design-right-sidebar')!.getBoundingClientRect().width));
   // The dock eases its width (240ms), so read the settled value.

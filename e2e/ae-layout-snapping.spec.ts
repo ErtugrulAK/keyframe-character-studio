@@ -92,7 +92,7 @@ test('equal-spacing distribution evens edge gaps, holds the span, and is one his
   const beforeA = await boxOf(page, 'a');
   const beforeC = await boxOf(page, 'c');
 
-  await page.getByRole('button', { name: 'Distribute Horizontal', exact: true }).click();
+  await page.getByRole('button', { name: 'Distribute Horizontally', exact: true }).click();
 
   const gaps = await gapsBetween(page, ['a', 'b', 'c']);
   expect(Math.abs(gaps[0] - gaps[1])).toBeLessThanOrEqual(1);

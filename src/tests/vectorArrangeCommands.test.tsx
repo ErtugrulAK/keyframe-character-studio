@@ -103,19 +103,23 @@ describe('vector authoring commands', () => {
     expect(h.worldX(b)).toBeCloseTo(0, 6);
   });
 
-  it('distributes three selected layers, and keeps its trigger unavailable below three', () => {
+  it('centers every layer on the collective centre in one command, gated at two', () => {
     const h = renderHarness();
     const [a, b, c] = seed(h, [[0, 0], [40, 0], [400, 0]]);
 
-    select(h, [a, b]);
-    expect(screen.getByRole('button', { name: 'Center Horizontally', exact: true })).toBeDisabled();
+    select(h, [a]);
+    expect(screen.getByRole('button', { name: 'Center', exact: true })).toBeDisabled();
 
     select(h, [a, b, c]);
-    expect(screen.getByRole('button', { name: 'Center Horizontally', exact: true })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Center', exact: true })).toBeEnabled();
     const before = h.document();
 
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Center Horizontally', exact: true })); });
+    // Collective bounds run 0…460, so every centre lands at x = 230: each 60-unit
+    // box ends at x = 200. One command stacks them as one undo step.
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Center', exact: true })); });
+    expect(h.worldX(a)).toBeCloseTo(200, 6);
     expect(h.worldX(b)).toBeCloseTo(200, 6);
+    expect(h.worldX(c)).toBeCloseTo(200, 6);
 
     act(() => { h.ctx().undo(); });
     expect(h.document()).toBe(before);
@@ -192,7 +196,7 @@ describe('vector authoring commands', () => {
     select(h, [a, b, c]);
     const before = h.document();
 
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Distribute Horizontal', exact: true })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Distribute Horizontally', exact: true })); });
     // The middle box takes the even gap (80 world units on each side).
     expect(h.worldX(b)).toBeCloseTo(200, 6);
     expect(h.worldX(a)).toBeCloseTo(0, 6);

@@ -882,7 +882,10 @@ export const StageCanvas: React.FC = () => {
         // the pointer. It answers in WORLD space — the write authority converts
         // the patch into the layer's container-local space, exactly like every
         // other canvas gesture. A sheared nesting is solved in its container
-        // frame instead (see `ResizeSolveFrame`).
+        // frame instead (see `ResizeSolveFrame`). A corner drag is free
+        // non-uniform scaling: pointer X drives scaleX and pointer Y drives
+        // scaleY independently. Shift toggles the aspect constraint for the
+        // duration of one drag, against the Inspector's persistent lock.
         const corner = CORNER_BY_SCALE_MODE[dragMode];
         if (!corner || !dragStart.localBounds) return;
         const frame = dragStart.solveFrame ?? { transform: dragStart.initialTransform };
@@ -892,7 +895,7 @@ export const StageCanvas: React.FC = () => {
           corner,
           startPointer: pointInSolveFrame(svgPointToWorld({ x: dragStart.x, y: dragStart.y }), frame),
           pointer: pointInSolveFrame(svgPointToWorld({ x: svgX, y: svgY }), frame),
-          uniform: isScaleLocked,
+          uniform: isScaleLocked !== e.shiftKey,
         });
         updateCurrentTransform(solveFramePatchToWorld(patch, frame));
       } else if (EDGE_BY_SCALE_MODE[dragMode]) {
@@ -1183,6 +1186,10 @@ export const StageCanvas: React.FC = () => {
 
   const sortedParts = stackingOrder(characterParts);
   const isPanning = activeTool === 'pan' || (isDragging && dragMode === 'pan');
+  // A primitive draw tool that is armed (waiting for its drag) owns the stage
+  // cursor: the canvas reads as a creation surface until Escape or the next
+  // tool exits it, and the cursor returns with the state change itself.
+  const isDrawToolArmed = (activeTool === 'shape_create' && Boolean(pendingShapeType)) || activeTool === 'freeform_draw';
   const cameraTransform = appMode === 'broadcast' || !cameraView || !stageBox
     ? null
     : getStageCameraTransform({ view: cameraView, stage: stageBox, zoom: zoomLevel, viewBox: EDITOR_CAMERA_VIEWBOX });
@@ -1203,7 +1210,7 @@ export const StageCanvas: React.FC = () => {
 
   return (
     <div
-      className={`stage-canvas-container ${isPanning ? 'panning' : ''} ${activeTool === 'pan' ? 'hand-tool' : 'select-tool'} ${isDragging ? 'interaction-dragging' : ''} ${cropMode ? 'crop-mode' : ''}`}
+      className={`stage-canvas-container ${isPanning ? 'panning' : ''} ${activeTool === 'pan' ? 'hand-tool' : 'select-tool'} ${isDragging ? 'interaction-dragging' : ''} ${cropMode ? 'crop-mode' : ''} ${isDrawToolArmed ? 'drawing-tool' : ''}`}
       data-camera-zoom={zoomLevel}
       ref={containerRef}
       onMouseDown={handleMouseDown}
@@ -1242,7 +1249,7 @@ export const StageCanvas: React.FC = () => {
             ? `translate(${cameraTransform.translateX}px, ${cameraTransform.translateY}px) scale(${cameraTransform.scale})`
             : 'translate(0px, 0px) scale(1)',
           transformOrigin: 'center center',
-          cursor: activeTool === 'freeform_draw' ? 'crosshair' : undefined,
+          cursor: isDrawToolArmed ? 'crosshair' : undefined,
         }}
       >
         <defs>

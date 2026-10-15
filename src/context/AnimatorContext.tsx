@@ -95,6 +95,8 @@ export interface AnimatorContextType {
 
   // Auto-Save System state
   lastSavedAt: Date | null;
+  /** True while the open project is the autosave this browser restored at startup. */
+  restoredFromLocalStorage: boolean;
   triggerManualSave: () => void;
 
   // Undo / Redo History
@@ -238,8 +240,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const { toasts, showToast, removeToast } = useToast();
 
   // Shared scale-lock state: used by the inspector scale card AND the canvas
-  // corner-drag scaling so both respect the same setting.
-  const [isScaleLocked, setIsScaleLocked] = useState<boolean>(true);
+  // corner-drag scaling so both respect the same setting. The corner drag is
+  // free (non-uniform) by default; this lock is the persistent uniform option
+  // and Shift is its per-gesture equivalent.
+  const [isScaleLocked, setIsScaleLocked] = useState<boolean>(false);
 
   // Canvas snapping master switch. It is presentation state (a preference), not
   // document state, so it lives beside scale-lock on the provider; the View band
@@ -642,6 +646,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const {
     lastSavedAt,
+    restoredFromLocalStorage,
     triggerManualSave,
     exportProject,
     importProject,
@@ -764,6 +769,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         showGrid,
         setShowGrid,
         lastSavedAt,
+        restoredFromLocalStorage,
         triggerManualSave,
         undo,
         redo,

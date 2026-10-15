@@ -4,7 +4,6 @@ import type { ToastOptions } from './useToast';
 import {
   collectArrangeTargets,
   planAlign,
-  planDistribute,
   planDistributeByGap,
   planFlip,
   planRotate,
@@ -37,8 +36,7 @@ export interface VectorArrange {
   /** Rotating or flipping needs one. */
   canTransform: boolean;
   align: (edge: AlignEdge) => void;
-  distribute: (axis: DistributeAxis) => void;
-  /** Equal EDGE-GAP distribution (the equal-spacing command). */
+  /** Equal EDGE-GAP distribution (the one distribute command per axis). */
   distributeGap: (axis: DistributeAxis) => void;
   rotate: (direction: RotateDirection) => void;
   flip: (axis: FlipAxis) => void;
@@ -107,7 +105,6 @@ export const createVectorArrangeActions = ({
     canDistribute: targets.length >= 3,
     canTransform: targets.length >= 1,
     align: (edge) => commit(planAlign(targets, edge), 'Align needs two measurable layers.'),
-    distribute: (axis) => commit(planDistribute(targets, axis), 'Distribute needs three measurable layers.'),
     distributeGap: (axis) => commit(
       planDistributeByGap(targets, axis),
       'Distribution needs three measurable layers.',

@@ -35,8 +35,9 @@ const CORNERS: Corner[] = ['tl', 'tr', 'bl', 'br'];
 const OPPOSITE: Record<Corner, Corner> = { tl: 'br', tr: 'bl', bl: 'tr', br: 'tl' };
 /**
  * Drag distance as a fraction of the corner's distance from the fixed corner.
- * The aspect-ratio lock is ON by default, so a pure diagonal drag is the
- * gesture that must both hold the opposite corner and reach the pointer.
+ * A corner drag is FREE (non-uniform) by default, so a pure diagonal drag is
+ * the gesture that must both hold the opposite corner and reach the pointer;
+ * uniform behaviour is tested separately against Shift and the aspect lock.
  */
 const FRACTIONS: Record<Corner, number> = { tl: 0.55, tr: 0.6, bl: 1.5, br: 1.4 };
 
@@ -307,6 +308,8 @@ interface DragOptions {
   offset?: Point;
   /** Runs while the pointer is mid-gesture (Escape handling). */
   midDrag?: () => Promise<void>;
+  /** Holds Shift for the whole gesture (toggles the aspect constraint). */
+  shift?: boolean;
 }
 
 interface DragResult {
@@ -324,7 +327,7 @@ async function dragCorner(
   fraction: number,
   options: DragOptions = {},
 ): Promise<DragResult> {
-  const { offset = { x: 0, y: 0 }, midDrag } = options;
+  const { offset = { x: 0, y: 0 }, midDrag, shift } = options;
   const draggedStart = analyticCorner(world, corner);
   const fixedStart = analyticCorner(world, OPPOSITE[corner]);
   const targetWorld = {
@@ -338,12 +341,14 @@ async function dragCorner(
   const opposite = start.corner[OPPOSITE[corner]];
   const target = (await toClient(page, { target: targetWorld })).target;
 
+  if (shift) await page.keyboard.down('Shift');
   await page.mouse.move(dragged.x, dragged.y);
   await page.mouse.down();
   await page.mouse.move(dragged.x + (target.x - dragged.x) / 2, dragged.y + (target.y - dragged.y) / 2, { steps: 4 });
   if (midDrag) await midDrag();
   await page.mouse.move(target.x, target.y, { steps: 4 });
   await page.mouse.up();
+  if (shift) await page.keyboard.up('Shift');
   await settle(page);
 
   const end = await measureHandles(page, start.index, start.matrix);
@@ -438,6 +443,21 @@ async function undoDepth(page: Page): Promise<number> {
   return depth;
 }
 
+/** The invariant shared by every corner gesture, uniform or free. */
+function expectOppositeHolds(label: string, corner: Corner, result: DragResult): void {
+  const opposite = OPPOSITE[corner];
+  expect(
+    Math.abs(result.after.opposite.x - result.before.opposite.x),
+    `${label}: the fixed ${opposite} corner drifted in x`,
+  ).toBeLessThanOrEqual(TOLERANCE_PX);
+  expect(
+    Math.abs(result.after.opposite.y - result.before.opposite.y),
+    `${label}: the fixed ${opposite} corner drifted in y`,
+  ).toBeLessThanOrEqual(TOLERANCE_PX);
+  expect(result.after.matrix.a, `${label}: camera magnification changed`).toBeCloseTo(result.before.matrix.a, 6);
+  expect(result.after.matrix.d, `${label}: camera magnification changed`).toBeCloseTo(result.before.matrix.d, 6);
+}
+
 test.describe('corner resize anchors the opposite corner', () => {
   for (const corner of CORNERS) {
     test(`unrotated rectangle: dragging ${corner.toUpperCase()} keeps ${OPPOSITE[corner].toUpperCase()} fixed`, async ({ page }) => {
@@ -519,21 +539,102 @@ test.describe('corner resize anchors the opposite corner', () => {
     expectDrag('non-uniform parent', 'tr', result);
   });
 
-  test('free (unlocked) corner drag tracks the pointer on both axes', async ({ page }) => {
+  test('free (unlocked) corner drag tracks the pointer on both axes by default', async ({ page }) => {
     const alpha = rect('alpha', 'Alpha', 0, 0, { rotation: 20 });
     await seed(page, [alpha]);
     await selectLayer(page, 'Alpha');
     await page.getByRole('button', { name: 'Expand TRANSFORM' }).first().click();
-    // R5-14 — the aspect lock is one compact glyph in the Scale cell; the
-    // labelled "Locked"/"Free" button is gone, the capability is not.
+    // R5-14 + V3.6: the aspect lock is one compact glyph in the Scale cell,
+    // and FREE is its resting state — the corner drag scales X and Y
+    // independently without the user touching anything.
     const lock = page.getByRole('button', { name: 'Lock aspect ratio' });
-    await expect(lock).toHaveAttribute('aria-pressed', 'true');
-    await lock.click();
     await expect(lock).toHaveAttribute('aria-pressed', 'false');
     await selectLayer(page, 'Alpha');
     // Off-diagonal target: only free scaling can put the corner on the pointer.
     const result = await dragCorner(page, 'alpha', worldOf(alpha), 'br', 1.35, { offset: { x: -22, y: 30 } });
     expectDrag('free scale BR', 'br', result);
+  });
+
+  test('Shift holds the aspect ratio: an off-diagonal drag scales uniformly', async ({ page }) => {
+    const alpha = rect('alpha', 'Alpha', 0, 0, { rotation: 20 });
+    await seed(page, [alpha]);
+    await selectLayer(page, 'Alpha');
+    const result = await dragCorner(page, 'alpha', worldOf(alpha), 'br', 1.35, {
+      offset: { x: -22, y: 30 },
+      shift: true,
+    });
+    expectOppositeHolds('shift-uniform BR', 'br', result);
+    // The constraint, measured where it is authored: one factor on both axes.
+    expect(result.after.authored.scaleY).toBeCloseTo(result.after.authored.scaleX, 6);
+    expect(result.after.authored.scaleX).not.toBeCloseTo(result.before.authored.scaleX, 2);
+  });
+
+  test('the persistent lock uniform-scales without Shift, and Shift frees it for one drag', async ({ page }) => {
+    const alpha = rect('alpha', 'Alpha', 0, 0, { rotation: 20 });
+    await seed(page, [alpha]);
+    await selectLayer(page, 'Alpha');
+    await page.getByRole('button', { name: 'Expand TRANSFORM' }).first().click();
+    const lock = page.getByRole('button', { name: 'Lock aspect ratio' });
+    await lock.click();
+    await expect(lock).toHaveAttribute('aria-pressed', 'true');
+    await selectLayer(page, 'Alpha');
+
+    // Locked, no modifier: uniform.
+    const locked = await dragCorner(page, 'alpha', worldOf(alpha), 'br', 1.35, { offset: { x: -22, y: 30 } });
+    expectOppositeHolds('locked BR', 'br', locked);
+    expect(locked.after.authored.scaleY).toBeCloseTo(locked.after.authored.scaleX, 6);
+
+    // Locked + Shift toggles the constraint for this drag only: free. The
+    // expected corners come from the CURRENT authored pose — the first drag
+    // already resized the layer.
+    const scaled = await readLayer(page, 'alpha');
+    const freed = await dragCorner(page, 'alpha', { x: scaled.x, y: scaled.y, rotation: 20, scaleX: scaled.scaleX, scaleY: scaled.scaleY }, 'tl', 0.6, {
+      offset: { x: 28, y: -16 },
+      shift: true,
+    });
+    expectOppositeHolds('locked+shift TL', 'tl', freed);
+    expect(Math.abs(freed.after.authored.scaleX - freed.after.authored.scaleY)).toBeGreaterThan(0.05);
+  });
+
+  test('a group corner drag is free too: the container scales both axes, children follow rigidly', async ({ page }) => {
+    // Two separated children: the aggregate box is their union, so a corner
+    // drag must track the pointer on both axes independently.
+    const first = rect('g1', 'G1', 40, -20);
+    const second = rect('g2', 'G2', 160, -20, { zIndex: 2 });
+    await seed(page, [first, second]);
+    await page.locator('.actor-node', { hasText: 'G1' }).first().click();
+    await page.locator('.actor-node', { hasText: 'G2' }).first().click({ modifiers: ['Control'] });
+    await page.getByRole('button', { name: 'Group layers', exact: true }).click();
+    await settle(page);
+    // Grouping leaves the new container selected; its aggregate box is the
+    // children's union: x -20…220 (centre 100, width 240), y -50…10 (60 tall).
+    await expect(page.getByTestId('transform-gizmo')).toHaveCount(1);
+    // Flush the autosave so the freshly grouped document is readable.
+    await snapshot(page);
+    const groupId = await page.evaluate((key: string) => {
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      const doc: unknown = JSON.parse(raw);
+      const layers = typeof doc === 'object' && doc !== null && 'layers' in doc ? doc.layers : undefined;
+      if (!Array.isArray(layers)) return null;
+      for (const layer of layers) {
+        if (typeof layer === 'object' && layer !== null && 'isGroup' in layer && layer.isGroup === true
+          && 'id' in layer && typeof layer.id === 'string') {
+          return layer.id;
+        }
+      }
+      return null;
+    }, STORAGE_KEY);
+    expect(groupId, 'the Group command produced a container layer').toBeTruthy();
+
+    // The union box as the gizmo must draw it: centre (100, -20), size 240×60 —
+    // expressed as the virtual pose whose RECT_BOUNDS image is that box.
+    const result = await dragCorner(page, groupId ?? 'group', { x: 100, y: -20, rotation: 0, scaleX: 2, scaleY: 1 }, 'br', 1.4, {
+      offset: { x: -24, y: 26 },
+    });
+    expectDrag('group free BR', 'br', result);
+    const container = result.after.authored;
+    expect(Math.abs(container.scaleX - container.scaleY)).toBeGreaterThan(0.05);
   });
 });
 

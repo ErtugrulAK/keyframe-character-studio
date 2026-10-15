@@ -416,12 +416,12 @@ test('mid-edge reversals of the inspector never drift the world', async ({ page 
   reportFrames('inspector reversals show->hide->show', showThenHideThenShow);
   expectStable('inspector reversals show->hide->show', showThenHideThenShow);
   await settle(page);
-  expect((await inspectorBox(page)).width, 'the reversals did not land on the docked width').toBeCloseTo(360, 1);
+  expect((await inspectorBox(page)).width, 'the reversals did not land on the docked width').toBeCloseTo(372, 1);
 });
 
 /**
  * The same contract at the viewport shapes that change the panel's docked width
- * (the `min(360px, max(250px, 34vw))` clamp) and the stage's room to crop: a
+ * (the `min(--right-inspector-width, max(250px, 34vw))` clamp) and the stage's room to crop: a
  * short window, a window narrow enough for the clamp to bite, and a wide one.
  * The panel's resting width must come back to exactly the stylesheet's value —
  * the ease leaves no inline override behind, and never a rounded copy of it.
@@ -440,7 +440,7 @@ test('chrome transitions never drift the world on short, narrow or wide viewport
     const before = await inspectorBox(page);
     expect(before.inlineWidth, `${label}: the stylesheet must own the resting width`).toBe('');
     expect(before.inlineBasis, `${label}: the stylesheet must own the resting flex basis`).toBe('');
-    if (viewport.width === 1280) expect(before.width, `${label}: docked width`).toBeCloseTo(360, 1);
+    if (viewport.width === 1280) expect(before.width, `${label}: docked width`).toBeCloseTo(372, 1);
 
     const hide = await sampleTransition(page, 'Hide Inspector');
     reportFrames(`inspector hide @${label}`, hide);

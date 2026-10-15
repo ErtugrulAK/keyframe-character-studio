@@ -129,7 +129,7 @@ export const ShortcutReferenceDialog: React.FC<ShortcutReferenceDialogProps> = (
                 </h3>
                 <dl>
                   {commands.map((command) => (
-                    <div key={command.id} className="shortcut-reference-row">
+                    <div key={command.id} className="shortcut-reference-row" title={command.detail ? `${command.label} — ${command.detail}` : command.label}>
                       <dt>
                         <span className="shortcut-reference-name">{command.label}</span>
                         {command.scope === 'timeline' && <span className="shortcut-reference-scope">timeline focus</span>}

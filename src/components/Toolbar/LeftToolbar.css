@@ -687,8 +687,7 @@
 /* V3.5 in-flow drawer dock: keep the rail in the main layout while the
    contextual panel is a flex item that can fully relinquish its footprint. */
 .left-toolbar-container {
-  --left-rail-width: 56px;
-  --left-drawer-width: 280px;
+  /* Both widths resolve from the ONE token source on `.app-container`. */
   width: var(--left-rail-width);
   min-width: var(--left-rail-width);
   flex: 0 0 var(--left-rail-width);
@@ -746,10 +745,6 @@
 .left-toolbar-container:not(.hidden) {
   width: calc(var(--left-rail-width) + var(--left-drawer-width));
   flex-basis: calc(var(--left-rail-width) + var(--left-drawer-width));
-}
-.app-container {
-  --left-rail-width: 56px;
-  --left-drawer-width: 280px;
 }
 
 /* The parent owns visibility; a hidden dock relinquishes every layout pixel.

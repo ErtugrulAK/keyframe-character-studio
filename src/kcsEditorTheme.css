@@ -123,12 +123,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .sidebar-nav-item.active { background: var(--kcs-bg-active); border-color: rgba(41,211,183,.42); box-shadow: none; color: var(--kcs-text-primary); }
 .sidebar-nav-item.active .nav-icon { color: var(--kcs-accent); }
 .nav-label { font-size: 10px; font-weight: 600; }
-.left-drawer-panel { width: 280px; background: #11161e; border-right-color: var(--kcs-border-default); }
+.left-drawer-panel { background: #11161e; border-right-color: var(--kcs-border-default); }
 .drawer-content { padding: 12px; gap: 10px; }
 .drawer-header { padding-bottom: 8px; border-bottom-color: var(--kcs-border-subtle); }
 .drawer-item-card { padding: 10px 6px; border-radius: var(--kcs-radius-panel); background: var(--kcs-bg-surface); border-color: var(--kcs-border-subtle); }
 
-.motion-design-right-sidebar { --right-inspector-width: 360px; background: #10151c; border-left-color: var(--kcs-border-default); box-shadow: -8px 0 24px rgba(0,0,0,.2); }
+.motion-design-right-sidebar { background: #10151c; border-left-color: var(--kcs-border-default); box-shadow: -8px 0 24px rgba(0,0,0,.2); }
 .outliner-dock { background: #11161e; border-bottom-color: var(--kcs-border-default); }
 .details-dock { background: #0e131a; }
 .sidebar-pane-divider { height: 4px; background: #080b10; border-color: var(--kcs-border-subtle); }
@@ -156,19 +156,18 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .canvas-viewport-radial-bg { background-color: var(--kcs-bg-canvas); background-image: radial-gradient(circle at 1px 1px, rgba(148,163,184,.08) 1px, transparent 0), radial-gradient(circle at 50% 45%, rgba(41,211,183,.035), transparent 68%); background-size: 24px 24px, 100% 100%; }
 .canvas-viewport-toolbar, .viewport-toolbar { background: rgba(14,19,26,.92); border-color: var(--kcs-border-default); box-shadow: 0 5px 16px rgba(0,0,0,.28); }
 
+/* Responsive chrome: the narrow-window sizes ride the ONE token source on
+   `.app-container` (index.css), so the panels and their dock handles always
+   agree at every breakpoint. */
 @media (max-width: 1100px) {
   .header-bar { padding: 0 8px; gap: 6px; }
-  .left-drawer-panel { width: 224px; }
-  .motion-design-right-sidebar,
-  .app-container { --right-inspector-width: 320px; }
+  .app-container { --left-drawer-width: 224px; --right-inspector-width: 320px; }
 }
 @media (max-width: 800px) {
   .header-brand { flex-basis: auto; }
   .header-center-controls { order: 3; flex-basis: 100%; }
   .header-bar { height: auto; min-height: 48px; padding-block: 4px; }
-  .left-drawer-panel { width: 196px; }
-  .motion-design-right-sidebar,
-  .app-container { --right-inspector-width: 286px; }
+  .app-container { --left-drawer-width: 196px; --right-inspector-width: 286px; }
 }
 @media (prefers-reduced-motion: reduce) {
   button, .motion-design-right-sidebar, .left-toolbar-container { transition: none !important; }

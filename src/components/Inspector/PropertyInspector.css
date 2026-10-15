@@ -1,8 +1,5 @@
-.app-container {
-  --right-inspector-width: 360px;
-}
 .motion-design-right-sidebar {
-  --right-inspector-width: 360px;
+  /* Width comes from the one `--right-inspector-width` token on `.app-container`. */
   --inspector-control-xs: 64px;
   --inspector-control-sm: 88px;
   --inspector-control-md: 112px;

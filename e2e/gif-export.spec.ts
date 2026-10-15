@@ -241,8 +241,9 @@ test('exports the current sequence as an animated GIF at the stage size', async 
   await expect(panel.locator('.gif-export-summary dd').nth(1)).toHaveText('0.50 s');
   await expect(panel.locator('.gif-export-summary dd').nth(2)).toHaveText('320×180');
   await expect(panel.getByLabel('Frame rate')).toHaveValue('24');
-  // The format's transparency rule is stated before the export, not after.
-  await expect(panel).toContainText('one transparent colour and no partial alpha');
+  // The format's transparency rule is stated before the export, not after —
+  // carried on the control the user is about to press.
+  await expect(panel.getByRole('button', { name: 'Export GIF' })).toHaveAttribute('title', /one transparent colour and no partial alpha/);
 
   const bytes = await downloadBytes(page);
   const gif = parseGif(bytes);

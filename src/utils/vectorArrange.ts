@@ -33,10 +33,14 @@ import { rotateAboutWorldPivot } from './rotationGesture';
  * ALIGN — the reference box is the COLLECTIVE selection bounds (the union of
  *   every target's world box). The editor has no reference-object ("key
  *   object") authority, so inventing one here would be a second selection rule;
- *   the collective box is what the selection frame already draws. Only the
- *   aligned axis is written, so the other axis cannot drift, and a target that
- *   is already on the edge is left completely alone (no zero-delta write, so no
- *   keyframe is created for a property that did not move).
+ *   the collective box is what the selection frame already draws. Edges align
+ *   one axis (`left`/`right` move X, `top`/`bottom` move Y), the centre edges
+ *   align one axis onto the collective centre (`horizontal-centers` moves X,
+ *   `vertical-centers` moves Y), and `center` aligns BOTH axes — every target's
+ *   centre lands on the collective centre in one step. Only the aligned axes are
+ *   written, so the other axis cannot drift, and a target that is already on the
+ *   line is left completely alone (no zero-delta write, so no keyframe is
+ *   created for a property that did not move).
  *
  * DISTRIBUTE — needs at least three measurable targets, and the authority ships
  *   TWO policies, each its own command:
@@ -70,7 +74,7 @@ import { rotateAboutWorldPivot } from './rotationGesture';
  *   layer rather than an approximation.
  */
 
-export type AlignEdge = 'left' | 'right' | 'top' | 'bottom' | 'horizontal-centers' | 'vertical-centers';
+export type AlignEdge = 'left' | 'right' | 'top' | 'bottom' | 'horizontal-centers' | 'vertical-centers' | 'center';
 export type DistributeAxis = 'horizontal' | 'vertical';
 export type RotateDirection = 'ccw' | 'cw';
 export type FlipAxis = 'horizontal' | 'vertical';
@@ -147,9 +151,12 @@ export const planAlign = (targets: ArrangeTarget[], edge: AlignEdge): ArrangePla
     else if (edge === 'right') deltaX = reference.maxX - bounds.maxX;
     else if (edge === 'top') deltaY = reference.minY - bounds.minY;
     else if (edge === 'bottom') deltaY = reference.maxY - bounds.maxY;
+    else if (edge === 'center') {
+      deltaX = referenceCenter.x - center.x;
+      deltaY = referenceCenter.y - center.y;
+    }
     else if (edge === 'horizontal-centers') deltaX = referenceCenter.x - center.x;
     else deltaY = referenceCenter.y - center.y;
-
     const x = transform.x + deltaX;
     const y = transform.y + deltaY;
     const patch: ArrangePatch = {};

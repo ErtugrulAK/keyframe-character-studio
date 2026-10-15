@@ -120,27 +120,12 @@
   font-size: var(--font-size-body);
 }
 
-.gif-export-note,
 .gif-export-blocked,
 .gif-export-done {
   margin: 0;
   color: var(--kcs-text-muted);
   font-size: var(--font-size-caption);
   line-height: var(--line-height-relaxed);
-}
-
-.gif-export-format {
-  color: var(--kcs-text-muted);
-  font-size: var(--font-size-caption);
-}
-
-.gif-export-format summary {
-  cursor: pointer;
-  color: var(--kcs-text-secondary);
-}
-
-.gif-export-format[open] .gif-export-note {
-  margin-top: 6px;
 }
 
 .gif-export-blocked {
@@ -187,24 +172,17 @@
   cursor: pointer;
 }
 
-.gif-export-cancel {
-  border: 1px solid var(--kcs-border-default);
-  background: transparent;
-  color: var(--kcs-text-secondary);
-}
-
-.gif-export-cancel:hover:not(:disabled),
-.gif-export-cancel:focus-visible {
-  border-color: var(--kcs-border-focus);
-  background: var(--kcs-bg-hover);
-  color: var(--kcs-text-primary);
-}
 
 .gif-export-run {
   border: 1px solid var(--kcs-accent);
   background: transparent;
   color: var(--kcs-accent);
   font-weight: 700;
+}
+
+.gif-export-run:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .gif-export-run:hover:not(:disabled),

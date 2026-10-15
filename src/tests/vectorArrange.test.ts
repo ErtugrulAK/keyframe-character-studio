@@ -109,6 +109,22 @@ describe('planAlign', () => {
     const aligned = applyPlan(parts, first);
     expect(planAlign(targetsOf(aligned, ['a', 'b']), 'left')).toEqual({});
   });
+
+  it('center aligns BOTH axes onto the collective centre in one plan', () => {
+    const parts = [rect('a', 0, 0), rect('b', 200, 80), rect('c', 400, -80)];
+    const plan = planAlign(targetsOf(parts, ['a', 'b', 'c']), 'center')!;
+    // Union centre (200, 0): the patches carry absolute authored positions, and
+    // only the axis that actually moves is written.
+    expect(plan).toEqual({ a: { x: 200 }, b: { y: 0 }, c: { x: 200, y: 0 } });
+
+    const aligned = applyPlan(parts, plan);
+    for (const box of boxesOf(aligned, ['a', 'b', 'c'])) {
+      expect((box!.minX + box!.maxX) / 2).toBeCloseTo(200, 6);
+      expect((box!.minY + box!.maxY) / 2).toBeCloseTo(0, 6);
+    }
+    // Idempotent like every other align: a second run writes nothing.
+    expect(planAlign(targetsOf(aligned, ['a', 'b', 'c']), 'center')).toEqual({});
+  });
 });
 
 describe('planDistribute', () => {

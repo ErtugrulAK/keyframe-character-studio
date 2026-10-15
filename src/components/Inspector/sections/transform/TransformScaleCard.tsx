@@ -34,8 +34,8 @@ export const TransformScaleCard: React.FC<TransformScaleCardProps> = ({ transfor
           aria-pressed={isScaleLocked}
           aria-label="Lock aspect ratio"
           title={isScaleLocked
-            ? 'Aspect ratio locked: the canvas corner drag keeps the shape uniform'
-            : 'Aspect ratio free: the canvas corner drag scales X and Y independently'}
+            ? 'Aspect ratio locked: the canvas corner drag keeps the shape uniform (hold Shift to unlock for one drag)'
+            : 'Aspect ratio free: the canvas corner drag scales X and Y independently (hold Shift to keep the shape uniform for one drag)'}
           onClick={() => setIsScaleLocked(!isScaleLocked)}
         >
           {isScaleLocked ? <Link size={11} aria-hidden="true" /> : <Unlink size={11} aria-hidden="true" />}

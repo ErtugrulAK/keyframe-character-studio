@@ -164,14 +164,16 @@ test('the vector bands align, distribute, rotate and flip the selection as one a
   await settle(page);
   expect(await boxes()).toEqual(aligned);
 
-  // Distribute: the outer two hold the span and the middle centre is halfway.
-  const spread = (await boxes()).map((box) => box.center).sort((a, b) => a - b);
+  // Center Horizontally: every centre lands on the collective vertical centre
+  // line (this is centre ALIGNMENT; the gap-spacing command is the separate
+  // `Distribute Horizontally` button). The redo above already stacked the left
+  // edges; the centres are what this command owns.
   await toolbarButton(page, 'Center Horizontally').click();
   await settle(page);
-  const distributed = (await boxes()).map((box) => box.center).sort((a, b) => a - b);
-  expect(distributed[0]).toBeCloseTo(spread[0], 0);
-  expect(distributed[2]).toBeCloseTo(spread[2], 0);
-  expect(distributed[1] - distributed[0]).toBeCloseTo(distributed[2] - distributed[1], 0);
+  const centered = (await boxes()).map((box) => box.center);
+  for (const center of centered) {
+    expect(Math.abs(center - centered[0]), 'a centre missed the collective centre line').toBeLessThanOrEqual(1);
+  }
 
   // Rotate and flip from the keyboard, on the one selected layer.
   await row('Alpha').click();

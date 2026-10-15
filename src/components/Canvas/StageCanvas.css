@@ -121,6 +121,18 @@
 }
 
 /*
+ * Armed primitive creation. While a draw tool is armed the stage reads as a
+ * creation surface: the Boxy-style crosshair is the pointer everywhere inside
+ * the canvas, and it hides nothing — the shape preview draws under it while
+ * the drag is live. Select/Pan keep their own cursors because this rule only
+ * matches the `drawing-tool` state the tool sets, and Escape drops the state
+ * (so the cursor returns) in the very same paint as the toolbar change.
+ */
+.stage-canvas-container.drawing-tool {
+  cursor: crosshair;
+}
+
+/*
  * Smart guides: the KCS accent lines a live snap draws through the matched
  * geometry. Decorative chrome only — the overlay they live in is
  * `pointer-events: none` and the lines are gone the moment the snap ends.

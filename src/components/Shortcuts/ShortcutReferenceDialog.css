@@ -141,10 +141,10 @@
   grid-auto-rows: max-content;
   align-items: start;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   align-content: start;
-  gap: var(--space-md);
-  padding: var(--space-md);
+  gap: 10px;
+  padding: 10px 12px;
   overflow-y: auto;
   min-height: 0;
 }
@@ -168,13 +168,14 @@
   justify-content: space-between;
   gap: var(--space-xs);
   margin: 0;
-  padding: 12px;
-  border-bottom: 1px solid var(--kcs-border-subtle);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--kcs-border-default);
   background: var(--kcs-bg-shell);
   color: var(--kcs-text-primary);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .shortcut-reference-category {
@@ -184,32 +185,37 @@
 }
 
 .shortcut-reference-category svg {
-  width: 16px;
-  height: 16px;
+  width: 13px;
+  height: 13px;
   flex: 0 0 auto;
   color: var(--kcs-accent);
 }
 
 /* The row count of the band: what the filter left, at a glance. */
 .shortcut-reference-count {
-  padding: 1px 6px;
+  padding: 0 5px;
   border-radius: var(--kcs-radius-control);
   background: var(--kcs-bg-active-muted);
   color: var(--kcs-text-muted);
-  font-size: var(--font-size-caption);
+  font-size: 10px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .shortcut-reference-group dl {
   margin: 0;
 }
 
+/* Dense command rows: one command per line, the keycaps right-aligned in a
+   shared column. The detail and the scope tag sit INLINE after the name — the
+   former stacked layout burned a third of each row's height on vertical
+   rhythm and pushed the keys away from the label they belong to. */
 .shortcut-reference-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: var(--space-sm);
-  padding: 10px 12px;
+  padding: 4px 10px;
   border-bottom: 1px solid var(--kcs-border-subtle);
 }
 
@@ -219,33 +225,46 @@
 
 .shortcut-reference-row dt {
   min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   color: var(--kcs-text-secondary);
   font-size: var(--font-size-body);
+  line-height: 1.45;
 }
 
 .shortcut-reference-name {
-  display: block;
+  /* The name is the row's identity: it never wraps, and it wins the line
+     against the detail (which is already ellipsis-clamped). */
+  min-width: 6em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 600;
 }
 
-.shortcut-reference-detail,
-.shortcut-reference-scope {
-  display: block;
-  margin-top: 2px;
+.shortcut-reference-detail {
+  /* One line per row is the dense contract: the detail truncates with an
+     ellipsis and the full sentence lives in the row's tooltip. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--kcs-text-muted);
   font-size: var(--font-size-caption);
-  line-height: var(--line-height-relaxed);
+  line-height: 1.4;
 }
 
+
 .shortcut-reference-scope {
-  width: fit-content;
-  margin-top: 4px;
-  padding: 2px 5px;
+  flex: 0 0 auto;
+  padding: 0 4px;
   border-radius: var(--kcs-radius-control);
   background: var(--kcs-bg-active-muted);
   color: var(--kcs-accent);
   font-size: 9px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .shortcut-reference-row dd {
@@ -253,7 +272,7 @@
   flex: 0 0 auto;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 4px;
+  gap: 3px;
   margin: 0;
 }
 
@@ -263,16 +282,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 26px;
-  height: 26px;
-  padding: 0 8px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
   border: 1px solid var(--kcs-border-default);
-  border-bottom-width: 3px;
+  border-bottom-width: 2px;
   border-radius: var(--kcs-radius-control);
   background: var(--kcs-bg-input);
   color: var(--kcs-text-primary);
   font-family: var(--font-family-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;

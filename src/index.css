@@ -200,10 +200,14 @@ body, html, #root {
   width: 100%;
   height: 100%;
   background: var(--bg-darkest);
-  /* R3-02: the shell is the positioning authority of the panel geometry tokens
-     (`--left-rail-width`, `--left-drawer-width`, `--right-inspector-width`) and
-     the owner of the two panel visibility flags whose edge geometry the dock
-     handles read. */
+  /* THE shared layout width contract (R3-02). The rail, the drawer and the
+     inspector each resolve their main size from exactly one of these tokens;
+     the dock handles derive their pinning from the same values, so chrome can
+     never be painted two slightly different widths. Responsive overrides for
+     these tokens belong on `.app-container` and nowhere else. */
+  --left-rail-width: 56px;
+  --left-drawer-width: 304px;
+  --right-inspector-width: 372px;
   position: relative;
 }
 
@@ -265,6 +269,24 @@ textarea:focus-visible,
 [role='button']:focus-visible {
   outline: 2px solid var(--kcs-border-focus);
   outline-offset: 2px;
+}
+
+/*
+ * Select focus policy. Windows Chromium treats a `select` as always
+ * keyboard-relevant (it matches `:focus-visible` even after a mouse click,
+ * because the popup is navigated from the keyboard), and its default
+ * indicator is the browser-style white ring. The author teal rule above can
+ * lose that race, so the select states its own ring explicitly: the KCS ring
+ * in both focus paths, the browser ring never. Buttons and text inputs keep
+ * the pointer-clean behaviour they already have from the rule above.
+ */
+select:focus {
+  outline: none;
+}
+
+select:focus-visible {
+  outline: 2px solid var(--kcs-border-focus) !important;
+  outline-offset: 2px !important;
 }
 
 button:disabled {

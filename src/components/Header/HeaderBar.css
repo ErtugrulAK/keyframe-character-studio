@@ -233,6 +233,28 @@
   letter-spacing: 0.3px;
 }
 
+/* Restore provenance chip: informational, so it borrows the autosave badge's
+   silhouette with a neutral (non-green, non-clickable) skin. */
+.restored-from-local-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-sm);
+  border: 1px solid var(--kcs-border-default);
+  border-radius: var(--radius-lg);
+  background: var(--kcs-bg-panel);
+  color: var(--kcs-text-secondary);
+  font-size: var(--font-size-mono);
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: default;
+}
+
+.restored-from-local-badge > svg {
+  color: var(--kcs-accent);
+}
+
 .text-green {
   color: #10b981;
 }
@@ -365,22 +387,27 @@
   border-color: #2dd4bf;
   box-shadow: none;
 }
-/* V3.1 semantic mode control: one state rail, two native accessible buttons. */
+/*
+ * The editor-mode segment control (V3.6 redesign). Three stacked generations
+ * used to paint this one control — a glowing text-shadow on the active label,
+ * a bright bouncing indicator bar with its own keyframes, and two later
+ * "cleanup" patches overriding them — which is exactly why the halves read
+ * inconsistently. This is the single definition: a quiet bordered rail, one
+ * sliding state indicator, and an unmistakable active/inactive pair. No glow,
+ * no bounce, no nested chrome; state changes move only the indicator.
+ */
 .header-mode-switch {
   position: relative;
   isolation: isolate;
-  border: 1px solid #2c414e;
-  overflow: hidden;
-}
-
-.header-mode-switch::before {
-  content: '';
-  position: absolute;
-  z-index: -2;
-  inset: 4px;
-  border: 1px solid #2c414e;
-  border-radius: 3px;
-  background: rgba(255,255,255,.025);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--kcs-border-subtle);
+  border-radius: var(--kcs-radius-control);
+  background: var(--kcs-panel-subtle);
+  box-shadow: none;
 }
 
 .header-mode-indicator {
@@ -391,120 +418,47 @@
   left: 4px;
   width: calc(50% - 6px);
   border: 1px solid var(--kcs-accent);
-  border-radius: var(--kcs-radius-control);
-  background: var(--kcs-bg-selected);
-  transform-origin: center;
-  transition: transform 300ms cubic-bezier(.65,0,.35,1), background-color 180ms ease, border-color 180ms ease;
-  animation-duration: 300ms;
-  animation-timing-function: cubic-bezier(0,1.15,1,.93);
-  animation-fill-mode: both;
-  animation-name: kcsModeIndicatorSettleEdit;
-}
-
-.header-mode-indicator::after {
-  content: '';
-  position: absolute;
-  top: 4px;
-  right: 5px;
-  width: 4px;
-  height: calc(100% - 8px);
-  border-radius: 99px;
-  background: rgba(220,255,247,.58);
-  transform: scaleY(.72);
-  transition: transform 180ms ease;
-}
-
-.header-mode-switch.is-broadcast .header-mode-indicator {
-  border-color: #a17b42;
-  background: rgba(245,158,11,.15);
-  transform: translateX(calc(100% + 4px)) scaleX(1);
-  animation-name: kcsModeIndicatorSettleBroadcast;
-}
-
-.header-mode-switch.is-broadcast .header-mode-indicator::after {
-  background: rgba(255,237,194,.7);
-  transform: scaleY(1);
-}
-
-@keyframes kcsModeIndicatorSettleEdit {
-  0% { transform: translateX(calc(100% + 4px)) scaleX(.86); }
-  55% { transform: translateX(-4px) scaleX(1.08); }
-  78% { transform: translateX(2px) scaleX(.97); }
-  100% { transform: translateX(0) scaleX(1); }
-}
-
-@keyframes kcsModeIndicatorSettleBroadcast {
-  0% { transform: translateX(0) scaleX(.86); }
-  55% { transform: translateX(calc(100% + 8px)) scaleX(1.08); }
-  78% { transform: translateX(calc(100% + 2px)) scaleX(.97); }
-  100% { transform: translateX(calc(100% + 4px)) scaleX(1); }
-}
-
-.header-mode-button {
-  position: relative;
-  min-width: 88px;
-  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease !important;
-}
-
-.header-mode-button.active {
-  text-shadow: 0 0 10px rgba(219,255,247,.18);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .header-mode-switch::before,
-  .header-mode-indicator,
-  .header-mode-indicator::after,
-  .header-mode-button {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-.header-mode-button {
-  color: var(--text-muted);
-  background: transparent;
-}
-
-.header-mode-button.edit.active {
-  color: #fff;
-}
-
-.header-mode-button.broadcast.active {
-  color: #fff;
-}
-
-.header-mode-button:active {
-  transform: scale(.97);
-}
-/* V3.3 segmented rail cleanup: one boundary, one indicator, no nested chrome. */
-.header-mode-switch {
-  border-color: var(--kcs-border-quiet);
-  border-radius: var(--kcs-radius-control) !important;
-  background: var(--kcs-panel-subtle) !important;
-  box-shadow: none;
-}
-
-.header-mode-switch::before {
-  display: none;
-}
-
-.header-mode-indicator {
-  border-color: var(--kcs-accent);
+  border-radius: calc(var(--kcs-radius-control) - 1px);
   background: var(--kcs-selected);
+  transition: transform 220ms cubic-bezier(.45, 0, .25, 1), background-color 180ms ease, border-color 180ms ease;
 }
 
 .header-mode-switch.is-broadcast .header-mode-indicator {
   border-color: var(--kcs-warning);
   background: rgba(241, 183, 91, .14);
+  transform: translateX(calc(100% + 4px));
 }
 
 .header-mode-button {
-  border: 0 !important;
+  position: relative;
+  min-width: 88px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: calc(var(--kcs-radius-control) - 1px);
+  background: transparent;
   color: var(--kcs-text-muted);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: .04em;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.header-mode-button:hover {
+  color: var(--kcs-text-secondary);
+  background: var(--kcs-bg-hover);
+}
+
+/* The inactive half must not mimic the pressed half: muted label, no fill. */
+.header-mode-switch.is-edit .header-mode-button.broadcast,
+.header-mode-switch.is-broadcast .header-mode-button.edit {
+  color: var(--kcs-text-muted);
+  background: transparent;
 }
 
 .header-mode-button.active {
   color: var(--kcs-text-primary);
-  text-shadow: none;
+  background: transparent;
 }
 
 .header-mode-button:focus-visible {
@@ -512,7 +466,9 @@
   outline-offset: -2px;
 }
 
-/* Keep one calm boundary around the mode rail and its state indicator. */
-.header-mode-switch {
-  border: 1px solid var(--kcs-border-subtle);
+@media (prefers-reduced-motion: reduce) {
+  .header-mode-indicator,
+  .header-mode-button {
+    transition: none !important;
+  }
 }

@@ -12,6 +12,7 @@ import {
   Plus,
   ChevronDown,
   Keyboard,
+  HardDriveDownload,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
@@ -87,6 +88,7 @@ export const HeaderBar: React.FC = () => {
     importProject,
     resetProject,
     lastSavedAt,
+    restoredFromLocalStorage,
     triggerManualSave,
     showToast,
     appMode,
@@ -412,34 +414,32 @@ export const HeaderBar: React.FC = () => {
           </div>
         </div>
 
-        {/* Mode Toggle - Centered */}
+        {/*
+          The editor-mode segment. Paint lives entirely in HeaderBar.css — the
+          inline styles that used to sit here could not be overridden by the
+          theme and made the two halves render inconsistently (different
+          backgrounds, no shared chrome). One control, one pressed state per
+          half, announced with `aria-pressed`.
+        */}
         <div className="header-center-controls">
-          <div className={`header-mode-switch ${appMode === 'broadcast' ? 'is-broadcast' : 'is-edit'}`} style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-dark)', borderRadius: 6, padding: '4px', gap: 4, flexShrink: 0 }}>
+          <div
+            className={`header-mode-switch ${appMode === 'broadcast' ? 'is-broadcast' : 'is-edit'}`}
+            role="group"
+            aria-label="Editor mode"
+          >
             <span className="header-mode-indicator" aria-hidden="true" />
             <button
-              className={`header-mode-button edit ${appMode === 'edit' ? 'active' : ''}`}
+              type="button"
+              className={`header-mode-button edit${appMode === 'edit' ? ' active' : ''}`}
               aria-pressed={appMode === 'edit'}
-              style={{
-                padding: '6px 12px',
-                borderRadius: 4,
-                fontSize: 12,
-                fontWeight: 700,
-                whiteSpace: 'nowrap',
-              }}
               onClick={() => setAppMode('edit')}
             >
               EDIT MODE
             </button>
             <button
-              className={`header-mode-button broadcast ${appMode === 'broadcast' ? 'active' : ''}`}
+              type="button"
+              className={`header-mode-button broadcast${appMode === 'broadcast' ? ' active' : ''}`}
               aria-pressed={appMode === 'broadcast'}
-              style={{
-                padding: '6px 12px',
-                borderRadius: 4,
-                fontSize: 12,
-                fontWeight: 700,
-                whiteSpace: 'nowrap',
-              }}
               onClick={() => setAppMode('broadcast')}
             >
               BROADCAST
@@ -455,6 +455,25 @@ export const HeaderBar: React.FC = () => {
             <CheckCircle2 size={13} className="text-green" />
             <span className="autosave-text">{timeAgoStr}</span>
           </div>
+
+          {/*
+            Restore provenance. The same browser profile serves localhost and
+            the LAN address, and autosave is keyed per origin — a machine that
+            reaches the editor over the LAN can therefore open with a DIFFERENT
+            (or empty) project than the machine that authored it, silently.
+            This chip states where the document currently on screen came from,
+            and it disappears the moment an import or a reset replaces it.
+          */}
+          {restoredFromLocalStorage && (
+            <div
+              className="restored-from-local-badge"
+              role="status"
+              title="This project was restored from this browser's autosave, not from a shared project file. Use Import project to open the other machine's document."
+            >
+              <HardDriveDownload size={13} aria-hidden="true" />
+              <span>Restored from this browser&#39;s autosave</span>
+            </div>
+          )}
 
           {/* FPS Control */}
           <select className="select-control"

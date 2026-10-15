@@ -407,6 +407,13 @@ interface UseSerializationOptions {
  */
 export interface UseSerializationApi {
   lastSavedAt: Date | null;
+  /**
+   * True while the project currently on screen is the autosave this browser
+   * restored at startup. It is cleared by anything that replaces the document
+   * (an import or a reset), so the header can tell a restored local cache
+   * apart from a freshly authored or imported project.
+   */
+  restoredFromLocalStorage: boolean;
   triggerManualSave: () => void;
   exportProject: () => string;
   importProject: (jsonStr: string, defaultName?: string) => ImportResult;
@@ -442,61 +449,66 @@ export const useSerialization = ({
 }: UseSerializationOptions): UseSerializationApi => {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
+  const [restoredFromLocalStorage, setRestoredFromLocalStorage] = useState<boolean>(false);
+
   // 1. Initial Load: Restore from LocalStorage (SceneData v1 or legacy AnimationProject)
   useEffect(() => {
     try {
       const saved = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
-      if (saved) {
-        // The autosave payload goes through the same boundary as an imported
-        // document: a corrupted or tampered entry is reported and skipped
-        // instead of being applied, and the defaults stay in place.
-        const validation = validateImportedDocument(saved);
-        if (!validation.ok) {
-          console.warn('[Storage] Autosave restore refused:', validation.diagnostics[0]?.code, validation.diagnostics[0]?.message);
-          return;
-        }
-
-        if (validation.document.kind === 'scene') {
-          const scene = validation.document.scene;
-          fromSceneData(scene, scene.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
-          return;
-        }
-
-        // Legacy AnimationProject format (backward compat)
-        const parsed = validation.document.project;
-        const hasLegacyStickman = parsed.characterParts.some((part) => (part as { type?: unknown }).type === 'head' || (part as { type?: unknown }).type === 'torso');
-        const legacyMotionTemplates = readMotionTemplates(parsed.motionTemplates);
-        if (!hasLegacyStickman) {
-          const savedResolution = readProjectResolution(parsed.projectResolution);
-          if (savedResolution) setProjectResolution(savedResolution);
-          setTracks(parsed.tracks.map(migrateTrack));
-          setCharacterParts(parsed.characterParts);
-          const savedFps = readOptionalNumber(parsed.fps);
-          if (savedFps !== undefined) setFps(savedFps);
-          const savedTotalFrames = readOptionalNumber(parsed.totalFrames);
-          if (savedTotalFrames !== undefined) setTotalFrames(savedTotalFrames);
-          const savedAt = readOptionalDate(parsed.lastSavedTime);
-          // Autosave restoration synchronizes React state with persisted storage.
-          // oxlint-disable-next-line react/set-state-in-effect
-          setLastSavedAt(savedAt ?? new Date());
-
-          const allIds: string[] = [];
-          parsed.characterParts.forEach((p: any) => allIds.push(p.id));
-          parsed.tracks.forEach((t: any) => {
-            allIds.push(t.id);
-            t.keyframes?.forEach((k: any) => allIds.push(k.id));
-            if (t.channels) {
-              Object.values(t.channels).forEach((ch: any) => (ch as any[])?.forEach((pk: any) => allIds.push(pk.id)));
-            }
-          });
-          for (const template of legacyMotionTemplates ?? []) {
-            allIds.push(template.id);
-          }
-          initializeIdCounter(allIds);
-        } else {
-          localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
-        }
+      if (!saved) return;
+      // The autosave payload goes through the same boundary as an imported
+      // document: a corrupted or tampered entry is reported and skipped
+      // instead of being applied, and the defaults stay in place.
+      const validation = validateImportedDocument(saved);
+      if (!validation.ok) {
+        console.warn('[Storage] Autosave restore refused:', validation.diagnostics[0]?.code, validation.diagnostics[0]?.message);
+        return;
       }
+
+      if (validation.document.kind === 'scene') {
+        const scene = validation.document.scene;
+        fromSceneData(scene, scene.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
+        // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
+        setRestoredFromLocalStorage(true);
+        return;
+      }
+
+      // Legacy AnimationProject format (backward compat)
+      const parsed = validation.document.project;
+      const hasLegacyStickman = parsed.characterParts.some((part) => (part as { type?: unknown }).type === 'head' || (part as { type?: unknown }).type === 'torso');
+      const legacyMotionTemplates = readMotionTemplates(parsed.motionTemplates);
+      if (hasLegacyStickman) {
+        localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
+        return;
+      }
+      const savedResolution = readProjectResolution(parsed.projectResolution);
+      if (savedResolution) setProjectResolution(savedResolution);
+      setTracks(parsed.tracks.map(migrateTrack));
+      setCharacterParts(parsed.characterParts);
+      const savedFps = readOptionalNumber(parsed.fps);
+      if (savedFps !== undefined) setFps(savedFps);
+      const savedTotalFrames = readOptionalNumber(parsed.totalFrames);
+      if (savedTotalFrames !== undefined) setTotalFrames(savedTotalFrames);
+      const savedAt = readOptionalDate(parsed.lastSavedTime);
+      // Autosave restoration synchronizes React state with persisted storage.
+      // oxlint-disable-next-line react/set-state-in-effect
+      setLastSavedAt(savedAt ?? new Date());
+
+      const allIds: string[] = [];
+      parsed.characterParts.forEach((p) => allIds.push(p.id));
+      parsed.tracks.forEach((t) => {
+        allIds.push(t.id);
+        t.keyframes?.forEach((k) => allIds.push(k.id));
+        if (t.channels) {
+          Object.values(t.channels).forEach((channel) => channel?.forEach((pk) => allIds.push(pk.id)));
+        }
+      });
+      for (const template of legacyMotionTemplates ?? []) {
+        allIds.push(template.id);
+      }
+      initializeIdCounter(allIds);
+      // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
+      setRestoredFromLocalStorage(true);
     } catch (e) {
       console.warn('[AutoSave] Failed to restore saved state', e);
     }
@@ -541,6 +553,9 @@ export const useSerialization = ({
       if (validation.document.kind === 'scene') {
         const scene = validation.document.scene;
         const imported = fromSceneData(scene, defaultName || scene.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
+        // A document the user imported is no longer "the autosave this browser
+        // restored at startup", whatever the apply outcome was.
+        setRestoredFromLocalStorage(false);
         return { ok: imported, diagnostics: validation.diagnostics };
       }
 
@@ -584,6 +599,7 @@ export const useSerialization = ({
         const declaredTotalFrames = readOptionalNumber(parsed.totalFrames);
         if (declaredTotalFrames !== undefined) setTotalFrames(declaredTotalFrames);
 
+        setRestoredFromLocalStorage(false);
         return { ok: true, diagnostics: validation.diagnostics };
       }
     } catch {
@@ -603,6 +619,7 @@ export const useSerialization = ({
       console.warn('[Storage] Could not clear autosave key:', e);
     }
     setLastSavedAt(null);
+    setRestoredFromLocalStorage(false);
   }, [setTracks, setCharacterParts, setCurrentFrame, setIsPlaying, setCoordinateSystem]);
 
   /**
@@ -650,6 +667,7 @@ export const useSerialization = ({
 
   return {
     lastSavedAt,
+    restoredFromLocalStorage,
     triggerManualSave,
     exportProject,
     importProject,

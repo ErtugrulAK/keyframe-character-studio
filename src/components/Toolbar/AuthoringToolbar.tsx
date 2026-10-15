@@ -4,17 +4,16 @@ import {
   AlignCenterVertical,
   AlignEndHorizontal,
   AlignEndVertical,
-  AlignHorizontalSpaceAround,
   AlignHorizontalSpaceBetween,
   AlignStartHorizontal,
   AlignStartVertical,
-  AlignVerticalSpaceAround,
   AlignVerticalSpaceBetween,
   ArrowDown,
   ArrowUp,
   Check,
   Circle,
   Compass,
+  Crosshair,
   Crop,
   FlipHorizontal2,
   FlipVertical2,
@@ -67,22 +66,28 @@ const BOOLEAN_LABEL: Record<BooleanOperation, string> = {
 /** The canvas tools the top strip owns, in the order the toolbar presents them. */
 const CANVAS_TOOLS: Array<'select' | 'pan'> = ['select', 'pan'];
 
-/** Direct desktop commands, ordered by axis: left/centre/right, top/centre/bottom. */
-const ALIGN_ITEMS: Array<{ id: AlignEdge; label: string; icon: LucideIcon }> = [
-  { id: 'left', label: 'Align Left', icon: AlignStartVertical },
-  { id: 'horizontal-centers', label: 'Align Horizontal Centers', icon: AlignCenterVertical },
-  { id: 'right', label: 'Align Right', icon: AlignEndVertical },
-  { id: 'top', label: 'Align Top', icon: AlignStartHorizontal },
-  { id: 'vertical-centers', label: 'Align Vertical Centers', icon: AlignCenterHorizontal },
-  { id: 'bottom', label: 'Align Bottom', icon: AlignEndHorizontal },
+/**
+ * The documented align commands, in the order the band presents them: the four
+ * edge alignments, then the centre family. Every label names exactly what the
+ * `planAlign` authority does to the selection — `Center` aligns BOTH centre
+ * axes in one command (one undo step), `Center Horizontally/Vertically` align
+ * one axis onto the collective centre line. They are distinct behaviours, not
+ * renamed duplicates.
+ */
+const ALIGN_ITEMS: Array<{ id: AlignEdge; label: string; note: string; icon: LucideIcon }> = [
+  { id: 'left', label: 'Align Left', note: 'the left edges meet on the selection bounds', icon: AlignStartVertical },
+  { id: 'right', label: 'Align Right', note: 'the right edges meet on the selection bounds', icon: AlignEndVertical },
+  { id: 'top', label: 'Align Top', note: 'the top edges meet on the selection bounds', icon: AlignStartHorizontal },
+  { id: 'bottom', label: 'Align Bottom', note: 'the bottom edges meet on the selection bounds', icon: AlignEndHorizontal },
+  { id: 'center', label: 'Center', note: 'every centre lands on the collective centre — both axes, one step', icon: Crosshair },
+  { id: 'horizontal-centers', label: 'Center Horizontally', note: 'every centre lands on the collective vertical centre line', icon: AlignCenterVertical },
+  { id: 'vertical-centers', label: 'Center Vertically', note: 'every centre lands on the collective horizontal centre line', icon: AlignCenterHorizontal },
 ];
 
-/** Labels distinguish equal visual gaps from the retained centre-based policy. */
+/** The one distribute command per axis: equal visual EDGE gaps, extremes held. */
 const DISTRIBUTE_ITEMS = [
-  { axis: 'horizontal', policy: 'gap', label: 'Distribute Horizontal', icon: AlignHorizontalSpaceBetween },
-  { axis: 'vertical', policy: 'gap', label: 'Distribute Vertical', icon: AlignVerticalSpaceBetween },
-  { axis: 'horizontal', policy: 'center', label: 'Center Horizontally', icon: AlignHorizontalSpaceAround },
-  { axis: 'vertical', policy: 'center', label: 'Center Vertically', icon: AlignVerticalSpaceAround },
+  { axis: 'horizontal', label: 'Distribute Horizontally', note: 'equal visual gaps between edges; the outer two hold the span', icon: AlignHorizontalSpaceBetween },
+  { axis: 'vertical', label: 'Distribute Vertically', note: 'equal visual gaps between edges; the outer two hold the span', icon: AlignVerticalSpaceBetween },
 ] as const;
 
 /**
@@ -343,14 +348,14 @@ export const AuthoringToolbar: React.FC = () => {
       <span className="authoring-toolbar-divider" aria-hidden="true" />
 
       <div className="authoring-toolbar-group" role="group" aria-label="Align">
-        {ALIGN_ITEMS.map(({ id, label, icon: Icon }) => (
+        {ALIGN_ITEMS.map(({ id, label, note, icon: Icon }) => (
           <button
             key={id}
             type="button"
             className="authoring-toolbar-button"
             aria-label={label}
             disabled={!arrange.canAlign}
-            title={arrange.canAlign ? label : `${label} needs two measurable layers`}
+            title={arrange.canAlign ? `${label} — ${note}` : `${label} needs two measurable layers`}
             onClick={() => arrange.align(id)}
           >
             <Icon />
@@ -361,17 +366,15 @@ export const AuthoringToolbar: React.FC = () => {
       <span className="authoring-toolbar-divider" aria-hidden="true" />
 
       <div className="authoring-toolbar-group" role="group" aria-label="Distribute">
-        {DISTRIBUTE_ITEMS.map(({ axis, policy, label, icon: Icon }) => (
+        {DISTRIBUTE_ITEMS.map(({ axis, label, note, icon: Icon }) => (
           <button
-            key={`${policy}-${axis}`}
+            key={axis}
             type="button"
             className="authoring-toolbar-button"
             aria-label={label}
             disabled={!arrange.canDistribute}
-            title={arrange.canDistribute
-              ? `${label} — ${policy === 'gap' ? 'equal visual edge gaps' : 'equal centre intervals'}`
-              : `${label} needs three measurable layers`}
-            onClick={() => policy === 'gap' ? arrange.distributeGap(axis) : arrange.distribute(axis)}
+            title={arrange.canDistribute ? `${label} — ${note}` : `${label} needs three measurable layers`}
+            onClick={() => arrange.distributeGap(axis)}
           >
             <Icon />
           </button>

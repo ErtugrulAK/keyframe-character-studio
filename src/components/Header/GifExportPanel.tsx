@@ -31,12 +31,14 @@ const scaleLabel = (scale: number): string => `${Math.round(scale * 1000) / 10}%
  *
  * It states exactly what will be written before it writes it: the export rate,
  * the pixel size, the frame count and the resulting duration, all derived from
- * the same plan the render uses (`export/gifPlan`). It also states the two things
- * GIF cannot do — one-bit transparency and no partial alpha — because those are
- * properties of the format the user is choosing, not surprises for later.
+ * the same plan the render uses (`export/gifPlan`). The two format facts the
+ * user cannot act on — the 20 ms playback floor and one-bit transparency — are
+ * carried as tooltips on the control they qualify, not as paragraph copy.
  *
  * It is NOT a blocking dialog: the editor stays usable behind it (the export
- * renders a snapshot, so editing cannot change what is being written).
+ * renders a snapshot, so editing cannot change what is being written). The
+ * header X, Escape and an outside click dismiss it; a footer button would just
+ * duplicate the X one row down.
  */
 export const GifExportPanel: React.FC<GifExportPanelProps> = ({ scene, sceneTitle, onClose, onBlocked, showToast }) => {
   const [exportFps, setExportFps] = useState<number>(() => resolveGifExportFps(scene.fps));
@@ -106,6 +108,7 @@ export const GifExportPanel: React.FC<GifExportPanelProps> = ({ scene, sceneTitl
             id="gif-export-fps"
             value={exportFps}
             disabled={gif.isExporting}
+            title={`${plan.exportFps} fps sampling. GIF playback uses at least 20 ms per frame; the full animation duration is preserved, rounded to hundredths of a second.`}
             onChange={(event) => setExportFps(Number(event.target.value))}
           >
             {GIF_EXPORT_FPS_OPTIONS.map((option) => (
@@ -119,6 +122,7 @@ export const GifExportPanel: React.FC<GifExportPanelProps> = ({ scene, sceneTitl
             id="gif-export-scale"
             value={scale}
             disabled={gif.isExporting}
+            title="The exported pixel size relative to the composition."
             onChange={(event) => setScale(Number(event.target.value))}
           >
             {GIF_SCALE_OPTIONS.map((option) => (
@@ -128,21 +132,6 @@ export const GifExportPanel: React.FC<GifExportPanelProps> = ({ scene, sceneTitl
         </label>
       </div>
 
-      <p className="gif-export-note">
-        {plan.exportFps} fps sampling. GIF playback uses at least 20 ms per frame;
-        the full animation duration is preserved, rounded to hundredths of a second.
-      </p>
-      <details className="gif-export-format">
-        <summary>Format limitations</summary>
-        <p className="gif-export-note">
-          GIF has one transparent colour and no partial alpha. Soft transparency becomes a hard edge.
-        </p>
-        {textLayerCount > 0 && (
-          <p className="gif-export-note">
-            Text uses the scene font when it can be embedded; otherwise a reported system-font fallback is used.
-          </p>
-        )}
-      </details>
 
       {blocking.length > 0 ? (
         <p className="gif-export-blocked" role="alert">
@@ -166,9 +155,6 @@ export const GifExportPanel: React.FC<GifExportPanelProps> = ({ scene, sceneTitl
       ) : null}
 
       <div className="gif-export-actions">
-        <button type="button" className="gif-export-cancel" onClick={onClose} disabled={gif.isExporting}>
-          Close
-        </button>
         {gif.isExporting ? (
           <button type="button" className="gif-export-run" onClick={gif.cancel}>Cancel</button>
         ) : (
@@ -176,6 +162,9 @@ export const GifExportPanel: React.FC<GifExportPanelProps> = ({ scene, sceneTitl
             type="button"
             className="gif-export-run"
             disabled={blocking.length > 0}
+            title={textLayerCount > 0
+              ? 'GIF has one transparent colour and no partial alpha, so soft transparency becomes a hard edge. Text uses the scene font when it can be embedded; otherwise a reported system-font fallback is used.'
+              : 'GIF has one transparent colour and no partial alpha, so soft transparency becomes a hard edge.'}
             onClick={() => void gif.start({ scene, exportFps, scale })}
           >
             Export GIF

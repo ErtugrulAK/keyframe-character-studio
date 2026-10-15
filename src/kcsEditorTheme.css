@@ -122,7 +122,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .sidebar-nav-item:hover { background: var(--kcs-bg-hover); }
 .sidebar-nav-item.active { background: var(--kcs-bg-active); border-color: rgba(41,211,183,.42); box-shadow: none; color: var(--kcs-text-primary); }
 .sidebar-nav-item.active .nav-icon { color: var(--kcs-accent); }
-.nav-label { font-size: 10px; font-weight: 600; }
+.nav-label { font-size: 10px; font-weight: 500; }
 .left-drawer-panel { background: #11161e; border-right-color: var(--kcs-border-default); }
 .drawer-content { padding: 12px; gap: 10px; }
 .drawer-header { padding-bottom: 8px; border-bottom-color: var(--kcs-border-subtle); }
@@ -435,7 +435,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 
 .sidebar-nav-item.active .nav-icon {
-  color: var(--kcs-text-primary);
+  color: var(--kcs-accent);
 }
 
 .outliner-header,
@@ -645,7 +645,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .sidebar-nav-item {
   width: 46px !important;
-  height: 44px;
+  height: 42px;
   border: 1px solid transparent;
   background: transparent;
 }
@@ -1088,24 +1088,26 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 /* V3.4 mirrored sidebar handle authority.
    R4-01 — ONE compact edge-handle family for every panel boundary: a thin
-   elevated pill whose interior is a bare chevron, attached to the edge it
-   collapses. The side handles are the VERTICAL member (20×46, riding a panel's
+   quiet tab riding flush on the boundary it collapses, its interior a bare
+   chevron. The side handles are the VERTICAL member (20×40, on a panel's
    left/right edge); the timeline's collapse control is the horizontal mirror
-   (46×20, riding the panel's top edge). No labelled bulky tab, symmetric left
+   (46×20, on the panel's top edge). No labelled bulky tab, symmetric left
    and right, and the chevron always points the way the panel will move. */
 .sidebar-handle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 20px;
-  height: 46px;
+  height: 40px;
   padding: 0;
-  border: 0;
-  border-radius: var(--kcs-radius-control);
+  border: 1px solid var(--kcs-border-quiet);
+  border-radius: calc(var(--kcs-radius-control) - 2px);
   /* R5-02 — the handle layer of the editor stack (see the tokens in this file):
      below chrome overlays, above every docked panel it rides. */
   z-index: var(--kcs-layer-handle);
-  background: var(--kcs-panel-elevated);
+  /* Quiet, boundary-flush chrome: the panel's own surface, not an elevated
+     block floating over the boundary it belongs to. */
+  background: var(--kcs-bg-panel);
   color: var(--kcs-text-muted);
   cursor: pointer;
   transition: background-color 160ms ease, color 160ms ease, outline-color 160ms ease;
@@ -1138,6 +1140,44 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .canvas-viewport-radial-bg {
   background-color: var(--kcs-bg-canvas);
   background-image: none;
+}
+
+/*
+ * Edit ↔ Broadcast content transition. The mode swap replaces chrome, never
+ * the stage: `StageCanvas` stays mounted and the camera authority (the
+ * remembered edit viewport, the centred broadcast fit) is untouched. The only
+ * motion here is the incoming surface fading up into place on mount —
+ * opacity plus a 3px paint-only translate, which changes no layout box, no
+ * dock width and no camera compensation. Rapid switching simply restarts the
+ * same CSS animation: no timers, no React state, nothing to get stuck.
+ */
+@keyframes kcs-mode-enter {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.authoring-toolbar,
+.left-toolbar-container,
+.motion-design-right-sidebar,
+.sequencer-timeline,
+.live-director-panel {
+  animation: kcs-mode-enter 180ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .authoring-toolbar,
+  .left-toolbar-container,
+  .motion-design-right-sidebar,
+  .sequencer-timeline,
+  .live-director-panel {
+    animation: none;
+  }
 }
 .canvas-viewport-toolbar,
 .viewport-toolbar {

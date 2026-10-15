@@ -1744,7 +1744,7 @@
 .motion-design-right-sidebar select:focus-visible,
 .motion-design-right-sidebar button:focus-visible {
   outline: 2px solid var(--kcs-border-focus);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 @media (prefers-reduced-motion: reduce) {

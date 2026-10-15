@@ -142,7 +142,7 @@
 
 .lottie-report-actions button:focus-visible {
   outline: 2px solid var(--kcs-border-focus);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 /* Scoped to the action row so it outranks `.lottie-report-actions button`. */

@@ -13,7 +13,6 @@ import {
   Check,
   Circle,
   Compass,
-  Crosshair,
   Crop,
   FlipHorizontal2,
   FlipVertical2,
@@ -23,6 +22,7 @@ import {
   Magnet,
   Maximize,
   MousePointer2,
+  Move,
   PenTool,
   RotateCcw,
   RotateCw,
@@ -67,22 +67,53 @@ const BOOLEAN_LABEL: Record<BooleanOperation, string> = {
 const CANVAS_TOOLS: Array<'select' | 'pan'> = ['select', 'pan'];
 
 /**
- * The documented align commands, in the order the band presents them: the four
- * edge alignments, then the centre family. Every label names exactly what the
- * `planAlign` authority does to the selection — `Center` aligns BOTH centre
- * axes in one command (one undo step), `Center Horizontally/Vertically` align
- * one axis onto the collective centre line. They are distinct behaviours, not
- * renamed duplicates.
+ * The arrange strip presents four command groups the user reads left to right:
+ * the edge alignments, the centre family, the gap distribution and the
+ * rotate/flip one-shots — each its own `role="group"` behind a compact divider.
+ * Group A carries the four edge commands; Group B, the centre family. Every
+ * label names exactly what the `planAlign` authority does to the selection —
+ * `Center` aligns BOTH centre axes in one command (one undo step, glyphed as a
+ * centred four-way target), `Center Horizontally/Vertically` align one axis
+ * onto the collective centre line. They are distinct behaviours, not renamed
+ * duplicates.
  */
-const ALIGN_ITEMS: Array<{ id: AlignEdge; label: string; note: string; icon: LucideIcon }> = [
+const ALIGN_EDGE_ITEMS: Array<{ id: AlignEdge; label: string; note: string; icon: LucideIcon }> = [
   { id: 'left', label: 'Align Left', note: 'the left edges meet on the selection bounds', icon: AlignStartVertical },
   { id: 'right', label: 'Align Right', note: 'the right edges meet on the selection bounds', icon: AlignEndVertical },
   { id: 'top', label: 'Align Top', note: 'the top edges meet on the selection bounds', icon: AlignStartHorizontal },
   { id: 'bottom', label: 'Align Bottom', note: 'the bottom edges meet on the selection bounds', icon: AlignEndHorizontal },
-  { id: 'center', label: 'Center', note: 'every centre lands on the collective centre — both axes, one step', icon: Crosshair },
+];
+
+const CENTER_ITEMS: Array<{ id: AlignEdge; label: string; note: string; icon: LucideIcon }> = [
+  { id: 'center', label: 'Center', note: 'every centre lands on the collective centre — both axes, one step', icon: Move },
   { id: 'horizontal-centers', label: 'Center Horizontally', note: 'every centre lands on the collective vertical centre line', icon: AlignCenterVertical },
   { id: 'vertical-centers', label: 'Center Vertically', note: 'every centre lands on the collective horizontal centre line', icon: AlignCenterHorizontal },
 ];
+
+/**
+ * One command button shared by the Align, Center and Distribute bands: the
+ * bands differ only in which authority they invoke, so the label/note, the
+ * availability copy and the glyph slot are declared once, here.
+ */
+const ArrangeButton: React.FC<{
+  label: string;
+  note: string;
+  icon: LucideIcon;
+  enabled: boolean;
+  disabledHint: string;
+  onInvoke: () => void;
+}> = ({ label, note, icon: Icon, enabled, disabledHint, onInvoke }) => (
+  <button
+    type="button"
+    className="authoring-toolbar-button"
+    aria-label={label}
+    disabled={!enabled}
+    title={enabled ? `${label} — ${note}` : disabledHint}
+    onClick={onInvoke}
+  >
+    <Icon />
+  </button>
+);
 
 /** The one distribute command per axis: equal visual EDGE gaps, extremes held. */
 const DISTRIBUTE_ITEMS = [
@@ -348,18 +379,32 @@ export const AuthoringToolbar: React.FC = () => {
       <span className="authoring-toolbar-divider" aria-hidden="true" />
 
       <div className="authoring-toolbar-group" role="group" aria-label="Align">
-        {ALIGN_ITEMS.map(({ id, label, note, icon: Icon }) => (
-          <button
+        {ALIGN_EDGE_ITEMS.map(({ id, label, note, icon: Icon }) => (
+          <ArrangeButton
             key={id}
-            type="button"
-            className="authoring-toolbar-button"
-            aria-label={label}
-            disabled={!arrange.canAlign}
-            title={arrange.canAlign ? `${label} — ${note}` : `${label} needs two measurable layers`}
-            onClick={() => arrange.align(id)}
-          >
-            <Icon />
-          </button>
+            label={label}
+            note={note}
+            icon={Icon}
+            enabled={arrange.canAlign}
+            disabledHint={`${label} needs two measurable layers`}
+            onInvoke={() => arrange.align(id)}
+          />
+        ))}
+      </div>
+
+      <span className="authoring-toolbar-divider" aria-hidden="true" />
+
+      <div className="authoring-toolbar-group" role="group" aria-label="Center">
+        {CENTER_ITEMS.map(({ id, label, note, icon: Icon }) => (
+          <ArrangeButton
+            key={id}
+            label={label}
+            note={note}
+            icon={Icon}
+            enabled={arrange.canAlign}
+            disabledHint={`${label} needs two measurable layers`}
+            onInvoke={() => arrange.align(id)}
+          />
         ))}
       </div>
 
@@ -367,17 +412,15 @@ export const AuthoringToolbar: React.FC = () => {
 
       <div className="authoring-toolbar-group" role="group" aria-label="Distribute">
         {DISTRIBUTE_ITEMS.map(({ axis, label, note, icon: Icon }) => (
-          <button
+          <ArrangeButton
             key={axis}
-            type="button"
-            className="authoring-toolbar-button"
-            aria-label={label}
-            disabled={!arrange.canDistribute}
-            title={arrange.canDistribute ? `${label} — ${note}` : `${label} needs three measurable layers`}
-            onClick={() => arrange.distributeGap(axis)}
-          >
-            <Icon />
-          </button>
+            label={label}
+            note={note}
+            icon={Icon}
+            enabled={arrange.canDistribute}
+            disabledHint={`${label} needs three measurable layers`}
+            onInvoke={() => arrange.distributeGap(axis)}
+          />
         ))}
       </div>
 

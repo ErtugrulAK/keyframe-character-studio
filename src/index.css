@@ -262,23 +262,30 @@ button {
   white-space: nowrap;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
+/*
+ * The one focus-visible authority. A keyboard focus is a quiet inset accent:
+ * the teal ring is painted INSIDE the control's own box (negative outline
+ * offset), so it never grows a frame around the control, never moves layout,
+ * and cannot stack with a control's own box-shadow. Pointer focus stays
+ * clean — `:focus-visible` decides, never a bare `:focus` — and no control
+ * loses its indicator: the browser ring is replaced here, not removed.
+ */
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 [role='button']:focus-visible {
   outline: 2px solid var(--kcs-border-focus);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 /*
  * Select focus policy. Windows Chromium treats a `select` as always
  * keyboard-relevant (it matches `:focus-visible` even after a mouse click,
  * because the popup is navigated from the keyboard), and its default
- * indicator is the browser-style white ring. The author teal rule above can
- * lose that race, so the select states its own ring explicitly: the KCS ring
- * in both focus paths, the browser ring never. Buttons and text inputs keep
- * the pointer-clean behaviour they already have from the rule above.
+ * indicator is the browser-style white ring. The author rule above can lose
+ * that race, so the select states the same inset ring explicitly: the KCS
+ * treatment in both focus paths, the browser ring never.
  */
 select:focus {
   outline: none;
@@ -286,7 +293,7 @@ select:focus {
 
 select:focus-visible {
   outline: 2px solid var(--kcs-border-focus) !important;
-  outline-offset: 2px !important;
+  outline-offset: -2px !important;
 }
 
 button:disabled {

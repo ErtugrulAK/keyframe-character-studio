@@ -51,6 +51,8 @@
 }
 
 .nav-icon {
+  width: 18px;
+  height: 18px;
   color: var(--kcs-text-secondary);
   flex: none;
 }
@@ -73,9 +75,11 @@
   height: 48px;
 }
 
+/* One label voice for the rail: caption size, medium weight, single line. */
 .nav-label {
-  font-size: var(--font-size-body);
-  font-weight: 600;
+  font-size: var(--font-size-caption);
+  font-weight: 500;
+  line-height: 1.15;
   white-space: nowrap;
 }
 
@@ -225,7 +229,7 @@
 
 .dropzone-browse:focus-visible {
   outline: 2px solid var(--kcs-border-focus);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 /* Texts drawer: each preset previews the font it creates. */
@@ -257,7 +261,7 @@
 
 .text-preset-card:focus-visible {
   outline: 2px solid var(--kcs-border-focus);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .text-preset-icon {
@@ -381,7 +385,7 @@
 
 .media-preview-item:focus-visible {
   outline: 2px solid var(--kcs-border-focus);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .drawer-grid {
@@ -464,9 +468,9 @@
 
 .sidebar-nav-item {
   width: 60px;
-  height: 48px;
+  height: 42px;
   border-radius: var(--kcs-radius-control);
-  gap: 3px;
+  gap: 2px;
 }
 
 .nav-label {
@@ -572,9 +576,8 @@
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease !important;
 }
 
-.sidebar-nav-item.active {
-  transform: translateX(1px);
-}
+/* The pressed state is the shared V3.3 surface + accent bar; the half-pixel
+   nudge this block used to add read as a misaligned rail. */
 
 .sidebar-nav-item:nth-child(3) {
   margin-top: 4px;

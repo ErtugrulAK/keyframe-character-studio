@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Transform } from '../types/animator';
 import type { PartLocalBounds } from '../utils/bounds';
+import { affineOfTransform, composeAffine, composeWorldTransform, withWorldAffine } from '../utils/containerMath';
 import { rotateAboutWorldPivot, selectionFrameCenterWorld } from '../utils/rotationGesture';
 
 /**
@@ -47,6 +48,25 @@ describe('selectionFrameCenterWorld', () => {
 
   it('applies the SIGNED scale, so a mirrored layer keeps the drawn centre', () => {
     expectPoint(selectionFrameCenterWorld(transform({ scaleX: -2 }), box()), { x: -20, y: 0 });
+  });
+
+  it('reads the derived affine, so a sheared frame pivots on the centre it draws', () => {
+    // A 30° child of a container scaled (2, 1): the exact nesting is sheared, so
+    // the drawn centre is the affine image of the local box centre — the child's
+    // offset rotated by the child, then the container's own anisotropic scale.
+    const parent = transform({ scaleX: 2, scaleY: 1 });
+    const child = transform({ x: 40, rotation: 30 });
+    const world = withWorldAffine(
+      composeWorldTransform(parent, child),
+      composeAffine(affineOfTransform(parent), affineOfTransform(child)),
+    );
+
+    // The TRS reading of the same numbers would put the centre at y = 10
+    // (offset ⊙ scale, rotated once). The affine puts it where it is drawn.
+    expectPoint(selectionFrameCenterWorld(world, box({ offsetX: 10, offsetY: 0 })), {
+      x: 80 + 2 * 10 * Math.cos(Math.PI / 6),
+      y: 10 * Math.sin(Math.PI / 6),
+    });
   });
 });
 

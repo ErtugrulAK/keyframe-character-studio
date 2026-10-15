@@ -12,7 +12,31 @@ import type { CharacterPart, Transform, Keyframe, PropertyKeyframe, AnimationTra
 import type { WorldTransform } from '../types/composition';
 import { interpolateTransform, interpolateChannel } from './defaults';
 import { PART_ANCHOR_OFFSETS } from './constants';
-import { composeWorldTransform } from './containerMath';
+import { affineOfTransform, composeAffine, composeWorldTransform, withWorldAffine } from './containerMath';
+
+/**
+ * The pose a layer owns WITHOUT any timeline animation: exactly the base the
+ * canonical channels and the legacy composite list are composed onto.
+ *
+ * This is the ONE authority for "the layer's own authored pose". The evaluator
+ * composes every channel onto it, and the legacy → canonical conversion uses the
+ * same value to tell a composite list that ANIMATES a property (its samples
+ * move, or they hold a pose the layer does not own) from one that merely
+ * re-states the layer's pose at every sample (no animation to carry, so no
+ * channel key may be fabricated for it).
+ */
+export const authoredBasePose = (part: CharacterPart | undefined): Transform => (
+  part
+    ? {
+        maskOffsetX: part.maskOffsetX ?? 0,
+        maskOffsetY: part.maskOffsetY ?? 0,
+        maskScale: part.maskScale ?? 1,
+        maskRotation: part.maskRotation ?? 0,
+        ...part.baseTransform,
+        mask: part.baseTransform?.mask ?? part.mask,
+      }
+    : { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, maskOffsetX: 0, maskOffsetY: 0, maskScale: 1, maskRotation: 0 }
+);
 
 /**
  * Evaluate the animated transform for a single layer at a given frame.
@@ -39,23 +63,13 @@ export function evaluateTransform(
   const visiting = new Set<string>();
   const evaluate = (currentPartId: string): WorldTransform => {
     const part = layers.find((p) => p.id === currentPartId);
-    const baseTransform: Transform = part
-      ? {
-          maskOffsetX: part.maskOffsetX ?? 0,
-          maskOffsetY: part.maskOffsetY ?? 0,
-          maskScale: part.maskScale ?? 1,
-          maskRotation: part.maskRotation ?? 0,
-          ...part.baseTransform,
-          mask: part.baseTransform?.mask ?? part.mask,
-        }
-      : { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, maskOffsetX: 0, maskOffsetY: 0, maskScale: 1, maskRotation: 0 };
-
     const track = tracks.find((t) => t.partId === currentPartId);
     const activeTmpl = activeTemplateId || 'Sequence';
     // A layer with no animation track still inherits its parent: only the
     // keyframe evaluation is skipped here, never the hierarchy resolution.
     // Returning early left a static child at its local transform while the same
     // child with an (empty) track was placed correctly.
+    const baseTransform = authoredBasePose(part);
     const rawTransform = track ? evaluateKeyframes(track, baseTransform, frame, activeTmpl) : baseTransform;
     let finalComputed = rawTransform;
 
@@ -73,7 +87,11 @@ export function evaluateTransform(
       const parentPart = layers.find((p) => p.id === relationshipParentId);
       if (parentPart && parentPart.id !== currentPartId) {
         const parentTransform = evaluate(parentPart.id);
-        finalComputed = composeWorldTransform(parentTransform, finalComputed);
+        const nestedAffine = composeAffine(
+          parentTransform.affine ?? affineOfTransform(parentTransform),
+          affineOfTransform(finalComputed),
+        );
+        finalComputed = withWorldAffine(composeWorldTransform(parentTransform, finalComputed), nestedAffine);
       }
     }
     visiting.delete(currentPartId);

@@ -4,7 +4,7 @@ import { useAnimator } from '../../context/useAnimator';
 import { commitWorkspaceLayout, createFrameEase, type FrameEase } from '../../utils/workspaceLayout';
 import { type TrackChannel, type AnimationChannel } from '../../types/animator';
 import { computeMaxFrame, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/timelineMetrics';
-import { resolveAuthoredLocalTransform } from '../../utils/channelKeyframeGroups';
+import { resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../../utils/channelKeyframeGroups';
 import { locateKeyframe } from '../../utils/trackMutations';
 import {
   Plus,
@@ -1157,6 +1157,7 @@ export const SequencerTimeline: React.FC = () => {
               <TrackLane
                 key={track.id}
                 track={track}
+                basePose={resolveAuthoredBasePose(characterParts, track.partId)}
                 isSelected={selectedPartId === track.partId}
                 selectedKeyframeIds={selectedKeyframeIds}
                 frameWidth={FRAME_WIDTH}

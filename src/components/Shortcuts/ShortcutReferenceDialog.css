@@ -1,13 +1,5 @@
-/*
- * The keyboard shortcut reference (R5-13).
- *
- * The panel is the shortcut table rendered: a category grid over one keymap, with
- * every binding drawn as a keycap chip in the platform's own labels. The layout
- * is deliberately compact — the whole table fits without scrolling at the
- * default viewport, so the reference reads as one page rather than a long list —
- * and the filter in the header is a view over the same rows, never a second
- * source of bindings.
- */
+/* Shortcut categories are cards over the canonical keymap. The fixed header
+   keeps filtering reachable while the cards scroll in a short viewport. */
 
 .shortcut-reference-backdrop {
   position: fixed;
@@ -24,8 +16,8 @@
 .shortcut-reference {
   display: flex;
   flex-direction: column;
-  width: min(880px, 100%);
-  max-height: min(720px, 90vh);
+  width: min(960px, 100%);
+  max-height: calc(100dvh - 32px);
   border: 1px solid var(--kcs-border-subtle);
   border-radius: var(--kcs-radius-panel);
   background: var(--kcs-bg-elevated);
@@ -36,6 +28,7 @@
 .shortcut-reference-header {
   display: flex;
   align-items: center;
+  flex: 0 0 auto;
   gap: var(--space-sm);
   padding: var(--space-md);
   border-bottom: 1px solid var(--kcs-border-subtle);
@@ -49,8 +42,18 @@
 .shortcut-reference-header h2 {
   margin: 0;
   color: var(--kcs-text-primary);
-  font-size: var(--font-size-body-lg);
+  font-size: 20px;
   font-weight: 700;
+}
+
+.shortcut-reference-eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--kcs-accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .shortcut-reference-platform {
@@ -66,7 +69,7 @@
   align-items: center;
   gap: 6px;
   flex: 0 1 240px;
-  height: var(--kcs-control-sm);
+  height: 32px;
   padding: 0 8px;
   border: 1px solid var(--kcs-border-default);
   border-radius: var(--kcs-radius-control);
@@ -135,12 +138,15 @@
 }
 
 .shortcut-reference-body {
+  grid-auto-rows: max-content;
+  align-items: start;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   align-content: start;
   gap: var(--space-md);
   padding: var(--space-md);
   overflow-y: auto;
+  min-height: 0;
 }
 
 .shortcut-reference-empty {
@@ -149,17 +155,39 @@
   font-size: var(--font-size-body);
 }
 
+.shortcut-reference-group {
+  overflow: hidden;
+  border: 1px solid var(--kcs-border-default);
+  border-radius: var(--kcs-radius-panel);
+  background: var(--kcs-bg-panel);
+}
+
 .shortcut-reference-group h3 {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-xs);
-  margin: 0 0 6px;
-  color: var(--kcs-text-label);
-  font-size: var(--font-size-caption);
+  margin: 0;
+  padding: 12px;
+  border-bottom: 1px solid var(--kcs-border-subtle);
+  background: var(--kcs-bg-shell);
+  color: var(--kcs-text-primary);
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.shortcut-reference-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shortcut-reference-category svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: var(--kcs-accent);
 }
 
 /* The row count of the band: what the filter left, at a glance. */
@@ -174,7 +202,6 @@
 
 .shortcut-reference-group dl {
   margin: 0;
-  border-top: 1px solid var(--kcs-border-subtle);
 }
 
 .shortcut-reference-row {
@@ -182,8 +209,12 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-sm);
-  padding: 6px 0;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--kcs-border-subtle);
+}
+
+.shortcut-reference-row:last-child {
+  border-bottom: 0;
 }
 
 .shortcut-reference-row dt {
@@ -194,6 +225,7 @@
 
 .shortcut-reference-name {
   display: block;
+  font-weight: 600;
 }
 
 .shortcut-reference-detail,
@@ -206,7 +238,14 @@
 }
 
 .shortcut-reference-scope {
+  width: fit-content;
+  margin-top: 4px;
+  padding: 2px 5px;
+  border-radius: var(--kcs-radius-control);
+  background: var(--kcs-bg-active-muted);
   color: var(--kcs-accent);
+  font-size: 9px;
+  font-weight: 600;
 }
 
 .shortcut-reference-row dd {
@@ -224,16 +263,49 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  height: 20px;
-  padding: 0 6px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 8px;
   border: 1px solid var(--kcs-border-default);
-  border-bottom-width: 2px;
+  border-bottom-width: 3px;
   border-radius: var(--kcs-radius-control);
   background: var(--kcs-bg-input);
   color: var(--kcs-text-primary);
   font-family: var(--font-family-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
-  font-size: var(--font-size-caption);
+  font-size: 12px;
+  font-weight: 700;
   line-height: 1;
   white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .shortcut-reference-header {
+    flex-wrap: wrap;
+    padding: 12px;
+  }
+
+  .shortcut-reference-filter {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .shortcut-reference-body {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 12px;
+    gap: 12px;
+  }
+}
+
+@media (max-height: 600px) {
+  .shortcut-reference-backdrop {
+    padding: 12px;
+  }
+
+  .shortcut-reference {
+    max-height: calc(100dvh - 24px);
+  }
+
+  .shortcut-reference-header {
+    padding: 12px;
+  }
 }

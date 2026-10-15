@@ -62,22 +62,6 @@ describe('TrimPathSection — the field shows the evaluated value', () => {
     expect(onPartPropChange).not.toHaveBeenCalledWith('trimPathEnd', expect.anything());
   });
 
-  it('offers a keyframe toggle per channel that reports the current-frame state', () => {
-    const onToggleTrimKeyframe = vi.fn();
-    render(<TrimPathSection
-      selectedPart={part()}
-      onPartPropChange={vi.fn()}
-      evaluatedTrim={{ start: 0, end: 1, offset: 0 }}
-      keyframedAtFrame={{ trimPathStart: false, trimPathEnd: true, trimPathOffset: false }}
-      onToggleTrimKeyframe={onToggleTrimKeyframe}
-    />);
-    expandTrimPath();
-
-    expect(screen.getByLabelText('Remove Trim Path End Keyframe')).toBeTruthy();
-    expect(screen.getByLabelText('Add Trim Path Start Keyframe')).toBeTruthy();
-    fireEvent.click(screen.getByLabelText('Add Trim Path Start Keyframe'));
-    expect(onToggleTrimKeyframe).toHaveBeenCalledWith('trimPathStart');
-  });
 });
 
 describe('updateCurrentPropertyChannel — trim path writes stay on one frame', () => {

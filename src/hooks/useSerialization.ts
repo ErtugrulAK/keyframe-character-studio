@@ -4,6 +4,7 @@ import type { PersistedTrackState, SceneCoordinateSystem, SceneData, SceneLayer 
 import { initializeIdCounter } from '../utils/idGenerator';
 import { makeEmptyChannels, DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../utils/defaults';
 import { convertLegacyKeyframesToChannels, fillChannelsFromLegacyKeyframes } from '../utils/legacyKeyframeConversion';
+import { resolveAuthoredBasePose } from '../utils/channelKeyframeGroups';
 import { AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
 import { DEFAULT_SCENE_COORDINATE_SYSTEM, isSceneCoordinateSystem, migrateSceneCoordinates } from '../utils/coordinateMigration';
 import { normalizeMotionTemplates } from '../utils/motionTemplates';
@@ -156,9 +157,14 @@ function toSceneData(
   // changed the animation the next load produced.
   const animTracks: (AnimationTrackData & PersistedTrackState)[] = tracks.map(t => {
     const hasChannelData = !!t.channels && Object.values(t.channels).some((arr) => arr.length > 0);
+    // The layer's own authored pose is the proof the legacy → canonical
+    // resolution needs before it may leave a composite property that only
+    // re-states the layer's pose out of the exported channels (see
+    // `convertLegacyKeyframesToChannels`).
+    const basePose = resolveAuthoredBasePose(characterParts, t.partId);
     const channels = hasChannelData
-      ? fillChannelsFromLegacyKeyframes(t.channels, t.keyframes || [])
-      : convertLegacyKeyframesToChannels(t.keyframes || []);
+      ? fillChannelsFromLegacyKeyframes(t.channels, t.keyframes || [], basePose)
+      : convertLegacyKeyframesToChannels(t.keyframes || [], basePose);
     return {
       partId: t.partId,
       channels: channels as Record<string, PropertyKeyframe[]>,
@@ -302,8 +308,10 @@ function fromSceneData(
       // R3-11: the resolution is the EVALUATOR's own (`fillChannelsFromLegacyKeyframes`),
       // so a file with partially populated channels plus a legacy keyframe list
       // imports what it plays — nothing can be hidden from the timeline, and a
-      // channel the legacy list still drives becomes canonical at import.
-      channels: fillChannelsFromLegacyKeyframes(t.channels, t.keyframes || []) as Track['channels'],
+      // channel the legacy list still drives becomes canonical at import. The
+      // imported layer's own pose is the proof a composite property that only
+      // re-states that pose is not authored animation.
+      channels: fillChannelsFromLegacyKeyframes(t.channels, t.keyframes || [], resolveAuthoredBasePose(parts, layerId)) as Track['channels'],
       maskChannels: t.maskChannels,
       maskPathChannels: migrateMaskPathChannels(t.maskPathChannels),
       // H-04: the authoring state exported with the track has to come back, or a

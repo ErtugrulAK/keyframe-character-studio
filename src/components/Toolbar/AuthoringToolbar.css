@@ -18,20 +18,15 @@
  * control-height token so it cannot drift from the rest of the editor's controls,
  * and the glyph size is declared once, for every band.
  *
- * R5-12 — the strip's rhythm: bands are separated by a hairline divider with
- * more air around it than between the commands of one band, so the eye groups a
- * band before it reads a single icon, and the whole strip still keeps its fixed
- * height (only the stage box may move with it, never the authored world). A band
- * that is a command SET (six align edges, two distribute axes) is one trigger
- * with a menu — see the menu block at the end of this file — which is what keeps
- * the strip compact without wrapping it.
+ * Command bands retain a fixed height. Direct align/distribute buttons fit a
+ * normal desktop without wrapping; smaller viewports can scroll the strip.
  */
 .authoring-toolbar {
   display: flex;
   align-items: center;
   flex: 0 0 auto;
   flex-wrap: nowrap;
-  gap: 8px;
+  gap: 6px;
   height: 40px;
   min-height: 40px;
   padding: 0 12px;
@@ -56,7 +51,7 @@
   flex: 0 0 auto;
   width: 1px;
   height: 18px;
-  margin: 0 4px;
+  margin: 0 3px;
   background: var(--kcs-border-default);
 }
 
@@ -110,6 +105,12 @@
   color: var(--kcs-text-muted);
   opacity: 0.4;
   cursor: default;
+}
+
+@media (max-width: 1350px) {
+  .authoring-toolbar-button {
+    width: 26px;
+  }
 }
 
 /* The trigger of a command-set band stays lit while its menu is open, the same

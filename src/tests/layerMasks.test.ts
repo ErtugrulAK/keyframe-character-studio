@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, LayerMask } from '../types/animator';
+import type { WorldTransform } from '../types/composition';
 import { buildLayerMaskDefinition, buildLayerMaskPathD } from '../utils/layerMasks';
 import { evaluateLayerMasks } from '../utils/evaluateLayerMasks';
 import { layerMaskChannel, layerMaskPathChannel } from '../types/animator';
@@ -32,6 +33,20 @@ describe('layer mask core', () => {
     expect(d).toContain('M -90 -30');
     expect(d).toContain('L 110 -30');
     expect(d).toContain('L 110 70');
+    expect(d).toContain('Z');
+  });
+
+  it('maps a sheared layer through the derived affine (drawn parallelogram)', () => {
+    // (x,y) ↦ (2x + 0.5y, y) — a shear the authored TRS fields cannot express
+    const sheared: WorldTransform = {
+      x: 10, y: 20, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1,
+      affine: { a: 2, b: 0, c: 0.5, d: 1, e: 0, f: 0 },
+    };
+    // normalized mask corners → local (-100,-50), (100,-50), (100,50)
+    const d = buildLayerMaskPathD(path, part, sheared, { x: 0, y: 0 });
+    expect(d).toContain('M -225 -50');
+    expect(d).toContain('L 175 -50');
+    expect(d).toContain('L 225 50');
     expect(d).toContain('Z');
   });
 

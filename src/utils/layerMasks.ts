@@ -2,6 +2,7 @@ import type { BezierPath, CharacterPart, LayerMask, LayerMaskMode } from '../typ
 import type { WorldTransform } from '../types/composition';
 import { buildBezierPathD } from './bezierPath';
 import { getPartBounds } from './bounds';
+import { applyAffine, worldAffineOf } from './containerMath';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from './projectCoordinates';
 
 export type LayerMaskCompositeMode = 'add' | 'subtract' | 'intersect' | 'difference';
@@ -27,6 +28,13 @@ const normalizeOpacity = (value: number | undefined): number =>
 const normalizeNonNegative = (value: number | undefined): number =>
   Number.isFinite(value) ? Math.max(0, value!) : 0;
 
+/**
+ * World-space mask contour. The localized mask point is mapped through the
+ * layer's DERIVED world affine (`worldAffineOf`) — never a hand-rolled
+ * `origin + R(rotation)·(local ⊙ scale)` — so a sheared nesting (a rotated child
+ * of an anisotropically scaled container) clips exactly where the layer is
+ * drawn, while a shear-free pose keeps its historical numbers.
+ */
 export const buildLayerMaskPathD = (
   maskPath: BezierPath | undefined,
   part: CharacterPart,
@@ -37,17 +45,13 @@ export const buildLayerMaskPathD = (
   const bounds = getPartBounds(part);
   const width = Number.isFinite(part.width) ? part.width! : bounds.halfW * 2;
   const height = Number.isFinite(part.height) ? part.height! : bounds.halfH * 2;
+  const worldMap = worldAffineOf(world);
   return buildBezierPathD(maskPath, (point) => {
     const local = maskPath.coordinateSpace === 'normalized'
       ? { x: (point.x - 0.5) * width, y: (point.y - 0.5) * height }
       : point;
-    const radians = (world.rotation * Math.PI) / 180;
-    const scaledX = local.x * world.scaleX;
-    const scaledY = local.y * world.scaleY;
-    return {
-      x: outputOrigin.x + world.x + scaledX * Math.cos(radians) - scaledY * Math.sin(radians),
-      y: outputOrigin.y + world.y + scaledX * Math.sin(radians) + scaledY * Math.cos(radians),
-    };
+    const mapped = applyAffine(worldMap, local);
+    return { x: outputOrigin.x + mapped.x, y: outputOrigin.y + mapped.y };
   });
 };
 

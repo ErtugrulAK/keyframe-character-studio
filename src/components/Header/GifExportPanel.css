@@ -7,7 +7,9 @@
   top: calc(100% + 6px);
   right: 0;
   z-index: 1000;
-  width: 340px;
+  width: min(320px, calc(100vw - 24px));
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
@@ -125,6 +127,20 @@
   color: var(--kcs-text-muted);
   font-size: var(--font-size-caption);
   line-height: var(--line-height-relaxed);
+}
+
+.gif-export-format {
+  color: var(--kcs-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.gif-export-format summary {
+  cursor: pointer;
+  color: var(--kcs-text-secondary);
+}
+
+.gif-export-format[open] .gif-export-note {
+  margin-top: 6px;
 }
 
 .gif-export-blocked {

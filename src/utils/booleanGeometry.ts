@@ -1,9 +1,19 @@
 import { difference, intersection, union, xor, type MultiPolygon, type Polygon, type Ring } from 'polygon-clipping';
 import type { CharacterPart, FreeformPoint, Track, Transform } from '../types/animator';
 import { getShapeGeometry } from './shapeGeometry';
+import { applyAffine, invertAffine, worldAffineOf, type WorldAffine } from './containerMath';
 import { normalizeClosedPoints, resolveFreeformPath } from './freeform';
 import { sampleBezierPath } from './bezierPath';
 import { getTextOutlinePolygons, type OutlinePolygon } from './textOutline';
+
+/**
+ * A WORLD transform: the authored TRS reading plus the DERIVED exact map the
+ * evaluator attaches when the nesting is not expressible as those numbers (a
+ * rotated child of an anisotropically scaled container). Every world map in this
+ * module is read through it; a plain `Transform` keeps working because the
+ * affine is optional and `worldAffineOf` falls back to the TRS' own map.
+ */
+type WorldTransformInput = Transform & { affine?: WorldAffine };
 
 export type BooleanOperation = 'union' | 'subtract' | 'intersect' | 'exclude';
 export type BooleanContours = FreeformPoint[][];
@@ -28,16 +38,23 @@ const hasStaticTextGeometry = (part: CharacterPart): boolean => (
   Boolean(part.textValue?.trim()) && (!part.textAnimMode || part.textAnimMode === 'none')
 );
 
-const toTransform = (part: CharacterPart, transform?: Transform): Transform => transform ?? part.baseTransform;
+const toTransform = (part: CharacterPart, transform?: WorldTransformInput): WorldTransformInput =>
+  transform ?? part.baseTransform;
 
-const transformPoint = (point: FreeformPoint, transform: Transform): [number, number] => {
-  const radians = (transform.rotation * Math.PI) / 180;
-  const scaledX = point.x * transform.scaleX;
-  const scaledY = point.y * transform.scaleY;
-  return [
-    transform.x + scaledX * Math.cos(radians) - scaledY * Math.sin(radians),
-    transform.y + scaledX * Math.sin(radians) + scaledY * Math.cos(radians),
-  ];
+/**
+ * Operand LOCAL → world. This is a WORLD map, so it is the layer's exact affine
+ * (`worldAffineOf`), never a hand-rolled `translate + R(rotation)·(local ⊙ scale)`:
+ * a Boolean operand inside a container whose nesting is not a TRS (a rotated
+ * child of an anisotropically scaled container) is SHEARED, and the hand-rolled
+ * law folded the container's anisotropy back into the operand's own axes — the
+ * drawn contour, and therefore the derived Boolean geometry, follows the affine.
+ */
+const transformPoint = (
+  point: FreeformPoint,
+  transform: WorldTransformInput,
+): [number, number] => {
+  const mapped = applyAffine(worldAffineOf(transform), point);
+  return [mapped.x, mapped.y];
 };
 
 /** One region of a shape: a single exterior ring with no holes. */
@@ -79,24 +96,31 @@ const localPolygons = (part: CharacterPart): OutlinePolygon[] | null => {
   const ring = localShapeRing(part);
   return ring ? [[ring.map((point): [number, number] => [point.x, point.y])]] : null;
 };
+
+/**
+ * Convert LOCAL Boolean contours into world space.
+ *
+ * A world map, so every point goes through the transform's exact affine (see
+ * `transformPoint`); the previous `R(rotation)·(point ⊙ scale)` spelling dropped
+ * the shear of an anisotropically scaled container.
+ */
 export const transformBooleanContours = (
   contours: BooleanContours,
-  transform: Transform,
-): BooleanContours => {
-  const radians = (transform.rotation * Math.PI) / 180;
-  const cos = Math.cos(radians);
-  const sin = Math.sin(radians);
-  return contours.map((contour) => contour.map((point) => {
-    const x = point.x * transform.scaleX;
-    const y = point.y * transform.scaleY;
-    return {
-      x: transform.x + x * cos - y * sin,
-      y: transform.y + x * sin + y * cos,
-    };
-  }));
-};
+  transform: WorldTransformInput,
+): BooleanContours => contours.map((contour) => contour.map(
+  (point) => applyAffine(worldAffineOf(transform), point),
+));
 
-const inverseTransformPoint = (point: FreeformPoint, transform: Transform): FreeformPoint => {
+const inverseTransformPoint = (
+  point: FreeformPoint,
+  transform: WorldTransformInput,
+): FreeformPoint => {
+  const inverse = invertAffine(worldAffineOf(transform));
+  if (inverse) return applyAffine(inverse, point);
+  // A collapsed map (det ≈ 0) has no inverse, so the historical reading is kept
+  // verbatim: an exact zero scale is treated as 1 (deterministic, NaN-free).
+  // A degenerate container draws nothing either way, and a sheared map only
+  // reaches this branch when it is itself collapsed.
   const radians = (transform.rotation * Math.PI) / 180;
   const dx = point.x - transform.x;
   const dy = point.y - transform.y;
@@ -108,10 +132,17 @@ const inverseTransformPoint = (point: FreeformPoint, transform: Transform): Free
   };
 };
 
-/** Convert world-space Boolean contours into the group's local space. */
+/**
+ * Convert world-space Boolean contours into the group's local space.
+ *
+ * This crosses the world map in the OPPOSITE direction, so it is the exact
+ * inverse of the group's world affine — a hand-rolled `R(-rotation)/scale`
+ * inverse would silently drop the group's shear and put the local contours of a
+ * sheared group outside its own frame.
+ */
 export const inverseTransformBooleanContours = (
   contours: BooleanContours,
-  transform: Transform,
+  transform: WorldTransformInput,
 ): BooleanContours => contours.map((contour) => contour.map((point) => inverseTransformPoint(point, transform)));
 
 const BOOLEAN_OPERATION_LABELS: Record<BooleanOperation, string> = {
@@ -171,8 +202,8 @@ export interface DerivedBooleanGeometry {
 export const deriveBooleanGeometry = (
   operation: BooleanOperation,
   operands: CharacterPart[],
-  operandTransforms: Record<string, Transform>,
-  groupTransform: Transform,
+  operandTransforms: Record<string, WorldTransformInput>,
+  groupTransform: WorldTransformInput,
 ): DerivedBooleanGeometry => {
   const worldContours = computeBooleanContours(operation, operands, operandTransforms);
   return {
@@ -207,7 +238,7 @@ export const isBooleanEligible = (part: CharacterPart | undefined): boolean => {
 };
 
 /** Every region of the operand in world space, or `null` when it has none. */
-export const partToWorldPolygons = (part: CharacterPart, transform?: Transform): Polygon[] | null => {
+export const partToWorldPolygons = (part: CharacterPart, transform?: WorldTransformInput): Polygon[] | null => {
   const polygons = localPolygons(part);
   if (!polygons) return null;
   const worldTransform = toTransform(part, transform);
@@ -233,7 +264,7 @@ export interface BooleanOperandReadiness {
  */
 export const inspectBooleanOperands = (
   operands: CharacterPart[],
-  transforms?: Record<string, Transform>,
+  transforms?: Record<string, WorldTransformInput>,
 ): BooleanOperandReadiness => {
   const unresolved = operands.filter((part) => {
     const polygons = partToWorldPolygons(part, transforms?.[part.id]);
@@ -249,7 +280,7 @@ const flattenResult = (result: MultiPolygon): BooleanContours => result.flatMap(
 export const computeBooleanContours = (
   operation: BooleanOperation,
   operands: CharacterPart[],
-  transforms?: Record<string, Transform>,
+  transforms?: Record<string, WorldTransformInput>,
 ): BooleanContours => {
   // An operand is a *set* of regions (a text is several glyphs, each with its own
   // holes), so the first operand's regions are the Boolean subject and the rest

@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import type { SceneData } from '../../types/composition';
 import type { OGrafExportDiagnostic } from '../../ograf/types';
 import { useGifExport } from '../../hooks/useGifExport';
+import { useFloatingPanel } from '../../hooks/useFloatingPanel';
 import {
   GIF_EXPORT_FPS_OPTIONS,
   GIF_SCALE_OPTIONS,
@@ -42,6 +43,7 @@ export const GifExportPanel: React.FC<GifExportPanelProps> = ({ scene, sceneTitl
   const [scale, setScale] = useState<number>(() => resolveGifScale(scene.width, scene.height));
   const gif = useGifExport({ sceneTitle, showToast, onBlocked });
   const closeRef = useRef<HTMLButtonElement>(null);
+  const { panelRef } = useFloatingPanel({ isOpen: true, onClose });
 
   const plan = useMemo(
     () => resolveGifFramePlan({ totalFrames: scene.totalFrames, projectFps: scene.fps, exportFps }),
@@ -56,8 +58,19 @@ export const GifExportPanel: React.FC<GifExportPanelProps> = ({ scene, sceneTitl
     closeRef.current?.focus();
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [onClose]);
+
   return (
-    <section className="gif-export-panel" role="dialog" aria-label="Export animated GIF">
+    <div ref={panelRef} className="gif-export-panel" role="dialog" aria-label="Export animated GIF">
       <header className="gif-export-header">
         <h2>Export as GIF</h2>
         <button
@@ -116,19 +129,20 @@ export const GifExportPanel: React.FC<GifExportPanelProps> = ({ scene, sceneTitl
       </div>
 
       <p className="gif-export-note">
-        {plan.frameCount} authored frames at {plan.exportFps} fps
-        {plan.exportFps !== scene.fps ? ` (resampled from ${scene.fps} fps; the animation keeps its ${plan.authoredDurationSeconds.toFixed(2)} s duration)` : ''}.
-        Frame delays are stored in hundredths of a second, which is the format's own granularity.
+        {plan.exportFps} fps sampling. GIF playback uses at least 20 ms per frame;
+        the full animation duration is preserved, rounded to hundredths of a second.
       </p>
-      <p className="gif-export-note">
-        GIF has one transparent colour and no partial alpha: the stage background stays transparent, a pixel more than half opaque becomes solid
-        and a more transparent one is dropped, so a soft shadow's edge hardens.
-      </p>
-      {textLayerCount > 0 && (
+      <details className="gif-export-format">
+        <summary>Format limitations</summary>
         <p className="gif-export-note">
-          Text uses the scene's web font when the browser can read it; a font that cannot be embedded falls back to a system family, and the export says so.
+          GIF has one transparent colour and no partial alpha. Soft transparency becomes a hard edge.
         </p>
-      )}
+        {textLayerCount > 0 && (
+          <p className="gif-export-note">
+            Text uses the scene font when it can be embedded; otherwise a reported system-font fallback is used.
+          </p>
+        )}
+      </details>
 
       {blocking.length > 0 ? (
         <p className="gif-export-blocked" role="alert">
@@ -168,6 +182,6 @@ export const GifExportPanel: React.FC<GifExportPanelProps> = ({ scene, sceneTitl
           </button>
         )}
       </div>
-    </section>
+    </div>
   );
 };

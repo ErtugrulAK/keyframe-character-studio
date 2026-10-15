@@ -5,10 +5,8 @@ import { makeEmptyChannels } from '../../utils/defaults';
 import { evaluateLayerMasks } from '../../utils/evaluateLayerMasks';
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
-import type { TrimPathChannel } from './sections/style/TrimPathSection';
 import { evaluateTrimPath } from '../../utils/trimPath';
 import { DuplicateTab } from './sections/DuplicateTab';
-import { layerMaskChannel } from '../../types/animator';
 import {
   Sliders,
   Copy,
@@ -32,9 +30,6 @@ export const DetailsPanel: React.FC = () => {
     getComputedTransform,
     updateCurrentTransform,
     updateCurrentPropertyChannel,
-    addPropertyKeyframe,
-    deletePropertyKeyframe,
-    addMaskPathKeyframe,
     authorMaskPath,
     deletePart,
     customPresets,
@@ -72,31 +67,12 @@ export const DetailsPanel: React.FC = () => {
    * `updateCurrentPropertyChannel` are the existing authorities for both halves.
    */
   const activeTrimTemplate = activeTemplateId || 'Sequence';
-  const trimChannel = (channel: TrimPathChannel) =>
-    (selectedTrack?.channels?.[channel] ?? []).filter(
-      (keyframe) => (keyframe.templateId || 'Sequence') === activeTrimTemplate,
-    );
   const evaluatedTrim = selectedPart
     ? (() => {
       const resolved = evaluateTrimPath(selectedPart, selectedTrack, currentFrame, activeTrimTemplate);
       return { start: resolved.start, end: resolved.end, offset: resolved.offset };
     })()
     : undefined;
-  const trimKeyframedAtFrame: Record<TrimPathChannel, boolean> = {
-    trimPathStart: trimChannel('trimPathStart').some((keyframe) => keyframe.frame === currentFrame),
-    trimPathEnd: trimChannel('trimPathEnd').some((keyframe) => keyframe.frame === currentFrame),
-    trimPathOffset: trimChannel('trimPathOffset').some((keyframe) => keyframe.frame === currentFrame),
-  };
-  const handleToggleTrimKeyframe = (channel: TrimPathChannel) => {
-    if (!selectedTrack || !evaluatedTrim) return;
-    const atFrame = trimChannel(channel).find((keyframe) => keyframe.frame === currentFrame);
-    if (atFrame) {
-      deletePropertyKeyframe(selectedTrack.id, channel, atFrame.id);
-      return;
-    }
-    const value = channel === 'trimPathStart' ? evaluatedTrim.start : channel === 'trimPathEnd' ? evaluatedTrim.end : evaluatedTrim.offset;
-    addPropertyKeyframe(selectedTrack.id, channel, currentFrame, value);
-  };
 
   const {
     handleDisplayedPartPropChange,
@@ -227,17 +203,8 @@ export const DetailsPanel: React.FC = () => {
                 coordinateSystem={coordinateSystem}
                 handlePartPropChange={handleDisplayedPartPropChange}
                 handlePartColorChange={handlePartColorChange}
-                currentFrame={currentFrame}
                 evaluatedTrim={evaluatedTrim}
-                trimKeyframedAtFrame={trimKeyframedAtFrame}
                 onUpdateTrimChannel={updateCurrentPropertyChannel}
-                onToggleTrimKeyframe={handleToggleTrimKeyframe}
-                onAddMaskKeyframe={(maskId, property, value) => {
-                  if (selectedTrack) addPropertyKeyframe(selectedTrack.id, layerMaskChannel(maskId, property), currentFrame, value);
-                }}
-                onAddMaskPathKeyframe={(maskId, path) => {
-                  if (selectedTrack) addMaskPathKeyframe(selectedTrack.id, maskId, currentFrame, path);
-                }}
                 onChangeMaskPath={(maskId, path) => {
                   if (selectedPartId) authorMaskPath(selectedPartId, maskId, path);
                 }}

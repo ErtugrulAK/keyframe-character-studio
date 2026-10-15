@@ -9,6 +9,7 @@
 
 import type { CharacterPart, PropertyKeyframe, Track, TrackChannel, Transform } from '../types/animator';
 import { worldToContainerLocal } from './containerMath';
+import { authoredBasePose } from './evaluateTransform';
 import { fillChannelsFromLegacyKeyframes } from './legacyKeyframeConversion';
 import { relationshipParentId } from './partBinding';
 
@@ -31,6 +32,23 @@ export const TRIM_PATH_CHANNELS = ['trimPathStart', 'trimPathEnd', 'trimPathOffs
 export const ANIMATABLE_CHANNELS: TrackChannel[] = [...DISPLAY_CHANNELS, ...TRIM_PATH_CHANNELS];
 
 /**
+ * The authored base pose of one layer inside a document, or `undefined` when the
+ * document does not carry that layer.
+ *
+ * A projection may only prune a legacy property the composite holds when it can
+ * PROVE the held value is the layer's own pose (`animatedScopes`). A missing
+ * layer proves nothing, so the projection stays faithful — the conservative
+ * reading, never an invented pose.
+ */
+export const resolveAuthoredBasePose = (
+  parts: readonly CharacterPart[] | undefined,
+  partId: string,
+): Transform | undefined => {
+  const part = parts?.find((candidate) => candidate.id === partId);
+  return part ? authoredBasePose(part) : undefined;
+};
+
+/**
  * The keyframes a track's channels resolve to: its canonical channel keys plus
  * every legacy composite keyframe the evaluator still falls back to.
  *
@@ -39,9 +57,19 @@ export const ANIMATABLE_CHANNELS: TrackChannel[] = [...DISPLAY_CHANNELS, ...TRIM
  * animation that plays, never a second store. The resolution is exactly the
  * evaluator's (`fillChannelsFromLegacyKeyframes`), so a surface can neither show
  * a key that has no effect nor hide a frame the animation uses.
+ *
+ * `basePose` is the layer's own authored pose (`authoredBasePose`). A legacy
+ * composite list is a sequence of full-pose samples, so without the pose the
+ * projection cannot tell an animated property from one that merely re-states
+ * the layer's pose; passing it keeps a property row from showing keys for a
+ * property the composite never moves (and never hides a held override that
+ * differs from the pose).
  */
-export function resolveTrackChannels(track: Track): Record<TrackChannel, PropertyKeyframe[]> {
-  return fillChannelsFromLegacyKeyframes(track.channels, track.keyframes || []);
+export function resolveTrackChannels(
+  track: Track,
+  basePose?: Partial<Transform>,
+): Record<TrackChannel, PropertyKeyframe[]> {
+  return fillChannelsFromLegacyKeyframes(track.channels, track.keyframes || [], basePose);
 }
 
 /**

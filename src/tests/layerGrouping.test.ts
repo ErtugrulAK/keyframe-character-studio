@@ -11,6 +11,7 @@ import {
   getGroupAggregateBounds,
   getGroupChildren,
   getGroupDescendants,
+  getLayerWorldBounds,
   groupSelectionBlockReason,
   resolveMarqueeSelection,
   resolveOutermostGroupAncestor,
@@ -425,6 +426,57 @@ describe('layer group authoring', () => {
       expect(bounds.minX).toBeCloseTo(-260, 6);
       expect(bounds.maxX).toBeCloseTo(260, 6);
       expect(bounds.offsetX).toBeCloseTo(0, 6);
+    });
+  });
+
+  /**
+   * The reported failure: a group is resized anisotropically while its children
+   * are rotated. Grouping adds a parent, so the exact map is the container's
+   * affine composed with each child's. A rotated child therefore lands as a
+   * parallelogram, and both the aggregate box (group-local) and the world box
+   * must be the AABB of that exact map — never the box a TRS reading would give
+   * by re-scaling the rotated child along its own axes.
+   */
+  describe('aggregate bounds follow the derived affine', () => {
+    // Group TRS has identity rotation/translation, but doubles X and leaves Y.
+    const groupPart = makePart('g', 0, {
+      type: 'custom_freeform',
+      isGroup: true,
+      points: [],
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 2, scaleY: 1, opacity: 1 },
+    });
+    const childPart = (id: string, rotation: number): CharacterPart => makePart(id, 0, {
+      parentId: 'g',
+      baseTransform: { x: 0, y: 0, rotation, scaleX: 1, scaleY: 1, opacity: 1 },
+    });
+    const scene = [groupPart, childPart('a', 90), childPart('b', 30)];
+    const worldOf = (partId: string) => evaluateTransform(scene, [], 'Sequence', partId, 0);
+
+    it('returns the AABB of the exactly mapped children in the group space', () => {
+      const bounds = getGroupAggregateBounds(scene, 'g', worldOf)!;
+
+      // a (rot 90) maps to R(90): 60 wide × 120 tall → x ±30, y ±60.
+      // b (rot 30) maps to R(30): ±(60·cos30 + 30·sin30) wide, ±(60·sin30 + 30·cos30) tall.
+      const halfWidthB = 60 * Math.cos(Math.PI / 6) + 30 * Math.sin(Math.PI / 6);
+      expect(bounds.minX).toBeCloseTo(-halfWidthB, 6);
+      expect(bounds.maxX).toBeCloseTo(halfWidthB, 6);
+      expect(bounds.minY).toBeCloseTo(-60, 6);
+      expect(bounds.maxY).toBeCloseTo(60, 6);
+      expect(bounds.offsetX).toBeCloseTo(0, 6);
+      expect(bounds.offsetY).toBeCloseTo(0, 6);
+    });
+
+    it('returns the world AABB of the exactly mapped children', () => {
+      const bounds = getLayerWorldBounds(scene, 'g', worldOf)!;
+
+      // The group's X scale (2) stretches the rotated children in the GROUP's
+      // frame: a grows along world Y (the correct 120 tall, not the wrong-axis
+      // 240), and b is stretched to 2·(60·cos30 + 30·sin30) wide.
+      const halfWidth = 2 * (60 * Math.cos(Math.PI / 6) + 30 * Math.sin(Math.PI / 6));
+      expect(bounds.minX).toBeCloseTo(-halfWidth, 6);
+      expect(bounds.maxX).toBeCloseTo(halfWidth, 6);
+      expect(bounds.minY).toBeCloseTo(-60, 6);
+      expect(bounds.maxY).toBeCloseTo(60, 6);
     });
   });
 

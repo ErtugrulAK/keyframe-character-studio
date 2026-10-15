@@ -9,11 +9,18 @@
  * i.e. local geometry → scale → rotate → translate (+ stage center offset).
  * Viewport pan/zoom is NOT part of scene coordinates and is never included.
  *
+ * A world transform whose nesting a TRS cannot express (a rotated child of an
+ * anisotropically scaled container → shear / axis swap) carries a DERIVED
+ * affine, and that affine IS the drawn map. Every world-space point/corner in
+ * this module is therefore mapped through `worldAffineOf(world)` — the authored
+ * TRS fields stay local and are never used to hand-roll a world map.
+ *
  * Geometry comes exclusively from `shapeGeometry.ts` — nothing is hardcoded
  * here. `custom_freeform` (and non-shape types) return null → no clip.
  */
 import type { BodyPartType, CharacterPart, MatteMode, PartMatte, TrackMatteV2 } from '../types/animator';
 import { buildBezierPathD, legacyFreeformPointsToPath } from './bezierPath';
+import { applyAffine, invertAffine, worldAffineOf, type WorldAffine } from './containerMath';
 import type { WorldTransform } from '../types/composition';
 import { getShapeGeometry, type ShapeGeometry } from './shapeGeometry';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from './projectCoordinates';
@@ -256,10 +263,12 @@ export function normalizeGradientType(value: unknown): 'linear' | 'radial' {
  *  by gradientEndpoints (never a second geometry system).
  *
  *  Coordinate spaces (6A pixel-verified):
- *  - `local: false` (shape/freeform/INVERTED text) → WORLD: center through
- *    applyWorld, radius × max(|scaleX|,|scaleY|) so the world-space circle
- *    SUFFICIENTLY COVERS the transformed source (non-uniform scale stays a
- *    circle — rX/rY unnecessary; zero scale treated as 1 like worldToLocal).
+ *  - `local: false` (shape/freeform/INVERTED text) → WORLD: center through the
+ *    derived world affine (applyWorld), radius × the map's largest singular
+ *    value — `max(|scaleX|,|scaleY|)` for an authored TRS map, read exactly as
+ *    before — so the world-space circle SUFFICIENTLY COVERS the transformed
+ *    source (non-uniform scale stays a circle — rX/rY unnecessary; zero scale
+ *    treated as 1 like worldToLocal).
  *  - `local: true` (non-inverted TEXT) → LOCAL: center/radius in the text's
  *    own space (the def is consumed by the transformed text element; 4A).
  *
@@ -292,10 +301,7 @@ export function radialGradientGeometry(
     return { cx, cy, r: localRadius }; // LOCAL (text element space)
   }
   const wc = applyWorld({ x: cx, y: cy }, world, outputOrigin);
-  // Zero scale → 1 (mirrors worldToLocal); abs for negative (flip) scales.
-  const sx = world.scaleX === 0 ? 1 : Math.abs(world.scaleX ?? 1);
-  const sy = world.scaleY === 0 ? 1 : Math.abs(world.scaleY ?? 1);
-  return { cx: wc.x, cy: wc.y, r: localRadius * Math.max(sx, sy) };
+  return { cx: wc.x, cy: wc.y, r: localRadius * worldRadiusFactor(world, worldAffineOf(world)) };
 }
 
 /** M20 — Deterministic <linearGradient|radialGradient> id for a matte source.
@@ -560,15 +566,24 @@ export function buildMatteImageMask(
  *  produced in world space by the M17 helper, then converted to the text
  *  source's LOCAL space because a gradient referenced from a <text> inside a
  *  transformed <g> resolves in that local space (4A pixel-verified). This is
- *  a two-point coordinate conversion — NEVER a geometry system. Zero scale
- *  (degenerate/collapsed source) → treated as 1 (deterministic, NaN-free —
- *  the source is invisible anyway). */
+ *  a two-point coordinate conversion — NEVER a geometry system. The inverse is
+ *  taken from the DERIVED world affine, so a sheared nesting inverts exactly;
+ *  only a collapsed map falls back to the historical reading (zero scale → 1,
+ *  deterministic and NaN-free — the source is invisible anyway). */
 export function worldToLocal(
   p: { x: number; y: number },
   w: WorldTransform,
   outputOrigin: CoordinatePoint = EDITOR_CAMERA_CENTER,
 ): { x: number; y: number } {
-  const rad = ((w.rotation ?? 0) * Math.PI) / 180;
+  const inverse = invertAffine(worldAffineOf(w));
+  if (inverse) {
+    return applyAffine(inverse, { x: p.x - outputOrigin.x, y: p.y - outputOrigin.y });
+  }
+  // Collapsed map (det ≈ 0) — the affine has no inverse, so the historical
+  // reading is kept verbatim: zero scale treated as 1 (deterministic, NaN-free).
+  // A degenerate source is invisible either way, and a sheared map only lands
+  // here when it is itself collapsed.
+  const rad = deg2rad(w.rotation ?? 0);
   const cos = Math.cos(rad);
   const sin = Math.sin(rad);
   const sx = w.scaleX === 0 ? 1 : (w.scaleX ?? 1);
@@ -793,21 +808,91 @@ export function buildMatteMaskFromPath(
   };
 }
 
-// ─── World transform (mirrors PartRenderer's SVG transform order) ────────
+// ─── World transform (the DERIVED affine IS the drawn world map) ─────────
 
 const deg2rad = (d: number) => (d * Math.PI) / 180;
 
+/**
+ * Whether the authored TRS fields already ARE the world map. `withWorldAffine`
+ * attaches the derived affine only when the summed/multiplied fields cannot
+ * re-create the evaluated nesting — so its absence is exactly the case where the
+ * historical TRS spellings in this module are the affine itself (and therefore
+ * stay byte-for-byte).
+ */
+const isAuthoredTrsMap = (w: WorldTransform): boolean => w.affine === undefined;
+
+/**
+ * Map a source-LOCAL point into world space (+ the stage origin) through the
+ * derived affine — never a hand-rolled `R(rotation)·(local ⊙ scale)`, so a
+ * sheared nesting produces the geometry that is actually drawn.
+ */
 function applyWorld(p: { x: number; y: number }, w: WorldTransform, outputOrigin: CoordinatePoint): { x: number; y: number } {
-  const rad = deg2rad(w.rotation);
-  const cos = Math.cos(rad);
-  const sin = Math.sin(rad);
-  const sx = p.x * (w.scaleX ?? 1);
-  const sy = p.y * (w.scaleY ?? 1);
-  return {
-    x: outputOrigin.x + (w.x ?? 0) + (sx * cos - sy * sin),
-    y: outputOrigin.y + (w.y ?? 0) + (sx * sin + sy * cos),
-  };
+  const mapped = applyAffine(worldAffineOf(w), p);
+  return { x: outputOrigin.x + mapped.x, y: outputOrigin.y + mapped.y };
 }
+
+/** Largest singular value σ₁ = √λmax(LᵗL) of the map's linear part. */
+const largestSingularValue = (m: WorldAffine): number => {
+  const trace = m.a * m.a + m.b * m.b + m.c * m.c + m.d * m.d;
+  const det = m.a * m.d - m.b * m.c;
+  return Math.sqrt(Math.max(0, (trace + Math.sqrt(Math.max(0, trace * trace - 4 * det * det))) / 2));
+};
+
+/**
+ * The stretch a WORLD-space radius needs so the gradient circle still COVERS the
+ * transformed source: the largest singular value of the map's linear part. An
+ * authored TRS map is read as `max(|scaleX|, |scaleY|)` exactly as before (zero
+ * scale → 1, abs for flips); a derived affine takes the singular-value route —
+ * there the authored scales no longer describe the drawn geometry.
+ */
+const worldRadiusFactor = (w: WorldTransform, m: WorldAffine): number => {
+  if (!isAuthoredTrsMap(w)) return largestSingularValue(m);
+  const sx = w.scaleX === 0 ? 1 : Math.abs(w.scaleX);
+  const sy = w.scaleY === 0 ? 1 : Math.abs(w.scaleY);
+  return Math.max(sx, sy);
+};
+
+/**
+ * Principal axes of the ellipse a unit circle maps to under a linear part:
+ * `major`/`minor` are the singular values σ₁ ≥ σ₂ (the exact semi-axis lengths)
+ * and `rotation` is the major-axis direction in degrees (eigen-decomposition of
+ * L·Lᵗ). Exact for any affine — the drawn ellipse is never approximated.
+ */
+const principalAxes = (m: WorldAffine): { major: number; minor: number; rotation: number } => {
+  const xx = m.a * m.a + m.c * m.c;
+  const xy = m.a * m.b + m.c * m.d;
+  const yy = m.b * m.b + m.d * m.d;
+  const disc = Math.sqrt(Math.max(0, (xx - yy) * (xx - yy) + 4 * xy * xy));
+  const major2 = (xx + yy + disc) / 2;
+  const minor2 = Math.max(0, (xx + yy - disc) / 2);
+  // Eigenvector of λ₁ = σ₁²: two equivalent forms, take the larger one so the
+  // direction can never degenerate to (0, 0).
+  const dx1 = xy;
+  const dy1 = major2 - xx;
+  const dx2 = major2 - yy;
+  const dy2 = xy;
+  const useFirst = dx1 * dx1 + dy1 * dy1 >= dx2 * dx2 + dy2 * dy2;
+  return {
+    major: Math.sqrt(Math.max(0, major2)),
+    minor: Math.sqrt(minor2),
+    rotation: (Math.atan2(useFirst ? dy1 : dy2, useFirst ? dx1 : dx2) * 180) / Math.PI,
+  };
+};
+
+/**
+ * The ellipse a local circle of radius `r` becomes in world space (SVG arc radii
+ * + rotation). An authored TRS map keeps the historical
+ * `r·|scaleX| / r·|scaleY| / rotation` spelling byte-for-byte — that spelling IS
+ * the affine there; a derived affine takes the exact principal axes, so a
+ * sheared or axis-swapped nesting produces the contour that is drawn.
+ */
+const worldEllipse = (w: WorldTransform, r: number): { rx: number; ry: number; rotation: number } => {
+  if (isAuthoredTrsMap(w)) {
+    return { rx: r * Math.abs(w.scaleX), ry: r * Math.abs(w.scaleY), rotation: w.rotation };
+  }
+  const axes = principalAxes(worldAffineOf(w));
+  return { rx: r * axes.major, ry: r * axes.minor, rotation: axes.rotation };
+};
 
 const fmt = (n: number) => {
   const r = Math.round(n * 1000) / 1000;
@@ -825,14 +910,15 @@ function geometryToWorldPathD(geo: ShapeGeometry, w: WorldTransform, outputOrigi
     }
 
     case 'circle': {
-      // Local circle r → world ellipse rx = r·|sx|, ry = r·|sy|, rotated by w.rotation.
-      const rx = geo.r * Math.abs(w.scaleX ?? 1);
-      const ry = geo.r * Math.abs(w.scaleY ?? 1);
-      if (rx <= 0 || ry <= 0) return null;
+      // Local circle r → world ellipse. The axes come from the world map: an
+      // authored TRS map keeps the historical r·|sx| / r·|sy| / rotation
+      // spelling, a derived affine takes the drawn ellipse's exact principal
+      // axes (a sheared circle is still an ellipse).
+      const ellipse = worldEllipse(w, geo.r);
+      if (ellipse.rx <= 0 || ellipse.ry <= 0) return null;
       const a = applyWorld({ x: geo.r, y: 0 }, w, outputOrigin);
       const b = applyWorld({ x: -geo.r, y: 0 }, w, outputOrigin);
-      const rot = w.rotation ?? 0;
-      return `M ${fmtPt(a)} A ${fmt(rx)} ${fmt(ry)} ${fmt(rot)} 0 1 ${fmtPt(b)} A ${fmt(rx)} ${fmt(ry)} ${fmt(rot)} 0 1 ${fmtPt(a)}`;
+      return `M ${fmtPt(a)} A ${fmt(ellipse.rx)} ${fmt(ellipse.ry)} ${fmt(ellipse.rotation)} 0 1 ${fmtPt(b)} A ${fmt(ellipse.rx)} ${fmt(ellipse.ry)} ${fmt(ellipse.rotation)} 0 1 ${fmtPt(a)}`;
     }
 
     case 'rect': {
@@ -845,12 +931,15 @@ function geometryToWorldPathD(geo: ShapeGeometry, w: WorldTransform, outputOrigi
         const bl = applyWorld({ x: geo.x, y: geo.y + geo.height }, w, outputOrigin);
         return `M ${fmtPt(tl)} L ${fmtPt(tr)} L ${fmtPt(br)} L ${fmtPt(bl)} Z`;
       }
-      // Rounded rect — 8 anchor points + 4 corner arcs. Arc radii scale with
-      // the world scale; sweep=1 (Y-down clockwise), rotation goes into the
-      // arc rotation parameter. Negative-scale edge case is future scope.
-      const rx = geo.rx * Math.abs(w.scaleX ?? 1);
-      const ry = geo.rx * Math.abs(w.scaleY ?? 1);
-      const rot = w.rotation ?? 0;
+      // Rounded rect — 8 anchor points + 4 corner arcs. The corner arcs are the
+      // same world ellipse as a circle source (authored TRS map → the historical
+      // r·|sx| / r·|sy| / rotation spelling; derived affine → exact principal
+      // axes); sweep=1 (Y-down clockwise). Negative-determinant (flipped)
+      // corner arcs remain future scope, exactly as before.
+      const ellipse = worldEllipse(w, geo.rx);
+      const rx = ellipse.rx;
+      const ry = ellipse.ry;
+      const rot = ellipse.rotation;
       const p = (x: number, y: number) => applyWorld({ x, y }, w, outputOrigin);
       const X1 = geo.x + geo.rx;
       const X2 = geo.x + geo.width - geo.rx;

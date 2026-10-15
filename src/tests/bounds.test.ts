@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { CharacterPart } from '../types/animator';
+import type { CharacterPart, Transform } from '../types/animator';
+import { evaluateTransform } from '../utils/evaluateTransform';
 import { getPartBounds, getPartLocalBounds, getPartWorldBounds } from '../utils/bounds';
 
 const makePart = (type: CharacterPart['type'] = 'custom_rect', overrides: Partial<CharacterPart> = {}): CharacterPart => ({
@@ -160,5 +161,67 @@ describe('image layer bounds follow the measured content', () => {
   it('keeps an unmeasured video on the whole box, like a pre-measurement image', () => {
     const video = makePart('custom_video', { width: 200, height: 100 });
     expect(getPartBounds(video, { scaleX: 1, scaleY: 1 })).toEqual({ halfW: 100, halfH: 50 });
+  });
+});
+
+/**
+ * A layer whose rendered world map is NOT a TRS — a rotated child of an
+ * anisotropically scaled container — draws as a parallelogram. The world bounds
+ * must be the AABB of that exact map, read through `worldAffineOf`, never
+ * `origin + R(rotation)·(local ⊙ scale)` (which re-scales a rotated child along
+ * its own axes and grows the wrong world axis).
+ */
+describe('world bounds follow the derived affine', () => {
+  const group = (over: Partial<Transform> = {}): CharacterPart => makePart('custom_freeform', {
+    id: 'g',
+    name: 'g',
+    isGroup: true,
+    points: [],
+    baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, ...over },
+  });
+
+  const rectChild = (rotation: number): CharacterPart => makePart('custom_rect', {
+    id: 'c',
+    name: 'c',
+    parentId: 'g',
+    baseTransform: { x: 0, y: 0, rotation, scaleX: 1, scaleY: 1, opacity: 1 },
+  });
+
+  it('maps a 90° child through S(2,1)·R(90), not R(90)·S(1,2)', () => {
+    const child = rectChild(90);
+    const parts = [group({ scaleX: 2, scaleY: 1 }), child];
+    const world = evaluateTransform(parts, [], 'Sequence', 'c', 0);
+
+    // The exact nesting cannot be spelled as a TRS, so the evaluator derives it.
+    expect(world.affine).toBeDefined();
+    expect(world.affine!.a).toBeCloseTo(0, 9);
+    expect(world.affine!.b).toBeCloseTo(1, 9);
+    expect(world.affine!.c).toBeCloseTo(-2, 9);
+    expect(world.affine!.d).toBeCloseTo(0, 9);
+
+    // The authored rect is 120 wide × 60 tall. A 90° rotation swaps the axes and
+    // the group's X scale (2) then grows world Y, so the drawn box is 120 × 120.
+    // Scaling along the child's own axes would instead give 60 × 240.
+    const bounds = getPartWorldBounds(child, world, 0, 0);
+    expect(bounds.minX).toBeCloseTo(-60, 9);
+    expect(bounds.maxX).toBeCloseTo(60, 9);
+    expect(bounds.minY).toBeCloseTo(-60, 9);
+    expect(bounds.maxY).toBeCloseTo(60, 9);
+  });
+
+  it('measures a shear-free pose exactly as the historical TRS path', () => {
+    const child = rectChild(30);
+    const parts = [group({ scaleX: 2, scaleY: 2 }), child];
+    const world = evaluateTransform(parts, [], 'Sequence', 'c', 0);
+    // A uniform scale keeps the nesting a TRS, so no affine is attached.
+    expect(world.affine).toBeUndefined();
+
+    const expectedHalfW = 2 * (60 * Math.cos(Math.PI / 6) + 30 * Math.sin(Math.PI / 6));
+    const expectedHalfH = 2 * (60 * Math.sin(Math.PI / 6) + 30 * Math.cos(Math.PI / 6));
+    const bounds = getPartWorldBounds(child, world, 0, 0);
+    expect(bounds.minX).toBeCloseTo(-expectedHalfW, 9);
+    expect(bounds.maxX).toBeCloseTo(expectedHalfW, 9);
+    expect(bounds.minY).toBeCloseTo(-expectedHalfH, 9);
+    expect(bounds.maxY).toBeCloseTo(expectedHalfH, 9);
   });
 });

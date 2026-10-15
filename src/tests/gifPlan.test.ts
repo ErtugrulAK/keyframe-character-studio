@@ -84,11 +84,26 @@ describe('gif frame plan', () => {
     expect(plan.frameCount).toBe(GIF_MAX_FRAMES);
   });
 
+  it('samples at 120 FPS without browser-clamped short delays or wall-clock drift', () => {
+    const plan = resolveGifFramePlan({ totalFrames: 120, projectFps: 120, exportFps: 120 });
+    expect(plan.exportFps).toBe(120);
+    expect(plan.durationSeconds).toBe(1);
+    expect(plan.steps.reduce((sum, step) => sum + step.delayCentiseconds, 0)).toBe(100);
+    expect(plan.steps.every((step) => step.delayCentiseconds >= 2)).toBe(true);
+    expect(plan.steps[0].frame).toBe(0);
+    expect(plan.steps.at(-1)!.frame).toBeGreaterThanOrEqual(117);
+  });
+
+  it('preserves the complete animation duration when the encoded frame budget is reached', () => {
+    const plan = resolveGifFramePlan({ totalFrames: 120000, projectFps: 120, exportFps: 120 });
+    expect(plan.durationSeconds).toBe(1000);
+    expect(plan.frameCount).toBeLessThanOrEqual(GIF_MAX_FRAMES);
+    expect(plan.steps.at(-1)!.frame).toBeGreaterThan(119800);
+  });
+
   it('picks an export rate and a scale the format can hold', () => {
     expect(resolveGifExportFps(30)).toBe(30);
     expect(resolveGifExportFps(24)).toBe(24);
-    expect(resolveGifExportFps(120)).toBe(60);
-    expect(GIF_EXPORT_FPS_OPTIONS.every((rate) => rate <= 100)).toBe(true);
 
     // The default keeps a 1080p stage under the default edge, and a small stage as it is.
     expect(resolveGifScale(1920, 1080)).toBe(0.5);

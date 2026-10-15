@@ -3,6 +3,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Lock, Plus, Tv, Un
 import type { CharacterPart, Track, TrackChannel } from '../../types/animator';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { resolveAdjacentKeyframeFrame, resolveChannelKeyframeFrames, resolveLayerKeyframeFrames } from '../../utils/timelineMetrics';
+import { resolveAuthoredBasePose } from '../../utils/channelKeyframeGroups';
 import { InlineRename } from '../Shared/InlineRename';
 
 interface TrackOutlinerRowProps {
@@ -101,6 +102,10 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
   // generated "Track part_x" placeholder). Resolve from the part; fall back
   // to the track name only when the part is missing.
   const displayName = parts.find((p) => p.id === track.partId)?.name ?? track.name;
+  // The layer's own authored pose: the proof the projection needs to keep a
+  // property row's keys to the properties the animation actually moves (see
+  // `resolveTrackChannels`). Navigation reads exactly what the rows draw.
+  const basePose = resolveAuthoredBasePose(parts, track.partId);
   const isTrackExpanded = track.expanded === true;
   const isPositionExpanded = isGroupExpanded(`${track.id}_position`, true);
   const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
@@ -111,7 +116,7 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
    * the SAME projection the lane diamonds are painted from, so the navigation can
    * neither skip a visible keyframe nor stop on a frame the layer does not animate.
    */
-  const keyframeFrames = resolveLayerKeyframeFrames(track, activeTemplateId || 'Sequence');
+  const keyframeFrames = resolveLayerKeyframeFrames(track, activeTemplateId || 'Sequence', basePose);
   const previousKeyframeFrame = resolveAdjacentKeyframeFrame(keyframeFrames, currentFrame, 'previous');
   const nextKeyframeFrame = resolveAdjacentKeyframeFrame(keyframeFrames, currentFrame, 'next');
 
@@ -129,7 +134,7 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
      * `resolveAdjacentKeyframeFrame`): nothing on a side disables that side, and
      * navigation never wraps.
      */
-    const channelKeyframeFrames = resolveChannelKeyframeFrames(track, ch, activeTmpl);
+    const channelKeyframeFrames = resolveChannelKeyframeFrames(track, ch, activeTmpl, basePose);
     const previousChannelFrame = resolveAdjacentKeyframeFrame(channelKeyframeFrames, currentFrame, 'previous');
     const nextChannelFrame = resolveAdjacentKeyframeFrame(channelKeyframeFrames, currentFrame, 'next');
     return (

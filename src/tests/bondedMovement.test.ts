@@ -144,6 +144,24 @@ describe('B-03 — a moving ancestor is not applied twice', () => {
     expect(h.world('a').x).toBeCloseTo(10, 5);
     expect(h.world('b').x).toBeCloseTo(130, 5);
   });
+
+  it('uses the post-move affine parent map for a partner already carried by that parent', () => {
+    const parts = [
+      part('g', { baseTransform: base({ rotation: 25, scaleX: 1.6, scaleY: 0.7 }) }),
+      part('p', { parentId: 'g', baseTransform: base({ x: 100, rotation: 30 }) }),
+      part('a', { ...bind(['b']) }),
+      part('b', { parentId: 'p', baseTransform: base({ x: 20, y: 15 }), ...bind(['a']) }),
+    ];
+    const h = harness(parts, parts.map((entry) => track(entry.id)), ['a', 'p'], 'a');
+    const before = h.world('b');
+    const parentBefore = h.world('p');
+    act(() => h.result.current.updateCurrentTransform({ x: 30, y: 20 }));
+    h.commit();
+    expect(h.world('p').x).toBeCloseTo(parentBefore.x + 30, 9);
+    expect(h.world('p').y).toBeCloseTo(parentBefore.y + 20, 9);
+    expect(h.world('b').x).toBeCloseTo(before.x + 30, 9);
+    expect(h.world('b').y).toBeCloseTo(before.y + 20, 9);
+  });
 });
 
 describe('B-04 — an X-only edit never rewrites the partner Y animation', () => {

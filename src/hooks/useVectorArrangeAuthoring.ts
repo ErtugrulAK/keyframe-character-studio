@@ -62,24 +62,6 @@ export interface VectorArrangeDependencies {
   showToast?: ShowToast;
 }
 
-const ALIGN_LABELS: Record<AlignEdge, string> = {
-  left: 'Aligned left',
-  right: 'Aligned right',
-  top: 'Aligned top',
-  bottom: 'Aligned bottom',
-  'horizontal-centers': 'Aligned horizontal centers',
-  'vertical-centers': 'Aligned vertical centers',
-};
-
-const DISTRIBUTE_LABELS: Record<DistributeAxis, string> = {
-  horizontal: 'Distributed horizontally',
-  vertical: 'Distributed vertically',
-};
-
-const DISTRIBUTE_GAP_LABELS: Record<DistributeAxis, string> = {
-  horizontal: 'Evened horizontal spacing',
-  vertical: 'Evened vertical spacing',
-};
 
 export const createVectorArrangeActions = ({
   currentFrame,
@@ -104,7 +86,7 @@ export const createVectorArrangeActions = ({
   );
 
   /** One command: write the plan as ONE batch interaction, or explain why not. */
-  const commit = (plan: ArrangePlan | null, unavailable: string, applied: string) => {
+  const commit = (plan: ArrangePlan | null, unavailable: string) => {
     if (plan === null) {
       showToast?.(unavailable, 'info');
       return;
@@ -117,7 +99,6 @@ export const createVectorArrangeActions = ({
     startBatchInteraction();
     entries.forEach(([id, patch]) => updateCurrentTransform(patch, id));
     endBatchInteraction();
-    showToast?.(`${applied} · ${entries.length} layer${entries.length === 1 ? '' : 's'}`, 'success');
   };
 
   return {
@@ -125,22 +106,19 @@ export const createVectorArrangeActions = ({
     canAlign: targets.length >= 2,
     canDistribute: targets.length >= 3,
     canTransform: targets.length >= 1,
-    align: (edge) => commit(planAlign(targets, edge), 'Align needs two measurable layers.', ALIGN_LABELS[edge]),
-    distribute: (axis) => commit(planDistribute(targets, axis), 'Distribute needs three measurable layers.', DISTRIBUTE_LABELS[axis]),
+    align: (edge) => commit(planAlign(targets, edge), 'Align needs two measurable layers.'),
+    distribute: (axis) => commit(planDistribute(targets, axis), 'Distribute needs three measurable layers.'),
     distributeGap: (axis) => commit(
       planDistributeByGap(targets, axis),
       'Distribution needs three measurable layers.',
-      DISTRIBUTE_GAP_LABELS[axis],
     ),
     rotate: (direction) => commit(
       planRotate(targets, direction),
       'Select a layer to rotate.',
-      direction === 'cw' ? 'Rotated 90° clockwise' : 'Rotated 90° counter-clockwise',
     ),
     flip: (axis) => commit(
       planFlip(targets, axis),
       'Select a layer to flip.',
-      axis === 'horizontal' ? 'Flipped horizontally' : 'Flipped vertically',
     ),
   };
 };

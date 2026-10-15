@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnimatorProvider, type AnimatorContextType } from '../context/AnimatorContext';
 import { useAnimator } from '../context/useAnimator';
@@ -73,12 +73,6 @@ const select = (h: Harness, ids: string[]) => {
   });
 };
 
-/** Opens a command-set band and runs one of its items. */
-const runFromMenu = (band: string, item: string) => {
-  act(() => { fireEvent.click(screen.getByRole('button', { name: band, exact: true })); });
-  const menu = screen.getByRole('menu', { name: band });
-  act(() => { fireEvent.click(within(menu).getByRole('menuitem', { name: item })); });
-};
 
 describe('vector authoring commands', () => {
   beforeEach(() => {
@@ -94,7 +88,7 @@ describe('vector authoring commands', () => {
     select(h, [a, b]);
     const before = h.document();
 
-    runFromMenu('Align', 'Align left');
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Align Left', exact: true })); });
     expect(h.worldX(b)).toBeCloseTo(0, 6);
     const after = h.document();
     expect(after).not.toBe(before);
@@ -114,13 +108,13 @@ describe('vector authoring commands', () => {
     const [a, b, c] = seed(h, [[0, 0], [40, 0], [400, 0]]);
 
     select(h, [a, b]);
-    expect(screen.getByRole('button', { name: 'Distribute' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Center Horizontally', exact: true })).toBeDisabled();
 
     select(h, [a, b, c]);
-    expect(screen.getByRole('button', { name: 'Distribute' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Center Horizontally', exact: true })).toBeEnabled();
     const before = h.document();
 
-    runFromMenu('Distribute', 'Distribute horizontally');
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Center Horizontally', exact: true })); });
     expect(h.worldX(b)).toBeCloseTo(200, 6);
 
     act(() => { h.ctx().undo(); });
@@ -178,7 +172,7 @@ describe('vector authoring commands', () => {
     select(h, [group, c]);
     const groupBefore = h.worldX(group);
     const childBefore = [a, b].map((id) => h.worldX(id));
-    runFromMenu('Align', 'Align right');
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Align Right', exact: true })); });
 
     // The container moved, and BOTH children moved by exactly the same delta:
     // the group was addressed once, as the one target it is.
@@ -198,7 +192,7 @@ describe('vector authoring commands', () => {
     select(h, [a, b, c]);
     const before = h.document();
 
-    runFromMenu('Distribute', 'Distribute horizontal spacing');
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Distribute Horizontal', exact: true })); });
     // The middle box takes the even gap (80 world units on each side).
     expect(h.worldX(b)).toBeCloseTo(200, 6);
     expect(h.worldX(a)).toBeCloseTo(0, 6);
@@ -220,7 +214,7 @@ describe('vector authoring commands', () => {
     select(h, []);
     const before = h.document();
 
-    expect(screen.getByRole('button', { name: 'Align' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Align Left', exact: true })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Rotate clockwise' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Flip vertical' })).toBeDisabled();
 

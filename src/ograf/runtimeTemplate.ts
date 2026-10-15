@@ -1,6 +1,10 @@
 import type { SceneData } from '../types/composition';
 import type { OGrafPublicColorField, OGrafPublicImageField, OGrafPublicTextField } from './types';
-import { runtimeCompareByStackingOrder, runtimeResolveMatteSource } from './runtimeSnippets';
+import {
+  runtimeCompareByStackingOrder,
+  runtimeResolveMatteSource,
+  runtimeWorldAffineAlgebra,
+} from './runtimeSnippets';
 
 function imageReferenceLookup(imageReferences: Record<string, string>): Record<string, string> {
   return Object.entries(imageReferences).reduce<Record<string, string>>((lookup, [source, packagedPath]) => {
@@ -172,8 +176,11 @@ function maskPathD(layer, mask, scene) {
   const bounds = { custom_circle: [60, 60], custom_box: [60, 60], custom_rect: [120, 60], custom_capsule: [100, 40] };
   const fallback = bounds[layer.type] || [120, 80];
   const width = Number.isFinite(layer.width) ? layer.width : fallback[0]; const height = Number.isFinite(layer.height) ? layer.height : fallback[1];
-  const radians = layer.transform.rotation * Math.PI / 180;
-  return pathD(mask.path, (point) => { const local = mask.path.coordinateSpace === 'normalized' ? { x: (point.x - 0.5) * width, y: (point.y - 0.5) * height } : point; const x = local.x * layer.transform.scaleX; const y = local.y * layer.transform.scaleY; return { x: scene.width / 2 + layer.transform.x + x * Math.cos(radians) - y * Math.sin(radians), y: scene.height / 2 + layer.transform.y + x * Math.sin(radians) + y * Math.cos(radians) }; });
+  const radians = layer.transform.rotation * Math.PI / 180; const worldAffine = layer.transform.affine;
+  // A mask path is world geometry, so it follows the layer's own world map: the
+  // exact derived affine when the nesting is not a TRS, and the historical TRS
+  // arithmetic (unchanged, byte for byte) otherwise.
+  return pathD(mask.path, (point) => { const local = mask.path.coordinateSpace === 'normalized' ? { x: (point.x - 0.5) * width, y: (point.y - 0.5) * height } : point; if (worldAffine) { const mapped = applyAffine(worldAffine, local); return { x: scene.width / 2 + mapped.x, y: scene.height / 2 + mapped.y }; } const x = local.x * layer.transform.scaleX; const y = local.y * layer.transform.scaleY; return { x: scene.width / 2 + layer.transform.x + x * Math.cos(radians) - y * Math.sin(radians), y: scene.height / 2 + layer.transform.y + x * Math.sin(radians) + y * Math.cos(radians) }; });
 }
 // The same stacking rule the editor stage uses: ascending zIndex paints first.
 // The authored array order is NOT the paint order (the outliner keeps index 0 on
@@ -181,9 +188,16 @@ function maskPathD(layer, mask, scene) {
 // The comparator is KCS's own helper, embedded from its single definition in
 // src/utils/stackingOrder.ts; only the array wrapper is plumbing.
 const compareByStackingOrder = ${runtimeCompareByStackingOrder()};
+// The world-affine algebra (see \`utils/containerMath\`), embedded from the same
+// single definitions the editor runs: the runtime derives a layer's exact world
+// map from its parent chain instead of folding the parent into the child's axes,
+// and spells it with the very same decision the editor's emitter makes, so a
+// rotated child of an anisotropically scaled container nests exactly as the
+// editor preview and the static SVG export render it.
+${runtimeWorldAffineAlgebra()}
 function stackingOrder(items) { return items.slice().sort(compareByStackingOrder); }
 function evaluateScene(scene, frame) {
-  const transforms = Object.create(null); const visiting = new Set(); const evaluateTransform = (layer) => { if (Object.prototype.hasOwnProperty.call(transforms, layer.id)) return transforms[layer.id]; const track = scene.tracks.find((item) => item.partId === layer.id); const channels = track && track.channels ? track.channels : {}; let result = { x: channelValue(channels.x, frame, layer.x), y: channelValue(channels.y, frame, layer.y), rotation: channelValue(channels.rotation, frame, layer.rotation), scaleX: channelValue(channels.scaleX, frame, layer.scaleX), scaleY: channelValue(channels.scaleY, frame, layer.scaleY), opacity: channelValue(channels.opacity, frame, layer.opacity) }; if (visiting.has(layer.id)) return result; visiting.add(layer.id); if (layer.parentId || layer.booleanGroupId) { const parentId = layer.parentId || layer.booleanGroupId; const parent = scene.layers.find((item) => item.id === parentId); if (parent) { const parentTransform = evaluateTransform(parent); const radians = parentTransform.rotation * Math.PI / 180; const sx = result.x * parentTransform.scaleX; const sy = result.y * parentTransform.scaleY; result = { x: parentTransform.x + sx * Math.cos(radians) - sy * Math.sin(radians), y: parentTransform.y + sx * Math.sin(radians) + sy * Math.cos(radians), rotation: parentTransform.rotation + result.rotation, scaleX: parentTransform.scaleX * result.scaleX, scaleY: parentTransform.scaleY * result.scaleY, opacity: result.opacity }; } } visiting.delete(layer.id); transforms[layer.id] = result; return result; };
+  const transforms = Object.create(null); const visiting = new Set(); const evaluateTransform = (layer) => { if (Object.prototype.hasOwnProperty.call(transforms, layer.id)) return transforms[layer.id]; const track = scene.tracks.find((item) => item.partId === layer.id); const channels = track && track.channels ? track.channels : {}; let result = { x: channelValue(channels.x, frame, layer.x), y: channelValue(channels.y, frame, layer.y), rotation: channelValue(channels.rotation, frame, layer.rotation), scaleX: channelValue(channels.scaleX, frame, layer.scaleX), scaleY: channelValue(channels.scaleY, frame, layer.scaleY), opacity: channelValue(channels.opacity, frame, layer.opacity) }; if (visiting.has(layer.id)) return result; visiting.add(layer.id); if (layer.parentId || layer.booleanGroupId) { const parentId = layer.parentId || layer.booleanGroupId; const parent = scene.layers.find((item) => item.id === parentId); if (parent) { const parentTransform = evaluateTransform(parent); const local = result; result = withWorldAffine(composeWorldTransform(parentTransform, local), composeAffine(worldAffineOf(parentTransform), affineOfTransform(local))); } } visiting.delete(layer.id); transforms[layer.id] = result; return result; };
   return stackingOrder(scene.layers).map((layer) => {
     const track = scene.tracks.find((item) => item.partId === layer.id);
     const channels = track && track.channels ? track.channels : {};
@@ -210,7 +224,14 @@ function geometry(layer, props) {
 function text(layer, props, fillOverride) { return '<text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="' + escapeXml(fillOverride === undefined ? (layer.fillColor || 'none') : fillOverride) + '" fill-opacity="' + (layer.fillOpacity === undefined ? 1 : layer.fillOpacity) + '" font-size="' + (layer.fontSize || 24) + '" font-family="' + escapeXml(layer.fontFamily || 'sans-serif') + '"' + (props || '') + '>' + escapeXml(layer.textValue || 'TEXT') + '</text>'; }
 function image(layer, imageReferences, props) { const width = layer.width || 180; const height = layer.height || 120; const href = imageReferences[layer.imageUrl] || layer.imageUrl || ''; return '<image href="' + escapeXml(resourceUrl(href)) + '" x="' + (-width / 2) + '" y="' + (-height / 2) + '" width="' + width + '" height="' + height + '" preserveAspectRatio="xMidYMid slice"' + (props || '') + ' />'; }
 function content(layer, imageReferences, props, fillOverride) { if (layer.type === 'custom_text') return text(layer, props, fillOverride); if (layer.type === 'custom_image') return image(layer, imageReferences, props); return geometry(layer, props); }
-function transform(scene, layer) { return 'translate(' + (scene.width / 2 + layer.transform.x) + ' ' + (scene.height / 2 + layer.transform.y) + ') rotate(' + layer.transform.rotation + ') scale(' + layer.transform.scaleX + ' ' + layer.transform.scaleY + ')'; }
+// The world map of a layer, spelled exactly like the editor's own emitter and
+// the static SVG renderer: affineTrsReading names the historical TRS form
+// whenever those numbers reproduce the map, the canonical rotate/scale reading
+// when the affine is shear-free but its axes were swapped (a 90°-rotated child of
+// a horizontally stretched container), and null — the exact matrix(...) form — only
+// when the map genuinely shears. Both renderers therefore paint such a child the
+// way the editor preview does, with no upward stretch.
+function transform(scene, layer) { const world = layer.transform; const affine = worldAffineOf(world); const reading = affineTrsReading(affine, world); if (reading) return 'translate(' + (scene.width / 2 + reading.x) + ' ' + (scene.height / 2 + reading.y) + ') rotate(' + reading.rotation + ') scale(' + reading.scaleX + ' ' + reading.scaleY + ')'; return 'translate(' + (scene.width / 2) + ' ' + (scene.height / 2) + ') matrix(' + affine.a + ' ' + affine.b + ' ' + affine.c + ' ' + affine.d + ' ' + affine.e + ' ' + affine.f + ')'; }
 // The precedence decision is KCS's own resolver, embedded from its single
 // definition in src/utils/matte.ts. Only the clip exclusion stays local: the
 // resolver names the source, it does not decide which SVG mechanism consumes it.

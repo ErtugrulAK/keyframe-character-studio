@@ -41,6 +41,14 @@ import { relationshipAncestorIds } from './partBinding';
  *   delta wins, and X and Y resolve INDEPENDENTLY, so a corner snap is two
  *   independent axis snaps that happen to fire on the same move.
  *
+ * GUIDE EXTENT — a guide is chrome that has to say WHICH two things line up, so
+ *   every guide carries a finite world band: the moving box's band on the guide's
+ *   opposite axis, widened to reach the matched box's band when the target is a
+ *   layer. A stage line is a reference (`span: null`) and therefore spans the
+ *   moving item alone. Nothing here ever asks for the canvas: the overlay draws
+ *   exactly the band the resolver reports, and a guide whose target is out of the
+ *   moving box's neighbourhood still only covers the distance between the two.
+ *
  * THRESHOLD — `SNAP_THRESHOLD_SCREEN_PX`, in SCREEN pixels, converted to world
  *   units by the caller through the camera scale. Keeping the threshold in screen
  *   pixels is what makes the feel identical at 25%, 100% and 400% zoom.
@@ -60,18 +68,42 @@ export type SnapAxis = 'x' | 'y';
 /** What produced a candidate line — used to document and to rank guides. */
 export type SnapTargetKind = 'stage-edge' | 'stage-center' | 'layer-edge' | 'layer-center';
 
+/** The band a box covers on ONE axis (its min..max span), in world units. */
+export interface SnapSpan {
+  min: number;
+  max: number;
+}
+
 export interface SnapLine {
   axis: SnapAxis;
   /** The world coordinate of the line (an X for `axis: 'x'`, a Y for `axis: 'y'`). */
   value: number;
   kind: SnapTargetKind;
+  /**
+   * The band the line's OWN box covers on the OPPOSITE axis (`y` for an `x`
+   * line), in world units — the geometry a guide for this line has to reach.
+   * `null` for a REFERENCE line (a stage edge or centre): the stage is not a box
+   * the moving item is compared against, so a guide for it covers the moving item
+   * itself instead of the whole artboard.
+   */
+  span: SnapSpan | null;
 }
 
-/** A guide the drag draws while a snap is active: the matched target line. */
+/**
+ * A guide the drag draws while a snap is active: the matched target line PLUS the
+ * finite band it is drawn over.
+ *
+ * The band is exactly the relation that produced the snap — the union of the
+ * moving box's band and the matched box's band on the guide's opposite axis, in
+ * world units — so the chrome always touches both things it aligns and is never a
+ * full-canvas line. The overlay that draws it converts these world extents to
+ * editor coordinates and does no geometry of its own.
+ */
 export interface SnapGuide {
   axis: SnapAxis;
   value: number;
   kind: SnapTargetKind;
+  extent: SnapSpan;
 }
 
 export interface SnapResolution {
@@ -114,13 +146,15 @@ export const translateWorldBounds = (
  */
 export const collectStageSnapCandidates = (bounds: PartWorldBounds): SnapLine[] => {
   const center = worldBoundsCenter(bounds);
+  // A stage line is a REFERENCE: `span: null` means a guide for it is drawn over
+  // the moving item, never over the artboard it would otherwise inherit.
   return [
-    { axis: 'x', value: bounds.minX, kind: 'stage-edge' },
-    { axis: 'x', value: center.x, kind: 'stage-center' },
-    { axis: 'x', value: bounds.maxX, kind: 'stage-edge' },
-    { axis: 'y', value: bounds.minY, kind: 'stage-edge' },
-    { axis: 'y', value: center.y, kind: 'stage-center' },
-    { axis: 'y', value: bounds.maxY, kind: 'stage-edge' },
+    { axis: 'x', value: bounds.minX, kind: 'stage-edge', span: null },
+    { axis: 'x', value: center.x, kind: 'stage-center', span: null },
+    { axis: 'x', value: bounds.maxX, kind: 'stage-edge', span: null },
+    { axis: 'y', value: bounds.minY, kind: 'stage-edge', span: null },
+    { axis: 'y', value: center.y, kind: 'stage-center', span: null },
+    { axis: 'y', value: bounds.maxY, kind: 'stage-edge', span: null },
   ];
 };
 
@@ -167,13 +201,17 @@ export const collectLayerSnapCandidates = ({
     const bounds = getLayerWorldBounds(parts, part.id, worldOf);
     if (!bounds) return;
     const center = worldBoundsCenter(bounds);
+    // Each line carries the band its own box covers on the opposite axis, so a
+    // guide for it spans from the moving item to this layer and no further.
+    const spanX: SnapSpan = { min: bounds.minY, max: bounds.maxY };
+    const spanY: SnapSpan = { min: bounds.minX, max: bounds.maxX };
     lines.push(
-      { axis: 'x', value: bounds.minX, kind: 'layer-edge' },
-      { axis: 'x', value: center.x, kind: 'layer-center' },
-      { axis: 'x', value: bounds.maxX, kind: 'layer-edge' },
-      { axis: 'y', value: bounds.minY, kind: 'layer-edge' },
-      { axis: 'y', value: center.y, kind: 'layer-center' },
-      { axis: 'y', value: bounds.maxY, kind: 'layer-edge' },
+      { axis: 'x', value: bounds.minX, kind: 'layer-edge', span: spanX },
+      { axis: 'x', value: center.x, kind: 'layer-center', span: spanX },
+      { axis: 'x', value: bounds.maxX, kind: 'layer-edge', span: spanX },
+      { axis: 'y', value: bounds.minY, kind: 'layer-edge', span: spanY },
+      { axis: 'y', value: center.y, kind: 'layer-center', span: spanY },
+      { axis: 'y', value: bounds.maxY, kind: 'layer-edge', span: spanY },
     );
   });
 
@@ -235,15 +273,36 @@ export const resolveSnap = ({
 
   const x = resolveAxis('x');
   const y = resolveAxis('y');
+  const finalDelta = {
+    x: delta.x + (x?.adjustment ?? 0),
+    y: delta.y + (y?.adjustment ?? 0),
+  };
+  // The extents describe where the item IS, so they are measured from the box at
+  // the SNAPPED delta — the box the write commits and the renderer draws — not
+  // from the raw pointer delta a snap may still move.
+  const finalBounds = translateWorldBounds(movingBounds, finalDelta);
+
+  // The band a guide is drawn over: the moving box's band on the guide's opposite
+  // axis, widened to reach the matched box when the target IS a box. A reference
+  // line (the stage) has no band of its own, so the moving box's band stands alone
+  // — the guide then underlines the item instead of covering the artboard.
+  const guideFor = (axis: SnapAxis, line: SnapLine): SnapGuide => {
+    const moving = axis === 'x'
+      ? { min: finalBounds.minY, max: finalBounds.maxY }
+      : { min: finalBounds.minX, max: finalBounds.maxX };
+    return {
+      axis,
+      value: line.value,
+      kind: line.kind,
+      extent: line.span
+        ? { min: Math.min(moving.min, line.span.min), max: Math.max(moving.max, line.span.max) }
+        : moving,
+    };
+  };
+
   return {
-    delta: {
-      x: delta.x + (x?.adjustment ?? 0),
-      y: delta.y + (y?.adjustment ?? 0),
-    },
-    guides: [
-      ...(x ? [{ axis: 'x' as const, value: x.line.value, kind: x.line.kind }] : []),
-      ...(y ? [{ axis: 'y' as const, value: y.line.value, kind: y.line.kind }] : []),
-    ],
+    delta: finalDelta,
+    guides: [...(x ? [guideFor('x', x.line)] : []), ...(y ? [guideFor('y', y.line)] : [])],
     snappedX: x !== null,
     snappedY: y !== null,
   };

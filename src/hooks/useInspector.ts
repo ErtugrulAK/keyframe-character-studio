@@ -1,7 +1,8 @@
 import type { CharacterPart, Track, Transform, TrackChannel } from '../types/animator';
-import { worldToContainerLocal } from '../utils/containerMath';
+import { affineOfTransform, composeAffine, composeWorldTransform, withWorldAffine, worldAffineOf, worldToContainerLocal } from '../utils/containerMath';
 import { resolveBoundPartners } from '../utils/partBinding';
 import { generateId } from '../utils/idGenerator';
+import { resolveAuthoredBasePose } from '../utils/channelKeyframeGroups';
 import { migrateLegacyKeyframesToCanonical, migrateTrackLegacyKeyframes } from '../utils/trackMutations';
 
 interface UseInspectorOptions {
@@ -44,16 +45,19 @@ export const useInspector = ({
     // R3-10/R3-11: ONE canonical authored truth. A track whose animation still
     // lives in the legacy composite list is migrated into the canonical channels
     // first, so the edit lands on the channel the timeline and the evaluator
-    // read, and no other channel's keys can disappear or hide.
+    // read, and no other channel's keys can disappear or hide. The authored base
+    // pose is the proof the conversion needs before it may leave a composite
+    // property that only re-states the layer's own pose out of the channels.
+    const basePose = resolveAuthoredBasePose(characterParts, id);
     if (track.keyframes && track.keyframes.length > 0) {
-      setTracks((prev) => migrateTrackLegacyKeyframes(prev, track.id));
+      setTracks((prev) => migrateTrackLegacyKeyframes(prev, track.id, basePose));
     }
 
     // Channel-aware path — the ONLY transform write path. Inspector edits write
     // to a channel that already carries keys for the active sequence (updating
     // or inserting a keyframe at the playhead) and to the base transform for a
     // channel that carries none, so a layer with no animation stays static.
-    applyTransformToChannels(id, migrateLegacyKeyframesToCanonical(track), newTransform, activeTmpl);
+    applyTransformToChannels(id, migrateLegacyKeyframesToCanonical(track, basePose), newTransform, activeTmpl);
   };
 
   /**
@@ -139,8 +143,8 @@ export const useInspector = ({
     sourcePartId: string,
     requested: Partial<Transform>,
     writtenIds: string[],
-    postWorld: Record<string, Transform>,
     activeTmpl: string,
+    toLocalPatch: (id: string, patch: Partial<Transform>) => Partial<Transform>,
   ) => {
     if (requested.x === undefined && requested.y === undefined) return;
     const partners = resolveBoundPartners(characterParts ?? [], sourcePartId)
@@ -154,29 +158,20 @@ export const useInspector = ({
 
     for (const partner of partners) {
       const partnerWorld = getComputedTransform(partner.id, currentFrame);
-      const desiredWorld: Transform = {
-        ...partnerWorld,
-        x: requested.x === undefined ? partnerWorld.x : partnerWorld.x + deltaX,
-        y: requested.y === undefined ? partnerWorld.y : partnerWorld.y + deltaY,
-      };
-      const parentId = partner.parentId ?? partner.booleanGroupId;
-      const containerT = parentId ? (postWorld[parentId] ?? getComputedTransform(parentId, currentFrame)) : null;
-      const currentLocal = containerT ? worldToContainerLocal(partnerWorld, containerT) : partnerWorld;
-      const desiredLocal = containerT ? worldToContainerLocal(desiredWorld, containerT) : desiredWorld;
+      const worldPatch: Partial<Transform> = {};
+      if (requested.x !== undefined) worldPatch.x = partnerWorld.x + deltaX;
+      if (requested.y !== undefined) worldPatch.y = partnerWorld.y + deltaY;
+      const localPatch = toLocalPatch(partner.id, worldPatch);
 
       // Write only the axes that actually move. A world-space X edit on an
       // unrotated parent leaves local Y untouched, so the partner's Y
       // animation must not gain a keyframe; a rotated parent genuinely changes
       // local Y, so both axes are written there.
-      const localPatch: Partial<Transform> = {};
-      if (requested.x !== undefined && desiredLocal.x !== currentLocal.x) localPatch.x = desiredLocal.x;
-      if (requested.y !== undefined && desiredLocal.y !== currentLocal.y) localPatch.y = desiredLocal.y;
       if (localPatch.x === undefined && localPatch.y === undefined) {
         writtenIds.push(partner.id);
         continue;
       }
       applyTransformToPart(partner.id, localPatch, activeTmpl);
-      postWorld[partner.id] = desiredWorld;
       writtenIds.push(partner.id);
     }
   };
@@ -196,15 +191,30 @@ export const useInspector = ({
     const toLocalPatch = (id: string, worldPatch: Partial<Transform>): Partial<Transform> => {
       const part = characterParts?.find((p) => p.id === id);
       const parentId = part?.parentId ?? part?.booleanGroupId;
-      if (!parentId) return worldPatch;
-      const containerT = postWorld[parentId] ?? getComputedTransform(parentId, currentFrame);
       const currentWorld = getComputedTransform(id, currentFrame);
-      const desiredWorld = { ...currentWorld, ...worldPatch };
-      const local = worldToContainerLocal(desiredWorld, containerT);
+      if (!parentId) {
+        postWorld[id] = { ...currentWorld, ...worldPatch };
+        return worldPatch;
+      }
+      const originalContainer = getComputedTransform(parentId, currentFrame);
+      const containerT = postWorld[parentId] ?? originalContainer;
+      const currentLocal = worldToContainerLocal(currentWorld, originalContainer);
+      const local = worldToContainerLocal({ ...currentWorld, ...worldPatch }, containerT);
       const localPatch: Partial<Transform> = {};
-      (['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'] as const).forEach((key) => {
+      if (worldPatch.x !== undefined || worldPatch.y !== undefined) {
+        // A world-axis edit can move both authored axes inside a rotated parent.
+        if (local.x !== currentLocal.x) localPatch.x = local.x;
+        if (local.y !== currentLocal.y) localPatch.y = local.y;
+      }
+      (['rotation', 'scaleX', 'scaleY', 'opacity'] as const).forEach((key) => {
         if (worldPatch[key] !== undefined) localPatch[key] = local[key];
       });
+      const nextLocal = { ...currentLocal, ...localPatch };
+      // Cache the POST-write map, not a spread carrying the pre-write affine.
+      postWorld[id] = withWorldAffine(
+        composeWorldTransform(containerT, nextLocal),
+        composeAffine(worldAffineOf(containerT), affineOfTransform(nextLocal)),
+      );
       return localPatch;
     };
 
@@ -230,20 +240,18 @@ export const useInspector = ({
         if (newTransform.scaleY !== undefined) worldPatch.scaleY = t.scaleY + deltaScaleY;
         if (newTransform.opacity !== undefined) worldPatch.opacity = t.opacity + deltaOpacity;
         worldPatches[id] = worldPatch;
-        postWorld[id] = { ...t, ...worldPatch };
         applyTransformToPart(id, toLocalPatch(id, worldPatch), activeTmpl);
         writtenIds.push(id);
       });
       selectedPartIds.forEach((id) => {
-        applyBondedPositionDelta(id, worldPatches[id], writtenIds, postWorld, activeTmpl);
+        applyBondedPositionDelta(id, worldPatches[id], writtenIds, activeTmpl, toLocalPatch);
       });
       return;
     }
 
-    postWorld[targetPartId] = { ...getComputedTransform(targetPartId, currentFrame), ...newTransform };
     applyTransformToPart(targetPartId, toLocalPatch(targetPartId, newTransform), activeTmpl);
     writtenIds.push(targetPartId);
-    applyBondedPositionDelta(targetPartId, newTransform, writtenIds, postWorld, activeTmpl);
+    applyBondedPositionDelta(targetPartId, newTransform, writtenIds, activeTmpl, toLocalPatch);
   };
 
   const updateCurrentPropertyChannel = (channel: TrackChannel, value: number, partIdOverride?: string) => {

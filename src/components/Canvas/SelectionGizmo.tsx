@@ -1,18 +1,27 @@
 import React from 'react';
 import type { CharacterPart, Track, Transform } from '../../types/animator';
+import { affineSvgTransform, worldAffineOf, type WorldAffine } from '../../utils/containerMath';
 import type { CornerBounds } from '../../utils/cornerResize';
 import { getGroupChildren } from '../../utils/layerGrouping';
 import { getSelectionFrameBounds, selectionFrameGizmoBounds } from '../../utils/selectionFrame';
 import { TransformGizmo, type ScaleMode } from './overlays/TransformGizmo';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../utils/projectCoordinates';
 
+/**
+ * A layer's evaluated world pose. The DERIVED `affine` rides along on every
+ * evaluated transform (see `utils/containerMath`) and every frame below draws
+ * through it, so the type has to carry it: a frame whose map a TRS cannot
+ * express is drawn by the gizmo's affine branch instead of the TRS one.
+ */
+type EvaluatedTransform = Transform & { affine?: WorldAffine };
+
 interface SelectionGizmoProps {
   selectedPartIds: string[];
   characterParts: CharacterPart[];
-  getComputedTransform: (partId: string, frame: number) => Transform;
+  getComputedTransform: (partId: string, frame: number) => EvaluatedTransform;
   currentFrame: number;
   selectedPart: CharacterPart | undefined;
-  selectedTransform: Transform | null;
+  selectedTransform: EvaluatedTransform | null;
   tracks: Track[];
   zScale: number;
   booleanOperandEditingGroupId?: string | null;
@@ -64,6 +73,11 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
           if (part.isGroup && containerIsCoveredBySelection(part)) return null;
           const frameBounds = getSelectionFrameBounds(part, { characterParts, getComputedTransform, currentFrame, transform });
           if (!frameBounds) return null;
+          // Decorative frames only: the spread carries the frame's own box AND —
+          // when the layer's world map is not a TRS (a rotated child of an
+          // anisotropically scaled container) — the affine the gizmo draws that
+          // box with, so a sheared layer is framed by its exact parallelogram
+          // and not by a box a TRS cannot produce.
           return (
             <TransformGizmo
               key={`multi-selection-${id}`}
@@ -101,7 +115,11 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
     const hasActiveMatte = Boolean(selectedPart.matte?.sourcePartId && selectedPart.matte.enabled !== false);
     const matteHitArea = hasActiveMatte ? (
       <g
-        transform={`translate(${outputOrigin.x + selectedTransform.x}, ${outputOrigin.y + selectedTransform.y}) rotate(${selectedTransform.rotation}) scale(${selectedTransform.scaleX}, ${selectedTransform.scaleY})`}
+        // The hit area must cover what is actually drawn: through the world
+        // affine, so a sheared target (a rotated child of an anisotropically
+        // scaled container) gets the exact parallelogram instead of the TRS
+        // reading that cannot express it. TRS layers emit the identical string.
+        transform={affineSvgTransform(worldAffineOf(selectedTransform), selectedTransform, outputOrigin)}
       >
         <rect
           data-testid="matte-editor-hit-area"

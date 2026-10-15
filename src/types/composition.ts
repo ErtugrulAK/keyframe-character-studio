@@ -9,6 +9,7 @@
 // (partId-based, canonical). `SceneData.tracks` references it directly —
 // there is no separate AnimationTrack type (P4-S3).
 import type { AnimationTrackData, BezierPath, ImageContentBounds, LayerMask, MotionTemplate, PartMatte, TrackMatteV2 } from './animator';
+import type { WorldAffine } from '../utils/containerMath';
 /**
  * Coordinate-unit semantics for persisted scene data.
  *
@@ -216,6 +217,7 @@ export interface EvaluatedLayer {
 }
 
 export type WorldTransform = {
+  /** Actual world origin, equal to affine.e/f when an affine is present. */
   x: number;
   y: number;
   rotation: number;  // degrees
@@ -223,7 +225,20 @@ export type WorldTransform = {
   scaleY: number;
   /** Evaluated opacity (base + keyframe/channel interpolation). Not multiplied by procedural deltas. */
   opacity: number;
+  /**
+   * DERIVED exact world affine of a LAYER INSIDE A CONTAINER (absent on a root
+   * layer, whose TRS is its own map, and never persisted or authored).
+   *
+   * Rotation/scale above retain the authored reading of the chain; x/y are
+   * always the actual world origin. An anisotropic parent and rotated child
+   * can produce shear, so render/measure/hit-test consumers read this exact
+   * map instead of reconstructing axes from scalars. See `utils/containerMath`.
+   */
+  affine?: WorldAffine;
 };
+
+/** World affine, re-exported where composition types live (see `utils/containerMath`). */
+export type { WorldAffine } from '../utils/containerMath';
 
 export interface LayerContent {
   fillColor?: string;

@@ -784,3 +784,46 @@ test('R5-08 — a drilled-in child keeps child-level selection for a marquee', a
   expect(await drawnFrames(page)).toHaveLength(2);
   await expect(page.getByTestId('group-aggregate-box')).toHaveCount(0);
 });
+
+for (const rotation of [90, 30]) {
+  test(`group right-edge resize maps a ${rotation} degree child horizontally, with exact history`, async ({ page }) => {
+    await seed(page, [
+      { ...shape('a', 'Alpha', -120, 0), rotation },
+      shape('b', 'Beta', 120, 0),
+    ]);
+    await groupPair(page);
+    const child = page.locator('[data-part-id="a"]').first();
+    const before = (await child.boundingBox())!;
+    const left = await handleCentre(page, '#38bdf8', 0);
+    const right = await handleCentre(page, '#38bdf8', 1);
+    const delta = 60;
+    const ratio = (right.x - left.x + delta) / (right.x - left.x);
+    await page.mouse.move(right.x, right.y);
+    await page.mouse.down();
+    await expect(page.locator('.stage-canvas-container')).toHaveClass(/interaction-dragging/);
+    await page.mouse.move(right.x + delta, right.y, { steps: 8 });
+    await page.mouse.up();
+    const after = (await child.boundingBox())!;
+    const anchored = await handleCentre(page, '#38bdf8', 0);
+    expect(Math.abs(anchored.x - left.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(anchored.y - left.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(after.x - (left.x + (before.x - left.x) * ratio))).toBeLessThanOrEqual(1);
+    expect(Math.abs(after.width - before.width * ratio)).toBeLessThanOrEqual(1);
+    expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(1);
+    await page.locator('.autosave-status-badge').click();
+    const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!).layers.find((layer: { id: string }) => layer.id === 'a'), STORAGE_KEY);
+    expect(saved.rotation).toBe(rotation);
+    expect(saved).not.toHaveProperty('affine');
+    await page.getByRole('button', { name: 'Undo', exact: true }).click();
+    const undone = (await child.boundingBox())!;
+    for (const field of ['x', 'y', 'width', 'height'] as const) {
+      expect(Math.abs(undone[field] - before[field])).toBeLessThanOrEqual(0.01);
+    }
+    await page.getByRole('button', { name: 'Redo', exact: true }).click();
+    const redone = (await child.boundingBox())!;
+    for (const field of ['x', 'y', 'width', 'height'] as const) {
+      expect(Math.abs(redone[field] - after[field])).toBeLessThanOrEqual(0.01);
+    }
+  });
+}

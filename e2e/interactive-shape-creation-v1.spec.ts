@@ -71,7 +71,6 @@ test('square creation keeps active feedback and equal authored scales', async ({
   await page.mouse.up();
 
   await expect(page.locator('.actor-node', { hasText: 'Square' })).toHaveCount(1);
-  await expect(squareTool).not.toHaveClass(/active/);
   await page.locator('.autosave-status-badge').click();
   await expect.poll(() => page.evaluate(() => {
     const scene = JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5') ?? '{}');
@@ -84,4 +83,37 @@ test('square creation keeps active feedback and equal authored scales', async ({
     return [layer?.scaleX, layer?.scaleY];
   });
   expect(scales[0]).toBe(scales[1]);
+});
+
+test('primitive creation stays armed for consecutive shapes, with one undo per shape, until Escape or another tool', async ({ page }) => {
+  await openElements(page);
+  const canvas = page.locator('.stage-canvas-container');
+  const box = await canvas.boundingBox();
+  expect(box).not.toBeNull();
+  const rectangle = page.getByRole('button', { name: 'Rectangle', exact: true });
+  await rectangle.click();
+  for (let index = 0; index < 3; index += 1) {
+    const x = box!.x + box!.width * (0.25 + index * 0.2);
+    const y = box!.y + box!.height * 0.35;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 40, y + 40);
+    await page.mouse.up();
+    await expect(page.locator('.actor-node', { hasText: 'Rectangle' })).toHaveCount(index + 1);
+  }
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(page.locator('.actor-node', { hasText: 'Rectangle' })).toHaveCount(2);
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(page.locator('.actor-node', { hasText: 'Rectangle' })).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Select', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.mouse.move(box!.x + 80, box!.y + 80);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + 140, box!.y + 140);
+  await page.mouse.up();
+  await expect(page.locator('.actor-node', { hasText: 'Rectangle' })).toHaveCount(1);
+  await rectangle.click();
+  await page.getByRole('button', { name: 'Pan', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Pan', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(rectangle).not.toHaveClass(/active/);
 });

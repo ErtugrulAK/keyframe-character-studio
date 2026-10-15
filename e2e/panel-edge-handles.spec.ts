@@ -3,12 +3,9 @@ import { test, expect, type Page } from '@playwright/test';
 /**
  * R5-01 / R5-02 — the panel edge handles, in a real browser.
  *
- * R5-01: the two show/hide handles are anchored to the PANEL BOUNDARY, not to
- * the panel's content. Each handle rides the OUTER side of the boundary it
- * collapses (the drawer's right edge, the inspector's left edge) and stays
- * wholly on the workspace side, so no label, card or row inside a panel can ever
- * end up underneath it — while its vertical anchor remains the workspace row's
- * top edge, the boundary a timeline resize can never move (R3-02 / R4-01).
+ * Handles are centred on the panel boundary's empty gutter, never on content.
+ * Their vertical anchor remains the workspace row's top edge, independent of
+ * timeline height.
  *
  * R5-02: the handles belong to the handle layer of the editor stack, so an open
  * overlay paints OVER them: the export dropdown and the GIF panel are owned by
@@ -72,9 +69,7 @@ export interface DockBoundaryReport {
 }
 
 /**
- * The panel-boundary contract: each handle's inner edge IS the boundary line, so
- * the handle is fully outside the panel, and no leaf that paints text inside a
- * panel intersects a handle box.
+ * The handle's centre is the dock boundary; no text-bearing leaf is covered.
  */
 async function dockBoundaryReport(page: Page): Promise<DockBoundaryReport> {
   return page.evaluate(() => {
@@ -116,10 +111,8 @@ async function dockBoundaryReport(page: Page): Promise<DockBoundaryReport> {
 }
 
 /**
- * The full R5-01 invariant for one layout state, one side: the handle is flush
- * against the panel's outer boundary (or the viewport edge it retires to), wholly
- * outside the panel's box, clear of every text-bearing leaf inside that panel,
- * and still inside the workspace row above the timeline.
+ * The handle stays centred on the open panel boundary (or retires fully inside
+ * the viewport edge), clear of panel text and above the timeline.
  */
 function expectHandleBoundary(
   label: string,
@@ -137,13 +130,9 @@ function expectHandleBoundary(
   if (panelOpen) {
     expect(panel!.width, `${label}: the ${side} panel should be open`).toBeGreaterThan(0);
     if (side === 'left') {
-      // The handle's inner edge is the drawer's right edge: anchored to the
-      // boundary itself, on the workspace side.
-      expect(Math.abs(handle!.x - panel!.right), `${label}: the left handle lost the drawer boundary`).toBeLessThanOrEqual(TOLERANCE);
-      expect(handle!.right, `${label}: the left handle paints inside the drawer`).toBeGreaterThanOrEqual(panel!.right - TOLERANCE);
+      expect(Math.abs(handle!.x + handle!.width / 2 - panel!.right), `${label}: the left handle lost the drawer boundary`).toBeLessThanOrEqual(TOLERANCE);
     } else {
-      expect(Math.abs(handle!.right - panel!.x), `${label}: the right handle lost the inspector boundary`).toBeLessThanOrEqual(TOLERANCE);
-      expect(handle!.x, `${label}: the right handle paints inside the inspector`).toBeLessThanOrEqual(panel!.x + TOLERANCE);
+      expect(Math.abs(handle!.x + handle!.width / 2 - panel!.x), `${label}: the right handle lost the inspector boundary`).toBeLessThanOrEqual(TOLERANCE);
     }
   } else if (side === 'left') {
     expect(Math.abs(handle!.x), `${label}: the hidden-drawer handle left the edge`).toBeLessThanOrEqual(TOLERANCE);

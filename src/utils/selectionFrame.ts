@@ -2,6 +2,7 @@ import type { CharacterPart, Transform } from '../types/animator';
 import { getPartLocalBounds, type PartLocalBounds } from './bounds';
 import { deriveBooleanGeometry } from './booleanGeometry';
 import { getGroupAggregateBounds } from './layerGrouping';
+import type { WorldAffine } from './containerMath';
 
 /**
  * THE selection-frame geometry authority.
@@ -68,6 +69,42 @@ export const getSelectionFrameBounds = (
   return getPartLocalBounds(measured, transform);
 };
 
+/** A box in a layer's own local units. */
+export interface SelectionFrameBox {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+/**
+ * The gizmo props one selection frame is drawn and anchored with.
+ *
+ * The TRS props describe a frame an authored TRS can render: the box in the
+ * layer's scaled local units, drawn under the layer's rotation. They are the
+ * complete description for every such layer.
+ *
+ * `affine` is present ONLY for a frame whose world map is not a TRS — a rotated
+ * child of an anisotropically scaled container, whose exact map
+ * `R(θp)·S(sp)·R(θc)·S(sc)` is a general 2×2 (a shear, or an axis swap). Such a
+ * frame is the LOCAL box `affineBounds` mapped by that affine, i.e. a
+ * PARALLELOGRAM, and no scaled-local box + rotation can draw it. Consumers MUST
+ * prefer the affine path when it is present (the gizmo emits `matrix(...)` and
+ * places every handle on the affine image of its local-box point); the TRS props
+ * stay alongside it because the drag solvers keep working on the local box.
+ */
+export interface SelectionFrameGizmoBounds {
+  overrideHalfW: number;
+  overrideHalfH: number;
+  overrideCenterX: number;
+  overrideCenterY: number;
+  overrideBounds: SelectionFrameBox;
+  /** The exact world map of the frame, when a TRS cannot re-create it. */
+  affine?: WorldAffine;
+  /** The LOCAL box the affine maps — the rect the affine frame draws. */
+  affineBounds?: SelectionFrameBox;
+}
+
 /**
  * The local box → gizmo props every caller draws and anchors on. The gizmo
  * applies the layer's scale itself (with its orientation flip), so the extents
@@ -75,21 +112,22 @@ export const getSelectionFrameBounds = (
  */
 export const selectionFrameGizmoBounds = (
   bounds: PartLocalBounds,
-  transform: Transform,
-): {
-  overrideHalfW: number;
-  overrideHalfH: number;
-  overrideCenterX: number;
-  overrideCenterY: number;
-  overrideBounds: { minX: number; minY: number; maxX: number; maxY: number };
-} => {
+  transform: Transform & { affine?: WorldAffine },
+): SelectionFrameGizmoBounds => {
   const scaleX = Math.abs(transform.scaleX);
   const scaleY = Math.abs(transform.scaleY);
-  return {
+  const box: SelectionFrameBox = { minX: bounds.minX, minY: bounds.minY, maxX: bounds.maxX, maxY: bounds.maxY };
+  const trsBounds: SelectionFrameGizmoBounds = {
     overrideHalfW: ((bounds.maxX - bounds.minX) / 2) * scaleX,
     overrideHalfH: ((bounds.maxY - bounds.minY) / 2) * scaleY,
     overrideCenterX: ((bounds.minX + bounds.maxX) / 2) * scaleX,
     overrideCenterY: ((bounds.minY + bounds.maxY) / 2) * scaleY,
-    overrideBounds: { minX: bounds.minX, minY: bounds.minY, maxX: bounds.maxX, maxY: bounds.maxY },
+    overrideBounds: box,
   };
+  // A derived affine is attached only when the TRS numbers cannot re-create the
+  // layer's world map (see `utils/containerMath`), so its presence IS the
+  // "this frame is not a scaled-local box" signal — checked, never approximated.
+  return transform.affine
+    ? { ...trsBounds, affine: transform.affine, affineBounds: box }
+    : trsBounds;
 };

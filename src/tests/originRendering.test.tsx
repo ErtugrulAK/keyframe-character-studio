@@ -143,3 +143,65 @@ describe('resolution-derived renderer origin', () => {
     expect(html).toContain('translate(300, 240)');
   });
 });
+
+/**
+ * The preview must draw the DERIVED world affine, not the summed/multiplied TRS
+ * reading: a rotated child of an anisotropically scaled container has no TRS
+ * world pose (its map is sheared), and drawing the fold is what stretched a 90°
+ * child vertically during a group resize.
+ */
+describe('renderer — group-nested layers draw their exact world map', () => {
+  const rect = (id: string, rotation: number, x: number): CharacterPart => ({
+    id,
+    name: id,
+    type: 'custom_rect',
+    zIndex: 1,
+    width: 100,
+    height: 60,
+    baseTransform: { x, y: 0, rotation, scaleX: 1, scaleY: 1, opacity: 1 },
+    fillColor: '#fff',
+    strokeColor: '#000',
+    parentId: 'g',
+  } as CharacterPart);
+
+  const group: CharacterPart = {
+    id: 'g',
+    name: 'g',
+    type: 'custom_freeform',
+    zIndex: 0,
+    isGroup: true,
+    points: [],
+    // Anisotropic container: the whole point of the affine.
+    baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 2, scaleY: 1, opacity: 1 },
+  } as CharacterPart;
+
+  const renderGroup = () => renderToString(
+    <StagePartLayers
+      sortedParts={[group, rect('r90', 90, -120), rect('r30', 30, 0), rect('r0', 0, 120)]}
+      appMode="edit"
+      broadcastState={{}}
+      currentFrame={0}
+      selectedPartId={null}
+      totalFrames={60}
+      onSelect={() => {}}
+      onStartTranslateDrag={() => {}}
+      onDrillIn={() => {}}
+      tracks={[]}
+      customPresets={[]}
+      liveStuntsState={{}}
+      projectResolution={{ width: 1920, height: 1080 }}
+    />,
+  );
+
+  it('emits the exact axis swap for a 90° child and matrix() for a sheared 30° child', () => {
+    const html = renderGroup();
+    // 90° in a scaleX 2 container: exact as rotate(90) scale(1, 2) — axes swapped,
+    // never rotate(90) scale(2, 1) which stretched the child vertically.
+    expect(html).toContain('rotate(90) scale(1, 2)');
+    expect(html).not.toContain('rotate(90) scale(2, 1)');
+    // 30° in the same container genuinely shears: only matrix() can express it.
+    expect(html).toMatch(/matrix\(/);
+    // An unrotated child is still a plain TRS: historical spelling, scale 2.
+    expect(html).toContain('rotate(0) scale(2, 1)');
+  });
+});

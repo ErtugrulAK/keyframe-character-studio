@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { CharacterPart } from '../types/animator';
-import { computeBooleanContours, createBooleanDisplayName, deriveBooleanGeometry, dissolveBooleanGroup, inverseTransformBooleanContours, isBooleanEligible, isGeneratedBooleanName, transformBooleanContours } from '../utils/booleanGeometry';
+import type { CharacterPart, FreeformPoint, Transform } from '../types/animator';
+import { affineOfTransform, composeAffine, worldAffineOf } from '../utils/containerMath';
+import { evaluateTransform } from '../utils/evaluateTransform';
+import { computeBooleanContours, createBooleanDisplayName, deriveBooleanGeometry, dissolveBooleanGroup, inverseTransformBooleanContours, isBooleanEligible, isGeneratedBooleanName, partToWorldPolygons, transformBooleanContours } from '../utils/booleanGeometry';
 
 const part = (id: string, type: CharacterPart['type'], x: number, y: number): CharacterPart => ({
   id,
@@ -151,7 +153,6 @@ describe('boolean geometry', () => {
     expect(isBooleanEligible(part('freeform', 'custom_freeform', 0, 0))).toBe(false);
     expect(isBooleanEligible(part('circle', 'custom_circle', 0, 0))).toBe(true);
   });
-});
 
   it('generates compact operand-derived names and preserves custom names', () => {
     const existing = [part('group-1', 'custom_freeform', 0, 0), {
@@ -206,3 +207,154 @@ describe('boolean geometry', () => {
     expect(roundTrip[0][0].x).toBeCloseTo(-10, 10);
     expect(roundTrip[0][0].y).toBeCloseTo(-5, 10);
   });
+});
+
+/**
+ * A Boolean operand inside a container whose nesting is not a TRS (`scale(2,1)`
+ * around a 90°-rotated child) is SHEARED: the exact map is
+ * `(x, y) -> (−2y − 160, x)` while the folded authored TRS reads
+ * `(x, y) -> (−160 − y, 2x)`. Every world map must be the affine.
+ */
+describe('boolean world maps through the derived affine', () => {
+  const SHAPE_TRS = (over: Partial<Transform> = {}): Transform => ({
+    x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, ...over,
+  });
+
+  const container = (id: string, over: Partial<Transform> = {}, parentId?: string): CharacterPart => ({
+    id,
+    name: id,
+    type: 'custom_freeform',
+    zIndex: 0,
+    isGroup: true,
+    points: [],
+    baseTransform: SHAPE_TRS(over),
+    ...(parentId ? { parentId } : {}),
+  } as unknown as CharacterPart);
+
+  /** `custom_rect` local geometry is the box (−60,−30)…(60,30). */
+  const rect = (id: string, parentId: string, over: Partial<Transform> = {}): CharacterPart => ({
+    id,
+    name: id,
+    type: 'custom_rect',
+    zIndex: 1,
+    parentId,
+    baseTransform: SHAPE_TRS(over),
+  } as unknown as CharacterPart);
+
+  /** Container with scaleX 2 holding a 90°-rotated child at local (−100, 0). */
+  const stretchedChild = (id: string): CharacterPart[] => [
+    container('g', { x: 40, scaleX: 2 }),
+    rect(id, 'g', { x: -100, rotation: 90 }),
+  ];
+
+  const worldOf = (parts: CharacterPart[], id: string): Transform & { affine?: ReturnType<typeof worldAffineOf> } =>
+    evaluateTransform(parts, [], 'Sequence', id, 0);
+
+  const bboxOf = (contours: FreeformPoint[][]) => {
+    const points = contours.flat();
+    return {
+      minX: Math.min(...points.map((p) => p.x)),
+      maxX: Math.max(...points.map((p) => p.x)),
+      minY: Math.min(...points.map((p) => p.y)),
+      maxY: Math.max(...points.map((p) => p.y)),
+    };
+  };
+
+  it('maps an operand\u2019s world polygons by the exact affine, not the folded TRS', () => {
+    const scene = stretchedChild('r');
+    const world = worldOf(scene, 'r');
+    expect(world.affine).toBeDefined();
+
+    const ring = partToWorldPolygons(scene[1], world)![0][0];
+    // Exact map: (−60,−30) → (−100,−60), (60,−30) → (−100,60),
+    // (60,30) → (−220,60), (−60,30) → (−220,−60).
+    const exact = [[-100, -60], [-100, 60], [-220, 60], [-220, -60]];
+    // Failing-before (folded TRS: rotation 90, scaleX 2 at (−160, 0)):
+    // (−130,−120), (−130,120), (−190,120), (−190,−120).
+    const folded = [[-130, -120], [-130, 120], [-190, 120], [-190, -120]];
+    expect(ring).toHaveLength(4);
+    ring.forEach(([x, y], index) => {
+      expect(x).toBeCloseTo(exact[index][0], 9);
+      expect(y).toBeCloseTo(exact[index][1], 9);
+      expect(x).not.toBeCloseTo(folded[index][0], 3);
+      expect(y).not.toBeCloseTo(folded[index][1], 3);
+    });
+  });
+
+  it('derives Boolean geometry from the sheared operand maps', () => {
+    // Both operands are 90°-rotated children of the stretched container, so
+    // their exact images are the boxes [−220,−100]×[−60,60] and
+    // [−220,−100]×[40,160]; they intersect in [−220,−100]×[40,60].
+    // Under the folded reading the same two images were [−190,−130]×[−120,120]
+    // and [−190,−130]×[−20,220], intersecting in [−190,−130]×[−20,120].
+    const a = rect('a', 'g', { x: -100, rotation: 90 });
+    const b = rect('b', 'g', { x: -100, y: 100, rotation: 90 });
+    const scene = [container('g', { x: 40, scaleX: 2 }), a, b];
+
+    const contours = computeBooleanContours('intersect', [a, b], {
+      a: worldOf(scene, 'a'),
+      b: worldOf(scene, 'b'),
+    });
+    const box = bboxOf(contours);
+    expect(box.minX).toBeCloseTo(-220, 9);
+    expect(box.maxX).toBeCloseTo(-100, 9);
+    expect(box.minY).toBeCloseTo(40, 9);
+    expect(box.maxY).toBeCloseTo(60, 9);
+    expect(box.maxX).not.toBeCloseTo(-130, 3);
+    expect(box.minY).not.toBeCloseTo(-20, 3);
+  });
+
+  it('inverts a derived affine exactly instead of the folded TRS inverse', () => {
+    const sheared = {
+      x: -160, y: 0, rotation: 90, scaleX: 2, scaleY: 1, opacity: 1,
+      affine: composeAffine(
+        affineOfTransform(SHAPE_TRS({ x: 40, scaleX: 2 })),
+        affineOfTransform(SHAPE_TRS({ x: -100, rotation: 90 })),
+      ),
+    };
+
+    const local = inverseTransformBooleanContours([[{ x: 0, y: 0 }]], sheared);
+    // Exact map `(x, y) -> (−2y − 160, x)`: world (0, 0) is local (0, −80).
+    // Failing-before (TRS inverse of the same world transform): (0, −160).
+    expect(local[0][0].x).toBeCloseTo(0, 9);
+    expect(local[0][0].y).toBeCloseTo(-80, 9);
+    expect(local[0][0].y).not.toBeCloseTo(-160, 3);
+
+    const back = transformBooleanContours(local, sheared);
+    expect(back[0][0].x).toBeCloseTo(0, 9);
+    expect(back[0][0].y).toBeCloseTo(0, 9);
+  });
+
+  it('puts the local contours of a Boolean group inside a sheared group\u2019s own frame', () => {
+    // Outer container scaleX 2 (x 40) → group `g` rotated 90° at (−100, 0) →
+    // two rect operands at group-local ±30. The group's world map is the shear
+    // `(x, y) -> (−2y − 160, x)`, so the operands' own local boxes
+    // (−90,−30)…(30,30) and (−30,−30)…(90,30) union to (−90,−30)…(90,30) in the
+    // group's frame and to [−220,−100]×[−90,90] in the world.
+    // Failing-before (folded TRS inverse) read the local box as (−45,−60)…(45,60).
+    const a = rect('a', 'g', { x: -30 });
+    const b = rect('b', 'g', { x: 30 });
+    const scene = [container('o', { x: 40, scaleX: 2 }), container('g', { x: -100, rotation: 90 }, 'o'), a, b];
+    const groupWorld = worldOf(scene, 'g');
+    expect(groupWorld.affine).toBeDefined();
+
+    const derived = deriveBooleanGeometry('union', [a, b], {
+      a: worldOf(scene, 'a'),
+      b: worldOf(scene, 'b'),
+    }, groupWorld);
+
+    const localBox = bboxOf(derived.localContours);
+    expect(localBox.minX).toBeCloseTo(-90, 6);
+    expect(localBox.maxX).toBeCloseTo(90, 6);
+    expect(localBox.minY).toBeCloseTo(-30, 6);
+    expect(localBox.maxY).toBeCloseTo(30, 6);
+    expect(localBox.minX).not.toBeCloseTo(-45, 3);
+    expect(localBox.minY).not.toBeCloseTo(-60, 3);
+
+    const worldBox = bboxOf(derived.worldContours);
+    expect(worldBox.minX).toBeCloseTo(-220, 6);
+    expect(worldBox.maxX).toBeCloseTo(-100, 6);
+    expect(worldBox.minY).toBeCloseTo(-90, 6);
+    expect(worldBox.maxY).toBeCloseTo(90, 6);
+  });
+});

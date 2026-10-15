@@ -9,7 +9,16 @@ import type {
 } from '../types/animator';
 import { getPartLocalBounds, getPartWorldBounds, type PartLocalBounds, type PartWorldBounds } from './bounds';
 import { PART_ANCHOR_OFFSETS, TOOLBAR_COLORS } from './constants';
-import { composeWorldTransform, worldToContainerLocal } from './containerMath';
+import {
+  affineToTransform,
+  applyAffine,
+  composeAffine,
+  composeWorldTransform,
+  invertAffine,
+  worldAffineOf,
+  worldToContainerLocal,
+  type WorldAffine,
+} from './containerMath';
 import { applyEasing, deriveAutoBezierControlPoints, interpolateChannel, lerp, makeEmptyChannels } from './defaults';
 import { evaluateTransform } from './evaluateTransform';
 import { generateId } from './idGenerator';
@@ -56,6 +65,15 @@ const LOCAL_CHANNELS = ['x', 'y', 'rotation', 'scaleX', 'scaleY'] as const;
 type LocalChannel = (typeof LOCAL_CHANNELS)[number];
 
 const IDENTITY: Transform = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+
+const IDENTITY_AFFINE: WorldAffine = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
+
+/**
+ * A world-pose reader: the authored TRS reading plus the derived affine the
+ * evaluator attaches when a TRS cannot re-create the nested map. Consumers read
+ * the world MAP through `worldAffineOf`, never by hand-rolling R·S again.
+ */
+type WorldOf = (partId: string) => Transform & { affine?: WorldAffine };
 
 /** How deep nested groups are walked before falling back to the container box. */
 const MAX_GROUP_DEPTH = 4;
@@ -287,7 +305,7 @@ const foldChildrenInto = (options: {
   parentId: string | undefined;
   compose: Transform;
   newParentWorld: Transform;
-  worldOf: (partId: string) => Transform;
+  worldOf: WorldOf;
 }): { parts: CharacterPart[]; tracks: Track[] } => {
   const { parts, tracks, childIds, parentId, compose, newParentWorld, worldOf } = options;
   const fold = foldAffine(compose);
@@ -341,12 +359,18 @@ const unionWorldBounds = (bounds: PartWorldBounds[]): PartWorldBounds => ({
  * Bounds of one layer as it sits in the container's local space, using the same
  * rendered-geometry authority the single-layer selection frame uses (so image
  * layers describe their visible pixels and Boolean groups their live contours).
+ *
+ * `map` is the EXACT affine from the child's own local space into the group's
+ * local space (computed by `aggregateLocalBounds`). For a direct child it is the
+ * child's own local affine; a rotated child of an anisotropically scaled group
+ * therefore keeps its true, possibly sheared parallelogram instead of being
+ * re-scaled along its own rotated axes.
  */
 const localBoundsInContainer = (
   parts: CharacterPart[],
   part: CharacterPart,
-  local: Transform,
-  worldOf: (partId: string) => Transform,
+  map: WorldAffine,
+  worldOf: WorldOf,
   depth: number,
 ): PartLocalBounds | null => {
   // A group has no geometry of its own: its own children define its box, which
@@ -356,21 +380,14 @@ const localBoundsInContainer = (
   // group's aggregate envelope.
   const bounds = part.isGroup
     ? aggregateLocalBounds(parts, part.id, worldOf, depth + 1)
-    : getPartLocalBounds(part, local);
+    : getPartLocalBounds(part, affineToTransform(map));
   if (!bounds) return null;
-  const radians = (local.rotation * Math.PI) / 180;
-  const cos = Math.cos(radians);
-  const sin = Math.sin(radians);
   const corners = [
-    [bounds.minX, bounds.minY],
-    [bounds.maxX, bounds.minY],
-    [bounds.maxX, bounds.maxY],
-    [bounds.minX, bounds.maxY],
-  ].map(([x, y]) => {
-    const scaledX = x * local.scaleX;
-    const scaledY = y * local.scaleY;
-    return { x: local.x + scaledX * cos - scaledY * sin, y: local.y + scaledX * sin + scaledY * cos };
-  });
+    { x: bounds.minX, y: bounds.minY },
+    { x: bounds.maxX, y: bounds.minY },
+    { x: bounds.maxX, y: bounds.maxY },
+    { x: bounds.minX, y: bounds.maxY },
+  ].map((corner) => applyAffine(map, corner));
   return unionLocalBounds(corners.map((point) => ({
     minX: point.x,
     minY: point.y,
@@ -386,13 +403,25 @@ const localBoundsInContainer = (
 const aggregateLocalBounds = (
   parts: CharacterPart[],
   groupId: string,
-  worldOf: (partId: string) => Transform,
+  worldOf: WorldOf,
   depth: number,
 ): PartLocalBounds | null => {
   if (depth > MAX_GROUP_DEPTH) return null;
   const groupWorld = worldOf(groupId);
+  // Undo the group's world map, then apply the child's own: the exact affine
+  // from the child's local space into the group's. When the group's map is
+  // collapsed (no inverse) we use the identity rather than fabricating a TRS
+  // from a degenerate one, so the child's exact map survives and the bounds
+  // stay its real, unsheared shape.
+  const groupInverse = invertAffine(worldAffineOf(groupWorld)) ?? IDENTITY_AFFINE;
   const bounds = getGroupChildren(parts, groupId)
-    .map((child) => localBoundsInContainer(parts, child, worldToContainerLocal(worldOf(child.id), groupWorld), worldOf, depth))
+    .map((child) => localBoundsInContainer(
+      parts,
+      child,
+      composeAffine(groupInverse, worldAffineOf(worldOf(child.id))),
+      worldOf,
+      depth,
+    ))
     .filter((item): item is PartLocalBounds => item !== null);
   return unionLocalBounds(bounds);
 };
@@ -405,14 +434,14 @@ const aggregateLocalBounds = (
 export const getGroupAggregateBounds = (
   parts: CharacterPart[],
   groupId: string,
-  worldOf: (partId: string) => Transform,
+  worldOf: WorldOf,
 ): PartLocalBounds | null => aggregateLocalBounds(parts, groupId, worldOf, 0);
 
 /** World bounds of a layer, walking a nested group's children when it is a container. */
 const layerWorldBounds = (
   parts: CharacterPart[],
   part: CharacterPart,
-  worldOf: (partId: string) => Transform,
+  worldOf: WorldOf,
   depth: number,
 ): PartWorldBounds | null => {
   if (part.isGroup) {
@@ -439,7 +468,7 @@ const layerWorldBounds = (
 export const getLayerWorldBounds = (
   parts: CharacterPart[],
   partId: string,
-  worldOf: (partId: string) => Transform,
+  worldOf: WorldOf,
 ): PartWorldBounds | null => {
   const part = parts.find((candidate) => candidate.id === partId);
   return part ? layerWorldBounds(parts, part, worldOf, 0) : null;
@@ -516,7 +545,7 @@ export interface GroupCreationContext {
   groupId: string;
   trackId: string;
   name: string;
-  worldOf: (partId: string) => Transform;
+  worldOf: WorldOf;
 }
 
 export type GroupCreationOutcome =

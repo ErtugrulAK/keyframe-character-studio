@@ -5,6 +5,7 @@ import { renderShapePart } from './parts/ShapePartRenderers';
 import { renderMediaPart } from './parts/MediaPartRenderer';
 import { renderTextOrClonerPart } from './parts/TextAndClonerRenderers';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
+import { affineSvgTransform, worldAffineOf } from '../../../utils/containerMath';
 
 interface PartRendererProps {
   part: CharacterPart;
@@ -122,7 +123,11 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
 
   const transformedContent = (
     <g
-      transform={`translate(${outputOrigin.x + el.transform.x}, ${outputOrigin.y + el.transform.y}) rotate(${el.transform.rotation}) scale(${el.transform.scaleX}, ${el.transform.scaleY})`}
+      // The world map through the DERIVED affine: an anisotropic container
+      // nesting that is not a TRS (a rotated child of a stretched group) renders
+      // exactly what the group frame shows. Every TRS layer keeps the historical
+      // `translate(...) rotate(...) scale(...)` spelling, character for character.
+      transform={affineSvgTransform(worldAffineOf(el.transform), el.transform, outputOrigin)}
       style={{ opacity: finalOpacity, cursor: isGhost ? 'default' : 'pointer', filter: filterId ? `url(#${filterId})` : undefined }}
       {...layerPointerHandlers}
     >

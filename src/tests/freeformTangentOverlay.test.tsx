@@ -486,11 +486,8 @@ describe('FreeformTangentOverlay coordinate mapping', () => {
     render(<Harness initialPart={makePart({ path })} transform={transform} outputOrigin={EDITOR_CAMERA_CENTER} />);
     const worldOf = (point: { x: number; y: number }) => getFreeformVertexWorldPositions(
       [point],
-      EDITOR_CAMERA_CENTER.x + transform.x,
-      EDITOR_CAMERA_CENTER.y + transform.y,
-      transform.scaleX,
-      transform.scaleY,
-      transform.rotation,
+      transform,
+      EDITOR_CAMERA_CENTER,
     )[0];
 
     openHandlesFor(0);

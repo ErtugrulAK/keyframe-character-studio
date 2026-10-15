@@ -37,11 +37,10 @@ async function seed(page: Page, layers: Record<string, unknown>[]): Promise<void
 }
 
 test.describe('KCS V5.1 manual QA gates', () => {
-  test('uses individual selection bounds and exposes no alignment block', async ({ page }) => {
+  test('uses individual selection bounds', async ({ page }) => {
     await seed(page, [layer('triangle', 'Triangle', 'custom_triangle', -160), layer('para', 'Parallelogram', 'custom_parallelogram', 160)]);
     await page.locator('.actor-node', { hasText: 'Triangle' }).click();
     await expect(page.locator('[data-testid="transform-gizmo"]')).toHaveCount(1);
-    await expect(page.getByRole('button', { name: 'Align Left' })).toHaveCount(0);
     await page.locator('.actor-node', { hasText: 'Parallelogram' }).click({ modifiers: ['Control'] });
     await expect(page.locator('[data-testid="transform-gizmo"]')).toHaveCount(2);
     await expect(page.locator('[data-testid="aggregate-selection-box"]')).toHaveCount(0);

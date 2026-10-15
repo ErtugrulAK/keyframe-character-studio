@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, Transform } from '../types/animator';
+import type { WorldAffine } from '../utils/containerMath';
 import { clientToCameraPoint, getCursorAnchoredCameraCenter, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox } from '../utils/viewportMath';
 
 const part = (id: string, overrides: Partial<CharacterPart> = {}): CharacterPart => ({
@@ -42,6 +43,19 @@ describe('Canvas Interaction V1 viewport math', () => {
     const parts = [part('visible'), part('hidden')];
     const transform: Transform = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
     expect(getPartsInMarquee(parts, () => transform, { x: 250, y: 225, w: 100, h: 100 }, 300, 240, (candidate) => candidate.id === 'visible')).toEqual(['visible']);
+  });
+
+  it('hits a sheared layer where it is drawn, not where its TRS fields would put it', () => {
+    // (x,y) ↦ (2x + 0.5y, y) on a 60×60 box → drawn x ∈ [225, 375], y ∈ [210, 270]
+    const world: Transform & { affine?: WorldAffine } = {
+      x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1,
+      affine: { a: 2, b: 0, c: 0.5, d: 1, e: 0, f: 0 },
+    };
+    const parts = [part('sheared')];
+    const marquee = { x: 200, y: 200, w: 30, h: 100 };
+    expect(getPartsInMarquee(parts, () => world, marquee)).toEqual(['sheared']);
+    // the TRS reading spans x ∈ [270, 330] → the same marquee never reaches it
+    expect(getPartsInMarquee(parts, () => ({ ...world, affine: undefined }), marquee)).toEqual([]);
   });
   it.each([
     [{ x: 10, y: 20 }, { x: 110, y: 220 }],

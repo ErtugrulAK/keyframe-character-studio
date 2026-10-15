@@ -67,19 +67,23 @@ const BOOLEAN_LABEL: Record<BooleanOperation, string> = {
 /** The canvas tools the top strip owns, in the order the toolbar presents them. */
 const CANVAS_TOOLS: Array<'select' | 'pan'> = ['select', 'pan'];
 
-/**
- * The six align edges, in the order the Align band's menu presents them: the
- * left/centre/right column first, then the top/centre/bottom row — the same
- * arrangement the glyphs themselves read in.
- */
+/** Direct desktop commands, ordered by axis: left/centre/right, top/centre/bottom. */
 const ALIGN_ITEMS: Array<{ id: AlignEdge; label: string; icon: LucideIcon }> = [
-  { id: 'left', label: 'Align left', icon: AlignStartVertical },
-  { id: 'horizontal-centers', label: 'Align horizontal centers', icon: AlignCenterVertical },
-  { id: 'right', label: 'Align right', icon: AlignEndVertical },
-  { id: 'top', label: 'Align top', icon: AlignStartHorizontal },
-  { id: 'vertical-centers', label: 'Align vertical centers', icon: AlignCenterHorizontal },
-  { id: 'bottom', label: 'Align bottom', icon: AlignEndHorizontal },
+  { id: 'left', label: 'Align Left', icon: AlignStartVertical },
+  { id: 'horizontal-centers', label: 'Align Horizontal Centers', icon: AlignCenterVertical },
+  { id: 'right', label: 'Align Right', icon: AlignEndVertical },
+  { id: 'top', label: 'Align Top', icon: AlignStartHorizontal },
+  { id: 'vertical-centers', label: 'Align Vertical Centers', icon: AlignCenterHorizontal },
+  { id: 'bottom', label: 'Align Bottom', icon: AlignEndHorizontal },
 ];
+
+/** Labels distinguish equal visual gaps from the retained centre-based policy. */
+const DISTRIBUTE_ITEMS = [
+  { axis: 'horizontal', policy: 'gap', label: 'Distribute Horizontal', icon: AlignHorizontalSpaceBetween },
+  { axis: 'vertical', policy: 'gap', label: 'Distribute Vertical', icon: AlignVerticalSpaceBetween },
+  { axis: 'horizontal', policy: 'center', label: 'Center Horizontally', icon: AlignHorizontalSpaceAround },
+  { axis: 'vertical', policy: 'center', label: 'Center Vertically', icon: AlignVerticalSpaceAround },
+] as const;
 
 /**
  * Dispatches a camera command on the established `canvas-viewport-command`
@@ -109,12 +113,8 @@ const dispatchViewportCommand = (type: 'zoom-in' | 'zoom-out' | 'reset-view') =>
  * no document state of its own, so a view-only tool cannot touch the project, and
  * it holds no second copy of any command.
  *
- * A band whose commands are variants along one axis (six align edges, two
- * distribute axes) is ONE trigger that opens a menu, so the strip stays compact
- * and no band is a long row of near-identical glyphs; a band of distinct
- * one-shot commands (rotate counter-clockwise/clockwise, flip
- * horizontal/vertical) keeps one button per command. Both kinds keep their
- * commands in one place — the band's own accessible name is its label.
+ * Align and distribute expose direct buttons on the desktop; each invokes the
+ * existing arrange policy, with no menu between the selection and the command.
  *
  * Paint is deliberately NOT here: fill and stroke are authored in the
  * Inspector's Appearance section, which is their one home.
@@ -342,43 +342,40 @@ export const AuthoringToolbar: React.FC = () => {
 
       <span className="authoring-toolbar-divider" aria-hidden="true" />
 
-      {/*
-        Align and Distribute are command SETS: each is one trigger with the
-        variants in a menu, so the strip keeps one hitbox per band. The trigger
-        is disabled — but never hidden — while the selection cannot use it, and
-        the two availability rules are the measure, not the count of rows in the
-        outline: aligning needs two layers with a measurable box, distributing
-        three.
-      */}
       <div className="authoring-toolbar-group" role="group" aria-label="Align">
-        <ToolbarMenu
-          label="Align"
-          icon={AlignStartVertical}
-          disabled={!arrange.canAlign}
-          title={arrange.canAlign
-            ? 'Align the selection to its collective bounds'
-            : 'Align needs two or more layers with measurable geometry'}
-          items={ALIGN_ITEMS.map(({ id, label, icon }) => ({ id, label, icon, run: () => arrange.align(id) }))}
-        />
+        {ALIGN_ITEMS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            className="authoring-toolbar-button"
+            aria-label={label}
+            disabled={!arrange.canAlign}
+            title={arrange.canAlign ? label : `${label} needs two measurable layers`}
+            onClick={() => arrange.align(id)}
+          >
+            <Icon />
+          </button>
+        ))}
       </div>
 
       <span className="authoring-toolbar-divider" aria-hidden="true" />
 
       <div className="authoring-toolbar-group" role="group" aria-label="Distribute">
-        <ToolbarMenu
-          label="Distribute"
-          icon={AlignHorizontalSpaceAround}
-          disabled={!arrange.canDistribute}
-          title={arrange.canDistribute
-            ? 'Even out the selection (the outer two layers hold the span)'
-            : 'Distribute needs three or more layers with measurable geometry'}
-          items={[
-            { id: 'horizontal', label: 'Distribute horizontally', icon: AlignHorizontalSpaceAround, run: () => arrange.distribute('horizontal') },
-            { id: 'vertical', label: 'Distribute vertically', icon: AlignVerticalSpaceAround, run: () => arrange.distribute('vertical') },
-            { id: 'horizontal-spacing', label: 'Distribute horizontal spacing', icon: AlignHorizontalSpaceBetween, run: () => arrange.distributeGap('horizontal') },
-            { id: 'vertical-spacing', label: 'Distribute vertical spacing', icon: AlignVerticalSpaceBetween, run: () => arrange.distributeGap('vertical') },
-          ]}
-        />
+        {DISTRIBUTE_ITEMS.map(({ axis, policy, label, icon: Icon }) => (
+          <button
+            key={`${policy}-${axis}`}
+            type="button"
+            className="authoring-toolbar-button"
+            aria-label={label}
+            disabled={!arrange.canDistribute}
+            title={arrange.canDistribute
+              ? `${label} — ${policy === 'gap' ? 'equal visual edge gaps' : 'equal centre intervals'}`
+              : `${label} needs three measurable layers`}
+            onClick={() => policy === 'gap' ? arrange.distributeGap(axis) : arrange.distribute(axis)}
+          >
+            <Icon />
+          </button>
+        ))}
       </div>
 
       <span className="authoring-toolbar-divider" aria-hidden="true" />

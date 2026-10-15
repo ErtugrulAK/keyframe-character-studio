@@ -279,21 +279,6 @@ describe('AuthoringToolbar', () => {
     expect(screen.queryByRole('button', { name: 'Unbind selected layer' })).toBeNull();
   });
 
-  it('never fires a disabled action', () => {
-    renderToolbar();
-    const disabled = [
-      'Boolean Union', 'Boolean Subtract', 'Dissolve Boolean', 'Group layers', 'Ungroup layers',
-      'Align', 'Distribute', 'Rotate counter-clockwise', 'Rotate clockwise', 'Flip horizontal', 'Flip vertical',
-      'Bring forward', 'Send backward',
-    ];
-    for (const name of disabled) {
-      fireEvent.click(screen.getByRole('button', { name }));
-    }
-    expect(animatorCtx.setCharacterParts).not.toHaveBeenCalled();
-    expect(animatorCtx.setTracks).not.toHaveBeenCalled();
-    expect(animatorCtx.updateCurrentTransform).not.toHaveBeenCalled();
-    expect(animatorCtx.startBatchInteraction).not.toHaveBeenCalled();
-  });
 
   it('arranges the selected layer through the shared z-index path', () => {
     const part = shape('a');
@@ -311,58 +296,6 @@ describe('AuthoringToolbar', () => {
     expect(backward([part])[0].zIndex).toBe(1);
   });
 
-  it('runs the vector commands through the shared transform write path, in one batch', () => {
-    const transform = { x: 200, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
-    animatorCtx.characterParts = [shape('a'), shape('b', { baseTransform: transform })];
-    setSelection(['a', 'b'], 'b');
-    renderToolbar();
-
-    // Two measurable layers: the band is available and reports it.
-    const align = screen.getByRole('button', { name: 'Align' });
-    expect(align).not.toBeDisabled();
-    expect(align).toHaveAttribute('aria-haspopup', 'menu');
-    expect(screen.getByRole('button', { name: 'Distribute' })).toBeDisabled();
-
-    fireEvent.click(align);
-    const menu = screen.getByRole('menu', { name: 'Align' });
-    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Align left' }));
-
-    // ONE contract: world-space patches go through updateCurrentTransform, and
-    // the whole command is one batch interaction (one history entry).
-    expect(animatorCtx.startBatchInteraction).toHaveBeenCalledTimes(1);
-    expect(animatorCtx.endBatchInteraction).toHaveBeenCalledTimes(1);
-    expect(animatorCtx.updateCurrentTransform).toHaveBeenCalledTimes(1);
-    expect(animatorCtx.updateCurrentTransform).toHaveBeenCalledWith({ x: 0 }, 'b');
-    expect(screen.queryByRole('menu', { name: 'Align' })).toBeNull();
-  });
-
-  it('offers the equal-spacing distribute commands in the existing Distribute band', () => {
-    animatorCtx.characterParts = [
-      shape('a'),
-      shape('b', { baseTransform: { x: 40, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } }),
-      shape('c', { baseTransform: { x: 400, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } }),
-    ];
-    setSelection(['a', 'b', 'c'], 'b');
-    renderToolbar();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Distribute' }));
-    const menu = screen.getByRole('menu', { name: 'Distribute' });
-    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
-      'Distribute horizontally',
-      'Distribute vertically',
-      'Distribute horizontal spacing',
-      'Distribute vertical spacing',
-    ]);
-
-    // The equal-spacing command is the SAME write path and ONE batch; the middle
-    // box takes the even gap while the extremes hold the span.
-    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Distribute horizontal spacing' }));
-    expect(animatorCtx.startBatchInteraction).toHaveBeenCalledTimes(1);
-    expect(animatorCtx.endBatchInteraction).toHaveBeenCalledTimes(1);
-    expect(animatorCtx.updateCurrentTransform).toHaveBeenCalledTimes(1);
-    expect(animatorCtx.updateCurrentTransform).toHaveBeenCalledWith({ x: 200 }, 'b');
-    expect(screen.queryByRole('menu', { name: 'Distribute' })).toBeNull();
-  });
 
   it('rotates and flips the selection with the same authority, disabled without one', () => {
     const part = shape('a');

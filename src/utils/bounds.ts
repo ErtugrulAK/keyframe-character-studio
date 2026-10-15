@@ -1,4 +1,5 @@
 import type { CharacterPart, Transform } from '../types/animator';
+import { applyAffine, worldAffineOf, type WorldAffine } from './containerMath';
 import { getShapeGeometry } from './shapeGeometry';
 import { resolveShapeAppearance } from './shapeAppearance';
 
@@ -277,31 +278,32 @@ export interface PartWorldBounds {
   maxY: number;
 }
 
-/** Transform the four local bounds corners into world/canvas coordinates. */
+/**
+ * Transform the four local bounds corners into world/canvas coordinates.
+ *
+ * The corner map is the layer's exact world affine — `worldAffineOf(transform)`
+ * — rather than a hand-rolled `origin + R(rotation)·(local ⊙ scale)`. For a
+ * shear-free pose the two are the same map; for a rotated child of an
+ * anisotropically scaled container they differ, and only the affine carries the
+ * nesting the authored TRS fields cannot. `worldAffineOf` falls back to the
+ * TRS' own map when no derived affine is attached, so a plain `Transform`
+ * produces exactly the historical numbers.
+ */
 export const getPartWorldBounds = (
   part: CharacterPart,
-  transform: Transform,
+  transform: Transform & { affine?: WorldAffine },
   canvasCenterX: number,
   canvasCenterY: number,
 ): PartWorldBounds => {
   const local = getPartLocalBounds(part, transform);
-  const radians = (transform.rotation * Math.PI) / 180;
-  const cos = Math.cos(radians);
-  const sin = Math.sin(radians);
-  const corners = [
-    [local.minX, local.minY],
-    [local.maxX, local.minY],
-    [local.maxX, local.maxY],
-    [local.minX, local.maxY],
-  ];
-  const world = corners.map(([x, y]) => {
-    const scaledX = x * transform.scaleX;
-    const scaledY = y * transform.scaleY;
-    return {
-      x: canvasCenterX + transform.x + scaledX * cos - scaledY * sin,
-      y: canvasCenterY + transform.y + scaledX * sin + scaledY * cos,
-    };
-  });
+  const m = worldAffineOf(transform);
+  const worldOffset = { ...m, e: m.e + canvasCenterX, f: m.f + canvasCenterY };
+  const world = [
+    { x: local.minX, y: local.minY },
+    { x: local.maxX, y: local.minY },
+    { x: local.maxX, y: local.maxY },
+    { x: local.minX, y: local.maxY },
+  ].map((corner) => applyAffine(worldOffset, corner));
   return {
     minX: Math.min(...world.map((point) => point.x)),
     minY: Math.min(...world.map((point) => point.y)),

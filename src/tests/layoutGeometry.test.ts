@@ -63,13 +63,15 @@ describe('bounds primitives', () => {
   });
 
   it('builds the six stage lines: four edges and the two centre lines', () => {
+    // A stage line is a reference line: `span: null` (a guide for it spans the
+    // moving item, not the artboard).
     expect(collectStageSnapCandidates(STAGE)).toEqual([
-      { axis: 'x', value: 0, kind: 'stage-edge' },
-      { axis: 'x', value: 300, kind: 'stage-center' },
-      { axis: 'x', value: 600, kind: 'stage-edge' },
-      { axis: 'y', value: 0, kind: 'stage-edge' },
-      { axis: 'y', value: 240, kind: 'stage-center' },
-      { axis: 'y', value: 480, kind: 'stage-edge' },
+      { axis: 'x', value: 0, kind: 'stage-edge', span: null },
+      { axis: 'x', value: 300, kind: 'stage-center', span: null },
+      { axis: 'x', value: 600, kind: 'stage-edge', span: null },
+      { axis: 'y', value: 0, kind: 'stage-edge', span: null },
+      { axis: 'y', value: 240, kind: 'stage-center', span: null },
+      { axis: 'y', value: 480, kind: 'stage-edge', span: null },
     ]);
   });
 });
@@ -93,13 +95,16 @@ describe('resolveSnap — stage targets', () => {
     expect(snap(moving, { x: 0, y: 120 }, stage).delta).toEqual({ x: 0, y: 125 });
   });
 
-  it('reports the matched line as a guide and which axes snapped', () => {
+  it('reports the matched line as a guide, with the band it is drawn over', () => {
     const result = snap(moving, { x: -105, y: 122 }, stage);
     expect(result.snappedX).toBe(true);
     expect(result.snappedY).toBe(true);
+    // The snapped delta is { x: -100, y: 125 }, i.e. the moving box is 0…60 ×
+    // 225…255 there. A stage line is a reference, so each guide carries the
+    // MOVING box's band on its opposite axis — never the artboard.
     expect(result.guides).toEqual([
-      { axis: 'x', value: 0, kind: 'stage-edge' },
-      { axis: 'y', value: 240, kind: 'stage-center' },
+      { axis: 'x', value: 0, kind: 'stage-edge', extent: { min: 225, max: 255 } },
+      { axis: 'y', value: 240, kind: 'stage-center', extent: { min: 0, max: 60 } },
     ]);
   });
 
@@ -126,8 +131,8 @@ describe('resolveSnap — stage targets', () => {
   it('breaks an exact tie by the candidate order, so the plan is deterministic', () => {
     // Two lines exactly 4 away on either side of the moving left edge (100).
     const candidates: SnapLine[] = [
-      { axis: 'x', value: 104, kind: 'layer-edge' },
-      { axis: 'x', value: 96, kind: 'layer-edge' },
+      { axis: 'x', value: 104, kind: 'layer-edge', span: { min: 100, max: 130 } },
+      { axis: 'x', value: 96, kind: 'layer-edge', span: { min: 100, max: 130 } },
     ];
     expect(snap(moving, { x: 0, y: 0 }, candidates).delta.x).toBe(4);
     expect(snap(moving, { x: 0, y: 0 }, [...candidates].reverse()).delta.x).toBe(-4);
@@ -138,7 +143,7 @@ describe('resolveSnap — threshold is a screen radius', () => {
   const moving = box(100, 100, 160, 130);
   // A candidate 20 world units from the moving left edge.
   const candidates: SnapLine[] = [
-    { axis: 'x', value: 80, kind: 'layer-edge' },
+    { axis: 'x', value: 80, kind: 'layer-edge', span: { min: 100, max: 130 } },
   ];
   const thresholdWorldAt = (zoom: number) => SNAP_THRESHOLD_SCREEN_PX / (zoom * 1);
 
@@ -158,14 +163,15 @@ describe('collectLayerSnapCandidates', () => {
   it('offers edges and centre of another layer, measured in world space', () => {
     const parts = [rect('a', 0), rect('b', 400)];
     const lines = collectLayerSnapCandidates({ parts, movingIds: ['a'], worldOf: worldAt(parts), isVisible: visible });
-    // Layer b is at x = 400 with the shape box −60…60 → 340…460, centre 400.
+    // Layer b is at x = 400 with the shape box −60…60 → 340…460, centre 400. Each
+    // line carries the band ITS box covers on the opposite axis (−30…30 both ways).
     expect(lines).toEqual([
-      { axis: 'x', value: 340, kind: 'layer-edge' },
-      { axis: 'x', value: 400, kind: 'layer-center' },
-      { axis: 'x', value: 460, kind: 'layer-edge' },
-      { axis: 'y', value: -30, kind: 'layer-edge' },
-      { axis: 'y', value: 0, kind: 'layer-center' },
-      { axis: 'y', value: 30, kind: 'layer-edge' },
+      { axis: 'x', value: 340, kind: 'layer-edge', span: { min: -30, max: 30 } },
+      { axis: 'x', value: 400, kind: 'layer-center', span: { min: -30, max: 30 } },
+      { axis: 'x', value: 460, kind: 'layer-edge', span: { min: -30, max: 30 } },
+      { axis: 'y', value: -30, kind: 'layer-edge', span: { min: 340, max: 460 } },
+      { axis: 'y', value: 0, kind: 'layer-center', span: { min: 340, max: 460 } },
+      { axis: 'y', value: 30, kind: 'layer-edge', span: { min: 340, max: 460 } },
     ]);
   });
 
@@ -174,8 +180,8 @@ describe('collectLayerSnapCandidates', () => {
     const parts = [rect('a', 0), tilted];
     const lines = collectLayerSnapCandidates({ parts, movingIds: ['a'], worldOf: worldAt(parts), isVisible: visible });
     // 120×60 turned 90° is a 60-wide box: 370…430.
-    expect(lines[0]).toEqual({ axis: 'x', value: 370, kind: 'layer-edge' });
-    expect(lines[2]).toEqual({ axis: 'x', value: 430, kind: 'layer-edge' });
+    expect(lines[0]).toEqual({ axis: 'x', value: 370, kind: 'layer-edge', span: { min: -60, max: 60 } });
+    expect(lines[2]).toEqual({ axis: 'x', value: 430, kind: 'layer-edge', span: { min: -60, max: 60 } });
   });
 
   it('represents a group by its aggregate box and hides its children', () => {
@@ -216,5 +222,68 @@ describe('collectLayerSnapCandidates', () => {
     expect(snap(moving, { x: 396, y: 0 }, candidates).delta).toEqual({ x: 400, y: 0 });
     // Horizontally: the moving centre Y onto the other centre Y (0).
     expect(snap(moving, { x: 0, y: 5 }, candidates).delta).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('guide extents', () => {
+  // The moving layer is the 120×60 shape box at the origin (−60…60 × −30…30).
+  // The other layer is 200 wide (scaleX 5/3) and twice as tall (scaleY 2) at
+  // (500, 100): its box is 400…600 × 40…160. Its height differs from the moving
+  // box's, so an edge lock and a centre lock never coincide.
+  const parts = [rect('a', 0), rect('b', 500, 100, {
+    baseTransform: { x: 500, y: 100, rotation: 0, scaleX: 5 / 3, scaleY: 2, opacity: 1 },
+  })];
+  const candidates = collectLayerSnapCandidates({
+    parts,
+    movingIds: ['a'],
+    worldOf: worldAt(parts),
+    isVisible: () => true,
+  });
+  const moving = getLayerWorldBounds(parts, 'a', worldAt(parts))!;
+
+  it('bridges the moving box and the matched box, and stops at both', () => {
+    // The moving left edge, 2 units short of 400, lands on the other layer's LEFT
+    // edge: delta 460. The band runs from the moving box's top (−30) to the matched
+    // box's bottom (160) — the relation, not the canvas.
+    const horizontally = snap(moving, { x: 458, y: 0 }, candidates);
+    expect(horizontally.delta).toEqual({ x: 460, y: 0 });
+    expect(horizontally.guides).toEqual([
+      { axis: 'x', value: 400, kind: 'layer-edge', extent: { min: -30, max: 160 } },
+    ]);
+
+    // The same rule on the other axis: the moving box's own band (−60…60) widened
+    // to the matched box's band (400…600).
+    const vertically = snap(moving, { x: 0, y: 103 }, candidates);
+    expect(vertically.delta).toEqual({ x: 0, y: 100 });
+    expect(vertically.guides).toEqual([
+      { axis: 'y', value: 100, kind: 'layer-center', extent: { min: -60, max: 600 } },
+    ]);
+  });
+
+  it('measures the band from the box the snap COMMITS, not from the pointer delta', () => {
+    // A 300-tall moving box (−150…150) whose centre line is 8 units from the
+    // target's, so BOTH axes snap on one move: X by +2 onto 400, Y by +8. The X
+    // guide's band has to cover the moving box where it is DRAWN (−142…158), not
+    // where the raw pointer delta would have put it (−150…150).
+    const parts2 = [
+      rect('a2', 0, 0, { baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 5, opacity: 1 } }),
+      rect('b2', 400, 158, {
+        baseTransform: { x: 400, y: 158, rotation: 0, scaleX: 5 / 3, scaleY: 1, opacity: 1 },
+      }),
+    ];
+    const candidates2 = collectLayerSnapCandidates({
+      parts: parts2,
+      movingIds: ['a2'],
+      worldOf: worldAt(parts2),
+      isVisible: () => true,
+    });
+    const moving2 = getLayerWorldBounds(parts2, 'a2', worldAt(parts2))!;
+
+    const result = snap(moving2, { x: 402, y: 0 }, candidates2);
+    expect(result.delta).toEqual({ x: 400, y: 8 });
+    expect(result.guides).toEqual([
+      { axis: 'x', value: 400, kind: 'layer-center', extent: { min: -142, max: 188 } },
+      { axis: 'y', value: 158, kind: 'layer-center', extent: { min: 300, max: 500 } },
+    ]);
   });
 });

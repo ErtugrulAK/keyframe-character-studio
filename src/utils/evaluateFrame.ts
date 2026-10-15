@@ -24,6 +24,7 @@ import type {
   LayerContent,
 } from '../types/composition';
 import { evaluateTransform } from './evaluateTransform';
+import { affineOfTransform, composeAffine, withWorldAffine } from './containerMath';
 import { computeProceduralDelta } from './proceduralAnimation';
 import { evaluateLayerMasks } from './evaluateLayerMasks';
 import { evaluateTrimPath } from './trimPath';
@@ -88,6 +89,18 @@ export function evaluateFrame(
     const finalSX = c.world.scaleX * d.scaleX;
     const finalSY = c.world.scaleY * d.scaleY;
 
+    // The procedural delta is a world-space layer pose applied ON TOP of the
+    // evaluated world pose: translation adds, rotation rotates the map and scale
+    // multiplies its columns. Applied to the derived affine too, so a layer
+    // whose nesting is sheared (a rotated child of an anisotropically scaled
+    // container) keeps the exact procedural result instead of the TRS reading
+    // that cannot express it.
+    const worldAffine = c.world.affine ?? affineOfTransform(c.world);
+    const mergedTransform = withWorldAffine(
+      { x: finalX, y: finalY, rotation: finalRot, scaleX: finalSX, scaleY: finalSY },
+      composeAffine(affineOfTransform(d), worldAffine),
+    );
+
     // Opacity: keyframe-evaluated (world.opacity) × procedural multiplier
     const finalOpacity = Math.max(0, Math.min(1, c.world.opacity * d.opacityMul));
     const visible = finalOpacity > 0.001;
@@ -101,11 +114,7 @@ export function evaluateFrame(
       id: layer.id,
       type: layer.type,
       transform: {
-        x: finalX,
-        y: finalY,
-        rotation: finalRot,
-        scaleX: finalSX,
-        scaleY: finalSY,
+        ...mergedTransform,
         opacity: finalOpacity,
       },
       opacity: finalOpacity,

@@ -1,4 +1,4 @@
-import type { Track, TrackChannel, AnimationChannel, LayerMaskChannel, LayerMaskPathChannel, EasingType, PropertyKeyframe, PathKeyframe, BezierPath } from '../types/animator';
+import type { Track, TrackChannel, AnimationChannel, LayerMaskChannel, LayerMaskPathChannel, EasingType, PropertyKeyframe, PathKeyframe, BezierPath, Transform } from '../types/animator';
 import { TRACK_CHANNELS } from '../types/animator';
 import { generateId } from './idGenerator';
 import { ANIMATABLE_CHANNELS, DISPLAY_CHANNELS, TRIM_PATH_CHANNELS } from './channelKeyframeGroups';
@@ -21,21 +21,28 @@ import { makeEmptyChannels } from './defaults';
  * easing, bezier points and sequence scope, and the now-redundant composite list
  * is dropped. The authored animation is then a single store — `channels` — and
  * no read path can hide a frame the evaluator uses.
+ *
+ * `basePose` is the layer's own authored pose (`authoredBasePose`), the proof
+ * `fillChannelsFromLegacyKeyframes` needs to tell a composite property that
+ * animates (or holds a pose the layer does not own) from one that only
+ * re-states the layer's own pose at every sample. A property it drops is
+ * resolved from that very pose afterwards (`evalComposite([], base) === base`),
+ * so the migration is pose-exact.
  */
-export const migrateLegacyKeyframesToCanonical = (track: Track): Track => {
+export const migrateLegacyKeyframesToCanonical = (track: Track, basePose?: Partial<Transform>): Track => {
   if (!track.keyframes || track.keyframes.length === 0) return track;
   return {
     ...track,
-    channels: fillChannelsFromLegacyKeyframes(track.channels, track.keyframes),
+    channels: fillChannelsFromLegacyKeyframes(track.channels, track.keyframes, basePose),
     keyframes: [],
   };
 };
 
 /** Migrate one track of a document; identical array when there is nothing to move. */
-export const migrateTrackLegacyKeyframes = (tracks: Track[], trackId: string): Track[] => {
+export const migrateTrackLegacyKeyframes = (tracks: Track[], trackId: string, basePose?: Partial<Transform>): Track[] => {
   const index = tracks.findIndex((track) => track.id === trackId);
   if (index < 0) return tracks;
-  const migrated = migrateLegacyKeyframesToCanonical(tracks[index]);
+  const migrated = migrateLegacyKeyframesToCanonical(tracks[index], basePose);
   if (migrated === tracks[index]) return tracks;
   const next = [...tracks];
   next[index] = migrated;
@@ -145,10 +152,11 @@ export const addTransformKeyframeGroupMutator = (
   templateId: string,
   values: Partial<Record<TrackChannel, number>>,
   easing: EasingType,
+  basePose?: Partial<Transform>,
 ): Track[] => {
   return tracks.map((t) => {
     if (t.id !== trackId) return t;
-    const migrated = migrateLegacyKeyframesToCanonical(t);
+    const migrated = migrateLegacyKeyframesToCanonical(t, basePose);
     const channels = { ...(migrated.channels ?? makeEmptyChannels()) };
     for (const channel of [...DISPLAY_CHANNELS, ...TRIM_PATH_CHANNELS]) {
       const value = values[channel];
@@ -683,17 +691,19 @@ export const applyTransitionChannelsMutator = (
 // populated keyframes[]). Existing legacy keyframes are converted into the
 // canonical channels first (so the old animation survives), then the
 // transition is applied on channels. The legacy keyframes[] array is left
-// untouched for import compatibility.
+// untouched for import compatibility. `basePose` is the layer's own authored
+// pose, used exactly as in `migrateLegacyKeyframesToCanonical`.
 export const applyTransitionToTrackCanonicalMutator = (
   tracks: Track[],
   trackId: string,
   transition: TransitionChannelResult | null,
-  activeTemplateId: string
+  activeTemplateId: string,
+  basePose?: Partial<Transform>,
 ): Track[] => {
   return tracks.map((t) => {
     if (t.id !== trackId) return t;
 
-    const converted = convertLegacyKeyframesToChannels(t.keyframes || []);
+    const converted = convertLegacyKeyframesToChannels(t.keyframes || [], basePose);
     const channels = { ...t.channels };
     for (const ch of TRACK_CHANNELS) {
       channels[ch] = [...(channels[ch] || []), ...converted[ch]].sort((a, b) => a.frame - b.frame);

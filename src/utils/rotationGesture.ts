@@ -1,5 +1,6 @@
 import type { Transform } from '../types/animator';
 import type { PartLocalBounds } from './bounds';
+import { applyAffine, worldAffineOf, type WorldAffine } from './containerMath';
 
 /** A point in the stage's world space (the space authored transforms live in). */
 export interface WorldPoint {
@@ -10,22 +11,16 @@ export interface WorldPoint {
 /**
  * The world point the selection frame's centre sits on.
  *
- * The gizmo draws the frame as `translate(origin) rotate(rotation)` around a box
- * centred at `offset * scale` in the layer's own scaled units, so the drawn
- * centre is the transform origin plus that offset rotated — which is also
- * exactly what a rotation gesture has to pivot around to look right.
+ * The frame is drawn around the layer's local geometry, so its centre is the
+ * local box centre mapped by the layer's world map — read through
+ * `worldAffineOf`, so a frame whose map a TRS cannot express (a rotated child of
+ * an anisotropically scaled container) reports the centre of the parallelogram
+ * that is actually drawn, not of a re-scaled box.
  */
-export const selectionFrameCenterWorld = (transform: Transform, bounds: PartLocalBounds): WorldPoint => {
-  const radians = (transform.rotation * Math.PI) / 180;
-  const cos = Math.cos(radians);
-  const sin = Math.sin(radians);
-  const offsetX = bounds.offsetX * transform.scaleX;
-  const offsetY = bounds.offsetY * transform.scaleY;
-  return {
-    x: transform.x + offsetX * cos - offsetY * sin,
-    y: transform.y + offsetX * sin + offsetY * cos,
-  };
-};
+export const selectionFrameCenterWorld = (
+  transform: Transform & { affine?: WorldAffine },
+  bounds: PartLocalBounds,
+): WorldPoint => applyAffine(worldAffineOf(transform), { x: bounds.offsetX, y: bounds.offsetY });
 
 export interface PivotRotationInput {
   /** The layer's world transform, captured at pointerdown. */
@@ -48,6 +43,14 @@ export interface PivotRotationInput {
  *
  * `offset` comes from the transform captured at pointerdown, never from the
  * rotating bounds, so the pivot cannot drift while the gesture runs.
+ *
+ * AUDIT (the world-affine contract): this is NOT a hand-rolled
+ * `R(rotation)·(local ⊙ scale)` map, so there is no world map here to route
+ * through `worldAffineOf`. The layer's own scale cancels — scaling happens about
+ * the layer's own origin, so turning about a fixed world pivot only moves that
+ * origin, and the origin's orbit about the pivot has radius `|offset|` whatever
+ * the scale is. `selectionFrameCenterWorld` is the file's only local → world
+ * map, and it goes through `worldAffineOf`.
  */
 export const rotateAboutWorldPivot = ({ transform, pivot, rotation }: PivotRotationInput): { x: number; y: number; rotation: number } => {
   const startRadians = (transform.rotation * Math.PI) / 180;

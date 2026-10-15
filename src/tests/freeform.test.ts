@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import type { CharacterPart, Transform } from '../types/animator';
+import { affineOfTransform, composeAffine } from '../utils/containerMath';
+import { evaluateTransform } from '../utils/evaluateTransform';
 import {
   buildFreeformPath,
   freeformVertexToDisplay,
@@ -13,6 +16,13 @@ import {
   normalizeClosedPoints,
   MIN_FREEFORM_POINTS,
 } from '../utils/freeform';
+
+/** A 90°-rotated child inside a container with scaleX 2 — the sheared nesting. */
+const STRETCHED_CONTAINER: Transform = { x: 40, y: 0, rotation: 0, scaleX: 2, scaleY: 1, opacity: 1 };
+const ROTATED_CHILD: Transform = { x: -100, y: 0, rotation: 90, scaleX: 1, scaleY: 1, opacity: 1 };
+const SHEARED_WORLD_AFFINE = composeAffine(affineOfTransform(STRETCHED_CONTAINER), affineOfTransform(ROTATED_CHILD));
+/** The same map as the evaluator's world transform: `(x, y) -> (−2y − 160, x)`. */
+const SHEARED_WORLD = { x: -160, y: 0, rotation: 90, scaleX: 2, scaleY: 1, affine: SHEARED_WORLD_AFFINE };
 
 describe('freeform utils', () => {
   describe('buildFreeformPath', () => {
@@ -207,20 +217,84 @@ describe('freeform utils', () => {
       expect(back.x).toBeCloseTo(local.x, 5);
       expect(back.y).toBeCloseTo(local.y, 5);
     });
+
+    it('follows the DERIVED affine of a sheared nesting (display fields match the drawn vertex)', () => {
+      // The exact map is `(x, y) -> (−2y − 160, x)`, so the display (Y-up)
+      // reading is `(−2y − 160, −x)`.
+      //
+      // Failing-before (hand-rolled TRS display map): local (1, 0) read
+      // (−160, −2) — the container's stretch folded into the child's own Y axis
+      // — and local (0, 1) read (−161, 0) instead of (−162, 0).
+      expect(freeformVertexToDisplay({ x: 1, y: 0 }, SHEARED_WORLD)).toEqual({ x: -160, y: -1 });
+      expect(freeformVertexToDisplay({ x: 0, y: 1 }, SHEARED_WORLD).x).toBeCloseTo(-162, 9);
+      expect(freeformVertexToDisplay({ x: 0, y: 1 }, SHEARED_WORLD).y).toBeCloseTo(0, 9);
+    });
+
+    it('inverts the sheared display map exactly', () => {
+      // Only the exact affine inverse puts the edit back on the drawn vertex.
+      // Failing-before (TRS inverse of the same world transform): the typed
+      // display point (−162, 0) became local (0, 2), not (0, 1).
+      const local = freeformVertexToLocal(-162, 0, SHEARED_WORLD);
+      expect(local.x).toBeCloseTo(0, 9);
+      expect(local.y).toBeCloseTo(1, 9);
+      expect(local.y).not.toBeCloseTo(2, 3);
+      // Round trip: display -> local -> display is identity.
+      const back = freeformVertexToDisplay(local, SHEARED_WORLD);
+      expect(back.x).toBeCloseTo(-162, 9);
+      expect(back.y).toBeCloseTo(0, 9);
+    });
+  });
+
+  describe('the evaluated world map of a sheared layer', () => {
+    const TRS = (over: Partial<Transform> = {}): Transform => ({
+      x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, ...over,
+    });
+    const scene: CharacterPart[] = [
+      {
+        id: 'g', name: 'g', type: 'custom_freeform', zIndex: 0, isGroup: true, points: [],
+        baseTransform: TRS({ x: 40, scaleX: 2 }),
+      } as unknown as CharacterPart,
+      {
+        id: 'free', name: 'free', type: 'custom_freeform', zIndex: 1, parentId: 'g',
+        baseTransform: TRS({ x: -100, rotation: 90 }),
+        path: {
+          version: 1 as const, coordinateSpace: 'local' as const, closed: true,
+          points: [{ id: 'p0', x: 1, y: 0 }, { id: 'p1', x: 0, y: 1 }, { id: 'p2', x: -1, y: 0 }],
+        },
+      } as unknown as CharacterPart,
+    ];
+
+    it('reads the derived affine the evaluator attached, not the folded TRS', () => {
+      const world = evaluateTransform(scene, [], 'Sequence', 'free', 0);
+      expect(world.affine).toBeDefined();
+
+      // Local +x -> world +y one unit long, riding on the layer's world position
+      // (e = −160); local +y -> world −x two units long.
+      const right = getFreeformVertexWorldPositions([{ x: 1, y: 0 }], world, { x: 0, y: 0 })[0];
+      expect(right.x).toBeCloseTo(-160, 9);
+      expect(right.y).toBeCloseTo(1, 9);
+      const up = getFreeformVertexWorldPositions([{ x: 0, y: 1 }], world, { x: 0, y: 0 })[0];
+      expect(up.x).toBeCloseTo(-162, 9);
+      expect(up.y).toBeCloseTo(0, 9);
+      // The folded reading a TRS would draw: +x at (−160, 2), +y at (−161, 0).
+      expect(right.y).not.toBeCloseTo(2, 3);
+      expect(up.x).not.toBeCloseTo(-161, 3);
+      // The Inspector's vertex fields read the same map.
+      expect(freeformVertexToDisplay({ x: 1, y: 0 }, world)).toEqual({ x: -160, y: -1 });
+    });
   });
 
   describe('getFreeformVertexWorldPositions', () => {
+    const ORIGIN = { x: 0, y: 0 };
+
     it('maps local points through scale and translation (no rotation)', () => {
       const world = getFreeformVertexWorldPositions(
         [
           { x: -10, y: -10 },
           { x: 10, y: 10 },
         ],
-        100,
-        200,
-        2,
-        2,
-        0
+        { x: 100, y: 200, scaleX: 2, scaleY: 2, rotation: 0 },
+        ORIGIN,
       );
       expect(world).toEqual([
         { x: 80, y: 180 },
@@ -229,14 +303,55 @@ describe('freeform utils', () => {
     });
 
     it('applies rotation after scaling (SVG order)', () => {
-      const world = getFreeformVertexWorldPositions([{ x: 10, y: 0 }], 0, 0, 1, 1, 90);
+      const world = getFreeformVertexWorldPositions(
+        [{ x: 10, y: 0 }],
+        { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 90 },
+        ORIGIN,
+      );
       // (10, 0) rotated 90° -> (0, 10)
       expect(world[0].x).toBeCloseTo(0, 5);
       expect(world[0].y).toBeCloseTo(10, 5);
     });
 
+    it('folds the output origin in on top of the world position', () => {
+      const world = getFreeformVertexWorldPositions(
+        [{ x: 1, y: -2 }],
+        { x: 10, y: 20, scaleX: 1, scaleY: 1, rotation: 0 },
+        { x: 300, y: 240 },
+      );
+      expect(world).toEqual([{ x: 311, y: 258 }]);
+    });
+
+    it('maps through the DERIVED affine of a sheared nesting, not the authored TRS', () => {
+      // A 90°-rotated child inside a container with scaleX 2: the exact nesting
+      // is `scale(2,1)·rotate(90)`, so local +x reaches world +y one unit long
+      // while local +y reaches world −x TWO units long.
+      //
+      // Failing-before (hand-rolled `R(90)·(local ⊙ (2,1))`): local +x reached
+      // (0, 2) — world +y scaled by 2 — and local +y reached (−1, 0).
+      const affine = composeAffine(
+        affineOfTransform({ x: 40, y: 0, rotation: 0, scaleX: 2, scaleY: 1 }),
+        affineOfTransform({ x: -100, y: 0, rotation: 90, scaleX: 1, scaleY: 1 }),
+      );
+      const world = getFreeformVertexWorldPositions(
+        [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: 0 }],
+        { x: -160, y: 0, scaleX: 2, scaleY: 1, rotation: 90, affine },
+        ORIGIN,
+      );
+      // Exact map: (x, y) -> (−2y − 160, x); the layer's world position is the
+      // map origin, so local (0,0) lands on (−160, 0).
+      expect(world[0].x).toBeCloseTo(-160, 9);
+      expect(world[0].y).toBeCloseTo(1, 9);
+      expect(world[1].x).toBeCloseTo(-162, 9);
+      expect(world[1].y).toBeCloseTo(0, 9);
+      expect(world[2]).toEqual({ x: -160, y: 0 });
+      // The bug's own spelling, never the drawn position:
+      expect(world[0].y).not.toBeCloseTo(2, 3);
+      expect(world[1].x).not.toBeCloseTo(-161, 3);
+    });
+
     it('returns empty array for no points', () => {
-      expect(getFreeformVertexWorldPositions([], 0, 0, 1, 1, 0)).toEqual([]);
+      expect(getFreeformVertexWorldPositions([], { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, ORIGIN)).toEqual([]);
     });
   });
 });

@@ -6,7 +6,7 @@
  * component.
  */
 
-import type { AnimationChannel, LayerMaskChannel, PropertyKeyframe, Track, TrackChannel } from '../types/animator';
+import type { AnimationChannel, LayerMaskChannel, PropertyKeyframe, Track, TrackChannel, Transform } from '../types/animator';
 import { TRACK_CHANNELS } from '../types/animator';
 import { resolveTrackChannels } from './channelKeyframeGroups';
 
@@ -109,7 +109,10 @@ export const TIMELINE_CHANNEL_ORDER: TrackChannel[] = ['x', 'y', 'rotation', 'sc
  * the legacy composite list the projection also carries) resolve to a single
  * playhead position.
  */
-const templateKeyframeFrames = (keyframes: PropertyKeyframe[], activeTemplateId: string): number[] => {
+const templateKeyframeFrames = (
+  keyframes: Array<{ frame: number; templateId?: string }>,
+  activeTemplateId: string,
+): number[] => {
   const frames = new Set<number>();
   keyframes.forEach((keyframe) => {
     if ((keyframe.templateId || 'Sequence') === activeTemplateId) frames.add(keyframe.frame);
@@ -122,29 +125,55 @@ const templateKeyframeFrames = (keyframes: PropertyKeyframe[], activeTemplateId:
  * `resolveLayerKeyframeFrames`, applied to the same projection, so the
  * property-level navigation can never reach a frame the property does not
  * animate. A channel the projection does not carry has no frames at all.
+ *
+ * `basePose` is the layer's own authored pose; it decides which legacy
+ * composite properties the projection may materialize (see
+ * `resolveTrackChannels`), so the property arrows and the property lane agree.
  */
 export function resolveChannelKeyframeFrames(
   track: Track,
   channel: TrackChannel,
   activeTemplateId: string,
+  basePose?: Partial<Transform>,
 ): number[] {
-  return templateKeyframeFrames(resolveTrackChannels(track)[channel] ?? [], activeTemplateId);
+  return templateKeyframeFrames(resolveTrackChannels(track, basePose)[channel] ?? [], activeTemplateId);
 }
 
 /**
  * R3-07 — the frames a layer's animation occupies in one template, ascending
  * and deduplicated.
  *
- * The read is `resolveTrackChannels`, the ONE projection behind the aggregate
- * layer row and the channel lanes, so a frame the user can SEE on the layer is
- * always a frame the navigation can reach — and a frame no surface shows (a
- * legacy composite key the evaluator no longer reads) is never a target.
+ * The read is exactly what the aggregate layer row DRAWS, so a frame the user
+ * can see on the layer is always a frame the navigation can reach, and a frame
+ * no surface shows is never a target:
+ *   - a track with canonical channel data draws its channel frame groups
+ *     (`resolveTrackChannels`, the projection behind both rows) — a legacy
+ *     composite the channel scope already covers is resolved by it;
+ *   - a track without canonical channel data draws its legacy composite
+ *     diamonds themselves, so those frames are the layer's frames even when the
+ *     composite list holds no motion for any single property (`TrackLane`
+ *     renders the legacy list directly for those tracks).
  */
-export function resolveLayerKeyframeFrames(track: Track, activeTemplateId: string): number[] {
+export function resolveLayerKeyframeFrames(
+  track: Track,
+  activeTemplateId: string,
+  basePose?: Partial<Transform>,
+): number[] {
   const frames = new Set<number>();
-  Object.values(resolveTrackChannels(track)).forEach((keyframes) => {
-    templateKeyframeFrames(keyframes, activeTemplateId).forEach((frame) => frames.add(frame));
-  });
+  if (hasChannelDataForTemplate(track, activeTemplateId)) {
+    Object.values(resolveTrackChannels(track, basePose)).forEach((keyframes) => {
+      templateKeyframeFrames(keyframes, activeTemplateId).forEach((frame) => frames.add(frame));
+    });
+    return [...frames].sort((a, b) => a - b);
+  }
+  // No canonical channel data → the layer row draws the legacy composite
+  // diamonds and the V6 mask keyframes themselves.
+  const drawnKeyframes = [
+    ...(track.keyframes ?? []),
+    ...Object.values(track.maskChannels ?? {}).flat(),
+    ...Object.values(track.maskPathChannels ?? {}).flat(),
+  ];
+  templateKeyframeFrames(drawnKeyframes, activeTemplateId).forEach((frame) => frames.add(frame));
   return [...frames].sort((a, b) => a - b);
 }
 

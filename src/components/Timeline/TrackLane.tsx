@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { Track, TrackChannel, AnimationChannel, LayerMaskChannel, LayerMaskPathChannel, PropertyKeyframe, PathKeyframe } from '../../types/animator';
+import type { Track, TrackChannel, AnimationChannel, LayerMaskChannel, LayerMaskPathChannel, PropertyKeyframe, PathKeyframe, Transform } from '../../types/animator';
 import type { KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, KEYFRAME_DRAG_THRESHOLD_PX, KEYFRAME_GLYPH_GAP_PX, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/channelKeyframeGroups';
@@ -7,6 +7,13 @@ import { hasChannelDataForTemplate, resolveConnectorSegments } from '../../utils
 
 interface TrackLaneProps {
   track: Track;
+  /**
+   * The layer's own authored pose (`authoredBasePose`). The lane projection uses
+   * it to tell a legacy composite property that animates (or holds a pose the
+   * layer does not own) from one that only re-states the layer's pose, so a
+   * property row can never show keys for a property the composite never moves.
+   */
+  basePose?: Partial<Transform>;
   isSelected: boolean;
   /** Every selected keyframe id (the store's canonical selection). */
   selectedKeyframeIds: string[];
@@ -116,6 +123,7 @@ const diamondKeyboardProps = (
 
 export const TrackLane: React.FC<TrackLaneProps> = ({
   track,
+  basePose,
   isSelected,
   selectedKeyframeIds,
   frameWidth,
@@ -199,7 +207,7 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
   // M6/R3-10: ONE read truth. The layer row and the channel lanes are both
   // projections of the keyframes the evaluator resolves (`resolveTrackChannels`),
   // so no store — canonical or legacy — can show on one row and hide on another.
-  const resolvedChannels = resolveTrackChannels(track);
+  const resolvedChannels = resolveTrackChannels(track, basePose);
   const useCanonical = hasChannelDataForTemplate(track, activeTmpl);
   const groups = groupChannelKeyframesByFrame(resolvedChannels, activeTmpl);
   const activeKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);

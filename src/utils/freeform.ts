@@ -1,10 +1,28 @@
 import type { BezierPath, FreeformPoint } from '../types/animator';
 import { buildBezierPathD, createBezierPath, legacyFreeformPointsToPath } from './bezierPath';
+import { applyAffine, invertAffine, worldAffineOf, type WorldAffine } from './containerMath';
 
 /**
  * Pure helpers for the freeform drawing feature.
  * Free of React dependencies and independently testable.
  */
+
+/**
+ * A freeform layer's WORLD transform: the authored TRS reading plus the DERIVED
+ * exact map the evaluator attaches when the nesting is not expressible as those
+ * numbers (a rotated child of an anisotropically scaled container is SHEARED).
+ * The overlay and the Inspector hand this helper the evaluated world transform,
+ * so every world-facing map below reads the affine through `worldAffineOf` — a
+ * plain `Transform` keeps its historical numbers because the field is optional.
+ */
+type WorldTransformInput = {
+  x: number;
+  y: number;
+  scaleX: number;
+  scaleY: number;
+  rotation: number;
+  affine?: WorldAffine;
+};
 
 /** The path a freeform layer actually renders: the canonical path when it exists,
  *  otherwise the legacy points normalized and converted to a local closed path
@@ -17,41 +35,40 @@ export const MIN_FREEFORM_POINTS = 3;
 /**
  * Convert a local vertex point into canvas-center-relative display
  * coordinates (Y-up), matching the POS X / POS Y fields in the inspector.
- * Applies the part's scale and rotation (same math as the SVG renderer:
- * translate -> rotate -> scale).
+ * Applies the layer's WORLD transform, so the position goes through its exact
+ * affine (`worldAffineOf`) — the same map the shape renderer draws with — and
+ * the display Y axis is flipped. Hand-rolling `translate + R(rotation)·(local ⊙ scale)`
+ * dropped the shear of a rotated child inside an anisotropically scaled
+ * container, which put the field (and the numbered marker) off the drawn vertex.
  */
 export const freeformVertexToDisplay = (
   p: FreeformPoint,
-  transform: { x: number; y: number; scaleX: number; scaleY: number; rotation: number }
+  transform: WorldTransformInput
 ): { x: number; y: number } => {
-  const { x: tx, y: ty, scaleX, scaleY, rotation } = transform;
-  const rad = (rotation * Math.PI) / 180;
-  const cosR = Math.cos(rad);
-  const sinR = Math.sin(rad);
-  // Sign-preserving epsilon: Math.max would collapse negative scales to 0.001,
-  // breaking mirrored copies (scaleX = -1). Keep the sign; only guard against
-  // an exact zero (used by the inverse division).
-  const sx = scaleX !== 0 ? scaleX : 0.001;
-  const sy = scaleY !== 0 ? scaleY : 0.001;
-  const dx = p.x * sx * cosR - p.y * sy * sinR;
-  const dy = p.x * sx * sinR + p.y * sy * cosR;
-  return { x: tx + dx, y: -(ty + dy) };
+  const mapped = applyAffine(worldAffineOf(transform), p);
+  return { x: mapped.x, y: -mapped.y };
 };
 
 /**
  * Inverse of freeformVertexToDisplay: display coords (canvas-center-relative,
  * Y-up) -> local point (center-relative, Y-down) that the renderer consumes.
+ * The display map crosses the world affine, so only its EXACT inverse puts the
+ * edited vertex where the typed coordinate says it is.
  */
 export const freeformVertexToLocal = (
   dispX: number,
   dispY: number,
-  transform: { x: number; y: number; scaleX: number; scaleY: number; rotation: number }
+  transform: WorldTransformInput
 ): FreeformPoint => {
+  const inverse = invertAffine(worldAffineOf(transform));
+  if (inverse) return applyAffine(inverse, { x: dispX, y: -dispY });
+  // Collapsed map (det ≈ 0): there is no inverse, so the historical reading is
+  // kept verbatim — the sign-preserving epsilon below only guards the division
+  // of such a degenerate (invisible) layer against a zero scale.
   const { x: tx, y: ty, scaleX, scaleY, rotation } = transform;
   const rad = (rotation * Math.PI) / 180;
   const cosR = Math.cos(rad);
   const sinR = Math.sin(rad);
-  // Sign-preserving epsilon (see freeformVertexToDisplay)
   const sx = scaleX !== 0 ? scaleX : 0.001;
   const sy = scaleY !== 0 ? scaleY : 0.001;
   const dx = dispX - tx;
@@ -179,27 +196,23 @@ export interface FreeformVertexWorld {
 }
 
 /**
- * Map center-relative local points to their world (stage) positions, applying
- * the same transform the shape renderer uses: translate -> rotate -> scale.
- * Used to draw numbered markers at the visible vertices on the canvas.
+ * Map center-relative LOCAL points to their world (stage) positions.
+ *
+ * The layer is drawn with its exact world affine, so the markers go through
+ * `applyAffine(worldAffineOf(world), point)` with the stage origin folded in —
+ * never `origin + R(rotation)·(local ⊙ scale)`, which drew the markers of a
+ * rotated child inside an anisotropically scaled container off the shape (the
+ * drawn vertices are SHEARED there). `origin` is the output/stage origin the
+ * caller also folds into the rendered transform.
  */
 export const getFreeformVertexWorldPositions = (
   points: FreeformPoint[],
-  centerX: number,
-  centerY: number,
-  scaleX: number,
-  scaleY: number,
-  rotationDeg: number
+  world: WorldTransformInput,
+  origin: { x: number; y: number }
 ): FreeformVertexWorld[] => {
-  const rad = (rotationDeg * Math.PI) / 180;
-  const cosR = Math.cos(rad);
-  const sinR = Math.sin(rad);
+  const map = worldAffineOf(world);
   return (points || []).map((p) => {
-    const lx = p.x * scaleX;
-    const ly = p.y * scaleY;
-    return {
-      x: centerX + lx * cosR - ly * sinR,
-      y: centerY + lx * sinR + ly * cosR,
-    };
+    const mapped = applyAffine(map, p);
+    return { x: origin.x + mapped.x, y: origin.y + mapped.y };
   });
 };

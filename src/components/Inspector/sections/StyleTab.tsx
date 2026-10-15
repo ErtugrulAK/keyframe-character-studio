@@ -1,5 +1,5 @@
 import React from 'react';
-import type { BezierPath, CharacterPart, LayerMaskChannelProperty, Transform } from '../../../types/animator';
+import type { BezierPath, CharacterPart, Transform } from '../../../types/animator';
 import { StyleColorSection } from './style/StyleColorSection';
 import { StyleAppearanceSection } from './style/StyleAppearanceSection';
 import { isShapeAppearanceEligible } from '../../../utils/shapeAppearance';
@@ -19,16 +19,10 @@ interface StyleTabProps {
   handlePartColorChange: (key: 'fillColor' | 'strokeColor', color: string) => void;
   transform?: Transform;
   coordinateSystem?: SceneCoordinateSystem;
-  currentFrame?: number;
-  onAddMaskKeyframe?: (maskId: string, property: LayerMaskChannelProperty, value: number) => void;
-  onAddMaskPathKeyframe?: (maskId: string, path: BezierPath) => void;
   onChangeMaskPath?: (maskId: string, path: BezierPath) => void;
   /** Evaluated Trim Path at the current frame; the fields must show what the stage draws. */
   evaluatedTrim?: { start: number; end: number; offset: number };
-  /** Which Trim Path channels carry a keyframe exactly at the current frame. */
-  trimKeyframedAtFrame?: Record<TrimPathChannel, boolean>;
   onUpdateTrimChannel?: (channel: TrimPathChannel, value: number) => void;
-  onToggleTrimKeyframe?: (channel: TrimPathChannel) => void;
   /** Opens/closes ONE undo entry around a completed color pointer gesture. */
   onColorInteractionStart?: () => void;
   onColorInteractionEnd?: () => void;
@@ -41,14 +35,9 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   handlePartColorChange,
   transform,
   coordinateSystem,
-  currentFrame,
-  onAddMaskKeyframe,
-  onAddMaskPathKeyframe,
   onChangeMaskPath,
   evaluatedTrim,
-  trimKeyframedAtFrame,
   onUpdateTrimChannel,
-  onToggleTrimKeyframe,
   onColorInteractionStart,
   onColorInteractionEnd,
 }) => {
@@ -64,9 +53,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
           selectedPart={selectedPart}
           onPartPropChange={handlePartPropChange}
           evaluatedTrim={evaluatedTrim}
-          keyframedAtFrame={trimKeyframedAtFrame}
           onUpdateTrimChannel={onUpdateTrimChannel}
-          onToggleTrimKeyframe={onToggleTrimKeyframe}
         />
       )}
       {isShapeAppearanceEligible(selectedPart.type) && (
@@ -102,9 +89,6 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         onPartPropChange={handlePartPropChange}
         onInteractionStart={onColorInteractionStart}
         onInteractionEnd={onColorInteractionEnd}
-        currentFrame={currentFrame}
-        onAddMaskKeyframe={onAddMaskKeyframe}
-        onAddMaskPathKeyframe={onAddMaskPathKeyframe}
         onChangeMaskPath={onChangeMaskPath}
       />
       <StyleClonerSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />

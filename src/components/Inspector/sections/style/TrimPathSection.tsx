@@ -17,23 +17,18 @@ interface TrimPathSectionProps {
    * frame and the property reads as a global edit.
    */
   evaluatedTrim?: { start: number; end: number; offset: number };
-  /** True when the channel carries a keyframe exactly at the current frame. */
-  keyframedAtFrame?: Record<TrimPathChannel, boolean>;
   /**
    * Canonical channel write: static field while the channel has no keyframes,
    * the current frame's keyframe once it has one. Never rewrites another frame.
    */
   onUpdateTrimChannel?: (channel: TrimPathChannel, value: number) => void;
-  onToggleTrimKeyframe?: (channel: TrimPathChannel) => void;
 }
 
 export const TrimPathSection: React.FC<TrimPathSectionProps> = ({
   selectedPart,
   onPartPropChange,
   evaluatedTrim,
-  keyframedAtFrame,
   onUpdateTrimChannel,
-  onToggleTrimKeyframe,
 }) => {
   // Without the channel callbacks the section keeps its original static
   // behaviour, so it stays usable on its own.
@@ -77,18 +72,6 @@ export const TrimPathSection: React.FC<TrimPathSectionProps> = ({
               precision={field.precision}
               onChange={(value) => write(field.channel, field.normalize ? field.normalize(value) : value)}
             />
-            {onToggleTrimKeyframe && (
-              <button
-                type="button"
-                className={`btn-secondary transform-compact-action transform-keyframe-action${keyframedAtFrame?.[field.channel] ? ' is-active' : ''}`}
-                aria-pressed={keyframedAtFrame?.[field.channel] === true}
-                aria-label={`${keyframedAtFrame?.[field.channel] ? 'Remove' : 'Add'} ${field.ariaLabel} Keyframe`}
-                title={keyframedAtFrame?.[field.channel] ? 'Remove the keyframe at this frame' : 'Add a keyframe at this frame'}
-                onClick={() => onToggleTrimKeyframe(field.channel)}
-              >
-                {keyframedAtFrame?.[field.channel] ? 'Remove Keyframe' : 'Add Keyframe'}
-              </button>
-            )}
           </div>
         ))}
       </div>

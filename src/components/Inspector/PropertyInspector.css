@@ -47,15 +47,11 @@
   visibility: hidden;
 }
 
-/* R3-02 / R4-01 / R5-01 — the inspector handle is anchored to the WORKSPACE ROW
-   (the same fixed inset below its top edge as the left one: symmetric handles, a
-   vertical position a timeline resize can never change or push onto the
-   timeline) and to the INSPECTOR'S OUTER BOUNDARY: its inner edge coincides with
-   the inspector's left edge, so it rides the panel boundary itself, fully on the
-   workspace side, and cannot cover the panel's own labels and rows. */
+/* Mirror the left handle: centre the hit target on the empty dock boundary,
+   without changing its workspace-row vertical anchor or overlay layer. */
 .app-container:not(.inspector-hidden) .inspector-dock-toggle {
   top: var(--kcs-panel-handle-top);
-  right: min(var(--right-inspector-width), max(250px, 34vw));
+  right: calc(min(var(--right-inspector-width), max(250px, 34vw)) - 10px);
 }
 
 .app-container.inspector-hidden .inspector-dock-toggle {

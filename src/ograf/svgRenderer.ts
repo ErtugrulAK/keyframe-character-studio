@@ -9,6 +9,7 @@ import { stackingOrder } from '../utils/stackingOrder';
 import { getShapeGeometry, polygonPointsToString } from '../utils/shapeGeometry';
 import { resolveShapeAppearance } from '../utils/shapeAppearance';
 import { getTrimPathDashProps, resolveTrimPath } from '../utils/trimPath';
+import { affineTrsReading, worldAffineOf } from '../utils/containerMath';
 import type { OGrafEvaluatedScene } from './evaluation';
 
 export interface OGrafSvgRenderOptions {
@@ -121,10 +122,31 @@ function renderTrim(content: LayerContent): SvgAttributes {
   return getTrimPathDashProps(trim) || {};
 }
 
+/**
+ * The world `transform` attribute of a layer, in this renderer's own
+ * space-separated spelling.
+ *
+ * The map is read through `worldAffineOf`, never re-derived from the TRS
+ * scalars: a rotated child of an anisotropically scaled container nests into a
+ * general 2×2 whose columns are not orthogonal, and folding the parent into the
+ * child's own axes (rotation adds, scales multiply) applies the parent's stretch
+ * along the CHILD's axis. That is why a 90°-rotated child of a horizontally
+ * stretched group used to stretch upward while the drawn group frame stretched
+ * sideways.
+ *
+ * `affineTrsReading` decides the spelling — the historical
+ * `translate ... rotate ... scale ...` form whenever it reproduces the map (so
+ * every existing layer, project and export stays byte-for-byte identical), the
+ * canonical rotate/scale reading when the affine is shear-free but its axes were
+ * swapped, and the exact `matrix(...)` only for a map that genuinely shears.
+ */
 function layerTransform(scene: OGrafEvaluatedScene, layer: EvaluatedLayer): string {
-  const centerX = scene.width / 2 + layer.transform.x;
-  const centerY = scene.height / 2 + layer.transform.y;
-  return `translate(${svgNumber(centerX)} ${svgNumber(centerY)}) rotate(${svgNumber(layer.transform.rotation)}) scale(${svgNumber(layer.transform.scaleX)} ${svgNumber(layer.transform.scaleY)})`;
+  const affine = worldAffineOf(layer.transform);
+  const reading = affineTrsReading(affine, layer.transform);
+  if (reading) {
+    return `translate(${svgNumber(scene.width / 2 + reading.x)} ${svgNumber(scene.height / 2 + reading.y)}) rotate(${svgNumber(reading.rotation)}) scale(${svgNumber(reading.scaleX)} ${svgNumber(reading.scaleY)})`;
+  }
+  return `translate(${svgNumber(scene.width / 2)} ${svgNumber(scene.height / 2)}) matrix(${svgNumber(affine.a)} ${svgNumber(affine.b)} ${svgNumber(affine.c)} ${svgNumber(affine.d)} ${svgNumber(affine.e)} ${svgNumber(affine.f)})`;
 }
 
 function renderShape(layer: EvaluatedLayer): string {

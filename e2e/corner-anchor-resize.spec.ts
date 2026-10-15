@@ -25,7 +25,11 @@ const RECT_BOUNDS = { minX: -60, minY: -30, maxX: 60, maxY: 30 };
 
 type Corner = 'tl' | 'tr' | 'bl' | 'br';
 type Point = { x: number; y: number };
-interface World { x: number; y: number; rotation: number; scaleX: number; scaleY: number; }
+interface World {
+  x: number; y: number; rotation: number; scaleX: number; scaleY: number;
+  /** Independent fixture composition; no application geometry is imported. */
+  basis?: readonly [number, number, number, number];
+}
 
 const CORNERS: Corner[] = ['tl', 'tr', 'bl', 'br'];
 const OPPOSITE: Record<Corner, Corner> = { tl: 'br', tr: 'bl', bl: 'tr', br: 'tl' };
@@ -74,23 +78,27 @@ const rect = (id: string, name: string, x: number, y: number, overrides: Partial
   strokeEnabled: false,
 });
 
-/**
- * The evaluator's world composition (`evaluateTransform`): parent scale, then
- * parent rotation, then parent translation; scale and rotation compose per axis.
- */
+const linearBasis = (pose: World): readonly [number, number, number, number] => {
+  if (pose.basis) return pose.basis;
+  const radians = pose.rotation * Math.PI / 180;
+  return [
+    Math.cos(radians) * pose.scaleX, Math.sin(radians) * pose.scaleX,
+    -Math.sin(radians) * pose.scaleY, Math.cos(radians) * pose.scaleY,
+  ];
+};
+
+/** Compose authored parent × child maps, including non-orthogonal axes. */
 const composeWorld = (child: World, parent?: World): World => {
   if (!parent) return child;
-  const rad = (parent.rotation * Math.PI) / 180;
-  const cos = Math.cos(rad);
-  const sin = Math.sin(rad);
-  const sx = child.x * parent.scaleX;
-  const sy = child.y * parent.scaleY;
+  const [a, b, c, d] = linearBasis(parent);
+  const [e, f, g, h] = linearBasis(child);
   return {
-    x: parent.x + sx * cos - sy * sin,
-    y: parent.y + sx * sin + sy * cos,
+    x: parent.x + a * child.x + c * child.y,
+    y: parent.y + b * child.x + d * child.y,
     rotation: parent.rotation + child.rotation,
     scaleX: parent.scaleX * child.scaleX,
     scaleY: parent.scaleY * child.scaleY,
+    basis: [a * e + c * f, b * e + d * f, a * g + c * h, b * g + d * h],
   };
 };
 
@@ -216,19 +224,14 @@ async function toClient(page: Page, points: Record<string, Point>): Promise<Reco
   }, points);
 }
 
-/**
- * The authored world position of one corner: origin + R(rotation)·(local ⊙ scale)
- * in the editor-camera space the viewBox is expressed in.
- */
+/** Project a canonical geometry corner through the fixture's exact world map. */
 function analyticCorner(world: World, corner: Corner): Point {
   const localX = corner === 'tl' || corner === 'bl' ? RECT_BOUNDS.minX : RECT_BOUNDS.maxX;
   const localY = corner === 'tl' || corner === 'tr' ? RECT_BOUNDS.minY : RECT_BOUNDS.maxY;
-  const radians = (world.rotation * Math.PI) / 180;
-  const cos = Math.cos(radians);
-  const sin = Math.sin(radians);
+  const [a, b, c, d] = linearBasis(world);
   return {
-    x: CAMERA_CENTER.x + world.x + localX * world.scaleX * cos - localY * world.scaleY * sin,
-    y: CAMERA_CENTER.y + world.y + localX * world.scaleX * sin + localY * world.scaleY * cos,
+    x: CAMERA_CENTER.x + world.x + localX * a + localY * c,
+    y: CAMERA_CENTER.y + world.y + localX * b + localY * d,
   };
 }
 
@@ -238,29 +241,21 @@ function analyticCorner(world: World, corner: Corner): Point {
  */
 async function measure(page: Page, world: World): Promise<Measurement> {
   const expected = await page.evaluate(
-    ({ authored, bounds, center }) => {
+    (corners) => {
       const svg = document.querySelector<SVGSVGElement>('.stage-svg');
       if (!svg) throw new Error('stage svg unavailable');
       const matrix = svg.getScreenCTM();
       if (!matrix) throw new Error('screen CTM unavailable');
-      const rad = (authored.rotation * Math.PI) / 180;
-      const cos = Math.cos(rad);
-      const sin = Math.sin(rad);
-      const project = (localX: number, localY: number) => {
-        const x = center.x + authored.x + localX * authored.scaleX * cos - localY * authored.scaleY * sin;
-        const y = center.y + authored.y + localX * authored.scaleX * sin + localY * authored.scaleY * cos;
-        const point = new DOMPoint(x, y).matrixTransform(matrix);
+      const project = (corner: Corner) => {
+        const point = new DOMPoint(corners[corner].x, corners[corner].y).matrixTransform(matrix);
         return { x: point.x, y: point.y };
       };
       return {
-        tl: project(bounds.minX, bounds.minY),
-        tr: project(bounds.maxX, bounds.minY),
-        bl: project(bounds.minX, bounds.maxY),
-        br: project(bounds.maxX, bounds.maxY),
+        tl: project('tl'), tr: project('tr'), bl: project('bl'), br: project('br'),
         matrix: { a: matrix.a, d: matrix.d },
       };
     },
-    { authored: world, bounds: RECT_BOUNDS, center: CAMERA_CENTER },
+    { tl: analyticCorner(world, 'tl'), tr: analyticCorner(world, 'tr'), bl: analyticCorner(world, 'bl'), br: analyticCorner(world, 'br') },
   );
 
   const targets = page.getByTestId('transform-gizmo').first().getByTestId('gizmo-hit-target');
@@ -719,4 +714,15 @@ test.describe('corner resize with a moved camera and a changed layout', () => {
     const result = await dragCorner(page, 'alpha', worldOf(alpha), 'bl', 1.4);
     expectDrag('after layout change', 'bl', result);
   });
+});
+
+test('a child inside a sheared nested parent keeps its opposite corner', async ({ page }) => {
+  const grandparent = rect('grandparent', 'Grandparent', -70, 20, { rotation: 25, scaleX: 1.6, scaleY: 0.7 });
+  const parent = rect('parent', 'Parent', 45, -18, { parentId: 'grandparent', rotation: 30 });
+  const child = rect('child', 'Child', 40, 15, { parentId: 'parent', rotation: 15, scaleX: 1.2, scaleY: 0.8 });
+  await seed(page, [grandparent, parent, child]);
+  await selectLayer(page, 'Child');
+  const world = composeWorld(worldOf(child), composeWorld(worldOf(parent), worldOf(grandparent)));
+  const result = await dragCorner(page, 'child', world, 'tr', 0.65);
+  expectDrag('deep affine parent', 'tr', result);
 });

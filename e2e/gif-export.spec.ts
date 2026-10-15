@@ -322,3 +322,26 @@ test('a scene the frames cannot draw is refused before anything is rendered', as
   await expect(panel.getByRole('alert')).toContainText('cannot be drawn frame by frame');
   await expect(page.getByRole('button', { name: 'Export GIF', exact: true })).toBeDisabled();
 });
+
+test('GIF panel keeps inside clicks open and dismisses on outside click or Escape', async ({ page }) => {
+  await seed(page, [rect()], [moverTrack]);
+  const panel = await openGifPanel(page);
+  await panel.getByRole('heading', { name: 'Export as GIF' }).click();
+  await expect(panel).toBeVisible();
+  await page.locator('.stage-canvas-container').click({ position: { x: 100, y: 100 } });
+  await expect(panel).toBeHidden();
+  await openGifPanel(page);
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
+});
+
+test('120 FPS GIF sampling preserves the encoded half-second duration without zero delays', async ({ page }) => {
+  await seed(page, [rect()], [moverTrack]);
+  const panel = await openGifPanel(page);
+  await expect(panel.getByLabel('Frame rate').locator('option[value="120"]')).toHaveCount(1);
+  await panel.getByLabel('Frame rate').selectOption('120');
+  const gif = parseGif(await downloadBytes(page));
+  expect(gif.frames.reduce((sum, frame) => sum + frame.delayCentiseconds, 0)).toBe(50);
+  expect(gif.frames.every((frame) => frame.delayCentiseconds >= 2)).toBe(true);
+  expect(opaqueCentroidX(gif, gif.frames.length - 1)).toBeGreaterThan(opaqueCentroidX(gif, 0) + 100);
+});

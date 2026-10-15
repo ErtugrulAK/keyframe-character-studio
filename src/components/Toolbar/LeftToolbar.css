@@ -767,16 +767,12 @@
   visibility: hidden;
 }
 
-/* R3-02 / R4-01 / R5-01 — the handle rides the WORKSPACE ROW's edge (a fixed
-   inset below the row's top edge, a boundary a timeline resize never moves) and
-   the DRAWER'S OUTER BOUNDARY: its inner edge coincides with the drawer's right
-   edge, so it is anchored to the panel boundary itself and stays fully on the
-   workspace side. It therefore cannot cover the drawer's own content — the
-   labels, cards and rows that begin at that edge keep their first 10px. */
+/* Centre the 20px hit target on the dock boundary, inside its empty gutter.
+   The fixed workspace-row inset remains independent of timeline height. */
 .app-container .left-toolbar-toggle {
   position: absolute;
   top: var(--kcs-panel-handle-top);
-  left: calc(var(--left-rail-width) + var(--left-drawer-width));
+  left: calc(var(--left-rail-width) + var(--left-drawer-width) - 10px);
   right: auto;
   /* The handle rides the collapsing edge instead of teleporting to it. */
   transition: background-color 160ms ease, color 160ms ease, outline-color 160ms ease,

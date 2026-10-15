@@ -4,6 +4,7 @@ import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/proje
 import { getFreeformVertexWorldPositions, resolveFreeformPath } from '../../../utils/freeform';
 import { initializeSmoothHandles } from '../../../utils/bezierPath';
 import { worldToLocal } from '../../../utils/matte';
+import type { WorldAffine } from '../../../utils/containerMath';
 
 /** Marker sizes, scaled by the canvas zScale so they stay screen-constant. */
 const VERTEX_RADIUS = 7;
@@ -32,7 +33,7 @@ interface DragState {
 export interface FreeformTangentOverlayProps {
   part: CharacterPart;
   /** Evaluated world transform of the part at the current frame. */
-  transform: Transform;
+  transform: Transform & { affine?: WorldAffine };
   zScale: number;
   /** Stage pointer mapper owned by StageCanvas (no second coordinate authority). */
   toWorld: (clientX: number, clientY: number) => { svgX: number; svgY: number };
@@ -161,25 +162,16 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     onBatchEndRef.current();
   }, []);
 
-  const worldTransform = {
-    x: transform.x,
-    y: transform.y,
-    rotation: transform.rotation,
-    scaleX: transform.scaleX,
-    scaleY: transform.scaleY,
-    opacity: transform.opacity,
-  };
+  // The overlay maps with the SAME world transform the renderer draws with, so
+  // the derived affine rides along here: dropping it (a hand-built TRS object)
+  // would shear every marker/handle away from the drawn shape in a container
+  // whose nesting is not a TRS.
+  const worldTransform = { ...transform };
 
   const toLocal = (point: { x: number; y: number }) => worldToLocal(point, worldTransform, outputOrigin);
 
-  const worldOf = (points: { x: number; y: number }[]) => getFreeformVertexWorldPositions(
-    points,
-    outputOrigin.x + transform.x,
-    outputOrigin.y + transform.y,
-    transform.scaleX,
-    transform.scaleY,
-    transform.rotation,
-  );
+  const worldOf = (points: { x: number; y: number }[]) =>
+    getFreeformVertexWorldPositions(points, transform, outputOrigin);
 
   if (!path || path.points.length < 2) return null;
 

@@ -6,24 +6,22 @@
  * scene, so the browser only has to rasterise and encode what this module
  * decided.
  *
- * FPS/TIMEBASE CONTRACT (see `utils/timebase`): a GIF frame's delay is stored in
- * whole CENTISECONDS, which is the format's own granularity (1/100 s). The plan
- * therefore maps every exported frame with a CUMULATIVE rounding
- * (`delay(k) = round((k+1)·100/fps) − round(k·100/fps)`, never below 1cs) so the
- * delays add up to exactly `round(frameCount·100/fps)` centiseconds: the GIF's
- * wall-clock duration is the authored duration rounded to the format's grid, and
- * it never drifts frame after frame the way a per-frame `100/fps` truncation
- * would. The authored frame for each exported frame is resolved through the
- * timebase (`secondsToFrame(k/exportFps, projectFps)`), so changing the export
- * rate resamples the SAME animation and never changes how long it lasts.
+ * FPS/TIMEBASE CONTRACT (see `utils/timebase`): the requested rate is the
+ * sampling grid, not a promise that GIF can display that many distinct frames.
+ * GIF stores whole centiseconds; browsers expand delays <= 1cs to 100ms.
+ * Displayed frames therefore receive at least 2cs, cumulatively rounded over
+ * the WHOLE authored duration (also when the frame budget is reached). Frames
+ * are sampled on the requested grid and coalesced to the display budget.
+ * The duration is rounded to 1cs, with a minimum single-frame hold of 2cs.
+ * See Chromium DeferredImageDecoder::FrameDurationAtIndex for the playback floor.
  */
 import type { SceneData } from '../types/composition';
 import type { OGrafExportDiagnostic } from '../ograf/types';
 import { validateSceneForOGraf } from '../ograf/validation';
 import { frameToSeconds, sanitizeProjectFps, secondsToFrame } from '../utils/timebase';
 
-/** The rates the GIF panel offers. GIF delay granularity is 1/100 s, so all are ≤ 100. */
-export const GIF_EXPORT_FPS_OPTIONS = [10, 12, 15, 20, 24, 25, 30, 50, 60];
+/** Requested sampling rates; the encoded playback plan respects GIF timing. */
+export const GIF_EXPORT_FPS_OPTIONS = [10, 12, 15, 20, 24, 25, 30, 50, 60, 120];
 
 /** The raster scales the GIF panel offers. A GIF is a delivery format, not a master. */
 export const GIF_SCALE_OPTIONS = [1, 0.5, 0.25, 0.125];
@@ -127,7 +125,7 @@ export const resolvePaletteSampleIndexes = (frameCount: number, sampleCount: num
 export interface GifFrameStep {
   /** The authored frame this GIF frame shows. */
   frame: number;
-  /** How long it is shown, in the format's whole centiseconds (never 0). */
+  /** Whole centiseconds, at least 2 to avoid browser short-delay clamping. */
   delayCentiseconds: number;
 }
 
@@ -155,17 +153,23 @@ export interface GifFramePlanInput {
 export const resolveGifFramePlan = ({ totalFrames, projectFps, exportFps }: GifFramePlanInput): GifFramePlan => {
   const sourceFps = sanitizeProjectFps(projectFps);
   const authoredFrames = Math.max(1, Math.floor(totalFrames));
-  const rate = Math.max(1, Math.min(100, Math.floor(exportFps)));
+  const rate = Math.max(1, Math.min(120, Math.floor(exportFps)));
   const authoredDurationSeconds = frameToSeconds(authoredFrames, sourceFps);
-  const frameCount = Math.min(GIF_MAX_FRAMES, Math.max(1, Math.round(authoredDurationSeconds * rate)));
+  const totalCentiseconds = Math.max(2, Math.round(authoredDurationSeconds * 100));
+  const frameCount = Math.min(
+    GIF_MAX_FRAMES,
+    Math.max(1, Math.round(authoredDurationSeconds * rate)),
+    Math.floor(totalCentiseconds / 2),
+  );
   const steps: GifFrameStep[] = [];
   for (let index = 0; index < frameCount; index += 1) {
-    const seconds = index / rate;
-    const frame = Math.min(authoredFrames - 1, Math.max(0, Math.round(secondsToFrame(seconds, sourceFps))));
-    const delayCentiseconds = Math.max(1, Math.round(((index + 1) * 100) / rate) - Math.round((index * 100) / rate));
+    const seconds = index * authoredDurationSeconds / frameCount;
+    const sampledSeconds = Math.round(seconds * rate) / rate;
+    const frame = Math.min(authoredFrames - 1, Math.max(0, Math.round(secondsToFrame(sampledSeconds, sourceFps))));
+    const delayCentiseconds = Math.round((index + 1) * totalCentiseconds / frameCount)
+      - Math.round(index * totalCentiseconds / frameCount);
     steps.push({ frame, delayCentiseconds });
   }
-  const totalCentiseconds = steps.reduce((sum, step) => sum + step.delayCentiseconds, 0);
   return {
     exportFps: rate,
     frameCount,

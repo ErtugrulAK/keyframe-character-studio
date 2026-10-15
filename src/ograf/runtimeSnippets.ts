@@ -21,6 +21,7 @@
 
 import { compareByStackingOrder } from '../utils/stackingOrder';
 import { resolveMatteSource } from '../utils/matte';
+import { createWorldAffineAlgebra } from '../utils/containerMath';
 
 /**
  * A helper's source, as the runtime will receive it.
@@ -38,3 +39,25 @@ export const runtimeCompareByStackingOrder = (): string => sourceOf(compareBySta
  * uses, including the legacy fallback when a Track Matte V2 record is disabled.
  */
 export const runtimeResolveMatteSource = (): string => sourceOf(resolveMatteSource as (...args: never[]) => unknown);
+
+/**
+ * Embed the ONE affine authority as a complete lexical closure.
+ *
+ * Serializing helpers separately is unsafe in production: the minifier renames
+ * module-scope references inside their source. The self-contained factory keeps
+ * those declarations and references together, so its source remains executable
+ * after minification without name rewriting or a second copy of the math.
+ */
+export const runtimeWorldAffineAlgebra = (): string => `const {
+  AFFINE_EPSILON,
+  affineOfTransform,
+  composeWorldTransform,
+  composeAffine,
+  applyAffine,
+  affineHasShear,
+  affineToTransform,
+  affineEquals,
+  withWorldAffine,
+  worldAffineOf,
+  affineTrsReading,
+} = (${sourceOf(createWorldAffineAlgebra as (...args: never[]) => unknown)})();`;

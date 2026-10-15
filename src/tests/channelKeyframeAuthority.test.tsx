@@ -217,12 +217,25 @@ describe('R3-10/R3-11 — one canonical transform channel authoring', () => {
 
     const track = h.trackOf(id);
     expect(track.keyframes).toHaveLength(0);
-    for (const channel of DISPLAY_CHANNELS) {
-      expect(track.channels?.[channel]?.map((key) => key.frame).sort((a, b) => a - b), channel)
-        .toEqual([0, 20]);
+    // The composite list animates X (0 → 200) and nothing else: Y, rotation,
+    // scale and opacity hold the layer's own pose at every sample, so the
+    // migration carries X and leaves no phantom keys on the other rows. The
+    // frames themselves stay: both were visible before and both are visible now.
+    expect(track.channels?.x?.map((key) => key.frame).sort((a, b) => a - b)).toEqual([0, 20]);
+    for (const channel of DISPLAY_CHANNELS.filter((channel) => channel !== 'x')) {
+      expect(track.channels?.[channel] ?? [], channel).toHaveLength(0);
     }
     expect(aggregateDiamonds(h.container, id).length).toBe(2);
-    expect(channelDiamonds(h.container, id, 'Location Y').length).toBe(2);
+    expect(channelDiamonds(h.container, id, 'Location X').length).toBe(2);
+    expect(channelDiamonds(h.container, id, 'Location Y').length).toBe(0);
+    // Nothing was lost: the layer plays the composite pose at every frame.
+    act(() => { h.ctx().setCurrentFrame(20); });
+    expect(h.pose(id).x).toBeCloseTo(200, 9);
+    expect(h.pose(id).y).toBeCloseTo(0, 9);
+    act(() => { h.ctx().setCurrentFrame(10); });
+    expect(h.pose(id).x).toBeGreaterThan(0);
+    expect(h.pose(id).x).toBeLessThan(200);
+    expect(h.pose(id).y).toBeCloseTo(0, 9);
   });
 
   it('edits only X at a keyed frame, leaving every other channel alone', () => {
@@ -252,10 +265,13 @@ describe('R3-10/R3-11 — one canonical transform channel authoring', () => {
 
     const track = h.trackOf(id);
     // The edit is authored (not swallowed by a base-transform write) and the
-    // untouched Y channel keeps both of its frames.
+    // composite's own X animation keeps every frame it carried.
     expect(track.channels?.x?.map((key) => key.frame).sort((a, b) => a - b)).toEqual([0, 10, 20]);
-    expect(track.channels?.y?.map((key) => key.frame).sort((a, b) => a - b)).toEqual([0, 20]);
+    // Y never moves in the composite (it holds the layer's own pose), so the
+    // migration invents no Y key — and the layer still plays Y = 0 everywhere.
+    expect(track.channels?.y ?? []).toHaveLength(0);
     expect(h.pose(id).x).toBeCloseTo(50, 9);
+    expect(h.pose(id).y).toBeCloseTo(0, 9);
   });
 
   it('does not change animation data when the track is expanded or collapsed', () => {
@@ -332,8 +348,9 @@ describe('R3-10/R3-11 — one canonical transform channel authoring', () => {
     const h = renderHarness();
     const id = h.addRect('Rect A', 0, 0);
     // A foreign/hand-edited document: partial canonical channels plus a legacy
-    // list the evaluator still resolves from.
-    h.injectLegacyTrack(id, [legacyKeyframe('kf0', 0, 0, 0), legacyKeyframe('kf20', 20, 200, 0)]);
+    // list the evaluator still resolves. The composite animates X and Y (its
+    // rotation/scale/opacity hold the layer's own pose).
+    h.injectLegacyTrack(id, [legacyKeyframe('kf0', 0, 0, 40), legacyKeyframe('kf20', 20, 200, 90)]);
     act(() => {
       h.ctx().setTracks((prev) => prev.map((track) => (
         track.partId === id
@@ -341,16 +358,29 @@ describe('R3-10/R3-11 — one canonical transform channel authoring', () => {
           : track
       )));
     });
+    const poseBefore = [0, 5, 10, 20].map((frame) => h.ctx().getComputedTransform(id, frame));
     const scene = h.ctx().exportProject();
     act(() => { h.ctx().importProject(scene); });
 
     // The evaluator's own resolution: canonical x wins for the sequence it
-    // covers, the legacy y list fills the channel it still drives. The row shows
-    // three frames — none of the animation is hidden.
+    // covers, the legacy list fills the channel it still drives (Y). The row
+    // shows every frame the animation uses — none of it is hidden.
     const track = h.trackOf(id);
     expect(track.channels?.x?.map((key) => key.frame)).toEqual([5]);
     expect(track.channels?.y?.map((key) => key.frame).sort((a, b) => a - b)).toEqual([0, 20]);
+    // The properties the composite never moves are not fabricated as animation.
+    for (const channel of ['rotation', 'scaleX', 'scaleY', 'opacity'] as TrackChannel[]) {
+      expect(track.channels?.[channel] ?? [], channel).toHaveLength(0);
+    }
     expect(aggregateDiamonds(h.container, id).length).toBe(3);
+    // … and the imported animation is exactly the animation that played before.
+    [0, 5, 10, 20].forEach((frame, index) => {
+      const pose = h.ctx().getComputedTransform(id, frame);
+      expect(pose.x).toBeCloseTo(poseBefore[index].x, 9);
+      expect(pose.y).toBeCloseTo(poseBefore[index].y, 9);
+      expect(pose.rotation).toBeCloseTo(poseBefore[index].rotation, 9);
+      expect(pose.opacity).toBeCloseTo(poseBefore[index].opacity, 9);
+    });
   });
 
   it('keeps a group container free of transform channels after ungroup-free authoring', () => {

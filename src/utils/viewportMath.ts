@@ -1,5 +1,6 @@
 import type { BodyPartType, CharacterPart, Transform } from '../types/animator';
 import { getPartWorldBounds } from './bounds';
+import type { WorldAffine } from './containerMath';
 import { deriveBooleanGeometry } from './booleanGeometry';
 import { getShapeGeometry, type ShapeGeometry } from './shapeGeometry';
 import type { CoordinatePoint } from './projectCoordinates';
@@ -227,9 +228,16 @@ export const getLocalDelta = (dx: number, dy: number, rotationDeg: number) => {
   };
 };
 
+/**
+ * Marquee hit-test. `getTransform` must return the EVALUATED world transform,
+ * including the DERIVED affine a sheared nesting carries; the part bounds are
+ * then mapped through `worldAffineOf` (bounds.ts), so a rotated child of an
+ * anisotropically scaled container is hit exactly where it is drawn while a
+ * shear-free pose keeps its historical bounds.
+ */
 export const getPartsInMarquee = (
   characterParts: CharacterPart[],
-  getTransform: (partId: string) => Transform,
+  getTransform: (partId: string) => Transform & { affine?: WorldAffine },
   marquee: { x: number; y: number; w: number; h: number },
   canvasCenterX: number = CANVAS_CENTER_X,
   canvasCenterY: number = CANVAS_CENTER_Y,

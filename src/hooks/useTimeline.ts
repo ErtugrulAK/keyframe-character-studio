@@ -3,7 +3,7 @@ import type { CharacterPart, Track, TrackChannel, AnimationChannel, EasingType, 
 import { layerMaskPathChannel } from '../types/animator';
 import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
 import { hasChannelDataForTemplate } from '../utils/timelineMetrics';
-import { buildTransformSnapshot, resolveAuthoredLocalTransform } from '../utils/channelKeyframeGroups';
+import { buildTransformSnapshot, resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../utils/channelKeyframeGroups';
 import { 
   updateKeyframeBezierPointsMutator,
   addPropertyKeyframeMutator,
@@ -116,6 +116,15 @@ export const useTimeline = ({
 
   // Keyframe & Track Actions
   /**
+   * The authored base pose of one track's layer: the proof the legacy →
+   * canonical conversion needs to tell a composite property that animates (or
+   * holds a pose the layer does not own) from one that only re-states the
+   * layer's own pose. Never re-derived — it is the evaluator's own
+   * `authoredBasePose`, and absent when the document does not carry the layer.
+   */
+  const basePoseOfTrack = (partId: string) => resolveAuthoredBasePose(characterParts, partId);
+
+  /**
    * R3-10: the layer-level ("aggregate") keyframe action authors ONE canonical
    * transform keyframe group — the x/y/rotation/scaleX/scaleY/opacity and Trim
    * Path channels at this frame, from the layer's evaluated authored pose. The
@@ -140,6 +149,7 @@ export const useTimeline = ({
       activeTemplateId || 'Sequence',
       values,
       'easeInOut',
+      basePoseOfTrack(track.partId),
     ));
   };
 
@@ -201,8 +211,9 @@ export const useTimeline = ({
     value: number,
     easing: EasingType = 'easeInOut'
   ) => {
+    const basePose = basePoseOfTrack(tracks.find((track) => track.id === trackId)?.partId ?? '');
     setTracks((prev) => addPropertyKeyframeMutator(
-      migrateTrackLegacyKeyframes(prev, trackId),
+      migrateTrackLegacyKeyframes(prev, trackId, basePose),
       trackId,
       channel,
       frame,
@@ -363,7 +374,7 @@ export const useTimeline = ({
     // are converted into channels first, then the transition applies. The
     // legacy keyframes[] array stays untouched for import compatibility.
     const transition = generateTransitionChannelKeyframes(baseTransform, transitionType, startFrame, endFrame);
-    setTracks((prev) => applyTransitionToTrackCanonicalMutator(prev, track.id, transition, activeTmpl));
+    setTracks((prev) => applyTransitionToTrackCanonicalMutator(prev, track.id, transition, activeTmpl, basePoseOfTrack(track.partId)));
     return;
   };
 

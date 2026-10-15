@@ -3,6 +3,7 @@ import type { CharacterPart, Transform } from '../../../types/animator';
 
 import { getPartLocalBounds } from '../../../utils/bounds';
 import type { CornerBounds } from '../../../utils/cornerResize';
+import { applyAffine, affineSvgTransform, type WorldAffine } from '../../../utils/containerMath';
 import { getTransformGizmoMetrics } from '../../../utils/transformGizmoMetrics';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
 
@@ -18,9 +19,23 @@ export type ScaleMode =
   | 'scale_top'
   | 'scale_bottom';
 
+/**
+ * The four corner handles, in the order the gizmo renders them. The cursor is
+ * the diagonal the corner sits on, and `x`/`y` select the local box edge the
+ * handle belongs to (0 = min, 1 = max) — each frame branch decides what those
+ * edges are in its own drawing space, so cursor/mode can never drift between
+ * the TRS frame and the affine frame.
+ */
+const CORNER_HANDLES = [
+  { key: 'top-left', cursor: 'nwse-resize', mode: 'scale_corner_tl', x: 0, y: 0 },
+  { key: 'top-right', cursor: 'nesw-resize', mode: 'scale_corner_tr', x: 1, y: 0 },
+  { key: 'bottom-left', cursor: 'nesw-resize', mode: 'scale_corner_bl', x: 0, y: 1 },
+  { key: 'bottom-right', cursor: 'nwse-resize', mode: 'scale_corner_br', x: 1, y: 1 },
+] as const;
+
 interface TransformGizmoProps {
   selectedPart: CharacterPart;
-  selectedTransform: Transform;
+  selectedTransform: Transform & { affine?: WorldAffine };
   zScale: number;
   onRotateMouseDown: (e: React.MouseEvent) => void;
   onScaleMouseDown: (e: React.MouseEvent, mode: ScaleMode, bounds?: CornerBounds) => void;
@@ -35,6 +50,14 @@ interface TransformGizmoProps {
    * part's own geometry bounds (a layer group draws its aggregate box).
    */
   overrideBounds?: { minX: number; minY: number; maxX: number; maxY: number };
+  /**
+   * The EXACT world map of the frame, present only when a TRS cannot re-create
+   * it (a rotated child of an anisotropically scaled container). With it, the
+   * frame is a parallelogram and the gizmo takes the affine branch below.
+   */
+  affine?: WorldAffine;
+  /** The LOCAL box the affine maps — the rect the affine frame draws. */
+  affineBounds?: { minX: number; minY: number; maxX: number; maxY: number };
   /**
    * A geometryless container (a layer group) owns no geometry, so the gizmo must
    * not invent one: no pivot/centre marker inside the frame, only the frame and
@@ -56,6 +79,8 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   overrideCenterX = 0,
   overrideCenterY = 0,
   overrideBounds,
+  affine,
+  affineBounds,
   suppressPivotMarker = false,
   outputOrigin = EDITOR_CAMERA_CENTER,
 }) => {
@@ -94,15 +119,19 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
    * artwork, a dark core keeps it readable over light artwork, and the accent
    * dash stays on top. Every stroke is non-interactive, so the frame never
    * changes what the pointer hits.
+   *
+   * `rect` is the box in the frame's own drawing space: the scaled local box for
+   * the TRS frame, the LOCAL box for the affine frame — whose emitted
+   * `matrix(...)` already carries the scale, so the rect is never pre-scaled.
    */
-  const renderBounds = (
+  const renderFrameOutlines = (rect: { x: number; y: number; width: number; height: number }) => (
     <>
       <rect
         data-testid="selection-frame-keyline"
-        x={left}
-        y={top}
-        width={halfW * 2}
-        height={halfH * 2}
+        x={rect.x}
+        y={rect.y}
+        width={rect.width}
+        height={rect.height}
         fill="none"
         pointerEvents="none"
         style={{ stroke: 'var(--kcs-selection-keyline)' }}
@@ -111,10 +140,10 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
       />
       <rect
         data-testid="selection-frame-halo"
-        x={left}
-        y={top}
-        width={halfW * 2}
-        height={halfH * 2}
+        x={rect.x}
+        y={rect.y}
+        width={rect.width}
+        height={rect.height}
         fill="none"
         pointerEvents="none"
         style={{ stroke: 'var(--bg-darkest)' }}
@@ -122,10 +151,10 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         vectorEffect="non-scaling-stroke"
       />
       <rect
-        x={left}
-        y={top}
-        width={halfW * 2}
-        height={halfH * 2}
+        x={rect.x}
+        y={rect.y}
+        width={rect.width}
+        height={rect.height}
         fill="none"
         pointerEvents="none"
         stroke="#00d2ff"
@@ -135,57 +164,140 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
       />
     </>
   );
-  const renderIndividualSelection = () => (
+
+  /** One corner handle (plus its hit target) at a point of the frame's own space. */
+  const renderCornerHandle = (point: { x: number; y: number }, corner: typeof CORNER_HANDLES[number]) => (
+    <g key={`corner-${corner.key}`}>
+      <rect
+        x={point.x - metrics.cornerSize / 2}
+        y={point.y - metrics.cornerSize / 2}
+        width={metrics.cornerSize}
+        height={metrics.cornerSize}
+        fill="#00d2ff"
+        stroke="#ffffff"
+        strokeWidth={1.5 * zScale}
+        style={{ cursor: corner.cursor, pointerEvents: 'auto' }}
+        onMouseDown={(e) => onScaleMouseDown(e, corner.mode, resizeBounds)}
+      />
+      <rect
+        data-testid="gizmo-hit-target"
+        x={point.x - metrics.hitRadius}
+        y={point.y - metrics.hitRadius}
+        width={metrics.hitRadius * 2}
+        height={metrics.hitRadius * 2}
+        fill="transparent"
+        pointerEvents="auto"
+        style={{ cursor: corner.cursor }}
+        onMouseDown={(e) => onScaleMouseDown(e, corner.mode, resizeBounds)}
+      />
+    </g>
+  );
+
+  /** One edge handle (plus its hit target) at a point of the frame's own space. */
+  const renderEdgeHandle = (point: { x: number; y: number }, cursor: string, mode: ScaleMode, fill: string) => (
+    <g>
+      <circle cx={point.x} cy={point.y} r={metrics.edgeRadius} fill={fill} stroke="#ffffff" strokeWidth={1.5 * zScale} style={{ cursor, pointerEvents: 'auto' }} onMouseDown={(e) => onScaleMouseDown(e, mode, resizeBounds)} />
+      <circle data-testid="gizmo-hit-target" cx={point.x} cy={point.y} r={metrics.hitRadius} fill="transparent" pointerEvents="auto" style={{ cursor }} onMouseDown={(e) => onScaleMouseDown(e, mode, resizeBounds)} />
+    </g>
+  );
+
+  /** The rotation stem and handle, drawn from the frame's top edge to `point`. */
+  const renderRotationHandle = (stemStart: { x: number; y: number }, point: { x: number; y: number }) => (
     <>
-      {renderBounds}
-      {!isGroup && (
-        <>
-          {[
-            { x: left, y: top, key: 'top-left', cursor: 'nwse-resize', mode: 'scale_corner_tl' as const },
-            { x: right, y: top, key: 'top-right', cursor: 'nesw-resize', mode: 'scale_corner_tr' as const },
-            { x: left, y: bottom, key: 'bottom-left', cursor: 'nesw-resize', mode: 'scale_corner_bl' as const },
-            { x: right, y: bottom, key: 'bottom-right', cursor: 'nwse-resize', mode: 'scale_corner_br' as const },
-          ].map((corner) => (
-            <g key={`corner-${corner.key}`}>
-              <rect
-                x={corner.x - metrics.cornerSize / 2}
-                y={corner.y - metrics.cornerSize / 2}
-                width={metrics.cornerSize}
-                height={metrics.cornerSize}
-                fill="#00d2ff"
-                stroke="#ffffff"
-                strokeWidth={1.5 * zScale}
-                style={{ cursor: corner.cursor, pointerEvents: 'auto' }}
-                onMouseDown={(e) => onScaleMouseDown(e, corner.mode, resizeBounds)}
-              />
-              <rect
-                data-testid="gizmo-hit-target"
-                x={corner.x - metrics.hitRadius}
-                y={corner.y - metrics.hitRadius}
-                width={metrics.hitRadius * 2}
-                height={metrics.hitRadius * 2}
-                fill="transparent"
-                pointerEvents="auto"
-                style={{ cursor: corner.cursor }}
-                onMouseDown={(e) => onScaleMouseDown(e, corner.mode, resizeBounds)}
-              />
-            </g>
-          ))}
-          {!suppressPivotMarker && (
-            <circle cx={centerX} cy={centerY} r={metrics.centerRadius} fill="#00d2ff" stroke="#ffffff" strokeWidth={1.5 * zScale} />
-          )}
-        </>
-      )}
+      <line
+        x1={stemStart.x}
+        y1={stemStart.y}
+        x2={point.x}
+        y2={point.y}
+        stroke="#00d2ff"
+        strokeWidth={2 * zScale}
+        vectorEffect="non-scaling-stroke"
+      />
+      <circle
+        cx={point.x}
+        cy={point.y}
+        r={metrics.rotationRadius}
+        fill="#ffb700"
+        stroke="#ffffff"
+        strokeWidth={2 * zScale}
+        style={{ cursor: 'grab', pointerEvents: 'auto' }}
+        onMouseDown={onRotateMouseDown}
+      />
+      <circle
+        data-testid="gizmo-hit-target"
+        cx={point.x}
+        cy={point.y}
+        r={metrics.hitRadius}
+        fill="transparent"
+        pointerEvents="auto"
+        style={{ cursor: 'grab' }}
+        onMouseDown={onRotateMouseDown}
+      />
     </>
   );
 
+  /**
+   * THE AFFINE FRAME — the frame a TRS cannot draw.
+   *
+   * A rotated child of an anisotropically scaled container renders as a
+   * parallelogram: its exact world map is a general 2×2, so the frame is the
+   * LOCAL box mapped by that affine. `affineSvgTransform` keeps the historical
+   * `translate(...) rotate(...) scale(...)` spelling whenever it reproduces the
+   * map, and emits `matrix(...)` otherwise; either way the rect is drawn in
+   * local units, because that spelling carries the scale itself.
+   *
+   * Handles are placed at the affine image of their own local-box point, in
+   * OUTPUT space: the emitted spelling already carries the frame's scale (a
+   * shear can only be a matrix), so a marker drawn inside it would be stretched
+   * with the frame and its hit area would sit off the handle. Layer groups
+   * (decorative multi-selection frames) draw the outline only, exactly as the
+   * TRS branch does.
+   */
+  if (affine !== undefined && affineBounds !== undefined) {
+    const box = affineBounds;
+    const boxCenterX = (box.minX + box.maxX) / 2;
+    const boxCenterY = (box.minY + box.maxY) / 2;
+    const topEdgeCenter = applyAffine(affine, { x: boxCenterX, y: box.minY });
+    // The rotation handle keeps the output-space distance the TRS frame gives it,
+    // measured along the frame's own up axis: the affine's up axis is
+    // `hypot(c, d)` output units long per local unit.
+    const upAxisLength = Math.hypot(affine.c, affine.d);
+    const rotationOffsetLocal = upAxisLength > 0 ? metrics.rotationOffset / upAxisLength : metrics.rotationOffset;
+    const center = applyAffine(affine, { x: boxCenterX, y: boxCenterY });
+
+    return (
+      <g data-testid="transform-gizmo" style={{ pointerEvents: 'none' }}>
+        <g transform={affineSvgTransform(affine, selectedTransform, outputOrigin)}>
+          {renderFrameOutlines({ x: box.minX, y: box.minY, width: box.maxX - box.minX, height: box.maxY - box.minY })}
+        </g>
+        <g transform={`translate(${outputOrigin.x}, ${outputOrigin.y})`}>
+          {!isGroup && (
+            <>
+              {CORNER_HANDLES.map((corner) => renderCornerHandle(
+                applyAffine(affine, { x: corner.x === 0 ? box.minX : box.maxX, y: corner.y === 0 ? box.minY : box.maxY }),
+                corner,
+              ))}
+              {!suppressPivotMarker && (
+                <circle cx={center.x} cy={center.y} r={metrics.centerRadius} fill="#00d2ff" stroke="#ffffff" strokeWidth={1.5 * zScale} />
+              )}
+            </>
+          )}
+
+          {!isGroup && (
+            <>
+              {renderRotationHandle(topEdgeCenter, applyAffine(affine, { x: boxCenterX, y: box.minY - rotationOffsetLocal }))}
+              {renderEdgeHandle(applyAffine(affine, { x: box.minX, y: boxCenterY }), 'ew-resize', 'scale_left', '#38bdf8')}
+              {renderEdgeHandle(applyAffine(affine, { x: box.maxX, y: boxCenterY }), 'ew-resize', 'scale_right', '#38bdf8')}
+              {renderEdgeHandle(topEdgeCenter, 'ns-resize', 'scale_top', '#c084fc')}
+              {renderEdgeHandle(applyAffine(affine, { x: boxCenterX, y: box.maxY }), 'ns-resize', 'scale_bottom', '#c084fc')}
+            </>
+          )}
+        </g>
+      </g>
+    );
+  }
+
   const rotationY = top - metrics.rotationOffset;
-  const renderEdgeHandle = (cx: number, cy: number, cursor: string, mode: ScaleMode, fill: string) => (
-    <g>
-      <circle cx={cx} cy={cy} r={metrics.edgeRadius} fill={fill} stroke="#ffffff" strokeWidth={1.5 * zScale} style={{ cursor, pointerEvents: 'auto' }} onMouseDown={(e) => onScaleMouseDown(e, mode, resizeBounds)} />
-      <circle data-testid="gizmo-hit-target" cx={cx} cy={cy} r={metrics.hitRadius} fill="transparent" pointerEvents="auto" style={{ cursor }} onMouseDown={(e) => onScaleMouseDown(e, mode, resizeBounds)} />
-    </g>
-  );
 
   return (
     <g
@@ -194,43 +306,27 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
       style={{ pointerEvents: 'none' }}
     >
       <g transform={`scale(${orientationScaleX}, ${orientationScaleY})`}>
-        {renderIndividualSelection()}
+        {renderFrameOutlines({ x: left, y: top, width: halfW * 2, height: halfH * 2 })}
 
         {!isGroup && (
           <>
-            <line
-              x1={centerX}
-              y1={top}
-              x2={centerX}
-              y2={rotationY}
-              stroke="#00d2ff"
-              strokeWidth={2 * zScale}
-              vectorEffect="non-scaling-stroke"
-            />
-            <circle
-              cx={centerX}
-              cy={rotationY}
-              r={metrics.rotationRadius}
-              fill="#ffb700"
-              stroke="#ffffff"
-              strokeWidth={2 * zScale}
-              style={{ cursor: 'grab', pointerEvents: 'auto' }}
-              onMouseDown={onRotateMouseDown}
-            />
-            <circle
-              data-testid="gizmo-hit-target"
-              cx={centerX}
-              cy={rotationY}
-              r={metrics.hitRadius}
-              fill="transparent"
-              pointerEvents="auto"
-              style={{ cursor: 'grab' }}
-              onMouseDown={onRotateMouseDown}
-            />
-            {renderEdgeHandle(left, centerY, 'ew-resize', 'scale_left', '#38bdf8')}
-            {renderEdgeHandle(right, centerY, 'ew-resize', 'scale_right', '#38bdf8')}
-            {renderEdgeHandle(centerX, top, 'ns-resize', 'scale_top', '#c084fc')}
-            {renderEdgeHandle(centerX, bottom, 'ns-resize', 'scale_bottom', '#c084fc')}
+            {CORNER_HANDLES.map((corner) => renderCornerHandle(
+              { x: corner.x === 0 ? left : right, y: corner.y === 0 ? top : bottom },
+              corner,
+            ))}
+            {!suppressPivotMarker && (
+              <circle cx={centerX} cy={centerY} r={metrics.centerRadius} fill="#00d2ff" stroke="#ffffff" strokeWidth={1.5 * zScale} />
+            )}
+          </>
+        )}
+
+        {!isGroup && (
+          <>
+            {renderRotationHandle({ x: centerX, y: top }, { x: centerX, y: rotationY })}
+            {renderEdgeHandle({ x: left, y: centerY }, 'ew-resize', 'scale_left', '#38bdf8')}
+            {renderEdgeHandle({ x: right, y: centerY }, 'ew-resize', 'scale_right', '#38bdf8')}
+            {renderEdgeHandle({ x: centerX, y: top }, 'ns-resize', 'scale_top', '#c084fc')}
+            {renderEdgeHandle({ x: centerX, y: bottom }, 'ns-resize', 'scale_bottom', '#c084fc')}
           </>
         )}
       </g>

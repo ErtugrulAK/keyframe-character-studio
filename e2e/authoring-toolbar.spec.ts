@@ -151,8 +151,7 @@ test('the vector bands align, distribute, rotate and flip the selection as one a
   expect(new Set(before.map((box) => box.left)).size).toBe(3);
 
   // Align: the three left edges meet on the collective left edge.
-  await toolbarButton(page, 'Align').click();
-  await page.getByRole('menu', { name: 'Align' }).getByRole('menuitem', { name: 'Align left' }).click();
+  await toolbarButton(page, 'Align Left').click();
   await settle(page);
   const aligned = await boxes();
   for (const box of aligned) expect(Math.abs(box.left - aligned[0].left)).toBeLessThanOrEqual(1);
@@ -167,8 +166,7 @@ test('the vector bands align, distribute, rotate and flip the selection as one a
 
   // Distribute: the outer two hold the span and the middle centre is halfway.
   const spread = (await boxes()).map((box) => box.center).sort((a, b) => a - b);
-  await toolbarButton(page, 'Distribute').click();
-  await page.getByRole('menu', { name: 'Distribute' }).getByRole('menuitem', { name: 'Distribute horizontally' }).click();
+  await toolbarButton(page, 'Center Horizontally').click();
   await settle(page);
   const distributed = (await boxes()).map((box) => box.center).sort((a, b) => a - b);
   expect(distributed[0]).toBeCloseTo(spread[0], 0);

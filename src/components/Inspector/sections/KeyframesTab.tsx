@@ -1,31 +1,23 @@
 import React from 'react';
 import { useAnimator } from '../../../context/useAnimator';
-import { Diamond, Plus, Trash2, Play } from 'lucide-react';
+import { Diamond, Play } from 'lucide-react';
 import type { CharacterPart } from '../../../types/animator';
 import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../../utils/channelKeyframeGroups';
-import { SmartNumberInput } from '../inputs/SmartNumberInput';
+import { authoredBasePose } from '../../../utils/evaluateTransform';
 import { frameToSeconds } from '../../../utils/timebase';
 
 interface KeyframesTabProps {
   selectedPart: CharacterPart;
 }
 
-/**
- * M3: Editor keyframe panel now reads/writes the canonical `track.channels`
- * model. "A keyframe" is a frame holding one property keyframe per channel
- * (same UX as the legacy composite keyframe — one row per frame).
- */
+/** Read-only projection of the timeline's canonical frame groups. */
 export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
   const {
     tracks,
     currentFrame,
     setCurrentFrame,
-    addKeyframeToTrack,
-    deleteKeyframeFrameGroup,
-    updatePropertyKeyframeFrame,
     activeTemplateId,
     fps,
-    totalFrames,
   } = useAnimator();
 
   const track = tracks.find((t) => t.partId === selectedPart.id);
@@ -33,39 +25,20 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
 
   // R3-10/R3-11: the SAME projection the timeline reads, so the panel can never
   // disagree with the layer row about which animation exists.
-  const groups = groupChannelKeyframesByFrame(track ? resolveTrackChannels(track) : undefined, activeTmpl);
+  const groups = groupChannelKeyframesByFrame(
+    track ? resolveTrackChannels(track, authoredBasePose(selectedPart)) : undefined,
+    activeTmpl,
+  );
 
   const formatTime = (frame: number) => {
     const totalSec = frameToSeconds(frame, fps);
     return `${totalSec.toFixed(2)}s`;
   };
 
-  // M3/R3-10: "Add keyframe" is the ONE canonical transform keyframe group
-  // action (materializes every transform channel at the current frame).
-  const handleAdd = () => {
-    if (!track) return;
-    addKeyframeToTrack(track.id, currentFrame);
-  };
-
-  const handleDelete = (frame: number) => {
-    if (!track) return;
-    // The frame group is the unit: every store at that (frame, sequence) goes.
-    deleteKeyframeFrameGroup(track.id, frame);
-  };
-
-  const handleFrameChange = (oldFrame: number, newFrame: number) => {
-    if (!track) return;
-    const group = groups.find((g) => g.frame === oldFrame);
-    if (!group) return;
-    for (const ch of group.channels) {
-      const kf = group.keyframes[ch];
-      if (kf) updatePropertyKeyframeFrame(track.id, ch, kf.id, newFrame);
-    }
-  };
 
   return (
     <div className="section-block">
-      {/* Header & Add Button */}
+      {/* Animation summary; authoring controls belong to the timeline. */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Diamond size={14} className="text-teal" />
@@ -74,27 +47,6 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
           </span>
         </div>
 
-        <button
-          className="fit-pill-btn"
-          onClick={handleAdd}
-          style={{
-            background: 'linear-gradient(135deg, #0d9488, #14b8a6)',
-            color: '#fff',
-            border: 'none',
-            padding: '4px 10px',
-            borderRadius: 6,
-            fontSize: 10,
-            fontWeight: 800,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            cursor: 'pointer',
-          }}
-          title={`Add Keyframe at Frame ${currentFrame}`}
-        >
-          <Plus size={12} />
-          <span>Add at F{currentFrame}</span>
-        </button>
       </div>
 
       {/* Keyframe List (frame-grouped channels) */}
@@ -114,7 +66,7 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
             No keyframes on &quot;{selectedPart.name}&quot;
           </p>
           <p style={{ fontSize: 10, color: '#64748b', margin: 0 }}>
-            Click <strong>+ Add at F{currentFrame}</strong> to create a keyframe.
+            Use the timeline property controls to author keyframes.
           </p>
         </div>
       ) : (
@@ -136,7 +88,7 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
                   transition: 'all 0.15s ease',
                 }}
               >
-                {/* Left: Frame Jump & Editable Frame Input */}
+                {/* Frame navigation does not mutate animation data. */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div
                     style={{
@@ -157,16 +109,7 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
                     >
                       <Play size={10} fill="currentColor" />
                     </button>
-                    <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8' }}>F</span>
-                    <SmartNumberInput
-                      value={group.frame}
-                      min={0}
-                      max={totalFrames}
-                      step={1}
-                      precision={0}
-                      deferCommit
-                      onChange={(v) => handleFrameChange(group.frame, v)}
-                    />
+                    <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8' }}>F{group.frame}</span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -184,17 +127,6 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
                   </div>
                 </div>
 
-                {/* Right: Actions */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <button
-                    className="btn-icon danger"
-                    onClick={() => handleDelete(group.frame)}
-                    title="Delete Keyframe (all properties at this frame)"
-                    style={{ width: 22, height: 22, padding: 0 }}
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                </div>
               </div>
             );
           })}

@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
-import { Search, X } from 'lucide-react';
+import { Command, Layers, MousePointer2, Move, PenTool, Scan, Search, Timer, X, type LucideIcon } from 'lucide-react';
 import { useDialogFocusRestoration, useDialogFocusTrap } from '../../hooks/useDialogFocusRestoration';
 import {
   detectShortcutPlatform,
@@ -9,6 +9,7 @@ import {
   SHORTCUT_CATEGORY_LABELS,
   SHORTCUT_CATEGORY_ORDER,
   SHORTCUT_COMMANDS,
+  type ShortcutCategory,
 } from '../../utils/shortcuts';
 import './ShortcutReferenceDialog.css';
 
@@ -16,6 +17,17 @@ interface ShortcutReferenceDialogProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+/** Presentation only; commands, descriptions and gestures stay in shortcuts.ts. */
+const CATEGORY_ICONS: Record<ShortcutCategory, LucideIcon> = {
+  selection: MousePointer2,
+  create: PenTool,
+  transform: Move,
+  grouping: Layers,
+  timeline: Timer,
+  view: Scan,
+  general: Command,
+};
 
 /**
  * The keyboard shortcut reference.
@@ -78,6 +90,7 @@ export const ShortcutReferenceDialog: React.FC<ShortcutReferenceDialogProps> = (
       >
         <header className="shortcut-reference-header">
           <div className="shortcut-reference-heading">
+            <span className="shortcut-reference-eyebrow">Editor reference</span>
             <h2 id="shortcut-reference-title">Keyboard shortcuts</h2>
             <p className="shortcut-reference-platform">{platformLabel} · typing in a field never triggers a command</p>
           </div>
@@ -106,30 +119,33 @@ export const ShortcutReferenceDialog: React.FC<ShortcutReferenceDialogProps> = (
           {groups.length === 0 && (
             <p className="shortcut-reference-empty">No shortcut matches “{filter.trim()}”.</p>
           )}
-          {groups.map(({ category, commands }) => (
-            <section key={category} className="shortcut-reference-group" aria-label={SHORTCUT_CATEGORY_LABELS[category]}>
-              <h3>
-                {SHORTCUT_CATEGORY_LABELS[category]}
-                <span className="shortcut-reference-count">{commands.length}</span>
-              </h3>
-              <dl>
-                {commands.map((command) => (
-                  <div key={command.id} className="shortcut-reference-row">
-                    <dt>
-                      <span className="shortcut-reference-name">{command.label}</span>
-                      {command.scope === 'timeline' && <span className="shortcut-reference-scope">timeline focus</span>}
-                      {command.detail && <span className="shortcut-reference-detail">{command.detail}</span>}
-                    </dt>
-                    <dd>
-                      {command.gestures.map((gesture) => (
-                        <kbd key={gesture}>{formatShortcutGesture(gesture, platform)}</kbd>
-                      ))}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-          ))}
+          {groups.map(({ category, commands }) => {
+            const Icon = CATEGORY_ICONS[category];
+            return (
+              <section key={category} className="shortcut-reference-group" aria-label={SHORTCUT_CATEGORY_LABELS[category]}>
+                <h3>
+                  <span className="shortcut-reference-category"><Icon aria-hidden="true" />{SHORTCUT_CATEGORY_LABELS[category]}</span>
+                  <span className="shortcut-reference-count">{commands.length}</span>
+                </h3>
+                <dl>
+                  {commands.map((command) => (
+                    <div key={command.id} className="shortcut-reference-row">
+                      <dt>
+                        <span className="shortcut-reference-name">{command.label}</span>
+                        {command.scope === 'timeline' && <span className="shortcut-reference-scope">timeline focus</span>}
+                        {command.detail && <span className="shortcut-reference-detail">{command.detail}</span>}
+                      </dt>
+                      <dd>
+                        {command.gestures.map((gesture) => (
+                          <kbd key={gesture}>{formatShortcutGesture(gesture, platform)}</kbd>
+                        ))}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            );
+          })}
         </div>
       </div>
     </div>,

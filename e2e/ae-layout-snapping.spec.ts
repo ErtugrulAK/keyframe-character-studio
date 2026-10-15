@@ -48,10 +48,6 @@ const boxOf = async (page: Page, id: string) => {
   return box!;
 };
 
-const runFromMenu = async (page: Page, band: string, item: string) => {
-  await page.getByRole('button', { name: band, exact: true }).click();
-  await page.getByRole('menuitem', { name: item }).click();
-};
 
 /** The horizontal gaps between three boxes, in rendered (screen) pixels. */
 async function gapsBetween(page: Page, ids: string[]): Promise<number[]> {
@@ -96,7 +92,7 @@ test('equal-spacing distribution evens edge gaps, holds the span, and is one his
   const beforeA = await boxOf(page, 'a');
   const beforeC = await boxOf(page, 'c');
 
-  await runFromMenu(page, 'Distribute', 'Distribute horizontal spacing');
+  await page.getByRole('button', { name: 'Distribute Horizontal', exact: true }).click();
 
   const gaps = await gapsBetween(page, ['a', 'b', 'c']);
   expect(Math.abs(gaps[0] - gaps[1])).toBeLessThanOrEqual(1);
@@ -220,6 +216,15 @@ async function stageLeftEdgeScreenX(page: Page): Promise<number> {
 }
 
 /**
+ * The camera zoom, read from the DOM the app publishes it in. It is the only
+ * observable proof that a zoom step has COMMITTED — and the camera has to be
+ * settled before a drag measures anything against it.
+ */
+const cameraZoom = async (page: Page): Promise<number> => Number(
+  await page.locator('.stage-canvas-container').getAttribute('data-camera-zoom'),
+);
+
+/**
  * Drags Alpha until its left edge is exactly `screenPx` SCREEN pixels short of
  * the stage's left edge. Both the layer box and the artboard are read from the
  * SAME rendered frame and the pointer moves by their own difference, so the miss
@@ -282,8 +287,23 @@ test('the snap threshold is a screen radius at any zoom: a 4px miss locks, a 16p
     // camera settles on: 4 screen pixels lock, 16 screen pixels do not.
     await seed(page, THRESHOLD_SEED);
     await selectLayers(page, ['Alpha']);
-    if (zoom === 'in') await page.keyboard.press('=');
-    if (zoom === 'out') for (let step = 0; step < 13; step += 1) await page.keyboard.press('-');
+    // The camera is DOM state (`data-camera-zoom`) and EVERY zoom step is confirmed
+    // there before the next one. Presses sent in a single tick all read the same
+    // stale zoom and commit one step between them, which leaves the camera moving
+    // under the drag that follows — the miss the test measures then belongs to the
+    // camera, not to the snap radius.
+    if (zoom === 'in') {
+      await page.keyboard.press('=');
+      await expect.poll(() => cameraZoom(page), { message: 'the zoom-in never committed' }).toBeGreaterThan(1);
+    }
+    if (zoom === 'out') {
+      for (let step = 0; step < 13; step += 1) {
+        const before = await cameraZoom(page);
+        await page.keyboard.press('-');
+        await expect.poll(() => cameraZoom(page), { message: `zoom-out step ${step + 1} never committed` })
+          .toBeLessThanOrEqual(Math.max(0.3, before * 0.9) + 1e-9);
+      }
+    }
 
     await dragStageMissOfScreenPixels(page, 4);
     await expect(page.locator('.snap-guide'), `4px miss did not lock: ${await snapReport(page)}`).toHaveCount(1);
@@ -295,4 +315,161 @@ test('the snap threshold is a screen radius at any zoom: a 4px miss locks, a 16p
     await page.mouse.up();
     await page.keyboard.press('Control+z');
   }
+});
+
+/**
+ * ── The chrome of a live snap ────────────────────────────────────────────────
+ *
+ * Everything above measures WHERE a lock lands. These measure the guide itself,
+ * read back from the DOM the browser painted and compared against the geometry
+ * the lock claims to relate: the moving layer's own rendered box and the matched
+ * target's. A guide is only worth drawing if it says which two things line up, so
+ * its extent is asserted to be exactly that relation — never the whole canvas.
+ *
+ * The seed is deliberately unambiguous: Alpha is 120 wide (box −60…60) and Bravo
+ * is 200 wide (box 400…600, centre 500), so when Alpha's left edge reaches
+ * Bravo's left edge every other moving point (centre 458, right 518) is 40+ world
+ * units clear of every other line — the candidate that wins is the only one in
+ * range, and it is far from the stage centre line and from Bravo's own centre.
+ */
+const GUIDES_SEED = [
+  layer('a', 'Alpha', -400, -200),
+  { ...layer('b', 'Bravo', 500, 100), scaleX: 5 / 3 },
+];
+
+/**
+ * Presses the layer once and returns a mover for the SAME gesture: successive
+ * calls continue the live drag, which is the only way a candidate switch and an
+ * out-of-radius move can be measured inside one gesture.
+ */
+async function pressAndMove(page: Page, id: string) {
+  const box = await boxOf(page, id);
+  const scale = await pxPerWorld(page);
+  const origin = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await page.mouse.move(origin.x, origin.y);
+  await page.mouse.down();
+  // The gesture is ready when the app says so in the DOM: `interaction-dragging` is
+  // committed with the same state the window move listener is attached from, and the
+  // drag delta is absolute from where the press landed, so no probe move is needed
+  // (and none is made — the authored transform is only ever touched by the moves
+  // this helper is asked for).
+  await expect(page.locator('.stage-canvas-container')).toHaveClass(/interaction-dragging/);
+  return (worldDx: number, worldDy = 0) => page.mouse.move(
+    origin.x + worldDx * scale,
+    origin.y + worldDy * scale,
+    { steps: 6 },
+  );
+}
+
+/**
+ * Every painted guide as the browser really drew it: the locked coordinate and
+ * the extent, both in SCREEN pixels, converted through the stage's own CTM, plus
+ * the pointer transparency the chrome is supposed to have.
+ */
+const paintedGuides = (page: Page) => page.evaluate(() => {
+  const svg = document.querySelector('svg.stage-svg') as SVGSVGElement | null;
+  const matrix = svg?.getScreenCTM?.();
+  if (!svg || !matrix) throw new Error('stage camera unavailable');
+  const project = (x: number, y: number) => {
+    const point = new DOMPoint(x, y).matrixTransform(matrix);
+    return { x: point.x, y: point.y };
+  };
+  const group = document.querySelector('.snap-guides');
+  return {
+    group: group ? getComputedStyle(group).pointerEvents : 'absent',
+    guides: [...document.querySelectorAll('.snap-guide')].map((element) => {
+      const a = project(Number(element.getAttribute('x1')), Number(element.getAttribute('y1')));
+      const b = project(Number(element.getAttribute('x2')), Number(element.getAttribute('y2')));
+      const vertical = a.x === b.x;
+      return {
+        axis: vertical ? 'x' : 'y',
+        line: vertical ? a.x : a.y,
+        extentMin: vertical ? Math.min(a.y, b.y) : Math.min(a.x, b.x),
+        extentMax: vertical ? Math.max(a.y, b.y) : Math.max(a.x, b.x),
+        pointerEvents: getComputedStyle(element).pointerEvents,
+      };
+    }),
+  };
+});
+
+test('a guide covers the relation between the aligned boxes, never the canvas', async ({ page }) => {
+  await seed(page, GUIDES_SEED);
+  await selectLayers(page, ['Alpha']);
+
+  const move = await pressAndMove(page, 'a');
+  await move(858); // alpha's left edge lands 2 world units short of Bravo's (400)
+
+  const alpha = await boxOf(page, 'a');
+  const bravo = await boxOf(page, 'b');
+  const painted = await paintedGuides(page);
+  const report = JSON.stringify({ painted, alpha, bravo });
+
+  expect(painted.guides, report).toHaveLength(1);
+  const guide = painted.guides[0];
+  expect(guide.axis, report).toBe('x');
+  // The line is exactly on the geometry the snap resolved: both left edges.
+  expect(Math.abs(guide.line - alpha.x), `line vs the moving edge: ${report}`).toBeLessThanOrEqual(1);
+  expect(Math.abs(guide.line - bravo.x), `line vs the target edge: ${report}`).toBeLessThanOrEqual(1);
+  // ...and drawn over exactly the relation: the two boxes' bands, nothing more.
+  expect(Math.abs(guide.extentMin - Math.min(alpha.y, bravo.y)), `extent start: ${report}`).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(guide.extentMax - Math.max(alpha.y + alpha.height, bravo.y + bravo.height)),
+    `extent end: ${report}`,
+  ).toBeLessThanOrEqual(1);
+  expect(guide.pointerEvents, `pointer transparency: ${report}`).toBe('none');
+  expect(painted.group, `pointer transparency: ${report}`).toBe('none');
+});
+
+test('each snapped axis paints its own guide, and a stage line spans the moving layer', async ({ page }) => {
+  await seed(page, GUIDES_SEED);
+  await selectLayers(page, ['Alpha']);
+
+  const move = await pressAndMove(page, 'a');
+  await move(858, 202); // X onto Bravo's left edge, Y onto the stage centre line
+
+  const alpha = await boxOf(page, 'a');
+  const painted = await paintedGuides(page);
+  const report = JSON.stringify({ painted, alpha });
+
+  // One guide per snapped axis: the axis list IS the uniqueness statement.
+  expect(painted.guides.map((guide) => guide.axis).sort(), report).toEqual(['x', 'y']);
+
+  const horizontal = painted.guides.find((guide) => guide.axis === 'x')!;
+  const vertical = painted.guides.find((guide) => guide.axis === 'y')!;
+  // The X guide is on the other layer's left edge, i.e. on the moving left edge.
+  expect(Math.abs(horizontal.line - alpha.x), `x guide: ${report}`).toBeLessThanOrEqual(1);
+  // The Y guide is on the stage's centre line, i.e. on the moving layer's centre.
+  expect(Math.abs(vertical.line - (alpha.y + alpha.height / 2)), `y guide: ${report}`).toBeLessThanOrEqual(1);
+  // A stage line is a reference, not a box the item is compared against: it spans
+  // the moving layer's own band instead of the whole artboard.
+  expect(Math.abs(vertical.extentMin - alpha.x), `y guide start: ${report}`).toBeLessThanOrEqual(1);
+  expect(Math.abs(vertical.extentMax - (alpha.x + alpha.width)), `y guide end: ${report}`).toBeLessThanOrEqual(1);
+});
+
+test('the guide follows the nearest candidate, clears the moment the snap lets go, and ignores the pointer', async ({ page }) => {
+  await seed(page, GUIDES_SEED);
+  await selectLayers(page, ['Alpha']);
+  const bravo = await boxOf(page, 'b');
+
+  const move = await pressAndMove(page, 'a');
+  await move(858); // onto Bravo's left edge
+  const onEdge = await paintedGuides(page);
+  await move(958); // the nearest candidate is now Bravo's CENTRE line
+  const onCentre = await paintedGuides(page);
+  await move(1100); // past every candidate, still mid-drag
+  const released = await paintedGuides(page);
+  await page.mouse.up();
+
+  const report = JSON.stringify({ onEdge: onEdge.guides, onCentre: onCentre.guides, released: released.guides });
+  expect(onEdge.guides, report).toHaveLength(1);
+  expect(Math.abs(onEdge.guides[0].line - bravo.x), `locked on the edge: ${report}`).toBeLessThanOrEqual(1);
+  expect(onCentre.guides, `switched candidate: ${report}`).toHaveLength(1);
+  expect(
+    Math.abs(onCentre.guides[0].line - (bravo.x + bravo.width / 2)),
+    `switched to the centre line: ${report}`,
+  ).toBeLessThanOrEqual(1);
+  // Leaving the radius clears the chrome in the same move — the drag is still on.
+  expect(released.guides, `cleared on unsnap: ${report}`).toHaveLength(0);
+  // ...and the mouse-up takes the overlay with it.
+  await expect(page.locator('.snap-guides'), `chrome after mouseup: ${report}`).toHaveCount(0);
 });

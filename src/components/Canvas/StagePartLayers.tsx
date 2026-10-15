@@ -40,6 +40,7 @@ import type { WorldTransform } from '../../types/composition';
 import type { NamedSequenceRuntimeState } from '../../utils/broadcastEngine';
 import { EDITOR_CAMERA_CENTER, getProjectCenter, type CoordinatePoint } from '../../utils/projectCoordinates';
 import { deriveBooleanGeometry } from '../../utils/booleanGeometry';
+import { affineSvgTransform, worldAffineOf } from '../../utils/containerMath';
 
 interface StagePartLayersProps {
   sortedParts: CharacterPart[];
@@ -484,16 +485,19 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     (mask.feather ?? 0) > 0 ? `url(#${featherFilterId(mask.id)})` : undefined;
 
   // M18 — the TEXT mask content: a <text> element baked through the SAME
-  // transform math the app's text renderer uses (PartRenderer inner <g>:
-  // translate(CX+tx, CY+ty) rotate(r) scale(sx,sy); x=0/y=0 middle/middle
-  // anchor). The evaluated world transform comes from evaluatedFrame — the
-  // same pipeline that drives the geometry sources, so parent composition /
-  // animation / negative scale are all preserved. Content/fonts live on the
-  // source part (read at runtime via textMaskContent — never duplicated here).
+  // world-map spelling the app's text renderer uses (PartRenderer inner <g>,
+  // via the shared affineSvgTransform: the historical
+  // translate(CX+tx, CY+ty) rotate(r) scale(sx,sy) form whenever a TRS
+  // reproduces the layer's world map, the exact matrix otherwise; x=0/y=0
+  // middle/middle anchor). The evaluated world transform comes from
+  // evaluatedFrame — the same pipeline that drives the geometry sources, so
+  // parent composition / animation / negative scale are all preserved.
+  // Content/fonts live on the source part (read at runtime via
+  // textMaskContent — never duplicated here).
   const renderTextMaskContent = (mask: MatteMask, t: WorldTransform): React.ReactNode => {
     if (!mask.text) return null;
     return (
-      <g transform={`translate(${outputOrigin.x + t.x}, ${outputOrigin.y + t.y}) rotate(${t.rotation}) scale(${t.scaleX}, ${t.scaleY})`}>
+      <g transform={affineSvgTransform(worldAffineOf(t), t, outputOrigin)}>
         <text
           x={0}
           y={0}
@@ -518,7 +522,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   };
 
   // M21 — the IMAGE mask content: an <image> element baked through the SAME
-  // transform math as text (translate(CX+tx, CY+ty) rotate(r) scale(sx,sy))
+  // transform spelling as text (the shared affineSvgTransform)
   // and the app's MediaPartRenderer layout convention (width×height centered
   // at the local origin, preserveAspectRatio xMidYMid slice). STRENGTH
   // CONTRACT (7A pixel-verified): fill-opacity is INERT on <image> — strength
@@ -526,7 +530,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   const renderImageMaskContent = (mask: MatteMask, t: WorldTransform): React.ReactNode => {
     if (!mask.image) return null;
     return (
-      <g transform={`translate(${outputOrigin.x + t.x}, ${outputOrigin.y + t.y}) rotate(${t.rotation}) scale(${t.scaleX}, ${t.scaleY})`}>
+      <g transform={affineSvgTransform(worldAffineOf(t), t, outputOrigin)}>
         <image
           href={mask.image.href}
           x={-mask.image.width / 2}
@@ -651,7 +655,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
             maskContentUnits="userSpaceOnUse"
             mask-type="alpha"
           >
-            <g transform={`translate(${outputOrigin.x + c.transform.x}, ${outputOrigin.y + c.transform.y}) rotate(${c.transform.rotation}) scale(${c.transform.scaleX}, ${c.transform.scaleY})`}>
+            <g transform={affineSvgTransform(worldAffineOf(c.transform), c.transform, outputOrigin)}>
               <image
                 href={c.content.href}
                 x={-c.content.width / 2}

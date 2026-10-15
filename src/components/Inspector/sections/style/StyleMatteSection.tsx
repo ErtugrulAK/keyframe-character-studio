@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
-import type { BezierPath, CharacterPart, LayerMask, LayerMaskChannelProperty, MatteMode, PartMatte } from '../../../../types/animator';
+import type { BezierPath, CharacterPart, LayerMask, MatteMode, PartMatte } from '../../../../types/animator';
 import { BezierPathEditor } from '../../BezierPathEditor';
 import { createBezierPath } from '../../../../utils/bezierPath';
 import { resolveMatteMode, normalizeFeather, isMatteEligible, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/matte';
@@ -13,9 +13,6 @@ interface StyleMatteSectionProps {
   selectedPart: CharacterPart;
   characterParts: CharacterPart[];
   onPartPropChange: (key: keyof CharacterPart, value: any) => void;
-  currentFrame?: number;
-  onAddMaskKeyframe?: (maskId: string, property: LayerMaskChannelProperty, value: number) => void;
-  onAddMaskPathKeyframe?: (maskId: string, path: BezierPath) => void;
   onChangeMaskPath?: (maskId: string, path: BezierPath) => void;
 }
 
@@ -53,8 +50,6 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   onPartPropChange,
   onInteractionStart,
   onInteractionEnd,
-  onAddMaskKeyframe,
-  onAddMaskPathKeyframe,
   onChangeMaskPath,
 }) => {
   /**
@@ -313,15 +308,6 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
     setLayerMasks(layerMasks.map((layerMask) => layerMask.id === activeLayerMask.id ? { ...layerMask, ...patch } : layerMask));
   };
   const trackMatte = selectedPart.trackMatte;
-  const addMaskKeyframe = (property: LayerMaskChannelProperty) => {
-    if (!activeLayerMask || !onAddMaskKeyframe) return;
-    const value = activeLayerMask[property] ?? (property === 'opacity' ? 1 : 0);
-    onAddMaskKeyframe(activeLayerMask.id, property, value);
-  };
-  const addMaskPathKeyframe = () => {
-    if (!activeLayerMask || !onAddMaskPathKeyframe) return;
-    onAddMaskPathKeyframe(activeLayerMask.id, activeLayerMask.path);
-  };
   const trackMatteSourceMissing = !!trackMatte && !characterParts.some((part) => part.id === trackMatte.sourceLayerId);
   const trackMatteSources = characterParts.filter((part) => part.id !== selectedPart.id);
   const setTrackMatte = (next: CharacterPart['trackMatte'] | undefined) => onPartPropChange('trackMatte', next);
@@ -596,26 +582,18 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             <div className="matte-field matte-compact-field">
               <label className="form-label">FEATHER</label>
               <input className="input-control" type="number" min={0} step={0.5} value={activeLayerMask.feather ?? 0} onChange={(event) => updateActiveLayerMask({ feather: Number(event.target.value) })} />
-              {onAddMaskKeyframe && <button type="button" className="btn-secondary" onClick={() => addMaskKeyframe('feather')}>Add feather keyframe</button>}
             </div>
             <div className="matte-field matte-compact-field">
               <label className="form-label">OPACITY</label>
               <input className="input-control" type="number" min={0} max={1} step={0.05} value={activeLayerMask.opacity ?? 1} onChange={(event) => updateActiveLayerMask({ opacity: Number(event.target.value) })} />
-              {onAddMaskKeyframe && <button type="button" className="btn-secondary" onClick={() => addMaskKeyframe('opacity')}>Add opacity keyframe</button>}
             </div>
             <div className="matte-field matte-compact-field">
               <label className="form-label">EXPANSION</label>
               <input className="input-control" type="number" step={1} value={activeLayerMask.expansion ?? 0} onChange={(event) => updateActiveLayerMask({ expansion: Number(event.target.value) })} />
-              {onAddMaskKeyframe && <button type="button" className="btn-secondary" onClick={() => addMaskKeyframe('expansion')}>Add expansion keyframe</button>}
             </div>
             <div className="matte-span-full">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <label className="form-label">MASK PATH</label>
-                {onAddMaskPathKeyframe && (
-                  <button type="button" className="btn-secondary" onClick={addMaskPathKeyframe}>
-                    Add Mask Path keyframe
-                  </button>
-                )}
               </div>
               <BezierPathEditor
                 onInteractionStart={onInteractionStart}

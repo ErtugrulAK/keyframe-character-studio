@@ -4,8 +4,8 @@ import { test, expect, type Page } from '@playwright/test';
  * UI CONTRACT — Left Toolbar collapse/expand (real browser).
  * Visibility is parent-owned: hidden left dock has zero footprint and its
  * content is inaccessible, while a sibling handle remains reachable at x=0.
- * Expanded layout gives the stage the left dock footprint and anchors its handle
- * at the full sidebar's far-right edge.
+ * Expanded layout gives the stage the dock footprint and centres the handle
+ * on the sidebar's far-right boundary.
  */
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -78,9 +78,7 @@ test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reach
       drawerPointerEvents: drawerStyle.pointerEvents,
       drawerVisibility: drawerStyle.visibility,
       leftHandleWidth: Math.round(handleRect.width),
-      // R5-01 — the handle is anchored to the drawer's OUTER boundary: its inner
-      // (left) edge coincides with the drawer's right edge, so it rides the panel
-      // boundary itself while staying fully on the workspace side.
+      // The hit target straddles the drawer's empty boundary gutter.
       leftHandleLeft: Math.round(handleRect.left),
       drawerRight: Math.round(drawerRect.right),
       rightHandleWidth: Math.round(rightHandle.getBoundingClientRect().width),
@@ -92,7 +90,7 @@ test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reach
   expect(expandedLayout.railWidth).toBe(56);
   expect(expandedLayout.drawerWidth).toBeGreaterThan(0);
   expect(expandedLayout.drawerMinWidth).toBe(`${expandedLayout.drawerWidth}px`);
-  expect(Math.abs(expandedLayout.leftHandleLeft - expandedLayout.drawerRight)).toBeLessThanOrEqual(1);
+  expect(Math.abs(expandedLayout.leftHandleLeft + expandedLayout.leftHandleWidth / 2 - expandedLayout.drawerRight)).toBeLessThanOrEqual(1);
   expect(expandedLayout.drawerPointerEvents).toBe('auto');
   expect(expandedLayout.drawerVisibility).toBe('visible');
   // R4-01 — the compact edge-handle family: a thin vertical pill, chevron only.

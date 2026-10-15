@@ -15,6 +15,7 @@ import { evaluateTransform } from '../utils/evaluateTransform';
 import { makeEmptyChannels } from '../utils/defaults';
 import type { CharacterPart, Track } from '../types/animator';
 import type { WorldTransform } from '../types/composition';
+import type { WorldAffine } from '../utils/containerMath';
 import { CANVAS_CENTER } from '../utils/constants';
 
 function makeSourcePart(type: string, overrides: Partial<CharacterPart> = {}): CharacterPart {
@@ -1276,3 +1277,120 @@ describe('M20 — radial gradient data/pure helpers', () => {
         expect(buildMatteImageMask('img', imageMaskContent(imgPart())!, 'alpha', false)).not.toHaveProperty('channel');
       });
     });
+
+// ─── Derived world affine ─────────────────────────────────────────────────
+// An anisotropic container scale landing on a rotated child is a general 2×2
+// map (shear) that a TRS cannot express. Every world-space matte quantity is
+// therefore read through the derived affine — the exact map that is drawn.
+
+describe('matte — derived world affine (sheared nesting)', () => {
+  const TRI = [{ x: 0, y: 0 }, { x: 60, y: 0 }, { x: 0, y: 30 }];
+  const freeformSource = (points: CharacterPart['points']) => makeSourcePart('custom_freeform', { points });
+
+  /** `(x,y) ↦ (2x + 0.5y, y)` — a pure shear no TRS can express. */
+  const SHEAR: WorldAffine = { a: 2, b: 0, c: 0.5, d: 1, e: 0, f: 0 };
+  /** Symmetric shear — singular values exactly 3 and 1 (principal axes ±45°). */
+  const SYMMETRIC: WorldAffine = { a: 2, b: 1, c: 1, d: 2, e: 0, f: 0 };
+  /**
+   * A world pose whose DERIVED affine is the drawn map. The TRS fields stay at
+   * the identity so every asserted number comes from the affine alone.
+   */
+  const sheared = (over: Partial<WorldTransform> = {}): WorldTransform =>
+    ({ x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, affine: SHEAR, ...over });
+
+  it('freeform matte is the drawn parallelogram — the TRS fields are not the map', () => {
+    const authored: WorldTransform = { x: 0, y: 0, rotation: 0, scaleX: 2, scaleY: 1, opacity: 1 };
+    // the authored TRS pose alone: the historical rectangle
+    expect(buildMattePath(freeformSource(TRI), authored, { x: 0, y: 0 })).toBe('M 0 0 L 120 0 L 0 30 Z');
+    // the same authored pose + its derived shear: the contour that is drawn
+    expect(buildMattePath(freeformSource(TRI), { ...authored, affine: SHEAR }, { x: 0, y: 0 }))
+      .toBe('M 0 0 L 120 0 L 15 30 Z');
+  });
+
+  it('authored TRS poses keep the historical numbers byte-for-byte', () => {
+    expect(buildMattePath(freeformSource(TRI), { x: 100, y: 50, rotation: 0, scaleX: 2, scaleY: 1, opacity: 1 }))
+      .toBe('M 400 290 L 520 290 L 400 320 Z');
+    const box = makeSourcePart('custom_box');
+    expect(buildMattePath(box, { x: 0, y: 0, rotation: 0, scaleX: 2, scaleY: 1, opacity: 1 }, { x: 0, y: 0 }))
+      .toBe('M -60 -30 L 60 -30 L 60 30 L -60 30 Z');
+    // rotation × anisotropic scale IS a TRS → the historical rotate/scale spelling
+    expect(buildMattePath(box, { x: 0, y: 0, rotation: 90, scaleX: 2, scaleY: 1, opacity: 1 }, { x: 0, y: 0 }))
+      .toBe('M 30 -60 L 30 60 L -30 60 L -30 -60 Z');
+  });
+
+  /** Evaluate a REAL nesting: a scaleX-2 container with a `rotation`-degree child. */
+  const nestedWorld = (rotation: number): WorldTransform => {
+    const parent = makeSourcePart('custom_box', {
+      id: 'par',
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 2, scaleY: 1, opacity: 1 },
+    });
+    const child = makeSourcePart('custom_box', {
+      id: 'child',
+      parentId: 'par',
+      baseTransform: { x: 0, y: 0, rotation, scaleX: 1, scaleY: 1, opacity: 1 },
+    });
+    const track = {
+      id: 't_child', partId: 'child', name: 'T', color: '#f00', visible: true,
+      keyframes: [], channels: makeEmptyChannels(),
+    } as Track;
+    return evaluateTransform([parent, child], [track], ACTIVE, 'child', 0);
+  };
+
+  it('evaluated nesting (scaleX 2 container + 30° child) renders its exact parallelogram', () => {
+    const world = nestedWorld(30);
+    // S(2,1)·R(30) is a shear: the TRS reading cannot express it, so the derived
+    // affine carries the map the renderer actually draws.
+    expect(world.affine).toBeDefined();
+    expect(buildMattePath(makeSourcePart('custom_box'), world, { x: 0, y: 0 }))
+      .toBe('M -21.962 -40.981 L 81.962 -10.981 L 21.962 40.981 L -81.962 10.981 Z');
+    // the authored TRS fields alone (R(30)·S(2,1)) describe a DIFFERENT contour
+    expect(buildMattePath(makeSourcePart('custom_box'), { ...world, affine: undefined }, { x: 0, y: 0 }))
+      .toBe('M -36.962 -55.981 L 66.962 4.019 L 36.962 55.981 L -66.962 -4.019 Z');
+  });
+
+  it('evaluated nesting (scaleX 2 container + 90° child) swaps the axes — the reported upstretch', () => {
+    const world = nestedWorld(90);
+    expect(world.affine).toBeDefined();
+    // the group's anisotropic scale lands on the child's y axis, and only the
+    // affine carries that: the field reading would stretch the wrong side.
+    expect(buildMattePath(makeSourcePart('custom_box'), world, { x: 0, y: 0 }))
+      .toBe('M 60 -30 L 60 30 L -60 30 L -60 -30 Z');
+    expect(buildMattePath(makeSourcePart('custom_box'), { ...world, affine: undefined }, { x: 0, y: 0 }))
+      .toBe('M 30 -60 L 30 60 L -30 60 L -30 -60 Z');
+  });
+
+  it('rect matte corners follow the sheared parallelogram', () => {
+    expect(buildMattePath(makeSourcePart('custom_box'), sheared(), { x: 0, y: 0 }))
+      .toBe('M -75 -30 L 45 -30 L 75 30 L -45 30 Z');
+  });
+
+  it('circle matte arc takes the drawn ellipse principal axes (3:1 at 45° for SYMMETRIC)', () => {
+    const circle = makeSourcePart('custom_circle');
+    expect(buildMattePath(circle, sheared({ affine: SYMMETRIC }), { x: 0, y: 0 }))
+      .toBe('M 60 30 A 90 30 45 0 1 -60 -30 A 90 30 45 0 1 60 30');
+    // the identity map keeps the historical circle spelling
+    expect(buildMattePath(circle, sheared({ affine: undefined }), { x: 0, y: 0 }))
+      .toBe('M 30 0 A 30 30 0 0 1 -30 0 A 30 30 0 0 1 30 0');
+  });
+
+  it('gradient endpoints are the map applied to the same two local points', () => {
+    // local bbox 60×30, center (30,15), angle 0 → local (0,15)/(60,15)
+    expect(gradientEndpoints(freeformSource(TRI), sheared(), 0, { x: 0, y: 0 }))
+      .toEqual({ x1: 7.5, y1: 15, x2: 127.5, y2: 15 });
+  });
+
+  it('radial gradient center and radius come from the map (radius covers the drawn extent)', () => {
+    expect(radialGradientGeometry(makeSourcePart('custom_circle'), sheared({ affine: SYMMETRIC }), false))
+      .toEqual({ cx: 300, cy: 240, r: (Math.sqrt(7200) / 2) * 3 });
+    const ff = radialGradientGeometry(freeformSource(TRI), sheared(), false, { x: 0, y: 0 })!;
+    expect(ff.cx).toBe(67.5);
+    expect(ff.cy).toBe(15);
+    // local bounding radius √4500/2 × the shear's largest singular value
+    expect(ff.r).toBeCloseTo(69.75551440775791, 9);
+  });
+
+  it('worldToLocal inverts the derived affine (round-trips sheared points exactly)', () => {
+    expect(worldToLocal({ x: 15, y: 30 }, sheared(), { x: 0, y: 0 })).toEqual({ x: 0, y: 30 });
+    expect(worldToLocal({ x: 135, y: 30 }, sheared(), { x: 0, y: 0 })).toEqual({ x: 60, y: 30 });
+  });
+});

@@ -16,6 +16,12 @@ Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candi
 
 The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` branch remains a preserved archive candidate.
 
+
+## PR #11 final micro-polish — V3.7 — 2026-10-15
+
+- The user-approved final polish round before the main integration: four announced arrange bands (Align / Center / Distribute / Rotate-Flip) with the both-axes Center drawn as the four-arrow centred target; a compact restrained rail (42px items, 18px icons, 10px/500 labels, light active surface + 2px accent bar) and quiet boundary-tab collapse handles of one visual family; one inset focus-visible authority replacing all outer rings (pointer stays clean, Tab preserved); a presentation-only 180ms chrome crossfade on the Edit ↔ Broadcast swap with reduced-motion support and a proven camera-exact rapid switch; the Shortcut Reference as a dense single-column sheet over the one command table; and the GIF control renamed **Sampling rate** after verifying 120-grid encodes 0.5s → 25 frames, 1s → 50, 2s → 100 at the 2 cs delay floor with preserved wall-clock duration. Record: `reports/progress_175_pr11_final_micro_polish_v37.md`.
+- Gate on the final head: tsc/lint/build clean, unit 173 files / 2601 tests, FULL Chromium **436 passed / 0 failed / 0 flaky** on the isolated QA config; new pins `e2e/micro-polish-v37.spec.ts` plus three 120-sampling browser rows in `e2e/gif-export.spec.ts`. The live surfaces (5173 vite serving this worktree, API 5000) were never stopped; PR #9/#10/#11 merge decisions stay with the user.
+
 ## Combined PR #9 + #10 manual QA — UI polish V3.6 remediation — 2026-10-15
 
 - Nine UI findings from the combined-round retest fixed on `qa/pr9-pr10-combined` (worktree `keyframe-character-studio-omp-combined-qa`), each browser-measured before and after: armed-draw crosshair cursor; one shared dock-width token contract (rail 56 / drawer 304 / inspector 372); GIF panel with a single close affordance and tooltip-carried format facts; the documented align/distribute command set in the documented order (the centre-spacing duplicate left the UI); **free non-uniform corner resize with the Shift aspect toggle** (Inspector lock defaults unlocked); KCS-styled select focus rings (no white browser ring on pointer focus); quiet mode segment (glow, bounce and inline paint gone); dense one-line shortcut rows; and a restore-provenance chip for the LAN cross-PC case. Record: `reports/progress_174_combined_pr9_pr10_ui_polish_v36.md`.

@@ -25,6 +25,21 @@ Gate on the V3.6 head: tsc/lint/build clean; unit 173 files / 2599 tests; FULL C
 
 V3.6 retest (in addition to the 12 items above): (a) draw with a rectangle tool — crosshair, preview under it, Escape restores; (b) corner-drag a group freely, then with Shift — uniform; (c) click a select — teal ring, no white; (d) toolbar order/names vs the list; (e) GIF panel footer single button + tooltips; (f) mode segment visual; (g) shortcut density; (h) chip visible on a restored project, gone after Reset.
 
+## Final micro-polish V3.7 addendum — 2026-10-15
+
+The user's V3.6 retest passed six surfaces and rejected the residual polish items; this round implements exactly the approved six, presentation and structure only — no behaviour, no feature, no timeline/mask/matte work, no merge. Full record: `reports/progress_175_pr11_final_micro_polish_v37.md`.
+
+1. **Toolbar grouping.** Align (four edges) / Center (three) / Distribute (two) / Rotate-Flip (four) are four announced groups behind the compact separators; the shared `ArrangeButton` keeps one copy of the command-button markup. The both-axes `Center` glyph is the four-arrow centred target (`Move`, no circle), distinct from both one-axis centre icons. Same commands, same order, same authorities; no dropdown.
+2. **Left rail + handles.** Rail items 42px tall, 18px icons on one optical scale, one 10px/500 label voice (no wrap), active = light teal surface + 2px accent bar (the translateX nudge deleted). Collapse handles are quiet boundary-flush tabs (panel surface + hairline border, unified radius) across left/right/timeline members. Widths untouched: the 56/304/372 token contract stands.
+3. **Focus visual.** One authority: keyboard `:focus-visible` is a 2px teal ring at `outline-offset: -2px` — inside the box, never an outer frame; the select keeps its explicit always-inset statement; seven scattered positive-offset component rings were folded in. Pointer focus stays clean; nothing lost its indicator.
+4. **Mode transition.** Entering a mode fades the incoming chrome (toolbar, docks, timeline/Live-Director swap) through one `kcs-mode-enter` keyframe: 180ms ease-out, opacity + 3px paint-only translate, `prefers-reduced-motion` → none. No React timers; the stage never animates (it stays mounted); rapid switching restarts the CSS animation and the edit camera returns to the identical reading (polled, exact).
+5. **Shortcut Reference.** A dense single-column reference sheet: slim header with search, hairline category bands (no card boxes), command left / keycaps right on one ≤34px line, full explanations in the row tooltip, short-window scroll preserved, Windows/macOS display from the one `utils/shortcuts.ts` table.
+6. **GIF sampling verified, not guessed.** 120 FPS is the sampling grid; the encoder honours the GIF centisecond floor. Measured through the real plan + real writer + independent byte reader: 0.50s → 25 frames / 50 cs, 1.00s → 50 / 100 cs, 2.00s → 100 / 200 cs — the reported "100 frames at 120" was the mathematically correct 2s row, so no functional fix was warranted. The control is renamed **Sampling rate**; the existing tooltip answers the presentation-rate question; no explanatory footer returned.
+
+Gate on the V3.7 head: tsc/lint/build clean; unit 173 files / 2601 tests; FULL Chromium **436 / 0 failed / 0 flaky** (workers 8, retries 0, isolated UI 5188 / API 5017; live API 5000 untouched); state consistency 56 checks; audit 0. New pins: `e2e/micro-polish-v37.spec.ts` (8 tests — band separation, glyph distinctness, rail compaction + restraint, inset keyboard ring vs clean pointer focus, crossfade + reduced motion, rapid-switch camera identity, sheet layout, handle family) and three parameterised 120-sampling rows in `e2e/gif-export.spec.ts`.
+
+Final user retest (6 items): (1) toolbar grouping + Center icon acceptable; (2) rail buttons and both collapse handles look cleaner; (3) no outer focus frame, Tab still visible as a subtle inset ring; (4) Edit ↔ Broadcast transition smooth, no stage/camera jump; (5) Shortcut Reference compact/readable; (6) GIF 0.5s/1s/2s at 120 shows 25/50/100 frames with 0.50/1.00/2.00 s total. If these pass: STOP polish — PR #11 is ready for a separate MAIN INTEGRATION + VERSION CHECKPOINT task. **NO MERGE in this task.**
+
 ## Findings, root causes, and fixes
 
 ### 1. Persistent primitive creation

@@ -291,4 +291,33 @@ describe('useBroadcast Hook', () => {
       sequenceId: null, status: 'idle', frame: 0, durationFrames: 0,
     });
   });
+
+  it('raises the mode-swap flag only on a real mode change and lets the shell lower it', () => {
+    const { result } = renderHook(() => useBroadcast({
+      setIsPlaying: mockSetIsPlaying,
+      setCurrentFrame: mockSetCurrentFrame,
+      characterParts: [],
+      characterPartsRef: { current: [] },
+      customPresetsRef: { current: [] },
+      fpsRef: { current: 30 }
+    }));
+
+    // The first paint is not a transition: no fade, so no flag.
+    expect(result.current.modeSwapActive).toBe(false);
+
+    act(() => { result.current.setAppMode('broadcast'); });
+    expect(result.current.appMode).toBe('broadcast');
+    expect(result.current.modeSwapActive).toBe(true);
+
+    // The shell lowers the flag when the enter animation reports done.
+    act(() => { result.current.finishModeSwap(); });
+    expect(result.current.modeSwapActive).toBe(false);
+
+    // Re-asserting the same mode is not a transition either.
+    act(() => { result.current.setAppMode('broadcast'); });
+    expect(result.current.modeSwapActive).toBe(false);
+
+    act(() => { result.current.setAppMode('edit'); });
+    expect(result.current.modeSwapActive).toBe(true);
+  });
 });

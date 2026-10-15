@@ -1143,13 +1143,16 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 
 /*
- * Edit ↔ Broadcast content transition. The mode swap replaces chrome, never
+ * Edit <-> Broadcast content transition. The mode swap replaces chrome, never
  * the stage: `StageCanvas` stays mounted and the camera authority (the
  * remembered edit viewport, the centred broadcast fit) is untouched. The only
- * motion here is the incoming surface fading up into place on mount —
- * opacity plus a 3px paint-only translate, which changes no layout box, no
- * dock width and no camera compensation. Rapid switching simply restarts the
- * same CSS animation: no timers, no React state, nothing to get stuck.
+ * motion here is the incoming surface fading up into place — opacity plus a
+ * 3px paint-only translate, which changes no layout box, no dock width and no
+ * camera compensation. The fade belongs to the TRANSITION, not to the first
+ * paint: it runs only under `kcs-mode-swap`, the flag the mode authority
+ * raises on a real Edit <-> Broadcast change and the shell lowers on the
+ * animation's own end event. Rapid switching simply restarts the same CSS
+ * animation: no timers, nothing to get stuck.
  */
 @keyframes kcs-mode-enter {
   from {
@@ -1162,20 +1165,20 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   }
 }
 
-.authoring-toolbar,
-.left-toolbar-container,
-.motion-design-right-sidebar,
-.sequencer-timeline,
-.live-director-panel {
+.kcs-mode-swap .authoring-toolbar,
+.kcs-mode-swap .left-toolbar-container,
+.kcs-mode-swap .motion-design-right-sidebar,
+.kcs-mode-swap .sequencer-timeline,
+.kcs-mode-swap .live-director-panel {
   animation: kcs-mode-enter 180ms ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .authoring-toolbar,
-  .left-toolbar-container,
-  .motion-design-right-sidebar,
-  .sequencer-timeline,
-  .live-director-panel {
+  .kcs-mode-swap .authoring-toolbar,
+  .kcs-mode-swap .left-toolbar-container,
+  .kcs-mode-swap .motion-design-right-sidebar,
+  .kcs-mode-swap .sequencer-timeline,
+  .kcs-mode-swap .live-director-panel {
     animation: none;
   }
 }

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnimatorProvider } from './context/AnimatorContext';
 import { EditorContextMenuProvider } from './context/EditorContextMenuContext';
@@ -14,7 +14,15 @@ import { useDockedPanelEdge } from './hooks/useDockedPanelEdge';
 
 import './kcsEditorTheme.css';
 const MainAppContent: React.FC = () => {
-  const { appMode } = useAnimator();
+  const { appMode, modeSwapActive, finishModeSwap } = useAnimator();
+
+  // The `kcs-mode-enter` chrome fade belongs to a mode TRANSITION, not to the
+  // app's first paint: the shell carries `kcs-mode-swap` (raised by the mode
+  // authority on a real change) only while the incoming surface animates, and
+  // drops it as soon as the enter animation itself reports done.
+  const handleModeSwapAnimationEnd = useCallback((event: React.AnimationEvent<HTMLDivElement>) => {
+    if (event.animationName === 'kcs-mode-enter') finishModeSwap();
+  }, [finishModeSwap]);
   const leftToolbar = useDockedPanelEdge(true);
   const inspector = useDockedPanelEdge(true);
 
@@ -43,7 +51,10 @@ const MainAppContent: React.FC = () => {
      * still owns the two panel visibility flags whose edge geometry the handles
      * read, and the panel geometry tokens they measure.
      */
-    <div className={`app-container ${leftToolbar.visible ? '' : 'left-toolbar-hidden'} ${inspector.visible ? '' : 'inspector-hidden'}`}>
+    <div
+      className={`app-container ${leftToolbar.visible ? '' : 'left-toolbar-hidden'} ${inspector.visible ? '' : 'inspector-hidden'} ${modeSwapActive ? 'kcs-mode-swap' : ''}`}
+      onAnimationEnd={handleModeSwapAnimationEnd}
+    >
       <HeaderBar />
       {appMode === 'edit' && <AuthoringToolbar />}
       <div className="main-layout">

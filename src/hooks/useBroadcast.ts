@@ -31,6 +31,20 @@ export const useBroadcast = ({
 }: UseBroadcastOptions) => {
   // Broadcast Mode State
   const [appMode, setAppMode] = useState<AppMode>('edit');
+  // Presentation flag for the Edit <-> Broadcast chrome fade (`kcs-mode-enter`).
+  // It is raised only by a real mode change, so the first paint of the app
+  // never runs the enter animation; the shell lowers it again once the
+  // incoming surface has finished fading.
+  const [modeSwapActive, setModeSwapActive] = useState(false);
+  const appModeRef = useRef<AppMode>(appMode);
+  const changeAppMode = useCallback((mode: AppMode) => {
+    if (mode !== appModeRef.current) {
+      appModeRef.current = mode;
+      setModeSwapActive(true);
+    }
+    setAppMode(mode);
+  }, []);
+  const finishModeSwap = useCallback(() => setModeSwapActive(false), []);
   const [broadcastState, setBroadcastState] = useState<Record<string, BroadcastObjectState>>({});
   const [namedSequenceRuntime, setNamedSequenceRuntime] = useState(createIdleNamedSequenceRuntime);
   const [broadcastSessionActivated, setBroadcastSessionActivated] = useState(false);
@@ -238,7 +252,9 @@ export const useBroadcast = ({
 
   return {
     appMode,
-    setAppMode,
+    setAppMode: changeAppMode,
+    modeSwapActive,
+    finishModeSwap,
     broadcastState,
     setBroadcastState,
     broadcastSessionActivated,

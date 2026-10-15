@@ -204,6 +204,8 @@ export interface AnimatorContextType {
   // Broadcast Mode & Custom Presets
   appMode: AppMode;
   setAppMode: (mode: AppMode) => void;
+  modeSwapActive: boolean;
+  finishModeSwap: () => void;
   broadcastState: Record<string, BroadcastObjectState>;
   broadcastSessionActivated: boolean;
   namedSequenceRuntime: NamedSequenceRuntimeState;
@@ -280,6 +282,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const {
     appMode,
     setAppMode,
+    modeSwapActive,
+    finishModeSwap,
     broadcastState,
     broadcastSessionActivated,
     namedSequenceRuntime,
@@ -818,6 +822,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         pasteKeyframeClipboard,
         appMode,
         setAppMode,
+        modeSwapActive,
+        finishModeSwap,
         broadcastState,
         broadcastSessionActivated,
         namedSequenceRuntime,

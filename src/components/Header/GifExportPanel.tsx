@@ -103,7 +103,7 @@ export const GifExportPanel: React.FC<GifExportPanelProps> = ({ scene, sceneTitl
 
       <div className="gif-export-controls">
         <label htmlFor="gif-export-fps">
-          Frame rate
+          Sampling rate
           <select
             id="gif-export-fps"
             value={exportFps}

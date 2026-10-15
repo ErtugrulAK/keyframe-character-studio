@@ -28,6 +28,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Final micro-polish before the PR #11 integration, measured in a real browser:
+  - The authoring strip groups the arrange commands the way the eye reads them — **Align** (the four edges), **Center** (the centre family), **Distribute** (one gap command per axis) and **Rotate/Flip** — four compact separator bands. The both-axes **Center** now carries a four-arrow centred-target glyph, visibly distinct from the one-axis centre icons. Commands, order and behaviour are untouched.
+  - The left navigation rail is compact: 18 px icons on one optical scale, caption-weight labels, ≤44 px items with unchanged hit targets, and an active state that is a restrained light surface plus the teal accent bar — the half-pixel nudge is gone.
+  - The collapse handles are quiet boundary tabs: the panel's own surface and a hairline border instead of an elevated floating block, one visual family across the left, right and timeline members.
+  - Keyboard focus is a quiet **inset** ring everywhere (toolbar, rail, segments, selects, panel controls, dialogs): the teal indicator rides inside the control box, the white browser ring never appears, and nothing relies on a large outer frame. Pointer focus stays clean; Tab still walks every control.
+  - Switching **Edit Mode ↔ Broadcast** fades the incoming chrome in over 180 ms ease-out (opacity plus a 3 px paint-only lift), honouring `prefers-reduced-motion`. The stage, the camera and the dock widths never animate: the edit camera returns exactly where it was, including under rapid switching.
+  - The Shortcut Reference is a dense **reference sheet**: search on top, hairline category bands instead of cards, command left / keycaps right on one compact line, longer explanations in the row tooltip. The Windows/macOS key display still reads from the one command table.
+  - The GIF export control is honestly named **Sampling rate** — the grid the frames are sampled on — while the encoded file keeps the authored wall-clock duration at the format's 20 ms delay floor (verified 0.5 s → 25 frames, 1 s → 50, 2 s → 100, in the browser, with the delay sums read back from the encoded bytes).
+
 - V3.6 combined-QA UI remediation, measured in a real browser:
   - An armed primitive draw (rectangle, square, circle, triangle, star, rhombus, parallelogram, pen) puts a Boxy-style **crosshair** on the whole canvas and keeps it through the live preview; select/pan cursors return in the same paint as Escape or the next tool, no overlay hides the shape being drawn.
   - The canvas **corner drag is free (non-uniform)** by default — pointer X drives width, pointer Y drives height, for layers and for groups alike — and **Shift toggles the aspect constraint for one drag** against the Inspector's now-unlocked-by-default aspect lock. The opposite corner stays fixed in every mode (<= 1 px).

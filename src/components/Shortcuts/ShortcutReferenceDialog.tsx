@@ -90,9 +90,8 @@ export const ShortcutReferenceDialog: React.FC<ShortcutReferenceDialogProps> = (
       >
         <header className="shortcut-reference-header">
           <div className="shortcut-reference-heading">
-            <span className="shortcut-reference-eyebrow">Editor reference</span>
             <h2 id="shortcut-reference-title">Keyboard shortcuts</h2>
-            <p className="shortcut-reference-platform">{platformLabel} · typing in a field never triggers a command</p>
+            <span className="shortcut-reference-platform">{platformLabel} · typing in a field never triggers a command</span>
           </div>
           <label className="shortcut-reference-filter">
             <Search aria-hidden="true" />

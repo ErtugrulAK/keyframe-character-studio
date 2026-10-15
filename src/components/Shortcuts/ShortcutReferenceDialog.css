@@ -1,5 +1,6 @@
-/* Shortcut categories are cards over the canonical keymap. The fixed header
-   keeps filtering reachable while the cards scroll in a short viewport. */
+/* A dense reference sheet over the canonical keymap: one compact row per
+   command under quiet category headings. The fixed header keeps filtering
+   reachable while the sheet scrolls in a short viewport. */
 
 .shortcut-reference-backdrop {
   position: fixed;
@@ -16,7 +17,7 @@
 .shortcut-reference {
   display: flex;
   flex-direction: column;
-  width: min(960px, 100%);
+  width: min(760px, 100%);
   max-height: calc(100dvh - 32px);
   border: 1px solid var(--kcs-border-subtle);
   border-radius: var(--kcs-radius-panel);
@@ -30,11 +31,14 @@
   align-items: center;
   flex: 0 0 auto;
   gap: var(--space-sm);
-  padding: var(--space-md);
+  padding: 10px 14px;
   border-bottom: 1px solid var(--kcs-border-subtle);
 }
 
 .shortcut-reference-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -42,25 +46,17 @@
 .shortcut-reference-header h2 {
   margin: 0;
   color: var(--kcs-text-primary);
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 700;
-}
-
-.shortcut-reference-eyebrow {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--kcs-accent);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .shortcut-reference-platform {
-  margin: 4px 0 0;
+  margin: 0;
   color: var(--kcs-text-muted);
   font-size: var(--font-size-caption);
 }
+
+
 
 /* The filter is a view control, so it reads as an input: one chip-width field
    that never grows past the header it shares with the close button. */
@@ -138,13 +134,11 @@
 }
 
 .shortcut-reference-body {
-  grid-auto-rows: max-content;
-  align-items: start;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  display: flex;
+  flex-direction: column;
   align-content: start;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 2px;
+  padding: 2px 14px 10px;
   overflow-y: auto;
   min-height: 0;
 }
@@ -155,11 +149,15 @@
   font-size: var(--font-size-body);
 }
 
+/* Category bands are a hairline and a heading — not cards. */
 .shortcut-reference-group {
   overflow: hidden;
-  border: 1px solid var(--kcs-border-default);
-  border-radius: var(--kcs-radius-panel);
-  background: var(--kcs-bg-panel);
+}
+
+.shortcut-reference-group + .shortcut-reference-group {
+  border-top: 1px solid var(--kcs-border-quiet);
+  margin-top: 4px;
+  padding-top: 2px;
 }
 
 .shortcut-reference-group h3 {
@@ -168,10 +166,8 @@
   justify-content: space-between;
   gap: var(--space-xs);
   margin: 0;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--kcs-border-default);
-  background: var(--kcs-bg-shell);
-  color: var(--kcs-text-primary);
+  padding: 6px 0 3px;
+  color: var(--kcs-text-secondary);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -215,12 +211,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-sm);
-  padding: 4px 10px;
-  border-bottom: 1px solid var(--kcs-border-subtle);
-}
-
-.shortcut-reference-row:last-child {
-  border-bottom: 0;
+  padding: 3px 0;
 }
 
 .shortcut-reference-row dt {
@@ -309,9 +300,7 @@
   }
 
   .shortcut-reference-body {
-    grid-template-columns: minmax(0, 1fr);
-    padding: 12px;
-    gap: 12px;
+    padding: 8px 12px 12px;
   }
 }
 

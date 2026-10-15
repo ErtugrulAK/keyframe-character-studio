@@ -94,6 +94,36 @@ describe('gif frame plan', () => {
     expect(plan.steps.at(-1)!.frame).toBeGreaterThanOrEqual(117);
   });
 
+  it('spends the two-centisecond GIF delay floor across a 120-sampling plan of 0.5 s, 1 s and 2 s', () => {
+    // 120 is a sampling grid over the authored frames, not a display rate: a GIF
+    // may not show a frame for less than two centiseconds (Chromium clamps delays
+    // of 10 ms and below to 100 ms), so the encoded plan carries floor(totalCS / 2)
+    // frames and holds the authored duration exactly.
+    const rows = [
+      { projectFps: 120, authoredFrames: 60, requestedFrames: 60, encodedFrames: 25, centiseconds: 50, lastFrame: 58 },
+      { projectFps: 120, authoredFrames: 120, requestedFrames: 120, encodedFrames: 50, centiseconds: 100, lastFrame: 118 },
+      { projectFps: 120, authoredFrames: 240, requestedFrames: 240, encodedFrames: 100, centiseconds: 200, lastFrame: 238 },
+      { projectFps: 30, authoredFrames: 15, requestedFrames: 60, encodedFrames: 25, centiseconds: 50, lastFrame: 14 },
+      { projectFps: 30, authoredFrames: 30, requestedFrames: 120, encodedFrames: 50, centiseconds: 100, lastFrame: 29 },
+      { projectFps: 30, authoredFrames: 60, requestedFrames: 240, encodedFrames: 100, centiseconds: 200, lastFrame: 59 },
+    ];
+    for (const row of rows) {
+      const plan = resolveGifFramePlan({ totalFrames: row.authoredFrames, projectFps: row.projectFps, exportFps: 120 });
+      const label = `${row.authoredFrames} authored frames at ${row.projectFps} fps`;
+
+      // The grid requests the full rate; the file cannot spend it.
+      expect(Math.round(plan.authoredDurationSeconds * 120), label).toBe(row.requestedFrames);
+      expect(plan.frameCount, label).toBe(row.encodedFrames);
+      expect(plan.frameCount, label).toBeLessThan(row.requestedFrames);
+      expect(plan.durationSeconds, label).toBe(plan.authoredDurationSeconds);
+      expect(plan.steps, label).toHaveLength(row.encodedFrames);
+      expect(plan.steps.every((step) => step.delayCentiseconds === 2), label).toBe(true);
+      expect(plan.steps.reduce((sum, step) => sum + step.delayCentiseconds, 0), label).toBe(row.centiseconds);
+      expect(plan.steps[0].frame, label).toBe(0);
+      expect(plan.steps[plan.steps.length - 1].frame, label).toBe(row.lastFrame);
+    }
+  });
+
   it('preserves the complete animation duration when the encoded frame budget is reached', () => {
     const plan = resolveGifFramePlan({ totalFrames: 120000, projectFps: 120, exportFps: 120 });
     expect(plan.durationSeconds).toBe(1000);

@@ -240,7 +240,7 @@ test('exports the current sequence as an animated GIF at the stage size', async 
   await expect(panel.locator('.gif-export-summary dd').first()).toHaveText('12');
   await expect(panel.locator('.gif-export-summary dd').nth(1)).toHaveText('0.50 s');
   await expect(panel.locator('.gif-export-summary dd').nth(2)).toHaveText('320×180');
-  await expect(panel.getByLabel('Frame rate')).toHaveValue('24');
+  await expect(panel.getByLabel('Sampling rate')).toHaveValue('24');
   // The format's transparency rule is stated before the export, not after —
   // carried on the control the user is about to press.
   await expect(panel.getByRole('button', { name: 'Export GIF' })).toHaveAttribute('title', /one transparent colour and no partial alpha/);
@@ -302,7 +302,7 @@ test('a cancelled export writes nothing', async ({ page }) => {
     channels: { x: [ { id: 'kx1', frame: 0, value: -800, easing: 'linear' }, { id: 'kx2', frame: 119, value: 800, easing: 'linear' } ] },
   }], { width: 1920, height: 1080, fps: 60, totalFrames: 120 });
   await openGifPanel(page);
-  await expect(page.getByLabel('Frame rate')).toHaveValue('60');
+  await expect(page.getByLabel('Sampling rate')).toHaveValue('60');
 
   await page.getByRole('button', { name: 'Export GIF', exact: true }).click();
   const cancel = page.getByRole('button', { name: 'Cancel', exact: true });
@@ -336,13 +336,47 @@ test('GIF panel keeps inside clicks open and dismisses on outside click or Escap
   await expect(panel).toBeHidden();
 });
 
-test('120 FPS GIF sampling preserves the encoded half-second duration without zero delays', async ({ page }) => {
-  await seed(page, [rect()], [moverTrack]);
-  const panel = await openGifPanel(page);
-  await expect(panel.getByLabel('Frame rate').locator('option[value="120"]')).toHaveCount(1);
-  await panel.getByLabel('Frame rate').selectOption('120');
-  const gif = parseGif(await downloadBytes(page));
-  expect(gif.frames.reduce((sum, frame) => sum + frame.delayCentiseconds, 0)).toBe(50);
-  expect(gif.frames.every((frame) => frame.delayCentiseconds >= 2)).toBe(true);
-  expect(opaqueCentroidX(gif, gif.frames.length - 1)).toBeGreaterThan(opaqueCentroidX(gif, 0) + 100);
-});
+/*
+ * The 120 row of the sampling grid, at the three durations the manual QA
+ * retest walks: 0.5 s, 1 s and 2 s. 120 FPS is the SAMPLING grid, not the
+ * presentation rate — the GIF format carries delays in hundredths of a
+ * second and Chromium floors anything at or below 10 ms to 100 ms, so the
+ * encoder keeps every frame at or above the 2 cs floor and the wall-clock
+ * duration is the authored one, quantized to whole centiseconds. The rows
+ * below measure that end to end: the panel's own displayed counts and the
+ * encoded file, read back with the independent parser.
+ */
+const GIF_SAMPLING_ROWS = [
+  { seconds: 0.5, totalFrames: 12, encodedFrames: 25, delaySumCs: 50 },
+  { seconds: 1, totalFrames: 24, encodedFrames: 50, delaySumCs: 100 },
+  { seconds: 2, totalFrames: 48, encodedFrames: 100, delaySumCs: 200 },
+] as const;
+
+for (const row of GIF_SAMPLING_ROWS) {
+  test(`120 sampling encodes ${row.seconds} s at the 2 cs floor with ${row.encodedFrames} frames`, async ({ page }) => {
+    const mover = rect();
+    const track = {
+      ...moverTrack,
+      channels: {
+        x: [
+          { id: 'kx1', frame: 0, value: -100, easing: 'linear' },
+          { id: 'kx2', frame: row.totalFrames - 1, value: 100, easing: 'linear' },
+        ],
+      },
+    };
+    await seed(page, [mover], [track], { width: 320, height: 180, fps: 24, totalFrames: row.totalFrames });
+    const panel = await openGifPanel(page);
+    await expect(panel.getByLabel('Sampling rate').locator('option[value="120"]')).toHaveCount(1);
+    await panel.getByLabel('Sampling rate').selectOption('120');
+
+    // What the panel DISPLAYS is the encoded plan, not the requested grid.
+    await expect(panel.locator('.gif-export-summary dd').first()).toHaveText(String(row.encodedFrames));
+    await expect(panel.locator('.gif-export-summary dd').nth(1)).toHaveText(`${row.seconds.toFixed(2)} s`);
+
+    const gif = parseGif(await downloadBytes(page));
+    expect(gif.frames.length).toBe(row.encodedFrames);
+    expect(gif.frames.reduce((sum, frame) => sum + frame.delayCentiseconds, 0)).toBe(row.delaySumCs);
+    expect(gif.frames.every((frame) => frame.delayCentiseconds >= 2)).toBe(true);
+    expect(opaqueCentroidX(gif, gif.frames.length - 1)).toBeGreaterThan(opaqueCentroidX(gif, 0) + 100);
+  });
+}

@@ -111,17 +111,21 @@ test('the GIF panel closes from its X alone and states the format in tooltips', 
   await expect(panel).toHaveCount(0);
 });
 
-test('the align band carries the documented commands in the documented order', async ({ page }) => {
+test('the arrange bands are the documented command groups in the documented order', async ({ page }) => {
   await seed(page, [shape('a', 'Alpha', 0, 0), shape('b', 'Beta', 200, 0), shape('c', 'Gamma', 400, 0)]);
   const labels = (group: string) => page.locator(`.authoring-toolbar-group[aria-label="${group}"] button`).evaluateAll(
     (els) => els.map((el) => el.getAttribute('aria-label')),
   );
-  expect(await labels('Align')).toEqual([
-    'Align Left', 'Align Right', 'Align Top', 'Align Bottom',
-    'Center', 'Center Horizontally', 'Center Vertically',
-  ]);
+  // Group A: the four edge alignments. Group B: the centre family. Each is
+  // its own announced band behind the compact separators.
+  expect(await labels('Align')).toEqual(['Align Left', 'Align Right', 'Align Top', 'Align Bottom']);
+  expect(await labels('Center')).toEqual(['Center', 'Center Horizontally', 'Center Vertically']);
   // One distribute command per axis; the centre-spacing duplicate is gone.
   expect(await labels('Distribute')).toEqual(['Distribute Horizontally', 'Distribute Vertically']);
+  // Group D keeps the four rotate/flip one-shots together.
+  expect(await labels('Rotate and flip')).toEqual([
+    'Rotate counter-clockwise', 'Rotate clockwise', 'Flip horizontal', 'Flip vertical',
+  ]);
 
   // Every command is reachable with a three-layer selection — no menu hop.
   await page.locator('.actor-node', { hasText: 'Alpha' }).first().click();
@@ -137,22 +141,24 @@ test('focus rings are KCS-styled for pointer and keyboard alike — never the wh
   const fpsSelect = page.locator('.header-actions select').first();
 
   // Chromium settles the select's focus state over the frames it needs to
-  // open the popup; poll the computed ring, do not sleep for it.
+  // open the popup; poll the computed ring, do not sleep for it. The ring is
+  // the inset authority: it rides inside the control box, never outside it.
   await fpsSelect.click();
   const ringAfterMouse = () => fpsSelect.evaluate((el) => {
     const cs = getComputedStyle(el);
-    return `${cs.outlineStyle} ${cs.outlineWidth} ${cs.outlineColor}`;
+    return `${cs.outlineStyle} ${cs.outlineWidth} ${cs.outlineColor} ${cs.outlineOffset}`;
   });
-  await expect.poll(ringAfterMouse, 'pointer focus must land on the KCS ring').toBe(`solid 2px ${KCS_RING_COLOUR}`);
+  await expect.poll(ringAfterMouse, 'pointer focus must land on the inset KCS ring').toBe(`solid 2px ${KCS_RING_COLOUR} -2px`);
 
   await fpsSelect.focus();
   const afterKeyboard = await fpsSelect.evaluate((el) => {
     const cs = getComputedStyle(el);
-    return { style: cs.outlineStyle, width: cs.outlineWidth, color: cs.outlineColor, fv: el.matches(':focus-visible') };
+    return { style: cs.outlineStyle, color: cs.outlineColor, offset: cs.outlineOffset, fv: el.matches(':focus-visible') };
   });
   expect(afterKeyboard.fv).toBe(true);
   expect(afterKeyboard.style).toBe('solid');
   expect(afterKeyboard.color).toBe(KCS_RING_COLOUR);
+  expect(afterKeyboard.offset).toBe('-2px');
 
   // A text input keeps the pointer-clean half of the policy: no ring on click.
   const search = page.locator('.outliner-search-box input, .search-input-wrapper input').first();

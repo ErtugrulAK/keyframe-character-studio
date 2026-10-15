@@ -7,6 +7,7 @@ import {
   quantizeFrame,
   type RgbaFrame,
 } from '../export/gifEncoder';
+import { resolveGifFramePlan } from '../export/gifPlan';
 
 /**
  * An independent GIF89a reader, written here so the encoder is checked by
@@ -235,6 +236,34 @@ describe('gif encoder', () => {
     writer.writeFrame(indices, 4);
     const parsed = parseGif(writer.finish());
     expect(parsed.frames[0].indices).toEqual(Array.from({ length: 16 }, () => 1));
+  });
+
+  it('writes the 120-sampling plan to the file at the GIF delay floor', () => {
+    // The whole chain, read back by the independent reader above: a plan taken at
+    // 120 sampling for a 0.5 s, 1 s and 2 s animation encodes exactly the planned
+    // number of frames, each shown for at least two centiseconds, for the authored
+    // duration exactly.
+    const rows = [
+      { authoredFrames: 60, encodedFrames: 25, centiseconds: 50 },
+      { authoredFrames: 120, encodedFrames: 50, centiseconds: 100 },
+      { authoredFrames: 240, encodedFrames: 100, centiseconds: 200 },
+    ];
+    for (const row of rows) {
+      const plan = resolveGifFramePlan({ totalFrames: row.authoredFrames, projectFps: 120, exportFps: 120 });
+      const frame = solidFrame(8, 8, [200, 40, 40]);
+      const parsed = parseGif(encode(
+        plan.steps.map(() => frame),
+        8,
+        8,
+        plan.steps.map((step) => step.delayCentiseconds),
+      ));
+      const label = `${row.authoredFrames} authored frames at 120 sampling`;
+
+      expect(parsed.frames, label).toHaveLength(row.encodedFrames);
+      expect(parsed.frames.map((entry) => entry.delayCentiseconds), label)
+        .toEqual(parsed.frames.map(() => 2));
+      expect(parsed.frames.reduce((sum, entry) => sum + entry.delayCentiseconds, 0), label).toBe(row.centiseconds);
+    }
   });
 
   it('maps a pixel below the alpha threshold to the transparent key and keeps the rest opaque', () => {

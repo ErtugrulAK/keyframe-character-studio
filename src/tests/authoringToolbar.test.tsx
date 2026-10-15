@@ -269,7 +269,7 @@ describe('AuthoringToolbar', () => {
     // rather than implied by pixels.
     const bands = [
       'Canvas tools', 'Create', 'Boolean operations', 'Layer group',
-      'Align', 'Distribute', 'Rotate and flip', 'Arrange', 'Crop', 'Crop to content', 'View controls',
+      'Align', 'Center', 'Distribute', 'Rotate and flip', 'Arrange', 'Crop', 'Crop to content', 'View controls',
     ];
     expect(screen.getAllByRole('group').map((group) => group.getAttribute('aria-label'))).toEqual(bands);
 

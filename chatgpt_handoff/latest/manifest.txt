@@ -3,23 +3,24 @@
 Worktree: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-combined-qa
 Branch: qa/pr9-pr10-combined
 Starting head: 784a8c235372f6f984f32e744894bfbb3c086f80
-Validated code/tests commit: 679f54f30ee172e08b0d0e94b4561f2a74c87a9f
-Code CI: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38744301819 — SUCCESS
+Validated code/tests commits: 679f54f30ee172e08b0d0e94b4561f2a74c87a9f (PR #11 round) and 08e52c7 (UI polish V3.6 round, same branch)
+Code CI: first round https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38744301819 — SUCCESS; V3.6 head CI is reported on delivery above the identical tested runtime
 PR: https://github.com/ErtugrulAK/keyframe-character-studio/pull/11 — OPEN, no merge
 PR #9: OPEN, unchanged fac2bc191724165540cf0f7cc53b7941d737919d
 PR #10: OPEN, unchanged 74603dea5f57d1d586e3ec8c97bf09c304c4ca8a
 
-Scope: approved combined manual QA remediation only. Generic affine group resizing; canonical property-channel projection; resolved snap/guide geometry; persistent primitive tools; direct toolbar and explicit gap/center naming; compact GIF dialog and duration-preserving 120 sampling; timeline-only keyframing controls; routine success-toast removal; boundary-centred panel handles; category-card Shortcut Reference.
+Scope: approved combined manual QA remediation only. First round: generic affine group resizing; canonical property-channel projection; resolved snap/guide geometry; persistent primitive tools; direct toolbar and explicit gap/center naming; compact GIF dialog and duration-preserving 120 sampling; timeline-only keyframing controls; routine success-toast removal; boundary-centred panel handles; category-card Shortcut Reference. V3.6 polish (2026-10-15): armed-draw crosshair cursor; single dock-width token contract (56/304/372); single-close GIF panel with tooltip-carried format facts; documented align/distribute command set and order; free non-uniform corner resize with Shift aspect toggle; focus-visible pointer/keyboard select policy; quiet mode segment; dense one-line shortcut rows; LAN restored-project provenance chip.
 
-Validation: TypeScript build and noEmit, lint, npm test, production build, validate:ograf and npm run check passed. Unit 173 files / 2598 tests. Focused Chromium 99 passed. Final full Chromium 415 passed / 0 failed / 0 flaky, workers 8 / retries 0, UI 5188 / API 5017. qa:release 2 passed; qa:v6 3 passed. State consistency 52 checks passed. npm audit low: 0 vulnerabilities. git diff --check passed. No weakened assertion, skip, retry, arbitrary sleep, or widened camera tolerance. Exact production OGraf minification and actual exported-host load were exercised, not only development rendering.
+Validation: V3.6 head — TypeScript build and noEmit, lint, npm test, production build, validate:ograf and npm run check passed. Unit 173 files / 2599 tests. Full Chromium 426 passed / 0 failed / 0 flaky, workers 8 / retries 0, isolated UI 5188 / API 5017 (live API 5000 never touched). State consistency 54 checks passed. No weakened assertion, skip, retry, arbitrary sleep, or widened camera tolerance. New permanent pin e2e/ui-polish-v36.spec.ts (8 tests). First round additionally: focused Chromium 99 passed; full 415 / 0 / 0; qa:release 2 passed; qa:v6 3 passed; npm audit low 0; exact production OGraf minification and actual exported-host load exercised.
 
-Live: 5173 now serves the validated combined worktree, listener 48984 (service wrapper 45300), HTTP 200. Switched only after all local gates and code CI passed. Actual Chromium smoke: direct toolbar, no page errors, GIF 120 selectable, compact 259.875px dialog and Escape close. API 5000 listener 2308, health HTTP 200, never restarted. No merge/release/tag/npm/rebase/force push/branch deletion/dependency/workflow/OMP configuration change.
+Live: 5173 serves this same combined worktree including the V3.6 head, listener 48984 (service wrapper 45300), HTTP 200; it was never stopped during the V3.6 round. API 5000 listener 2308, health HTTP 200, never restarted. No merge/release/tag/npm/rebase/force push/branch deletion/dependency/workflow/OMP configuration change.
 Canonical exception: main/origin main 8e2df61b899bb06df110475d5cc17521fcf35715. A subagent mistakenly wrote src/utils/matte.ts then restored HEAD content and refreshed index metadata. User was informed; one approved refresh did not clear the M marker. User explicitly accepted that exact metadata-only dirty-STOP exception, with no further canonical/index repair. HEAD/index/raw/filtered blob match 96d0b4ad2bed3326f8ff4f8e5df552c2ec93a3b5; no content or staged diff. Canonical is not described as clean or untouched.
 
 Current task documents:
 - README.md — entry point and record precedence
 - OMP_FINAL_RESPONSE.md — complete findings, root causes, fixes, math/timing decisions, validation and retest record
 - manifest.txt — provenance and validation summary
+- progress_174_combined_pr9_pr10_ui_polish_v36.md — the V3.6 nine-findings remediation record
 
 Retained historical/mirrored documents, not changed in this task:
 - CHANGELOG.md

@@ -18,7 +18,8 @@ This task-specific bundle supersedes the earlier aggregation-only handoff. The a
 - PR #9 and #10 remain OPEN with unchanged heads `fac2bc1` and `74603de`.
 - No merge, release, tag, npm publication, rebase, force push or API 5000 restart.
 
-Local gates passed: 173 files / 2598 unit tests, 99 focused Chromium, 415 full Chromium with zero failed/flaky and retries 0, release QA 2/2, V6 QA 3/3, state consistency 52 checks, and audit zero vulnerabilities. Code commit `679f54f30ee172e08b0d0e94b4561f2a74c87a9f` has successful CI run [38744301819](https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38744301819). Live 5173 now serves the validated combined worktree (listener 48984); API 5000 remains healthy on unchanged listener 2308. The documents-only refresh adds no runtime changes; its own head/CI is reported separately on delivery.
+Local gates passed (latest V3.6 head, 2026-10-15): 173 files / 2599 unit tests and FULL Chromium **426 passed / 0 failed / 0 flaky** on the isolated QA config (UI 5188; API 5000 never touched); the earlier PR #11 round recorded 2598 unit tests / 415 Chromium at code commit `679f54f` with CI run [38744301819](https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38744301819). Live 5173 serves this same combined worktree (listener 48984) and shows the V3.6 head; API 5000 remains healthy on unchanged listener 2308. The V3.6 documents-only refresh adds no runtime changes; its head/CI is reported in `manifest.txt` on delivery.
+
 ## Record precedence
 
 The remediation record and manifest are the current task authority. Other documents retained here are historical snapshots or exact mirrors of root documents. Their old validation counts and next-session narratives are context, not current remediation results. No root document, historical report or mirrored roadmap was modified for this task.
@@ -27,7 +28,6 @@ The remediation record and manifest are the current task authority. Other docume
 ## Upload
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`. The one-file is regenerated from this scoped handoff before delivery; do not upload individual bundle files.
-
 
 ---
 
@@ -41,6 +41,24 @@ Worktree: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-combined-q
 Branch: `qa/pr9-pr10-combined`. Starting head: `784a8c235372f6f984f32e744894bfbb3c086f80`.
 Only the approved findings are addressed. No merge, release, tag, npm publication, rebase, force push, branch deletion, dependency change, workflow change, or API 5000 restart.
 PR #9 remains OPEN at `fac2bc191724165540cf0f7cc53b7941d737919d`; PR #10 remains OPEN at `74603dea5f57d1d586e3ec8c97bf09c304c4ca8a`. Neither history was changed.
+
+## UI polish V3.6 addendum — 2026-10-15
+
+Supersedes §5 (command naming/order), §6 (panel copy) and §9 (row density) of this record. The user's combined-round retest produced nine UI findings, fixed and browser-measured before/after on the same branch (full detail: `reports/progress_174_combined_pr9_pr10_ui_polish_v36.md`):
+
+1. **Draw cursor.** Armed primitives set `drawing-tool` on the stage container; CSS owns the crosshair (container + svg); Escape/tool-switch returns `default` in the same paint. Measured `default→crosshair→default`.
+2. **Dock width contract.** One token block on `.app-container` (rail 56 / drawer 304 / inspector 372) replaces five scattered declarations incl. the theme's hard 280px drawer line; dock handles derive from the same tokens. Measured 280→304 and 360→372 with the handles still boundary-centred.
+3. **GIF panel.** Footer Close, the note paragraph and the Format-limitations details removed (X/Escape/outside-press unchanged); the 20 ms sampling fact moved to the frame-rate select tooltip, transparency/text-font facts to the Export button tooltip. Summary (frames/duration/size) stays visible.
+4. **Toolbar command set.** Align band in the required order — Align Left/Right/Top/Bottom, Center (both axes, one undo), Center Horizontally/Vertically (one axis each) — and exactly one gap-based Distribute per axis. The confusing centre-spacing distribute duplicate left the UI; the pure `planDistribute` authority stays (documented policy test), the hook's dead arm was deleted. Labels are exact; no menu hop on desktop.
+5. **Corner resize.** `isScaleLocked` defaults false and the corner drag solves `uniform: isScaleLocked !== e.shiftKey`: free non-uniform by default (pointer X→scaleX, pointer Y→scaleY), Shift = uniform for one drag, the Inspector glyph = persistent option; groups ride the same branch. Four new browser tests pin default-free, Shift-uniform, locked-uniform, locked+Shift-free and a free group corner drag.
+6. **Select focus.** `select` is always `:focus-visible` in Windows Chromium, so the KCS teal ring is pinned explicitly (`select:focus{outline:none}` + important teal `:focus-visible`): the white 3px browser ring is gone in both focus paths; buttons/inputs keep pointer-clean behaviour.
+7. **Mode segment.** Three stacked CSS generations (glowing text-shadow, bouncing bright indicator bar, keyframes) and inline markup styles replaced by one definition: bordered rail, sliding indicator, unmistakable pressed half, no glow anywhere; `aria-pressed` semantics unchanged.
+8. **Shortcut Reference.** Rows became `grid: minmax(0,1fr) auto` with 22px keycaps and inline detail/scope chips; names/details are one line with ellipsis and the full sentence in the row tooltip. Measured max row height 124px→31px (before: uniform 47px), 28 rows intact.
+9. **Restore provenance (LAN).** `useSerialization` exposes `restoredFromLocalStorage` (set only when the startup autosave restore fills the document; cleared by import/reset), the context carries it, and the header shows a neutral chip "Restored from this browser's autosave" — the case that matters when the other PC opens the editor over the LAN and localStorage differs per origin.
+
+Gate on the V3.6 head: tsc/lint/build clean; unit 173 files / 2599 tests; FULL Chromium **426 / 0 failed / 0 flaky** on the isolated QA config (UI 5188; live API 5000 never touched). New permanent pin: `e2e/ui-polish-v36.spec.ts` (8 tests); five existing specs migrated to the new contracts instead of re-pinning removed UI.
+
+V3.6 retest (in addition to the 12 items above): (a) draw with a rectangle tool — crosshair, preview under it, Escape restores; (b) corner-drag a group freely, then with Shift — uniform; (c) click a select — teal ring, no white; (d) toolbar order/names vs the list; (e) GIF panel footer single button + tooltips; (f) mode segment visual; (g) shortcut density; (h) chip visible on a restored project, gone after Reset.
 
 ## Findings, root causes, and fixes
 
@@ -133,7 +151,6 @@ Crop to current selection: select one or two shapes, run the command; the stage 
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`. Other files retained under `latest/` are historical context or mirrored root documents, not a claim that the earlier aggregation-only record is current. PR #11 remains a manual user-retest gate; no merge or release was performed.
 
-
 ---
 
 ## manifest.txt
@@ -143,23 +160,24 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`. Other files retained un
 Worktree: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-combined-qa
 Branch: qa/pr9-pr10-combined
 Starting head: 784a8c235372f6f984f32e744894bfbb3c086f80
-Validated code/tests commit: 679f54f30ee172e08b0d0e94b4561f2a74c87a9f
-Code CI: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38744301819 — SUCCESS
+Validated code/tests commits: 679f54f30ee172e08b0d0e94b4561f2a74c87a9f (PR #11 round) and 08e52c7 (UI polish V3.6 round, same branch)
+Code CI: first round https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38744301819 — SUCCESS; V3.6 head CI is reported on delivery above the identical tested runtime
 PR: https://github.com/ErtugrulAK/keyframe-character-studio/pull/11 — OPEN, no merge
 PR #9: OPEN, unchanged fac2bc191724165540cf0f7cc53b7941d737919d
 PR #10: OPEN, unchanged 74603dea5f57d1d586e3ec8c97bf09c304c4ca8a
 
-Scope: approved combined manual QA remediation only. Generic affine group resizing; canonical property-channel projection; resolved snap/guide geometry; persistent primitive tools; direct toolbar and explicit gap/center naming; compact GIF dialog and duration-preserving 120 sampling; timeline-only keyframing controls; routine success-toast removal; boundary-centred panel handles; category-card Shortcut Reference.
+Scope: approved combined manual QA remediation only. First round: generic affine group resizing; canonical property-channel projection; resolved snap/guide geometry; persistent primitive tools; direct toolbar and explicit gap/center naming; compact GIF dialog and duration-preserving 120 sampling; timeline-only keyframing controls; routine success-toast removal; boundary-centred panel handles; category-card Shortcut Reference. V3.6 polish (2026-10-15): armed-draw crosshair cursor; single dock-width token contract (56/304/372); single-close GIF panel with tooltip-carried format facts; documented align/distribute command set and order; free non-uniform corner resize with Shift aspect toggle; focus-visible pointer/keyboard select policy; quiet mode segment; dense one-line shortcut rows; LAN restored-project provenance chip.
 
-Validation: TypeScript build and noEmit, lint, npm test, production build, validate:ograf and npm run check passed. Unit 173 files / 2598 tests. Focused Chromium 99 passed. Final full Chromium 415 passed / 0 failed / 0 flaky, workers 8 / retries 0, UI 5188 / API 5017. qa:release 2 passed; qa:v6 3 passed. State consistency 52 checks passed. npm audit low: 0 vulnerabilities. git diff --check passed. No weakened assertion, skip, retry, arbitrary sleep, or widened camera tolerance. Exact production OGraf minification and actual exported-host load were exercised, not only development rendering.
+Validation: V3.6 head — TypeScript build and noEmit, lint, npm test, production build, validate:ograf and npm run check passed. Unit 173 files / 2599 tests. Full Chromium 426 passed / 0 failed / 0 flaky, workers 8 / retries 0, isolated UI 5188 / API 5017 (live API 5000 never touched). State consistency 54 checks passed. No weakened assertion, skip, retry, arbitrary sleep, or widened camera tolerance. New permanent pin e2e/ui-polish-v36.spec.ts (8 tests). First round additionally: focused Chromium 99 passed; full 415 / 0 / 0; qa:release 2 passed; qa:v6 3 passed; npm audit low 0; exact production OGraf minification and actual exported-host load exercised.
 
-Live: 5173 now serves the validated combined worktree, listener 48984 (service wrapper 45300), HTTP 200. Switched only after all local gates and code CI passed. Actual Chromium smoke: direct toolbar, no page errors, GIF 120 selectable, compact 259.875px dialog and Escape close. API 5000 listener 2308, health HTTP 200, never restarted. No merge/release/tag/npm/rebase/force push/branch deletion/dependency/workflow/OMP configuration change.
+Live: 5173 serves this same combined worktree including the V3.6 head, listener 48984 (service wrapper 45300), HTTP 200; it was never stopped during the V3.6 round. API 5000 listener 2308, health HTTP 200, never restarted. No merge/release/tag/npm/rebase/force push/branch deletion/dependency/workflow/OMP configuration change.
 Canonical exception: main/origin main 8e2df61b899bb06df110475d5cc17521fcf35715. A subagent mistakenly wrote src/utils/matte.ts then restored HEAD content and refreshed index metadata. User was informed; one approved refresh did not clear the M marker. User explicitly accepted that exact metadata-only dirty-STOP exception, with no further canonical/index repair. HEAD/index/raw/filtered blob match 96d0b4ad2bed3326f8ff4f8e5df552c2ec93a3b5; no content or staged diff. Canonical is not described as clean or untouched.
 
 Current task documents:
 - README.md — entry point and record precedence
 - OMP_FINAL_RESPONSE.md — complete findings, root causes, fixes, math/timing decisions, validation and retest record
 - manifest.txt — provenance and validation summary
+- progress_174_combined_pr9_pr10_ui_polish_v36.md — the V3.6 nine-findings remediation record
 
 Retained historical/mirrored documents, not changed in this task:
 - CHANGELOG.md

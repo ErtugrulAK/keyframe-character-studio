@@ -10,7 +10,8 @@ This task-specific bundle supersedes the earlier aggregation-only handoff. The a
 - PR #9 and #10 remain OPEN with unchanged heads `fac2bc1` and `74603de`.
 - No merge, release, tag, npm publication, rebase, force push or API 5000 restart.
 
-Local gates passed: 173 files / 2598 unit tests, 99 focused Chromium, 415 full Chromium with zero failed/flaky and retries 0, release QA 2/2, V6 QA 3/3, state consistency 52 checks, and audit zero vulnerabilities. Code commit `679f54f30ee172e08b0d0e94b4561f2a74c87a9f` has successful CI run [38744301819](https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38744301819). Live 5173 now serves the validated combined worktree (listener 48984); API 5000 remains healthy on unchanged listener 2308. The documents-only refresh adds no runtime changes; its own head/CI is reported separately on delivery.
+Local gates passed (latest V3.6 head, 2026-10-15): 173 files / 2599 unit tests and FULL Chromium **426 passed / 0 failed / 0 flaky** on the isolated QA config (UI 5188; API 5000 never touched); the earlier PR #11 round recorded 2598 unit tests / 415 Chromium at code commit `679f54f` with CI run [38744301819](https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38744301819). Live 5173 serves this same combined worktree (listener 48984) and shows the V3.6 head; API 5000 remains healthy on unchanged listener 2308. The V3.6 documents-only refresh adds no runtime changes; its head/CI is reported in `manifest.txt` on delivery.
+
 ## Record precedence
 
 The remediation record and manifest are the current task authority. Other documents retained here are historical snapshots or exact mirrors of root documents. Their old validation counts and next-session narratives are context, not current remediation results. No root document, historical report or mirrored roadmap was modified for this task.

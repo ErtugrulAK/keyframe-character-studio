@@ -34,6 +34,9 @@ interface EditorApi {
   characterParts: CharacterPart[];
   setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>;
   sceneTitle: string;
+  fps: number;
+  totalFrames: number;
+  projectResolution: { width: number; height: number };
 }
 
 const rectPart = (id: string, x = 0): CharacterPart => ({
@@ -95,11 +98,60 @@ const autosaveScene = () => ({
 });
 
 const restoredIds = ['n1-group', 'n1-child', 'n1-rect', 'n1-text'];
+/** A representative legacy AnimationProject autosave (version is a string, so the
+ * boundary routes it to the legacy apply path; fields follow legacyPartProblem and
+ * trackProblem — exactly what the validator accepts today). */
+const legacyPart = (id: string, x: number) => ({
+  id,
+  name: id,
+  type: 'custom_rect',
+  zIndex: 1,
+  baseTransform: { x, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+  width: 80,
+  height: 60,
+});
+
+const LEGACY_DOCUMENT = {
+  version: '5.0',
+  idCounter: 12,
+  fps: 25,
+  totalFrames: 96,
+  projectResolution: { width: 1024, height: 768 },
+  sceneTitle: 'Legacy QA Scene',
+  lastSavedTime: '2026-10-16T09:00:00.000Z',
+  characterParts: [legacyPart('p1', -140), legacyPart('p2', 90)],
+  tracks: [
+    {
+      id: 'track_p1',
+      partId: 'p1',
+      name: 'Track p1',
+      color: '#3b82f6',
+      keyframes: [
+        { id: 'kf_1', frame: 0, transform: { x: -140, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } },
+        { id: 'kf_2', frame: 24, transform: { x: -40, y: 20, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } },
+      ],
+      channels: {
+        x: [
+          { id: 'ck_1', frame: 0, value: -140, easing: 'linear' },
+          { id: 'ck_2', frame: 24, value: -40, easing: 'linear' },
+        ],
+        y: [
+          { id: 'ck_3', frame: 0, value: 0, easing: 'linear' },
+          { id: 'ck_4', frame: 24, value: 20, easing: 'linear' },
+        ],
+      },
+    },
+  ],
+};
+
+const legacyAutosave = (project: Record<string, unknown> = {}) =>
+  JSON.stringify({ ...LEGACY_DOCUMENT, ...project });
+
 
 /** Renders the two hooks as the provider wires them (live document state derived per render). */
-const renderEditor = (options: { seed?: boolean; strict?: boolean } = {}): EditorApi => {
-  if (options.seed) {
-    window.localStorage.setItem(AUTOSAVE_STORAGE_KEY, JSON.stringify(autosaveScene()));
+const renderEditor = (options: { seed?: boolean; rawSeed?: string; strict?: boolean } = {}): EditorApi => {
+  if (options.seed || options.rawSeed !== undefined) {
+    window.localStorage.setItem(AUTOSAVE_STORAGE_KEY, options.rawSeed ?? JSON.stringify(autosaveScene()));
   }
   let api!: EditorApi;
   renderHook(
@@ -179,6 +231,9 @@ const renderEditor = (options: { seed?: boolean; strict?: boolean } = {}): Edito
         characterParts,
         setCharacterParts,
         sceneTitle,
+      fps,
+      totalFrames,
+      projectResolution,
       };
       return null;
     },
@@ -201,6 +256,9 @@ const renderEditor = (options: { seed?: boolean; strict?: boolean } = {}): Edito
     get characterParts() { return api.characterParts; },
     get setCharacterParts() { return api.setCharacterParts; },
     get sceneTitle() { return api.sceneTitle; },
+    get fps() { return api.fps; },
+    get totalFrames() { return api.totalFrames; },
+    get projectResolution() { return api.projectResolution; },
   };
 };
 
@@ -330,5 +388,123 @@ describe('N1 — restored project is the history baseline (restore is initializa
     expect(child?.channels?.rotation?.length).toBe(2);
     // Document-level fields travel with the restore and the undo floor.
     expect(api.sceneTitle).toBe('N1 Fixture');
+  });
+});
+
+describe('N1-legacy — the legacy AnimationProject autosave is initialization too', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('F3. a restored legacy project is the baseline: zero-edit Ctrl+Z is inert and the ladder floors at the restored scene', () => {
+    const api = renderEditor({ rawSeed: legacyAutosave() });
+    expect(api.restoredFromLocalStorage).toBe(true);
+    expect(api.characterParts.map((part) => part.id)).toEqual(['p1', 'p2']);
+    expect(api.tracks.map((track) => track.id)).toEqual(['track_p1']);
+    expect(api.fps).toBe(25);
+    expect(api.totalFrames).toBe(96);
+    expect(api.projectResolution).toEqual({ width: 1024, height: 768 });
+    // Pre-N1 contract, pinned unchanged: the legacy STARTUP path never
+    // restores the scene title (only explicit import does).
+    expect(api.sceneTitle).toBe('Fixture');
+    // Same contract as the SceneData path: the restore is the baseline, not an edit.
+    expect(api.canUndo).toBe(false);
+    act(() => api.undo());
+    expect(api.characterParts.map((part) => part.id)).toEqual(['p1', 'p2']);
+    expect(api.fps).toBe(25);
+
+    // One own edit undoes back to EXACTLY the restored document; redo replays it.
+    act(() => api.setCharacterParts((prev) => [...prev, rectPart('legacy-mine')]));
+    expect(api.canUndo).toBe(true);
+    act(() => api.undo());
+    expect(api.characterParts.map((part) => part.id)).toEqual(['p1', 'p2']);
+    expect(api.fps).toBe(25);
+    expect(api.canRedo).toBe(true);
+    act(() => api.redo());
+    expect(api.characterParts.map((part) => part.id)).toEqual(['p1', 'p2', 'legacy-mine']);
+
+    // Excessive undo stops AT the restored floor and goes inert.
+    act(() => {
+      api.undo();
+      api.undo();
+      api.undo();
+      api.undo();
+    });
+    expect(api.characterParts.map((part) => part.id)).toEqual(['p1', 'p2']);
+    expect(api.totalFrames).toBe(96);
+    expect(api.canUndo).toBe(false);
+  });
+
+  it('F3b. StrictMode double mount does not reseed or duplicate the legacy baseline', () => {
+    const api = renderEditor({ rawSeed: legacyAutosave(), strict: true });
+    expect(api.restoredFromLocalStorage).toBe(true);
+    expect(api.characterParts.map((part) => part.id)).toEqual(['p1', 'p2']);
+    expect(api.tracks).toHaveLength(1);
+    expect(api.canUndo).toBe(false);
+  });
+
+  it('F4. a validator-accepted legacy document whose keyframes omit ids still restores as the baseline', () => {
+    // trackProblem/legacyKeyframeProblem require frame+transform but NOT ids, and
+    // the legacy id sweep reads them — absence must not turn into a thrown
+    // half-restore (history left at [default, applied] with a phantom undo).
+    const keyframe = { id: 'kf_9', frame: 12, transform: { x: 5, y: 6, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } };
+    const { id: _omit, ...keyframeWithoutId } = keyframe;
+    void _omit;
+    const channelKey = { id: 'ck_9', frame: 12, value: 33, easing: 'linear' };
+    const { id: _omit2, ...channelKeyWithoutId } = channelKey;
+    void _omit2;
+    const seed = legacyAutosave({
+      tracks: [
+        {
+          id: 'track_p1',
+          partId: 'p1',
+          name: 'Track p1',
+          color: '#3b82f6',
+          keyframes: [keyframeWithoutId],
+          channels: { x: [channelKeyWithoutId] },
+        },
+      ],
+    });
+    const api = renderEditor({ rawSeed: seed });
+    expect(api.restoredFromLocalStorage).toBe(true);
+    expect(api.characterParts.map((part) => part.id)).toEqual(['p1', 'p2']);
+    expect(api.fps).toBe(25);
+    expect(api.canUndo).toBe(false);
+  });
+
+  it('F5. a legacy track without channels restores fully (empty channels injected) and floors undo at the restored scene', () => {
+    // The validator accepts a track without `channels` and the legacy migrator
+    // injects empty ones — the documented behavior of BOTH apply paths
+    // (startup and import), which the baseline fix must preserve.
+    const noChannels = legacyAutosave({
+      tracks: [
+        {
+          id: 'track_p1',
+          partId: 'p1',
+          name: 'Track p1',
+          color: '#3b82f6',
+          keyframes: [
+            { id: 'kf_1', frame: 0, transform: { x: 1, y: 2, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } },
+          ],
+        },
+      ],
+    });
+    const api = renderEditor({ rawSeed: noChannels });
+    expect(api.restoredFromLocalStorage).toBe(true);
+    expect(api.characterParts.map((part) => part.id)).toEqual(['p1', 'p2']);
+    expect(api.tracks.map((track) => track.id)).toEqual(['track_p1']);
+    expect(api.tracks[0]?.channels?.x).toEqual([]);
+    expect(api.fps).toBe(25);
+    expect(api.canUndo).toBe(false);
+    act(() => api.undo());
+    expect(api.characterParts.map((part) => part.id)).toEqual(['p1', 'p2']);
+    // The stored autosave survives a successful restore untouched.
+    expect(window.localStorage.getItem(AUTOSAVE_STORAGE_KEY)).not.toBeNull();
+    // Parity with the startup path: the same document via import is accepted.
+    let imported: { ok: boolean } | undefined;
+    act(() => {
+      imported = api.importProject(noChannels);
+    });
+    expect(imported?.ok).toBe(true);
   });
 });

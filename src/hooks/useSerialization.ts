@@ -496,18 +496,14 @@ export const useSerialization = ({
         return;
       }
       const savedResolution = readProjectResolution(parsed.projectResolution);
-      if (savedResolution) setProjectResolution(savedResolution);
-      setTracks(parsed.tracks.map(migrateTrack));
-      setCharacterParts(parsed.characterParts);
+      const migratedTracks = parsed.tracks.map(migrateTrack);
       const savedFps = readOptionalNumber(parsed.fps);
-      if (savedFps !== undefined) setFps(savedFps);
       const savedTotalFrames = readOptionalNumber(parsed.totalFrames);
-      if (savedTotalFrames !== undefined) setTotalFrames(savedTotalFrames);
       const savedAt = readOptionalDate(parsed.lastSavedTime);
-      // Autosave restoration synchronizes React state with persisted storage.
-      // oxlint-disable-next-line react/set-state-in-effect
-      setLastSavedAt(savedAt ?? new Date());
-
+      // The id sweep and the counter init read the same boundary fields the
+      // setters below queue. They run FIRST, mirroring `fromSceneData`: every
+      // derivable throw happens while the live document is still untouched,
+      // so a failed restore mutates nothing and never requests a baseline.
       const allIds: string[] = [];
       parsed.characterParts.forEach((p) => allIds.push(p.id));
       parsed.tracks.forEach((t) => {
@@ -521,6 +517,17 @@ export const useSerialization = ({
         allIds.push(template.id);
       }
       initializeIdCounter(allIds);
+      // From here to the baseline request the block is pure setter dispatch:
+      // a successful legacy startup restore is all-or-nothing (N1), and the
+      // baseline request is the final statement of the success path.
+      if (savedResolution) setProjectResolution(savedResolution);
+      setTracks(migratedTracks);
+      setCharacterParts(parsed.characterParts);
+      if (savedFps !== undefined) setFps(savedFps);
+      if (savedTotalFrames !== undefined) setTotalFrames(savedTotalFrames);
+      // Autosave restoration synchronizes React state with persisted storage.
+      // oxlint-disable-next-line react/set-state-in-effect
+      setLastSavedAt(savedAt ?? new Date());
       // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
       setRestoredFromLocalStorage(true);
       // N1: the restored legacy scene is the baseline, not an undoable edit.

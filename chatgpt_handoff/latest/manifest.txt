@@ -1,13 +1,13 @@
-# KCS SAFE-01 Autosave Ownership Manifest
+# KCS N3 PR-1 Import Boundary Manifest
 
-Repository: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio (main; work ran in the isolated standard worktree .worktrees/safe01-autosave-safety from main@6b86b29, removed after the merge)
-Lineage: autosave safety track (SAFE-01); N1 restore/undo predecessor merged earlier as PR #12
-Validated code commits: 1f76281 (CAS engine), eacf171 (report), 9b7a885 (header conflict surface), 2f56015 (dependency-array hygiene)
-Code CI: run 38926553783 SUCCESS at 2f56015; post-merge CI on main SUCCESS
-Integration: PR #13 merged into main at 5ee9909 (GitHub merge, head branch auto-deleted); local main fast-forwarded to match
-SAFE-01 scope: the four verified autosave loss modes fixed in src/hooks/useSerialization.ts, the amber conflict badge + toast in the header, nine units (src/tests/autosaveMultiTab.test.tsx) and four two-tab browser specs (e2e/autosave-multi-tab.spec.ts); the single-profile read-to-write window stays a documented residual race (K1), the multi-tab token protocol stays the deferred SAFE-02 decision
+Repository: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio (main at f45f8b1; work ran in the isolated standard worktree .worktrees/n3-import-boundary-pr1 from the same base)
+Lineage: N3 import-boundary track (Track C campaign); SAFE-01 autosave ownership merged earlier as PR #13
+Validated code commits: 1605270 (bounded acceptance + sanitizer floor + guards + e2e seed honesty), cf4a4fd (round report)
+Code CI: run 38943255178 SUCCESS at cf4a4fd; qa:release exact-SHA gate passed on a fresh build
+Integration: PR #14 OPEN at https://github.com/ErtugrulAK/keyframe-character-studio/pull/14 — awaiting user review; NO MERGE, NO RELEASE, NO TAG
+N3 PR-1 scope: bounded numeric acceptance at the single import boundary on both document kinds (finite fps 0.5-240, integer totalFrames 10-1200, canvas edges 2-16384 with fractions legal for Lottie, legacy projectResolution numeric edges, legacy numeric-version guard) plus the sanitizeProjectFps round-to-zero floor; 34 new boundary/sanitizer rows and 4 real-hook apply guards (zero setters, no baseline request, tampered-restore refusal); the v51 seed aligned from 1800 to the 1200 the state always applied
 
-Earlier-round provenance retained below (checkpoint, integration and V3.x rounds) as historical context; their counts and positions predate SAFE-01.
+Earlier-round provenance retained below (SAFE-01, checkpoint, integration and V3.x rounds) as historical context; their counts and positions predate N3 PR-1.
 
 
 Scope: main integration of the PR #9/#10/#11 UI lineage, plus the targeted remediation of the regression the merge gate caught (first-paint chrome fade unsettling the timeline's initial layout). The underlying lineages they integrate: first round — generic affine group resizing; canonical property-channel projection; resolved snap/guide geometry; persistent primitive tools; direct toolbar and explicit gap/center naming; compact GIF dialog and duration-preserving 120 sampling; timeline-only keyframing controls; routine success-toast removal; boundary-centred panel handles; category-card Shortcut Reference. V3.6 polish (2026-10-15): armed-draw crosshair cursor; single dock-width token contract (56/304/372); single-close GIF panel with tooltip-carried format facts; documented align/distribute command set and order; free non-uniform corner resize with Shift aspect toggle; focus-visible pointer/keyboard select policy; quiet mode segment; dense one-line shortcut rows; LAN restored-project provenance chip. V3.7 final micro-polish (2026-10-15): announced Align/Center/Distribute/Rotate-Flip band grouping with a four-arrow both-axes Center glyph; compact restrained rail (42px items, 18px icons, one label voice, light active surface + accent bar) and quiet boundary-tab handles of one family; ONE inset focus-visible authority; presentation-only 180ms Edit/Broadcast chrome crossfade (reduced-motion honoured, camera-exact rapid switching); dense single-column Shortcut Reference sheet; GIF control renamed Sampling rate after verifying 0.5s/1s/2s at 120 encode 25/50/100 frames at the 2 cs delay floor with preserved wall-clock duration.
@@ -21,7 +21,7 @@ Canonical sync: main/origin main carry the delivered head. The disclosed metadat
 
 Current task documents:
 - README.md — entry point and record precedence
-- OMP_FINAL_RESPONSE.md — complete findings, root causes, fixes, math/timing decisions, validation and retest record, with the SAFE-01 autosave ownership addendum (2026-10-16)
+- OMP_FINAL_RESPONSE.md — complete findings, root causes, fixes, math/timing decisions, validation and retest record, with the N3 PR-1 import-boundary addendum (2026-10-16)
 - manifest.txt — provenance and validation summary
 - progress_174_combined_pr9_pr10_ui_polish_v36.md — the V3.6 nine-findings remediation record
 - progress_175_pr11_final_micro_polish_v37.md — the V3.7 final micro-polish record
@@ -30,6 +30,7 @@ Current task documents:
 - progress_178_restore_undo_s0_baseline.md — the N1 restore/undo record (root reports/ copy; PR #12)
 - progress_179_pr12_edge_review.md — the PR #12 edge review record (root reports/ copy)
 - progress_180_safe01_autosave_ownership.md — the SAFE-01 four-loss-mode fix, CAS engine and two-tab pins record
+- progress_181_n3_import_boundary_pr1.md — the N3 PR-1 bounded numeric acceptance record (seven confirmed findings, both-route policy, red-to-green matrix, apply guards)
 
 Current mirrors of root state documents (re-copied from root after this round):
 - CHANGELOG.md

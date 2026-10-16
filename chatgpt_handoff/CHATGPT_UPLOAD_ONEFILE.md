@@ -1,27 +1,27 @@
-# KCS — SAFE-01 Autosave Ownership (PR #13)
+# KCS — N3 PR-1 Import Boundary (PR #14, awaiting review)
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## README.md
 
-# KCS SAFE-01 Autosave Ownership Handoff
+# KCS N3 PR-1 Import Boundary Handoff
 
-This task-specific bundle carries the autosave production-safety round: the four verified shared-key loss modes, the ownership-tracked compare-and-swap rewrite of the interval writer, the conflict pause surfaced in the header, and the two-tab browser pins — integrated into `main` by PR #13.
+This task-specific bundle carries the import-boundary numeric-integrity round: seven first-hand-confirmed findings (fps 0.4 → sanitizer-zero → Infinity-interval playhead freeze, accepted-then-clamped totalFrames, 1e9 canvases, the numeric-policy-free legacy route, the version-99 legacy re-route) and the bounded numeric acceptance policy now enforced on both document kinds. The work is OPEN as PR #14 — not merged, no release, no tag.
 
 ## Current engineering record
 
-- Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (`main`); this round ran in the isolated standard worktree `.worktrees\safe01-autosave-safety` from `main@6b86b29` and was removed after the merge.
-- Status: **SAFE-01 MERGED — PR #13 AT `5ee9909` — POST-MERGE CI GREEN — NO TAG — NO RELEASE — NO PUBLISH.**
-- Fully validated code head: `2f56015714d9b60c0c7606c5ece0cfa7daba2d98` (four commits: CAS engine, report, header conflict surface, dependency-array hygiene); the documents-only records ride above it per the usual convention.
-- Release inventory untouched: `v1.1.0-rc.1` (draft), `v1.1.0-rc.2` (public prerelease), `v1.1.0-public-controls`; package metadata stays the private `1.1.0-rc.1`. The `v1.2.0-rc.1` proposal from the checkpoint round still awaits the user's approval — SAFE-01 adds to its delta.
-- Behavior contract: a tab writes the shared key only when its document earned the write (dirty vs the settled capture) and the key still holds the exact value this tab last read or wrote; mismatches pause autosave visibly (amber badge + one-time toast) instead of overwriting. Restored tabs stay silent until a real edit. Import/reset are explicit replacements and lift the pause. The single-profile read-to-write window is the documented residual race (K1); the multi-tab token protocol is the deferred SAFE-02 decision.
-- `OMP_FINAL_RESPONSE.md` carries the SAFE-01 addendum; `reports/progress_180_safe01_autosave_ownership.md` is the full round record.
+- Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (`main` at `f45f8b1`); this round ran in the isolated standard worktree `.worktrees\n3-import-boundary-pr1` from `main@f45f8b1`.
+- Status: **N3 PR-1 OPEN — PR #14 AT HEAD `cf4a4fd` — CI GREEN — AWAITING USER REVIEW — NO MERGE — NO RELEASE — NO TAG.**
+- Fully validated code head: `cf4a4fd79fb1ec0a60b43c38eaa31ff822e733d7` (code commit `1605270` + report commit `cf4a4fd`); the merge decision is the user's.
+- Release inventory untouched: `v1.1.0-rc.1` (draft), `v1.1.0-rc.2` (public prerelease), `v1.1.0-public-controls`; package metadata stays the private `1.1.0-rc.1`. The `v1.2.0-rc.1` proposal from the checkpoint round still awaits the user's approval.
+- Behavior contract delivered (in the PR, pending merge): present-but-unusable timeline/canvas numbers refuse with one stable diagnostic (`fps` 0.5–240; integer `totalFrames` 10–1200; edges 2–16384 with fractions legal for Lottie; legacy mirror rules plus the numeric-version guard; sanitizer round-to-zero floor). Absent fields keep documented defaults; nothing is silently repaired; refused documents apply nothing.
+- `OMP_FINAL_RESPONSE.md` carries the N3 PR-1 addendum; `reports/progress_181_n3_import_boundary_pr1.md` is the full round record.
 
-Local gates passed (head `2f56015`, 2026-10-16): tsc/lint clean; nine focused autosave units 9/9; full vitest 2623/2624 (the only failure the local `main`-drift environmental guard of `stateConsistencyCheck`, green on CI); `npm run qa:release` passed for the exact candidate SHA on a fresh build; FULL Chromium **444 passed / 0 failed** (workers 4, retries 1, isolated port; live API 5000 and the canonical 5173 never touched); CI `Build, Lint & Test Verification` pass at the SHA and on `main` after the merge.
+Local gates passed (head `cf4a4fd`, 2026-10-16): tsc/lint clean; full vitest **2665/2665** (176 files, +41 new tests); FULL Chromium **443 passed / 0 failed + 1 environmental flake** (history-restore under workers-4; passed on retry and 5/5 isolated — evidence in the report); `npm run qa:release` passed for the exact SHA on a fresh build; `validate:ograf` and `git diff --check` clean; PR CI `Build, Lint & Test Verification` pass (run 38943255178). Protected surfaces untouched: canonical 5173, API 5000, 4312 never started, `.research/` and previous worktrees preserved.
 
 ## Record precedence
 
-The SAFE-01 addendum in `OMP_FINAL_RESPONSE.md`, the manifest and `progress_180` are the current task authority. The integration and remediation records retained here are historical snapshots or exact mirrors of root documents; their counts, positions and next-inputs are context, not current state. No release, tag, npm publication or branch deletion beyond the PR head's auto-deletion was performed in this round.
+The N3 PR-1 addendum in `OMP_FINAL_RESPONSE.md`, the manifest and `progress_181` are the current task authority; the SAFE-01, checkpoint, integration and V3.x records below/alongside are historical snapshots or exact mirrors of root documents. Their counts, positions and next-inputs are context, not current state. The PR is OPEN: nothing from this round is on `main` until the user approves the merge.
 
 ## Upload
 
@@ -96,6 +96,14 @@ Production-safety round on the shared-key autosave engine; full record: `reports
 `useSerialization` now keeps three pieces of ownership state and nothing else changed: `storageKnownRef` (the exact string this tab last read at boot — a refused value included — or wrote), `settledSaveRef` (the serialized document the tab's state settled to; re-armed to null when a restore applies or when import/reset replace the document) and `autosavePausedRef` (event-loop-safe mirror of the conflict pause). A tick writes only when the candidate differs from the settled capture and the live key still equals the known value; success adopts the written string, mismatch adopts the observed value and pauses with the amber `--paused` badge plus a one-time toast. Manual save shares the same CAS path and never force-overwrites across a detected conflict; import and reset are explicit document replacements and lift the pause deliberately. The read-to-write window inside one browser profile remains the documented residual race — pinned honestly by K1 rather than claimed fixed; the multi-tab token protocol stays the deferred SAFE-02 decision.
 
 Validation at merged head `2f56015` (PR #13, merged into `main` at `5ee9909`, head branch auto-deleted): CI `Build, Lint & Test Verification` pass; exact-SHA `npm run qa:release` pass on a fresh build; full vitest 2623/2624 with the only failure being the local `main`-drift guard of `stateConsistencyCheck` (green on CI); FULL Chromium **444 passed / 0 failed** (441 plus the new two-tab specs N1/K1/K2/H1); nine focused units 9/9; the external s0 harness stayed 0/3 with exit 0 on the final bundle.
+
+## N3 PR-1 import-boundary addendum — 2026-10-16
+
+Import-boundary hardening round; full record: `reports/progress_181_n3_import_boundary_pr1.md`. Seven findings were re-confirmed first-hand at base `f45f8b1` against the code (not inherited from the earlier audits): the scene boundary accepted `fps: 0.4` and the state sanitizer rounded it to zero, freezing the playhead through `1000 / 0 = Infinity` with no diagnostic; `totalFrames >= 1` was accepted while the state silently clamped `[10,1200]` and rounded (accepted ≠ applied); canvas edges accepted any finite positive number (1e9 into viewBox/stage bounds/GIF canvas plan); the legacy route carried no numeric policy at all; and a numeric unsupported version re-routed through the legacy shape and imported.
+
+The fix lives only in the boundary and the sanitizer: bounded numeric acceptance on BOTH document kinds — finite fps within 0.5–240, integer totalFrames within 10–1200, canvas edges within 2–16384 with fractions legal for Lottie-mapped sizes, the legacy `projectResolution` numeric edges carrying the same range (a non-object keeps the documented drop-to-default narrowing), a numeric-version guard refusing scene versions outside [1,2] on the legacy route, and a round-to-zero floor in `sanitizeProjectFps` as defense-in-depth for every caller. Refusals remain single-diagnostic with stable codes (`KCS_IMPORT_INVALID_TIMELINE`, `KCS_IMPORT_INVALID_CANVAS`, `KCS_IMPORT_UNSUPPORTED_VERSION`) and exact `$.` paths; nothing is silently repaired; absent fields keep their documented defaults.
+
+Validation at head `cf4a4fd` (PR #14, OPEN — no merge, no tag): full vitest 2665/2665 including 34 new boundary/sanitizer rows and four real-hook apply guards proving zero state setters and no history-baseline request for refused documents and tampered restores; full Chromium 443 passed + 1 environmental flake (history-restore under workers-4 contention — passed on its own retry and 5/5 isolated, all its seeds in-policy); lint/tsc/build/validate:ograf/diff-check clean; `npm run qa:release` passed for the exact SHA on a fresh build; PR CI `Build, Lint & Test Verification` pass at the SHA. One e2e seed was aligned to honesty: `v51-recovery` declared 1800 frames, a value the state always silently clamped to 1200 — the seed now says 1200, the identical effective timeline. Deliberate tightenings (compat suites green): non-numeric fps/totalFrames on the legacy route now refuse instead of silently defaulting, and an out-of-range numeric legacy resolution edge refuses instead of dropping to defaults. Deferred per the audit backlog: keyframe frame-range and id uniqueness (C4), canvas JSON-drop choke (C5), media caps (C6), channel-key allowlist (C8), FileReader pre-check (C9), id hygiene (C11), preset-library read (C12).
 
 ## Findings, root causes, and fixes
 
@@ -190,16 +198,16 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`. Other files retained un
 
 ## manifest.txt
 
-# KCS SAFE-01 Autosave Ownership Manifest
+# KCS N3 PR-1 Import Boundary Manifest
 
-Repository: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio (main; work ran in the isolated standard worktree .worktrees/safe01-autosave-safety from main@6b86b29, removed after the merge)
-Lineage: autosave safety track (SAFE-01); N1 restore/undo predecessor merged earlier as PR #12
-Validated code commits: 1f76281 (CAS engine), eacf171 (report), 9b7a885 (header conflict surface), 2f56015 (dependency-array hygiene)
-Code CI: run 38926553783 SUCCESS at 2f56015; post-merge CI on main SUCCESS
-Integration: PR #13 merged into main at 5ee9909 (GitHub merge, head branch auto-deleted); local main fast-forwarded to match
-SAFE-01 scope: the four verified autosave loss modes fixed in src/hooks/useSerialization.ts, the amber conflict badge + toast in the header, nine units (src/tests/autosaveMultiTab.test.tsx) and four two-tab browser specs (e2e/autosave-multi-tab.spec.ts); the single-profile read-to-write window stays a documented residual race (K1), the multi-tab token protocol stays the deferred SAFE-02 decision
+Repository: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio (main at f45f8b1; work ran in the isolated standard worktree .worktrees/n3-import-boundary-pr1 from the same base)
+Lineage: N3 import-boundary track (Track C campaign); SAFE-01 autosave ownership merged earlier as PR #13
+Validated code commits: 1605270 (bounded acceptance + sanitizer floor + guards + e2e seed honesty), cf4a4fd (round report)
+Code CI: run 38943255178 SUCCESS at cf4a4fd; qa:release exact-SHA gate passed on a fresh build
+Integration: PR #14 OPEN at https://github.com/ErtugrulAK/keyframe-character-studio/pull/14 — awaiting user review; NO MERGE, NO RELEASE, NO TAG
+N3 PR-1 scope: bounded numeric acceptance at the single import boundary on both document kinds (finite fps 0.5-240, integer totalFrames 10-1200, canvas edges 2-16384 with fractions legal for Lottie, legacy projectResolution numeric edges, legacy numeric-version guard) plus the sanitizeProjectFps round-to-zero floor; 34 new boundary/sanitizer rows and 4 real-hook apply guards (zero setters, no baseline request, tampered-restore refusal); the v51 seed aligned from 1800 to the 1200 the state always applied
 
-Earlier-round provenance retained below (checkpoint, integration and V3.x rounds) as historical context; their counts and positions predate SAFE-01.
+Earlier-round provenance retained below (SAFE-01, checkpoint, integration and V3.x rounds) as historical context; their counts and positions predate N3 PR-1.
 
 
 Scope: main integration of the PR #9/#10/#11 UI lineage, plus the targeted remediation of the regression the merge gate caught (first-paint chrome fade unsettling the timeline's initial layout). The underlying lineages they integrate: first round — generic affine group resizing; canonical property-channel projection; resolved snap/guide geometry; persistent primitive tools; direct toolbar and explicit gap/center naming; compact GIF dialog and duration-preserving 120 sampling; timeline-only keyframing controls; routine success-toast removal; boundary-centred panel handles; category-card Shortcut Reference. V3.6 polish (2026-10-15): armed-draw crosshair cursor; single dock-width token contract (56/304/372); single-close GIF panel with tooltip-carried format facts; documented align/distribute command set and order; free non-uniform corner resize with Shift aspect toggle; focus-visible pointer/keyboard select policy; quiet mode segment; dense one-line shortcut rows; LAN restored-project provenance chip. V3.7 final micro-polish (2026-10-15): announced Align/Center/Distribute/Rotate-Flip band grouping with a four-arrow both-axes Center glyph; compact restrained rail (42px items, 18px icons, one label voice, light active surface + accent bar) and quiet boundary-tab handles of one family; ONE inset focus-visible authority; presentation-only 180ms Edit/Broadcast chrome crossfade (reduced-motion honoured, camera-exact rapid switching); dense single-column Shortcut Reference sheet; GIF control renamed Sampling rate after verifying 0.5s/1s/2s at 120 encode 25/50/100 frames at the 2 cs delay floor with preserved wall-clock duration.
@@ -213,7 +221,7 @@ Canonical sync: main/origin main carry the delivered head. The disclosed metadat
 
 Current task documents:
 - README.md — entry point and record precedence
-- OMP_FINAL_RESPONSE.md — complete findings, root causes, fixes, math/timing decisions, validation and retest record, with the SAFE-01 autosave ownership addendum (2026-10-16)
+- OMP_FINAL_RESPONSE.md — complete findings, root causes, fixes, math/timing decisions, validation and retest record, with the N3 PR-1 import-boundary addendum (2026-10-16)
 - manifest.txt — provenance and validation summary
 - progress_174_combined_pr9_pr10_ui_polish_v36.md — the V3.6 nine-findings remediation record
 - progress_175_pr11_final_micro_polish_v37.md — the V3.7 final micro-polish record
@@ -222,6 +230,7 @@ Current task documents:
 - progress_178_restore_undo_s0_baseline.md — the N1 restore/undo record (root reports/ copy; PR #12)
 - progress_179_pr12_edge_review.md — the PR #12 edge review record (root reports/ copy)
 - progress_180_safe01_autosave_ownership.md — the SAFE-01 four-loss-mode fix, CAS engine and two-tab pins record
+- progress_181_n3_import_boundary_pr1.md — the N3 PR-1 bounded numeric acceptance record (seven confirmed findings, both-route policy, red-to-green matrix, apply guards)
 
 Current mirrors of root state documents (re-copied from root after this round):
 - CHANGELOG.md

@@ -162,3 +162,59 @@ test('an explicit import stays one undoable transaction (the contrast case)', as
   await page.keyboard.press('Control+z');
   await expect.poll(() => paintedParts(page)).toBe(0);
 });
+
+test('a restored legacy AnimationProject autosave is the baseline as well (N1 review, cases A+B)', async ({ page }) => {
+  // Real legacy shape (string version, characterParts/tracks), with keyframes
+  // and channel keys that OMIT ids — the validator-accepted inputs that used
+  // to crash the legacy startup apply after its setters had run.
+  const legacyCharacterParts = ['l1', 'l2', 'l3'].map((id, index) => ({
+    id,
+    name: `Legacy ${index}`,
+    type: 'custom_rect',
+    zIndex: 3 - index,
+    baseTransform: { x: -120 + index * 140, y: -40, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    width: 100,
+    height: 80,
+    fillColor: '#3a86ff',
+    strokeColor: '#000000',
+  }));
+  const legacyDocument = JSON.stringify({
+    version: '5.0',
+    idCounter: 12,
+    fps: 30,
+    totalFrames: 90,
+    projectResolution: { width: 1920, height: 1080 },
+    lastSavedTime: new Date().toISOString(),
+    characterParts: legacyCharacterParts,
+    tracks: legacyCharacterParts.map((part) => ({
+      id: `t_${part.id}`,
+      partId: part.id,
+      name: part.name,
+      color: '#22c55e',
+      keyframes: KEYFRAME_FRAMES.map((frame) => ({
+        frame,
+        transform: { x: frame * 2, y: -40, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      })),
+      channels: {
+        x: KEYFRAME_FRAMES.map((frame) => ({ frame, value: frame * 2, easing: 'linear' })),
+      },
+    })),
+  });
+
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+  await page.addInitScript(
+    (payload: { key: string; value: string }) => localStorage.setItem(payload.key, payload.value),
+    { key: STORAGE_KEY, value: legacyDocument },
+  );
+  await page.goto('/');
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  // Fully applied, not half-restored: every legacy layer painted, every track row and diamond present.
+  await expect(page.locator('.ue-track-row')).toHaveCount(3);
+  await expect(page.locator('.keyframe-diamond')).toHaveCount(KEYFRAME_FRAMES.length * 3);
+  expect(await paintedParts(page)).toBe(3);
+
+  await page.keyboard.press('Control+z');
+  await expect.poll(() => paintedParts(page), { timeout: 4000 }).toBe(3);
+  await expect(page.locator('.ue-track-row')).toHaveCount(3);
+});

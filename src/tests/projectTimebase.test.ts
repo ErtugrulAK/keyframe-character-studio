@@ -321,3 +321,31 @@ describe('R4-15 — the exported OGraf runtime is time-driven, not cadence-drive
     expect(graphic._currentFrame).toBe(60);
   });
 });
+
+/**
+ * N3 PR-1 — the sanitizer must never turn a POSITIVE rate into zero.
+ * `Math.round(0.4) = 0` used to pass the old positivity guard and poison
+ * playback: `1000 / 0` is an infinite frame interval, so the playhead froze
+ * with no diagnostic. The boundary now refuses out-of-range rates on import;
+ * this floor is the defense-in-depth for every other `setFps` caller.
+ */
+describe('N3 PR-1 — sanitizeProjectFps never yields zero from a positive rate', () => {
+  it.each([
+    [0.4, 60],
+    [0.49, 60],
+    [0, 60],
+    [-5, 60],
+    [Number.NaN, 60],
+    [Number.POSITIVE_INFINITY, 60],
+  ])('falls back for %p', (value, fallback) => {
+    expect(sanitizeProjectFps(value, fallback)).toBe(fallback);
+  });
+
+  it('keeps every rate that rounds to a usable whole number', () => {
+    expect(sanitizeProjectFps(0.5, 60)).toBe(1);
+    expect(sanitizeProjectFps(1.4, 60)).toBe(1);
+    expect(sanitizeProjectFps(29.97, 60)).toBe(30);
+    expect(sanitizeProjectFps(24, 60)).toBe(24);
+    expect(sanitizeProjectFps(240, 60)).toBe(240);
+  });
+});

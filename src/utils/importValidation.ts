@@ -173,6 +173,46 @@ const REIMPORT_ACTION = 'Re-export the project from Keyframe Studio and import t
 /** Scene versions this build can apply; a higher one is a file from a newer build. */
 const SUPPORTED_SCENE_VERSIONS: readonly number[] = [1, 2];
 
+/**
+ * N3 PR-1 — bounded numeric acceptance. These limits mirror the editor's own
+ * authored behaviour: the state clamps `totalFrames` into [10, 1200] and the
+ * FPS sanitizer rounds to a whole rate, so accepting anything outside these
+ * ranges would mean "accepted ≠ applied" — a document the boundary promised
+ * to keep and the state then silently rewrote. The fps floor (0.5) is also
+ * what keeps `Math.round(fps) >= 1`: a smaller positive rate rounded to zero
+ * and froze the playhead (`1000 / 0` is an infinite frame interval). The
+ * ceilings leave generous headroom above the highest value the editor ever
+ * authors (120 fps, 2560 px; fractional canvas sizes stay legal because the
+ * Lottie mapping produces them). Absent fields keep their documented
+ * defaults — absence is never a refusal.
+ */
+const MIN_IMPORT_FPS = 0.5;
+const MAX_IMPORT_FPS = 240;
+const MIN_IMPORT_TOTAL_FRAMES = 10;
+const MAX_IMPORT_TOTAL_FRAMES = 1200;
+const MIN_IMPORT_CANVAS_EDGE = 2;
+const MAX_IMPORT_CANVAS_EDGE = 16384;
+
+/** The shared timeline rule for both document kinds: present values must be usable. */
+const timelineProblem = (fps: unknown, totalFrames: unknown): SceneProblem | undefined => {
+  if (fps !== undefined && !(isFiniteNumberValue(fps) && fps >= MIN_IMPORT_FPS && fps <= MAX_IMPORT_FPS)) {
+    return sceneProblem('KCS_IMPORT_INVALID_TIMELINE', '$.fps', `The file declares a frame rate outside the supported range (${MIN_IMPORT_FPS}–${MAX_IMPORT_FPS}), so playback has no usable duration.`);
+  }
+  if (totalFrames !== undefined && !(isFiniteNumberValue(totalFrames) && Number.isInteger(totalFrames)
+    && totalFrames >= MIN_IMPORT_TOTAL_FRAMES && totalFrames <= MAX_IMPORT_TOTAL_FRAMES)) {
+    return sceneProblem('KCS_IMPORT_INVALID_TIMELINE', '$.totalFrames', `The file declares a timeline length outside the supported range (an integer ${MIN_IMPORT_TOTAL_FRAMES}–${MAX_IMPORT_TOTAL_FRAMES}).`);
+  }
+  return undefined;
+};
+
+/** The shared canvas rule; a present edge must fit the viewBox and the GIF canvas plan. */
+const canvasEdgeProblem = (field: 'width' | 'height', value: unknown, path: string): SceneProblem | undefined => {
+  if (value !== undefined && !(isFiniteNumberValue(value) && value >= MIN_IMPORT_CANVAS_EDGE && value <= MAX_IMPORT_CANVAS_EDGE)) {
+    return sceneProblem('KCS_IMPORT_INVALID_CANVAS', path, `The file declares a canvas ${field} outside the supported range (${MIN_IMPORT_CANVAS_EDGE}–${MAX_IMPORT_CANVAS_EDGE}).`);
+  }
+  return undefined;
+};
+
 const sceneProblem = (code: string, path: string, message: string, action: string = REIMPORT_ACTION): SceneProblem =>
   ({ code, path, message, action });
 
@@ -508,6 +548,36 @@ const trackProblem = (value: unknown, index: number): SceneProblem | undefined =
  * documents.
  */
 const legacyProjectProblem = (project: LegacyProjectDocument): SceneProblem | undefined => {
+  // Legacy documents predate the numeric schema; a NUMERIC version can only
+  // mean a scene-shaped file wearing the legacy arrays, and this build cannot
+  // apply a schema it does not know. (True legacy files carry a text version
+  // like '5.0' or none at all.)
+  const version = (project as unknown as { version?: unknown }).version;
+  if (typeof version === 'number' && !SUPPORTED_SCENE_VERSIONS.includes(version)) {
+    return sceneProblem(
+      'KCS_IMPORT_UNSUPPORTED_VERSION',
+      '$.version',
+      `The file declares scene version ${String(version)}, which this build does not know how to apply.`,
+      'Open the file in the Keyframe Studio version that wrote it, or export it again from a supported one.',
+    );
+  }
+
+  // The legacy apply path forwards these values to the same timeline and
+  // resolution state the scene path feeds, so they carry the same rules.
+  const timingProblem = timelineProblem(project.fps, project.totalFrames);
+  if (timingProblem) return timingProblem;
+  if (project.projectResolution !== undefined) {
+    const resolution = asRecord(project.projectResolution);
+    // A non-object resolution keeps the documented drop-to-default narrowing;
+    // a present numeric edge that the state cannot adopt is a refusal.
+    if (resolution) {
+      for (const field of ['width', 'height'] as const) {
+        const canvasProblem = canvasEdgeProblem(field, resolution[field], `$.projectResolution.${field}`);
+        if (canvasProblem) return canvasProblem;
+      }
+    }
+  }
+
   const seenIds = new Set<string>();
   for (const [index, part] of project.characterParts.entries()) {
     const partProblem = legacyPartProblem(part, index, seenIds);
@@ -537,22 +607,17 @@ const sceneSemanticProblem = (scene: SceneData): SceneProblem | undefined => {
     );
   }
 
-  // Playback timing. `fps` divides the animation duration and `totalFrames`
-  // bounds the timeline, so both must be usable numbers; absence keeps the
-  // current values, which is the documented behaviour for a v1 file.
-  if (record.fps !== undefined && !(isFiniteNumberValue(record.fps) && record.fps > 0)) {
-    return sceneProblem('KCS_IMPORT_INVALID_TIMELINE', '$.fps', 'The file declares a frame rate that is not a positive number, so playback has no usable duration.');
-  }
-  if (record.totalFrames !== undefined && !(isFiniteNumberValue(record.totalFrames) && record.totalFrames >= 1)) {
-    return sceneProblem('KCS_IMPORT_INVALID_TIMELINE', '$.totalFrames', 'The file declares a timeline length that is not a positive number.');
-  }
+  // Playback timing and canvas size. `fps` divides the animation duration and
+  // `totalFrames` bounds the timeline, so both must be usable numbers the state
+  // can adopt unchanged; absence keeps the current values, which is the
+  // documented behaviour for a v1 file. The canvas feeds the SVG viewBox, the
+  // stage bounds and the GIF canvas plan, so its edges carry the same promise.
+  const timingProblem = timelineProblem(record.fps, record.totalFrames);
+  if (timingProblem) return timingProblem;
 
-  // Canvas size. Absent means the documented 1920×1080 default; a present value
-  // must be usable, because the SVG viewBox and the stage zoom are built from it.
   for (const field of ['width', 'height'] as const) {
-    if (record[field] !== undefined && !(isFiniteNumberValue(record[field]) && record[field] > 0)) {
-      return sceneProblem('KCS_IMPORT_INVALID_CANVAS', `$.${field}`, `The file declares a canvas ${field} that is not a positive number.`);
-    }
+    const canvasProblem = canvasEdgeProblem(field, record[field], `$.${field}`);
+    if (canvasProblem) return canvasProblem;
   }
 
   const seenIds = new Set<string>();

@@ -733,7 +733,7 @@ export const useSerialization = ({
     } catch {
       return { ok: false, diagnostics: [{ code: 'KCS_IMPORT_FAILED', severity: 'error', feature: 'project-import', path: '$', message: 'The document passed validation but could not be applied.', action: 'Re-export the project and import it again.' }] };
     }
-  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setProjectResolution, setCoordinateSystem, setTracks, setCharacterParts, setFps, setTotalFrames, setTemplateCanvasStore, setProjectTemplates, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState]);
+  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setProjectResolution, setCoordinateSystem, setTracks, setCharacterParts, setFps, setTotalFrames, setTemplateCanvasStore, setProjectTemplates, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, adoptOwnershipAfterReplacement]);
 
   const resetProject = useCallback(() => {
     setTracks(DEFAULT_TRACKS);
@@ -753,7 +753,7 @@ export const useSerialization = ({
     adoptOwnershipAfterReplacement(null);
     setLastSavedAt(null);
     setRestoredFromLocalStorage(false);
-  }, [setTracks, setCharacterParts, setCurrentFrame, setIsPlaying, setCoordinateSystem]);
+  }, [setTracks, setCharacterParts, setCurrentFrame, setIsPlaying, setCoordinateSystem, adoptOwnershipAfterReplacement]);
 
   /**
    * Explicitly opt a legacy-centi scene into the project-unit contract.

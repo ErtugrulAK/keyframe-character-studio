@@ -1,21 +1,21 @@
-# KCS Version Checkpoint + Safe Desktop Cleanup Handoff
+# KCS SAFE-01 Autosave Ownership Handoff
 
-This task-specific bundle carries the post-integration checkpoint round: the version-history audit and the `v1.2.0-rc.1` recommendation (report only — nothing bumped or tagged), the safe cleanup of the retired desktop QA worktrees, the workspace folder standard, and the re-validation on the delivered head.
+This task-specific bundle carries the autosave production-safety round: the four verified shared-key loss modes, the ownership-tracked compare-and-swap rewrite of the interval writer, the conflict pause surfaced in the header, and the two-tab browser pins — integrated into `main` by PR #13.
 
 ## Current engineering record
 
-- Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (`main`); this round's gates ran in the isolated standard worktree `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\qc-checkpoint` (detached, full dependency install, own runtime SQLite DB).
-- Status: **VERSION CHECKPOINT AUDITED — SAFE DESKTOP CLEANUP COMPLETE — NO TAG — NO RELEASE — NO PUBLISH.**
-- Fully validated code/tests head: `ef1d43eab73ff101b4c9cf0fdb0215a3b33d2f41` (vitest collector scoped away from the `.worktrees/` and `.research/` standards); the documents-only record rides above it per the usual convention.
-- Release inventory untouched: `v1.1.0-rc.1` (draft), `v1.1.0-rc.2` (public prerelease), `v1.1.0-public-controls`; package metadata stays the private `1.1.0-rc.1`. The next candidate is **proposed** as `v1.2.0-rc.1` (minor) — the user's approval is the gate, see `reports/progress_177_version_checkpoint_desktop_cleanup.md`.
-- Desktop cleanup: `keyframe-character-studio-omp-combined-qa`, `keyframe-character-studio-omp-manual-qa-r1` and `keyframe-character-studio-omp-ae-layout` verified data-safe and removed with `git worktree remove` only; their branches remain on `origin` (deletion needs separate approval). The user's `KCS\` host folders, the active research model's `effectcraft-reference-20261015`, `ograf-studio-stable` and the in-repo `.research/` clones were preserved untouched.
-- `OMP_FINAL_RESPONSE.md` carries the version-checkpoint addendum (inventory, SemVer assessment, cleanup table, standard); `reports/progress_177_version_checkpoint_desktop_cleanup.md` is the full round record.
+- Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (`main`); this round ran in the isolated standard worktree `.worktrees\safe01-autosave-safety` from `main@6b86b29` and was removed after the merge.
+- Status: **SAFE-01 MERGED — PR #13 AT `5ee9909` — POST-MERGE CI GREEN — NO TAG — NO RELEASE — NO PUBLISH.**
+- Fully validated code head: `2f56015714d9b60c0c7606c5ece0cfa7daba2d98` (four commits: CAS engine, report, header conflict surface, dependency-array hygiene); the documents-only records ride above it per the usual convention.
+- Release inventory untouched: `v1.1.0-rc.1` (draft), `v1.1.0-rc.2` (public prerelease), `v1.1.0-public-controls`; package metadata stays the private `1.1.0-rc.1`. The `v1.2.0-rc.1` proposal from the checkpoint round still awaits the user's approval — SAFE-01 adds to its delta.
+- Behavior contract: a tab writes the shared key only when its document earned the write (dirty vs the settled capture) and the key still holds the exact value this tab last read or wrote; mismatches pause autosave visibly (amber badge + one-time toast) instead of overwriting. Restored tabs stay silent until a real edit. Import/reset are explicit replacements and lift the pause. The single-profile read-to-write window is the documented residual race (K1); the multi-tab token protocol is the deferred SAFE-02 decision.
+- `OMP_FINAL_RESPONSE.md` carries the SAFE-01 addendum; `reports/progress_180_safe01_autosave_ownership.md` is the full round record.
 
-Local gates passed (head `ef1d43e`, 2026-10-16): tsc/lint/build clean; unit 173 files / 2602 tests on the canonical tree; `npm run qa:release` passed for the exact candidate SHA; FULL Chromium **436 passed / 0 failed / 0 flaky** (workers 8, retries 0, isolated config; live API 5000 and the canonical-served 5173 never touched); `timeline-marquee` 6/6 (workers 1, retries 0); state consistency PASS (57 checks); `npm audit` 0. Earlier rounds on this lineage keep their records: integration 73fc000 (2602/436), V3.7 2601/436, V3.6 2599/426, first round 2598/415.
+Local gates passed (head `2f56015`, 2026-10-16): tsc/lint clean; nine focused autosave units 9/9; full vitest 2623/2624 (the only failure the local `main`-drift environmental guard of `stateConsistencyCheck`, green on CI); `npm run qa:release` passed for the exact candidate SHA on a fresh build; FULL Chromium **444 passed / 0 failed** (workers 4, retries 1, isolated port; live API 5000 and the canonical 5173 never touched); CI `Build, Lint & Test Verification` pass at the SHA and on `main` after the merge.
 
 ## Record precedence
 
-The version-checkpoint addendum in `OMP_FINAL_RESPONSE.md`, the manifest and `progress_177` are the current task authority. The integration and remediation records retained here are historical snapshots or exact mirrors of root documents; their counts, positions and next-inputs are context, not current state. No release, tag, npm publication, branch deletion or research-folder move was performed in this round.
+The SAFE-01 addendum in `OMP_FINAL_RESPONSE.md`, the manifest and `progress_180` are the current task authority. The integration and remediation records retained here are historical snapshots or exact mirrors of root documents; their counts, positions and next-inputs are context, not current state. No release, tag, npm publication or branch deletion beyond the PR head's auto-deletion was performed in this round.
 
 ## Upload
 

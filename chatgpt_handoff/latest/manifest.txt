@@ -1,10 +1,10 @@
-# KCS N3 PR-1 Import Boundary Manifest
+# KCS Post-PR14 Docs Sync + SAFE-02 Preflight Manifest
 
-Repository: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio (main at f45f8b1; work ran in the isolated standard worktree .worktrees/n3-import-boundary-pr1 from the same base)
+Repository: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio (main at 84ca0ac for this docs-sync round; the N3 code round ran in the isolated standard worktree .worktrees/n3-import-boundary-pr1 from main@f45f8b1)
 Lineage: N3 import-boundary track (Track C campaign); SAFE-01 autosave ownership merged earlier as PR #13
 Validated code commits: 1605270 (bounded acceptance + sanitizer floor + guards + e2e seed honesty), cf4a4fd (round report)
 Code CI: run 38943255178 SUCCESS at cf4a4fd; qa:release exact-SHA gate passed on a fresh build
-Integration: PR #14 OPEN at https://github.com/ErtugrulAK/keyframe-character-studio/pull/14 — awaiting user review; NO MERGE, NO RELEASE, NO TAG
+Integration: PR #14 MERGED into main at 84ca0ac (normal GitHub merge, no squash/rebase/force; post-merge CI run 38948404230 SUCCESS); head branch fix/n3-import-boundary-caps-1 and worktree .worktrees/n3-import-boundary-pr1 RETAINED pending separate cleanup approval; NO RELEASE, NO TAG
 N3 PR-1 scope: bounded numeric acceptance at the single import boundary on both document kinds (finite fps 0.5-240, integer totalFrames 10-1200, canvas edges 2-16384 with fractions legal for Lottie, legacy projectResolution numeric edges, legacy numeric-version guard) plus the sanitizeProjectFps round-to-zero floor; 34 new boundary/sanitizer rows and 4 real-hook apply guards (zero setters, no baseline request, tampered-restore refusal); the v51 seed aligned from 1800 to the 1200 the state always applied
 
 Earlier-round provenance retained below (SAFE-01, checkpoint, integration and V3.x rounds) as historical context; their counts and positions predate N3 PR-1.

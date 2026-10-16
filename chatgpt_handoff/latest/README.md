@@ -1,21 +1,20 @@
-# KCS N3 PR-1 Import Boundary Handoff
+# KCS Post-PR14 Docs Sync + SAFE-02 Preflight Handoff
 
-This task-specific bundle carries the import-boundary numeric-integrity round: seven first-hand-confirmed findings (fps 0.4 → sanitizer-zero → Infinity-interval playhead freeze, accepted-then-clamped totalFrames, 1e9 canvases, the numeric-policy-free legacy route, the version-99 legacy re-route) and the bounded numeric acceptance policy now enforced on both document kinds. The work is OPEN as PR #14 — not merged, no release, no tag.
+This task-specific bundle carries the post-merge round: the documentation reconciliation for the safety track (PR #12 N1, PR #13 SAFE-01, PR #14 N3 PR-1 all MERGED into `main`), the verified Git/CI ledger at the new `main`, and the READ-ONLY SAFE-02 implementation-readiness analysis. No SAFE-02 code was written this round.
 
 ## Current engineering record
 
-- Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (`main` at `f45f8b1`); this round ran in the isolated standard worktree `.worktrees\n3-import-boundary-pr1` from `main@f45f8b1`.
-- Status: **N3 PR-1 OPEN — PR #14 AT HEAD `cf4a4fd` — CI GREEN — AWAITING USER REVIEW — NO MERGE — NO RELEASE — NO TAG.**
-- Fully validated code head: `cf4a4fd79fb1ec0a60b43c38eaa31ff822e733d7` (code commit `1605270` + report commit `cf4a4fd`); the merge decision is the user's.
-- Release inventory untouched: `v1.1.0-rc.1` (draft), `v1.1.0-rc.2` (public prerelease), `v1.1.0-public-controls`; package metadata stays the private `1.1.0-rc.1`. The `v1.2.0-rc.1` proposal from the checkpoint round still awaits the user's approval.
-- Behavior contract delivered (in the PR, pending merge): present-but-unusable timeline/canvas numbers refuse with one stable diagnostic (`fps` 0.5–240; integer `totalFrames` 10–1200; edges 2–16384 with fractions legal for Lottie; legacy mirror rules plus the numeric-version guard; sanitizer round-to-zero floor). Absent fields keep documented defaults; nothing is silently repaired; refused documents apply nothing.
-- `OMP_FINAL_RESPONSE.md` carries the N3 PR-1 addendum; `reports/progress_181_n3_import_boundary_pr1.md` is the full round record.
-
-Local gates passed (head `cf4a4fd`, 2026-10-16): tsc/lint clean; full vitest **2665/2665** (176 files, +41 new tests); FULL Chromium **443 passed / 0 failed + 1 environmental flake** (history-restore under workers-4; passed on retry and 5/5 isolated — evidence in the report); `npm run qa:release` passed for the exact SHA on a fresh build; `validate:ograf` and `git diff --check` clean; PR CI `Build, Lint & Test Verification` pass (run 38943255178). Protected surfaces untouched: canonical 5173, API 5000, 4312 never started, `.research/` and previous worktrees preserved.
+- Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (`main`); inspected SHA `84ca0acb701ffbba7d49d5719e6799cd94337395` (merge commit of PR #14; local main fast-forwarded to match `origin/main`; the docs/bundle commits ride above it).
+- Status: **SAFETY TRACK MERGED — N3 PR-1 ON MAIN — SAFE-02 PREFLIGHT COMPLETE, IMPLEMENTATION NOT STARTED — NO RELEASE — NO TAG — NO PUBLISH — NO WORKTREE CLEANUP.**
+- Merged PRs: #12 (N1 restore/undo baseline) at `6b86b29`; #13 (SAFE-01 autosave CAS ownership) at `5ee9909`; #14 (N3 PR-1 bounded numeric import acceptance) at `84ca0ac`, reviewed head `cf4a4fd`, post-merge CI run 38948404230 SUCCESS.
+- Release inventory untouched: `v1.1.0-rc.1` (draft), `v1.1.0-rc.2` (public prerelease), `v1.1.0-public-controls`; package metadata stays the private `1.1.0-rc.1`. The `v1.2.0-rc.1` proposal still awaits the user's version approval.
+- N3 PR-1 policy now enforced at the single import boundary: finite fps 0.5–240, integer totalFrames 10–1200, canvas edges 2–16384 (fractions legal for Lottie), legacy mirror rules + numeric-version guard, `sanitizeProjectFps` round-to-zero floor. Records: `reports/progress_178..181`, changelog Fixed entries.
+- SAFE-02 readiness: feasible as a small independent PR — one production file, ~60–90 lines, three lock sites, feature-detect fallback (jsdom has no `navigator.locks`), units with a mock lock queue plus real two-tab Chromium contention tests (the test tabs can hold the named lock open deterministically). Mount-time restore stays lock-free (async boot would break the N1 baseline contract). Two decisions await the user: (D1) manual-save queue policy — recommended FIFO queue with bounded wait surfacing the conflict UI on timeout; (D2) `storage` events — recommended deferral (visibility, not safety). Full ten-point analysis: `OMP_FINAL_RESPONSE.md`, "SAFE-02 implementation-readiness preflight" addendum.
+- Surfaces: 5173 (pid 34332) and API 5000 (pid 32588) kept running and untouched; 4312 never started; the four retained worktrees (`pr12-final-qa`, `restore-undo-s0`, `n3-import-boundary-pr1`, canonical) and all `.research/` folders preserved; the user's untracked `EFFECTCRAFT_DEEP_ARCHITECTURE_RESEARCH.md` untouched.
 
 ## Record precedence
 
-The N3 PR-1 addendum in `OMP_FINAL_RESPONSE.md`, the manifest and `progress_181` are the current task authority; the SAFE-01, checkpoint, integration and V3.x records below/alongside are historical snapshots or exact mirrors of root documents. Their counts, positions and next-inputs are context, not current state. The PR is OPEN: nothing from this round is on `main` until the user approves the merge.
+The docs-sync round's `OMP_FINAL_RESPONSE.md` addenda (N3 PR-1 + SAFE-02 preflight), the manifest and `PROJECT_STATE.md`/`NEXT_SESSION.md` mirrors are the current task authority. Earlier addenda and retained records are historical snapshots or exact mirrors; their counts and positions are context, not current state.
 
 ## Upload
 

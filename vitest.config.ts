@@ -6,7 +6,11 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/tests/setup.ts'],
-    exclude: ['node_modules', 'dist', 'e2e/**'],
+    // The workspace-local standards folders (.worktrees/ for temporary worktrees,
+    // .research/ for external reference clones) live inside the repository and are
+    // git-ignored; reference-repo test files are not KCS tests and must never be
+    // collected here.
+    exclude: ['node_modules', 'dist', 'e2e/**', '.worktrees/**', '.research/**'],
     globals: true,
     coverage: {
       provider: 'v8',

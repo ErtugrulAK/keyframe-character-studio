@@ -12,6 +12,14 @@
 - Release tags: `v1.1.0-rc.1` (annotated) and `v1.1.0-public-controls`, both unchanged
 - Branches kept: `feat/canvas-tangent-authoring` (Milestone A review artefact) and `feat/canvas-tangent-authoring-replay` (its replayed integration branch, now behind `main`); both are retained and deleting them needs approval. The six proven-obsolete branches (`fix/authoring-ux-transform-toolbar`, `fix/authoring-ux-camera-invariance`, `fix/authoring-ux-corner-anchor`, `fix/authoring-ux-final-slices`, `fix/ograf-runtime-parity-phase-a-replay`, `fix/ograf-runtime-parity-phase-a`) were deleted locally and on `origin` in the final pre-QA cleanup.
 
+
+## SAFE-01 autosave ownership + PR #13 — 2026-10-16
+
+- PR #13 (`fix/safe01-multitab-autosave`, four commits `1f76281..2f56015`) is **merged into `main` at `5ee9909`** by squash-free GitHub merge with the head branch auto-deleted; post-merge CI on `main` is green. The branch was created this session under the standing delegated-branch convention (see `BRANCH_STRATEGY.md`); the worktree ran from `main@6b86b29`.
+- Behavior: autosave became an ownership-tracked CAS writer (see `reports/progress_180_safe01_autosave_ownership.md`). The read-to-write window in one profile remains the documented residual race — pinned honestly in K1, deliberately NOT claimed fixed; adopting the multi-tab token protocol is the deferred SAFE-02 decision.
+- Validation at the merged SHA: CI pass (2m17s), exact-SHA `qa:release` gate on a fresh build, full vitest 2623/2624 (the single failure was the local `main`-drift environmental guard of `stateConsistencyCheck`, green on CI), full chromium e2e 444/444, focused autosave units 9/9, s0 harness 0/3 exit 0.
+- Surfaces: the `.worktrees/safe01-autosave-safety` worktree (including its throwaway `safe01-repro-tmp/` harness copy) was removed after the merge; 5173 serves the canonical `main` checkout, API 5000 untouched.
+- Next on this track (all approval-gated): SAFE-02 multi-tab coordination decision, SAFE-03 destructive-operation audit.
 ## Version checkpoint audit + safe desktop cleanup — 2026-10-16
 
 - The checkpoint round is an AUDIT, not a version change: the recommended next candidate is **`v1.2.0-rc.1`** (minor — backward-compatible capability since the last candidate, no format/API breaks; the approved surface removals disclosed in the changelog's Removed section). Rationale, the exact file list a bump touches, and the rc.1/rc.2 cut procedure: `reports/progress_177_version_checkpoint_desktop_cleanup.md`. **The user's version approval is the next input.** Only after it: metadata bump, `[Unreleased]` cut, candidate summary, exact-SHA smoke run, annotated tag — each requiring that approval.

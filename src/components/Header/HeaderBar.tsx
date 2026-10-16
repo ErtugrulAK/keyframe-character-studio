@@ -9,6 +9,7 @@ import {
   Upload,
   RotateCcw,
   CheckCircle2,
+  AlertTriangle,
   Plus,
   ChevronDown,
   Keyboard,
@@ -89,6 +90,7 @@ export const HeaderBar: React.FC = () => {
     resetProject,
     lastSavedAt,
     restoredFromLocalStorage,
+    autosaveConflict,
     triggerManualSave,
     showToast,
     appMode,
@@ -168,6 +170,20 @@ export const HeaderBar: React.FC = () => {
     const interval = setInterval(updateLabel, 5000);
     return () => clearInterval(interval);
   }, [lastSavedAt]);
+
+  /**
+   * SAFE-01: a conflict pause must be noticed, not discovered. One toast per
+   * session (the badge stays visible afterwards); the current in-memory edits
+   * are never replaced — the user reloads to adopt the external document or
+   * exports this tab's work.
+   */
+  const conflictAnnouncedRef = useRef(false);
+  useEffect(() => {
+    if (autosaveConflict && !conflictAnnouncedRef.current) {
+      conflictAnnouncedRef.current = true;
+      showToast('Autosave paused: another tab changed the shared project. Reload to adopt it, or export this tab’s work — nothing here will be overwritten.', 'error', { title: 'Autosave paused' });
+    }
+  }, [autosaveConflict, showToast]);
 
   const handleExport = () => {
     const json = exportProject();
@@ -450,9 +466,15 @@ export const HeaderBar: React.FC = () => {
         {/* Action Controls & Status (Right aligned) */}
         <div className="header-actions">
           {/* Auto-Save */}
-          <div className="autosave-status-badge" onClick={triggerManualSave} title="Auto-saved every 10 seconds. Click to save manually.">
-            <div className="pulse-green-dot" />
-            <CheckCircle2 size={13} className="text-green" />
+          <div
+            className={`autosave-status-badge${autosaveConflict ? ' autosave-status-badge--paused' : ''}`}
+            onClick={triggerManualSave}
+            title={autosaveConflict
+              ? 'Autosave paused: another tab changed the shared project. Reload to adopt it, or export this tab\u2019s work — nothing here will be overwritten.'
+              : 'Auto-saved every 10 seconds. Click to save manually.'}
+          >
+            <div className={autosaveConflict ? 'pulse-amber-dot' : 'pulse-green-dot'} />
+            {autosaveConflict ? <AlertTriangle size={13} /> : <CheckCircle2 size={13} className="text-green" />}
             <span className="autosave-text">{timeAgoStr}</span>
           </div>
 

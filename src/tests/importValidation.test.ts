@@ -362,3 +362,140 @@ describe('KCS import boundary — legacy project values the editor applies verba
     }
   });
 });
+
+/**
+ * N3 PR-1 — bounded numeric acceptance at the single import boundary.
+ *
+ * A positive fractional fps used to pass the boundary and then round to zero
+ * inside the state setter, freezing playback with no diagnostic; oversized
+ * canvases and timelines used to be "accepted" and silently rewritten by the
+ * state clamp — accepted ≠ applied. The boundary now refuses everything the
+ * state could not honestly apply, on BOTH routes (scene and legacy), and a
+ * refusal never mutates state or re-requests the history baseline.
+ * The ranges mirror the editor's own authored bounds (rates 24/30/60/120,
+ * the [10,1200] frame clamp in usePlayback, viewBox-sized canvases) with
+ * headroom; fractions stay legal for canvas sizes (Lottie maps them).
+ */
+describe('N3 PR-1 — timeline and canvas numeric bounds at the import boundary', () => {
+  const scene = (overrides: Record<string, unknown> = {}) => JSON.stringify({
+    version: 2,
+    fps: 30,
+    totalFrames: 90,
+    width: 1920,
+    height: 1080,
+    layers: [],
+    tracks: [],
+    ...overrides,
+  });
+
+  const legacy = (overrides: Record<string, unknown> = {}) => JSON.stringify({
+    version: '5.0',
+    characterParts: [{
+      id: 'p1', name: 'Part', type: 'custom_rect', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    }],
+    tracks: [{ partId: 'p1', channels: {} }],
+    fps: 30,
+    totalFrames: 60,
+    ...overrides,
+  });
+
+  const refusalOf = (text: string) => {
+    const result = validateImportedDocument(text);
+    return result.ok ? undefined : result.diagnostics[0];
+  };
+
+  it.each([
+    ['fps just under the floor', scene({ fps: 0.4 }), '$.fps'],
+    ['fps below the rounding-safe floor', scene({ fps: 0.49 }), '$.fps'],
+    ['fps above the supported ceiling', scene({ fps: 240.5 }), '$.fps'],
+    ['an absurd fps', scene({ fps: 1e9 }), '$.fps'],
+    ['an Infinity fps from raw JSON', '{"version":2,"layers":[],"tracks":[],"fps":1e999}', '$.fps'],
+  ])('refuses a scene with %s', (_label, text, path) => {
+    const diagnostic = refusalOf(text);
+
+    expect(diagnostic?.code).toBe('KCS_IMPORT_INVALID_TIMELINE');
+    expect(diagnostic?.path).toBe(path);
+  });
+
+  it.each([
+    ['a timeline below the editor minimum', scene({ totalFrames: 9 }), '$.totalFrames'],
+    ['a timeline above the editor maximum', scene({ totalFrames: 1201 }), '$.totalFrames'],
+    ['an absurd timeline', scene({ totalFrames: 1e7 }), '$.totalFrames'],
+    ['a fractional timeline the state would silently round', scene({ totalFrames: 60.5 }), '$.totalFrames'],
+  ])('refuses %s', (_label, text, path) => {
+    const diagnostic = refusalOf(text);
+
+    expect(diagnostic?.code).toBe('KCS_IMPORT_INVALID_TIMELINE');
+    expect(diagnostic?.path).toBe(path);
+  });
+
+  it.each([
+    ['a one-pixel canvas', scene({ width: 1 }), '$.width'],
+    ['a canvas above the supported maximum', scene({ width: 16385 }), '$.width'],
+    ['an absurd canvas', scene({ height: 1e9 }), '$.height'],
+  ])('refuses %s', (_label, text, path) => {
+    const diagnostic = refusalOf(text);
+
+    expect(diagnostic?.code).toBe('KCS_IMPORT_INVALID_CANVAS');
+    expect(diagnostic?.path).toBe(path);
+  });
+
+  it.each([
+    ['fps 0.4 that froze playback', legacy({ fps: 0.4 }), '$.fps'],
+    ['fps 1e9', legacy({ fps: 1e9 }), '$.fps'],
+    ['a negative timeline', legacy({ totalFrames: -5 }), '$.totalFrames'],
+    ['a fractional timeline', legacy({ totalFrames: 60.5 }), '$.totalFrames'],
+    ['an oversized canvas width', legacy({ projectResolution: { width: 1e9, height: 1080 } }), '$.projectResolution.width'],
+    ['a sub-pixel canvas height', legacy({ projectResolution: { width: 1920, height: 1 } }), '$.projectResolution.height'],
+  ])('refuses the same class on the legacy route: %s', (_label, text, path) => {
+    const diagnostic = refusalOf(text);
+
+    expect(diagnostic?.code).toBe(
+      String(path).startsWith('$.projectResolution') ? 'KCS_IMPORT_INVALID_CANVAS' : 'KCS_IMPORT_INVALID_TIMELINE',
+    );
+    expect(diagnostic?.path).toBe(path);
+  });
+
+  it('refuses a numeric unsupported version wearing the legacy shape (probe R02)', () => {
+    const diagnostic = refusalOf(legacy({ version: 99 }));
+
+    expect(diagnostic?.code).toBe('KCS_IMPORT_UNSUPPORTED_VERSION');
+    expect(diagnostic?.path).toBe('$.version');
+  });
+
+  it('still refuses nothing a compatible legacy document carries', () => {
+    expect(validateImportedDocument(legacy()).ok).toBe(true);
+    expect(validateImportedDocument(legacy({ version: undefined })).ok).toBe(true);
+    // A junk resolution object keeps the documented drop-to-default narrowing.
+    expect(validateImportedDocument(legacy({ projectResolution: 'auto' })).ok).toBe(true);
+    // Numeric version 1 is a supported schema, so the legacy guard accepts it.
+    expect(validateImportedDocument(legacy({ version: 1 })).ok).toBe(true);
+  });
+
+  it.each([
+    ['the floor rate', scene({ fps: 0.5 })],
+    ['the ceiling rate', scene({ fps: 240 })],
+    ['a mapped fractional rate', scene({ fps: 29.97 })],
+    ['the minimum timeline', scene({ totalFrames: 10 })],
+    ['the maximum timeline', scene({ totalFrames: 1200 })],
+    ['a two-pixel canvas', scene({ width: 2, height: 2 })],
+    ['a fractional canvas from Lottie mapping', scene({ width: 1920.5, height: 1080.25 })],
+    ['the maximum canvas', scene({ width: 16384, height: 16384 })],
+    ['a scene without any timing or canvas fields', '{"version":1,"layers":[],"tracks":[]}'],
+  ])('accepts %s', (_label, text) => {
+    const result = validateImportedDocument(text);
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('emits exactly one error diagnostic per refusal', () => {
+    const result = validateImportedDocument(scene({ fps: 0.4, totalFrames: 9000 }));
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error')).toHaveLength(1);
+      expect(result.diagnostics.filter((diagnostic) => diagnostic.severity === 'warning')).toHaveLength(0);
+    }
+  });
+});

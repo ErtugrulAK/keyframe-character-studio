@@ -15,7 +15,9 @@ async function seed(page: Page) {
     width: 800,
     height: 500,
     fps: 30,
-    totalFrames: 1800,
+    // 1200 is the policy ceiling and the value the state always applied: the
+    // old 1800 was silently clamped to it, hiding accepted ≠ applied (N3 PR-1).
+    totalFrames: 1200,
     layers: [{
       id: 'headline', name: 'Headline', type: 'custom_text', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1,
       opacity: 1, visible: true, zIndex: 1, fillColor: '#22d3ee', strokeColor: 'none',

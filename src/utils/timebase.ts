@@ -41,7 +41,11 @@ export const DEFAULT_PROJECT_FPS = 60;
  */
 export function sanitizeProjectFps(value: number, fallback: number = DEFAULT_PROJECT_FPS): number {
   if (!Number.isFinite(value) || value <= 0) return fallback;
-  return Math.round(value);
+  // A positive fraction below 0.5 would round to zero and the playhead would
+  // divide by it (1000 / 0 = Infinity → the frame never advances); N3 closes
+  // that class at the import boundary and this floor defends every caller.
+  const rounded = Math.round(value);
+  return rounded >= 1 ? rounded : fallback;
 }
 
 /** `seconds = frame / fps`, and 0 when the rate cannot carry the mapping. */

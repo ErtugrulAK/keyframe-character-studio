@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AnimationTrackData, CharacterPart, Track, MotionTemplate, PropertyKeyframe } from '../types/animator';
 import type { PersistedTrackState, SceneCoordinateSystem, SceneData, SceneLayer } from '../types/composition';
 import { initializeIdCounter } from '../utils/idGenerator';
@@ -423,6 +423,14 @@ export interface UseSerializationApi {
    * apart from a freshly authored or imported project.
    */
   restoredFromLocalStorage: boolean;
+  /**
+   * SAFE-01: true once another writer is detected to have changed the shared
+   * autosave storage outside this tab. Unsafe background and manual writes
+   * are then paused until reload, so a foreign document is never silently
+   * overwritten; the header surfaces the pause and the user can export or
+   * reload to adopt the external document.
+   */
+  autosaveConflict: boolean;
   triggerManualSave: () => void;
   exportProject: () => string;
   importProject: (jsonStr: string, defaultName?: string) => ImportResult;
@@ -461,10 +469,31 @@ export const useSerialization = ({
 
   const [restoredFromLocalStorage, setRestoredFromLocalStorage] = useState<boolean>(false);
 
+  // SAFE-01 — cross-tab write discipline. storageKnownRef holds the exact
+  // string this tab last READ at boot (a refused/corrupted value included:
+  // "whatever was there") or last WROTE itself: every attempted save compares
+  // the live key against it — optimistic concurrency, because localStorage
+  // offers no atomic compare-and-swap (the one-synchronous-block getItem →
+  // setItem window is the documented residual race). settledSaveRef is the
+   // serialized document this tab's state settled to at boot or after its last
+  // save: equality with the next candidate means the session is idle and is
+  // granted NO write (K1 empty-tab / K2 stale-tab / K3 idle churn). A
+  // detected conflict latches autosavePausedRef: nothing writes until reload.
+  const [autosaveConflict, setAutosaveConflict] = useState<boolean>(false);
+  const storageKnownRef = useRef<string | null>(null);
+  const settledSaveRef = useRef<string | null>(null);
+  const autosavePausedRef = useRef<boolean>(false);
+  const restoreDecidedRef = useRef<boolean>(false);
+  const restoreAppliedRef = useRef<boolean>(false);
+
   // 1. Initial Load: Restore from LocalStorage (SceneData v1 or legacy AnimationProject)
   useEffect(() => {
     try {
       const saved = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
+      // Whatever is in the key at boot — applied, refused, or absent — is what
+      // this tab last observed; every later write compares against it (SAFE-01).
+      storageKnownRef.current = saved;
+      restoreDecidedRef.current = true;
       if (!saved) return;
       // The autosave payload goes through the same boundary as an imported
       // document: a corrupted or tampered entry is reported and skipped
@@ -483,6 +512,7 @@ export const useSerialization = ({
           setRestoredFromLocalStorage(true);
           // N1: the restored scene is the baseline, not an undoable edit.
           requestHistoryBaseline();
+          restoreAppliedRef.current = true;
         }
         return;
       }
@@ -493,6 +523,8 @@ export const useSerialization = ({
       const legacyMotionTemplates = readMotionTemplates(parsed.motionTemplates);
       if (hasLegacyStickman) {
         localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
+        // This tab legitimately deleted the key; that deletion is its own last-known write.
+        storageKnownRef.current = null;
         return;
       }
       const savedResolution = readProjectResolution(parsed.projectResolution);
@@ -532,22 +564,69 @@ export const useSerialization = ({
       setRestoredFromLocalStorage(true);
       // N1: the restored legacy scene is the baseline, not an undoable edit.
       requestHistoryBaseline();
+      restoreAppliedRef.current = true;
     } catch (e) {
       console.warn('[AutoSave] Failed to restore saved state', e);
     }
   }, [setTotalFrames, setProjectResolution, setTracks, setCharacterParts, setFps, setCoordinateSystem, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState, requestHistoryBaseline]);
 
-  // 2. Auto-Save: SceneData format every 10 seconds
-  const performSave = useCallback(() => {
+  // 2. Auto-Save: SceneData format every 10 seconds (SAFE-01 write discipline).
+  const buildSceneJson = useCallback((): string => {
+    const scene = toSceneData(characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId);
+    scene.name = sceneTitle || 'Untitled';
+    return JSON.stringify(scene);
+  }, [characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId]);
+
+  /**
+   * SAFE-01: capture the document THIS TAB WAS GIVEN as its idle baseline.
+   * Runs after the mount effect and, when a restore was applied, after that
+   * restore's state commit (signalled by restoredFromLocalStorage) — always
+   * before any user edit is possible, so an edit made in the first seconds of
+   * a session is correctly dirty and earns its next save (unlike a
+   * first-tick capture, which absorbed early edits into the baseline).
+   */
+  useEffect(() => {
+    if (settledSaveRef.current !== null || !restoreDecidedRef.current) return;
+    if (restoreAppliedRef.current && !restoredFromLocalStorage) return;
+    settledSaveRef.current = buildSceneJson();
+  }, [restoredFromLocalStorage, buildSceneJson]);
+
+  const performSave = useCallback((options?: { force?: boolean }) => {
+    if (autosavePausedRef.current) return;
+    const nextJson = buildSceneJson();
+    if (settledSaveRef.current === null) {
+      // The settle effect has not captured the boot document yet (same-commit
+      // window): nothing is dirty yet either, so no write is owed.
+      return;
+    }
+    // An idle session earned no write (K1/K2/K3); a manual save is explicit
+    // user intent and always proceeds to the concurrency check below.
+    if (!options?.force && nextJson === settledSaveRef.current) return;
+    let currentStored: string | null;
     try {
-      const scene = toSceneData(characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId);
-      scene.name = sceneTitle || 'Untitled';
-      localStorage.setItem(AUTOSAVE_STORAGE_KEY, JSON.stringify(scene));
+      currentStored = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
+    } catch {
+      // Storage unreadable: honest no-op. Tokens untouched, retried next tick.
+      return;
+    }
+    if (currentStored !== storageKnownRef.current) {
+      // The shared key changed outside this tab since its last read or write:
+      // PAUSE rather than silently overwriting the other session's document.
+      autosavePausedRef.current = true;
+      setAutosaveConflict(true);
+      console.warn('[AutoSave] Paused: the shared project was changed outside this tab. Reload to adopt it, or export this tab to keep its work.');
+      return;
+    }
+    try {
+      localStorage.setItem(AUTOSAVE_STORAGE_KEY, nextJson);
+      storageKnownRef.current = nextJson;
+      settledSaveRef.current = nextJson;
       setLastSavedAt(new Date());
     } catch (e) {
+      // Honest failure: neither lastSavedAt nor the write tokens advance.
       console.error('[AutoSave] Failed to save project to LocalStorage', e);
     }
-  }, [characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId]);
+  }, [buildSceneJson]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -557,8 +636,32 @@ export const useSerialization = ({
   }, [performSave]);
 
   const triggerManualSave = useCallback(() => {
-    performSave();
+    // Explicit intent: writes an unchanged document too, but never across a conflict.
+    performSave({ force: true });
   }, [performSave]);
+
+  /**
+   * SAFE-01: import and reset are EXPLICIT document replacements — the user's
+   * intent is to own whatever the shared key holds. Re-observe the key right
+   * now (so the next save compares against reality, not the boot value), lift
+   * any previous conflict pause, and hand the fresh document to the settle
+   * capture. Passing the known value explicitly covers reset's own removal.
+   */
+  const adoptOwnershipAfterReplacement = useCallback((adoptedKnown?: string | null) => {
+    if (adoptedKnown === undefined) {
+      try {
+        storageKnownRef.current = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
+      } catch {
+        storageKnownRef.current = null;
+      }
+    } else {
+      storageKnownRef.current = adoptedKnown;
+    }
+    settledSaveRef.current = null;
+    restoreAppliedRef.current = false;
+    autosavePausedRef.current = false;
+    setAutosaveConflict(false);
+  }, []);
 
   // 3. Export: SceneData format (canonical, version 1)
   const exportProject = useCallback((): string => {
@@ -579,6 +682,7 @@ export const useSerialization = ({
         // A document the user imported is no longer "the autosave this browser
         // restored at startup", whatever the apply outcome was.
         setRestoredFromLocalStorage(false);
+        adoptOwnershipAfterReplacement();
         return { ok: imported, diagnostics: validation.diagnostics };
       }
 
@@ -623,12 +727,13 @@ export const useSerialization = ({
         if (declaredTotalFrames !== undefined) setTotalFrames(declaredTotalFrames);
 
         setRestoredFromLocalStorage(false);
+        adoptOwnershipAfterReplacement();
         return { ok: true, diagnostics: validation.diagnostics };
       }
     } catch {
       return { ok: false, diagnostics: [{ code: 'KCS_IMPORT_FAILED', severity: 'error', feature: 'project-import', path: '$', message: 'The document passed validation but could not be applied.', action: 'Re-export the project and import it again.' }] };
     }
-  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setProjectResolution, setCoordinateSystem, setTracks, setCharacterParts, setFps, setTotalFrames, setTemplateCanvasStore, setProjectTemplates, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState]);
+  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setProjectResolution, setCoordinateSystem, setTracks, setCharacterParts, setFps, setTotalFrames, setTemplateCanvasStore, setProjectTemplates, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, adoptOwnershipAfterReplacement]);
 
   const resetProject = useCallback(() => {
     setTracks(DEFAULT_TRACKS);
@@ -641,9 +746,14 @@ export const useSerialization = ({
     } catch (e) {
       console.warn('[Storage] Could not clear autosave key:', e);
     }
+    // The reset tab is the legitimate deleter of the key: the cleared state is
+    // its own last-known value, and the default document it now shows settles
+    // without an idle write until the next user action earns one (SAFE-01).
+    // An earlier conflict pause is lifted — the user deliberately replaced it.
+    adoptOwnershipAfterReplacement(null);
     setLastSavedAt(null);
     setRestoredFromLocalStorage(false);
-  }, [setTracks, setCharacterParts, setCurrentFrame, setIsPlaying, setCoordinateSystem]);
+  }, [setTracks, setCharacterParts, setCurrentFrame, setIsPlaying, setCoordinateSystem, adoptOwnershipAfterReplacement]);
 
   /**
    * Explicitly opt a legacy-centi scene into the project-unit contract.
@@ -691,6 +801,7 @@ export const useSerialization = ({
   return {
     lastSavedAt,
     restoredFromLocalStorage,
+    autosaveConflict,
     triggerManualSave,
     exportProject,
     importProject,

@@ -97,6 +97,8 @@ export interface AnimatorContextType {
   lastSavedAt: Date | null;
   /** True while the open project is the autosave this browser restored at startup. */
   restoredFromLocalStorage: boolean;
+  /** True when another writer changed the shared autosave outside this tab; autosave is paused until reload. */
+  autosaveConflict: boolean;
   triggerManualSave: () => void;
 
   // Undo / Redo History
@@ -652,6 +654,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const {
     lastSavedAt,
     restoredFromLocalStorage,
+    autosaveConflict,
     triggerManualSave,
     exportProject,
     importProject,
@@ -776,6 +779,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setShowGrid,
         lastSavedAt,
         restoredFromLocalStorage,
+        autosaveConflict,
         triggerManualSave,
         undo,
         redo,

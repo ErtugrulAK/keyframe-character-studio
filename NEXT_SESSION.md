@@ -13,6 +13,13 @@
 - Branches kept: `feat/canvas-tangent-authoring` (Milestone A review artefact) and `feat/canvas-tangent-authoring-replay` (its replayed integration branch, now behind `main`); both are retained and deleting them needs approval. The six proven-obsolete branches (`fix/authoring-ux-transform-toolbar`, `fix/authoring-ux-camera-invariance`, `fix/authoring-ux-corner-anchor`, `fix/authoring-ux-final-slices`, `fix/ograf-runtime-parity-phase-a-replay`, `fix/ograf-runtime-parity-phase-a`) were deleted locally and on `origin` in the final pre-QA cleanup.
 
 
+## N3 PR-1 merged + docs sync + SAFE-02 preflight — 2026-10-16
+
+- PR #14 (`fix/n3-import-boundary-caps-1`, head `cf4a4fd`) is **merged into `main` at `84ca0ac`** by the repository's normal GitHub merge (no squash, no rebase, no force); post-merge CI on `main` is green (run 38948404230). The head branch and the `.worktrees/n3-import-boundary-pr1` worktree were deliberately retained — cleanup needs a separate approval.
+- The safety track's merges: PR #12 (N1 restore/undo baseline) at `6b86b29`, PR #13 (SAFE-01 autosave CAS ownership) at `5ee9909`, PR #14 (N3 PR-1 bounded numeric import acceptance: fps 0.5–240, integer totalFrames 10–1200, canvas 2–16384, legacy mirror rules + version guard, sanitizer round-to-zero floor) at `84ca0ac`. Records: `reports/progress_178..181` and the changelog's Fixed entries.
+- SAFE-02 preflight was executed read-only this round; the architecture findings and the decisions awaiting the user's approval are in `chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md` (SAFE-02 preflight addendum). **No SAFE-02 code was written.**
+- Next on this track (all approval-gated): SAFE-02 implementation (web-lock single-writer election or the documented alternative), SAFE-03 destructive-operation audit, N3 PR-2 (audit backlog C4–C12), N2 OGraf runtime parity, and the pending `v1.2.0-rc.1` version approval.
+
 ## SAFE-01 autosave ownership + PR #13 — 2026-10-16
 
 - PR #13 (`fix/safe01-multitab-autosave`, four commits `1f76281..2f56015`) is **merged into `main` at `5ee9909`** by squash-free GitHub merge with the head branch auto-deleted; post-merge CI on `main` is green. The branch was created this session under the standing delegated-branch convention (see `BRANCH_STRATEGY.md`); the worktree ran from `main@6b86b29`.

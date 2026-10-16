@@ -41,6 +41,9 @@ const readMotionTemplates = (value: unknown): MotionTemplate[] | undefined => {
 import { normalizeBezierPath } from '../utils/bezierPath';
 import { validateImportedDocument, type ImportResult } from '../utils/importValidation';
 const noopSetCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>> = () => undefined;
+// A module-level stable default: a per-render inline default would join the
+// restore effect's dependencies and re-arm the one-shot sync on every render.
+const noopRequestHistoryBaseline = () => undefined;
 
 /** Ensure legacy tracks (without channels) get empty channels injected */
 function migrateTrack(t: Track): Track {
@@ -398,6 +401,12 @@ interface UseSerializationOptions {
   setTemplateCanvasStore: React.Dispatch<React.SetStateAction<any>>;
   setCurrentFrame: (frame: number | ((prev: number) => number)) => void;
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
+  /**
+   * Called once after a SUCCESSFUL startup autosave restore, when its setters are
+   * already in the same batch. The history authority makes the restored document
+   * the new S0: the restore is initialization, never a user-undoable change.
+   */
+  requestHistoryBaseline?: () => void;
 }
 
 /**
@@ -446,6 +455,7 @@ export const useSerialization = ({
   setTemplateCanvasStore,
   setCurrentFrame,
   setIsPlaying,
+  requestHistoryBaseline = noopRequestHistoryBaseline,
 }: UseSerializationOptions): UseSerializationApi => {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
@@ -467,9 +477,13 @@ export const useSerialization = ({
 
       if (validation.document.kind === 'scene') {
         const scene = validation.document.scene;
-        fromSceneData(scene, scene.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
-        // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
-        setRestoredFromLocalStorage(true);
+        const applied = fromSceneData(scene, scene.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
+        if (applied) {
+          // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
+          setRestoredFromLocalStorage(true);
+          // N1: the restored scene is the baseline, not an undoable edit.
+          requestHistoryBaseline();
+        }
         return;
       }
 
@@ -509,10 +523,12 @@ export const useSerialization = ({
       initializeIdCounter(allIds);
       // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
       setRestoredFromLocalStorage(true);
+      // N1: the restored legacy scene is the baseline, not an undoable edit.
+      requestHistoryBaseline();
     } catch (e) {
       console.warn('[AutoSave] Failed to restore saved state', e);
     }
-  }, [setTotalFrames, setProjectResolution, setTracks, setCharacterParts, setFps, setCoordinateSystem, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState]);
+  }, [setTotalFrames, setProjectResolution, setTracks, setCharacterParts, setFps, setCoordinateSystem, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState, requestHistoryBaseline]);
 
   // 2. Auto-Save: SceneData format every 10 seconds
   const performSave = useCallback(() => {

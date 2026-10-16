@@ -17,6 +17,13 @@ Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candi
 The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` branch remains a preserved archive candidate.
 
 
+## Version checkpoint audit + safe desktop cleanup — 2026-10-16
+
+- Checkpoint task on the integrated line: the starting state was verified, the version history was audited read-only (tags `v1.1.0-rc.1`, `v1.1.0-rc.2` and `v1.1.0-public-controls` left exactly as found; package metadata remains the private `1.1.0-rc.1`; no npm publication) and the next candidate was assessed: **`v1.2.0-rc.1` (minor) recommended, pending the user's explicit approval**. No version field was changed and no tag was created in this round.
+- The retired desktop QA worktrees `keyframe-character-studio-omp-combined-qa`, `keyframe-character-studio-omp-manual-qa-r1` and `keyframe-character-studio-omp-ae-layout` were audited (tracked-clean, no process using them, their heads preserved by ancestry in `main` or byte-exact on `origin`) and removed with `git worktree remove` only — no `git clean`, no force removal, no branch deletion. The user's host folders under `KCS\`, the desktop research/reference folders (`effectcraft-reference-20261015` — the active research model's — and `ograf-studio-stable`) and all unrelated desktop content were left untouched.
+- Workspace folder standard enforced: temporary worktrees live under `.worktrees/`, external research clones under `.research/`, both ignored via repo-local `.git/info/exclude` only. After the research clones appeared under `.research/`, a bare unit run collected 152 non-KCS test files; the vitest collector is now scoped to the standard (tooling commit `ef1d43e`) without touching any KCS test.
+- Re-gated on the delivered head `ef1d43e`: unit 173 files / 2602 tests, FULL Chromium **436 passed / 0 failed / 0 flaky** (workers 8, retries 0), release gate passed for the exact candidate SHA, state consistency PASS; the first-paint-exempt mode fade was re-verified live on the canonical 5173 surface. Full record: `reports/progress_177_version_checkpoint_desktop_cleanup.md`.
+
 ## PR #11 main integration + mode-swap fade fix — 2026-10-16
 
 - The approved MAIN INTEGRATION task integrated the PR #9/#10/#11 UI lineage (`qa/pr9-pr10-combined`, V3.4 manual-QA rounds through the V3.7 final micro-polish, head `2b14fa5`) into `main` by fast-forward-only pushes; `main` is at or after `73fc000`, matching `origin/main`. No merge commit, no rebase, no force push; the release tags are unchanged and no npm publication occurred. PR #9/#10/#11 handles are untouched.

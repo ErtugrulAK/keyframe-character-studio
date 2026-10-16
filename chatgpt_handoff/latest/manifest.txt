@@ -1,16 +1,19 @@
-# PR #11 Main Integration + Mode-Swap Fade Fix Manifest
+# KCS Version Checkpoint + Safe Desktop Cleanup Manifest
 
 Repository: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio (main; validation in the isolated detached worktree .worktrees/main-2b14fa5)
 Lineage: qa/pr9-pr10-combined (V3.4 manual QA through V3.7 micro-polish), integrated head 2b14fa5
-Validated code/tests commits: 679f54f (PR #11 round), 08e52c7 (UI polish V3.6), the V3.7 final micro-polish round, and the integration fix 73fc000a54c6c50ce21b71822c16a954a27399c4
+Validated code/tests commits: 679f54f (PR #11 round), 08e52c7 (UI polish V3.6), the V3.7 final micro-polish round, the integration fix 73fc000a54c6c50ce21b71822c16a954a27399c4, and the checkpoint tooling head ef1d43eab73ff101b4c9cf0fdb0215a3b33d2f41
 Code CI: PR-round runs 38744301819 and 38785555323 SUCCESS; the integration head ran the full local gate (release gate passed for the exact SHA)
 Integration: main fast-forward-only to 2b14fa5 then 73fc000, matching origin/main; no merge commit, no rebase, no force push
 PR #9/#10/#11: handles unchanged by this task; the lineage itself is on main
+Checkpoint round: version audit (no bump, no tag), retired desktop worktree cleanup, workspace folder standard, vitest collector scoping; gates re-ran on ef1d43e in .worktrees/qc-checkpoint
 
 
 Scope: main integration of the PR #9/#10/#11 UI lineage, plus the targeted remediation of the regression the merge gate caught (first-paint chrome fade unsettling the timeline's initial layout). The underlying lineages they integrate: first round — generic affine group resizing; canonical property-channel projection; resolved snap/guide geometry; persistent primitive tools; direct toolbar and explicit gap/center naming; compact GIF dialog and duration-preserving 120 sampling; timeline-only keyframing controls; routine success-toast removal; boundary-centred panel handles; category-card Shortcut Reference. V3.6 polish (2026-10-15): armed-draw crosshair cursor; single dock-width token contract (56/304/372); single-close GIF panel with tooltip-carried format facts; documented align/distribute command set and order; free non-uniform corner resize with Shift aspect toggle; focus-visible pointer/keyboard select policy; quiet mode segment; dense one-line shortcut rows; LAN restored-project provenance chip. V3.7 final micro-polish (2026-10-15): announced Align/Center/Distribute/Rotate-Flip band grouping with a four-arrow both-axes Center glyph; compact restrained rail (42px items, 18px icons, one label voice, light active surface + accent bar) and quiet boundary-tab handles of one family; ONE inset focus-visible authority; presentation-only 180ms Edit/Broadcast chrome crossfade (reduced-motion honoured, camera-exact rapid switching); dense single-column Shortcut Reference sheet; GIF control renamed Sampling rate after verifying 0.5s/1s/2s at 120 encode 25/50/100 frames at the 2 cs delay floor with preserved wall-clock duration.
 
 Validation: integration head 73fc000 — TypeScript build and noEmit, lint, npm test (173 files / 2602 tests), production build and validate:ograf passed; timeline-marquee 6/6 twice in isolation (workers 1, retries 0); npm run qa:release passed for the exact candidate SHA; FULL Chromium 436 passed / 0 failed / 0 flaky (workers 8, retries 0, isolated UI 5188 / API 5017; live API 5000 never touched). Same no-weakening policy as earlier rounds: no assertion relax, skip, retry, arbitrary sleep or widened camera tolerance; new permanent pin in src/tests/useBroadcast.test.ts. V3.7 head — unit 173 files / 2601 tests; full Chromium 436 / 0 / 0; state consistency 56 checks; npm audit low 0; pins e2e/micro-polish-v37.spec.ts (8 tests), three 120-sampling browser rows in e2e/gif-export.spec.ts, two GIF delay-floor unit tests. V3.6 round: unit 2599, full Chromium 426 / 0 / 0, pin e2e/ui-polish-v36.spec.ts. First round additionally: focused Chromium 99; full 415 / 0 / 0; qa:release 2; qa:v6 3; exact production OGraf minification and exported-host load exercised.
+
+Checkpoint head ef1d43e (2026-10-16): tsc -b, lint, production build, validate:ograf clean; unit 173 files / 2602 tests (canonical, hardened collector); release gate passed for the exact candidate SHA; FULL Chromium 436 passed / 0 failed / 0 flaky (workers 8, retries 0, isolated config; live API 5000 and canonical-served 5173 never touched); timeline-marquee 6/6 (workers 1, retries 0); state consistency PASS (57 checks); npm audit low 0. Cleanup removed only the three verified-clean, process-free, ref-preserved -omp-* worktrees via git worktree remove; no git clean, no reset, no force, no branch deletion, no user-file moves; research folders preserved.
 
 Live: 5173 now serves the canonical main checkout (documented cutover in this round's report); API 5000 listener 2308, health HTTP 200, never restarted. No release, tag, npm, rebase, force push, branch deletion, dependency, workflow or OMP configuration change.
 Canonical sync: main/origin main carry the delivered head. The disclosed metadata-only matte.ts marker was proven content-free (HEAD/index/worktree blob 96d0b4ad2bed3326f8ff4f8e5df552c2ec93a3b5), the stale index was rebuilt from HEAD (metadata-only operation), and the approved fast-forward checkout resolved it; the tracked canonical tree is clean. The untracked EFFECTCRAFT_DEEP_ARCHITECTURE_RESEARCH.md is the user's local file and was not touched.
@@ -22,6 +25,7 @@ Current task documents:
 - progress_174_combined_pr9_pr10_ui_polish_v36.md — the V3.6 nine-findings remediation record
 - progress_175_pr11_final_micro_polish_v37.md — the V3.7 final micro-polish record
 - progress_176_main_integration_mode_swap_fix.md — the main integration and mode-swap fade fix record
+- progress_177_version_checkpoint_desktop_cleanup.md — the version checkpoint audit and safe desktop cleanup record
 
 Current mirrors of root state documents (re-copied from root after this round):
 - CHANGELOG.md

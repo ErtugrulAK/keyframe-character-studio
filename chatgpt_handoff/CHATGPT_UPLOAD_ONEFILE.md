@@ -1,28 +1,29 @@
-# KCS — PR #11 Main Integration + Mode-Swap Fade Fix
+# KCS — Version Checkpoint + Safe Desktop Cleanup
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.
 
-This record supersedes the earlier remediation bundles for delivery: the PR #9/#10/#11 lineage is integrated into main and the gate-caught fade regression is fixed. Historical reports and root mirrors remain under latest/ unchanged; they are not repeated here.
+This record carries the post-integration checkpoint round: version audit with the pending v1.2.0-rc.1 recommendation, safe desktop worktree cleanup, the workspace folder standard and the re-validation on the delivered head. Earlier task records under latest/ remain historical context; they are not repeated here.
 
 ## README.md
 
-# PR #11 Main Integration + Mode-Swap Fade Fix Handoff
+# KCS Version Checkpoint + Safe Desktop Cleanup Handoff
 
-This task-specific bundle carries the MAIN INTEGRATION round: the user-approved fast-forward integration of the PR #9/#10/#11 UI lineage into `main`, the merge-gate regression it surfaced, and the targeted fix delivered above it.
+This task-specific bundle carries the post-integration checkpoint round: the version-history audit and the `v1.2.0-rc.1` recommendation (report only — nothing bumped or tagged), the safe cleanup of the retired desktop QA worktrees, the workspace folder standard, and the re-validation on the delivered head.
 
 ## Current engineering record
 
-- Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`; integration validated in the detached worktree `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\main-2b14fa5` (full dependency install, own runtime SQLite DB).
-- Status: **MAIN INTEGRATED — GATE GREEN ON CODE HEAD `73fc000` — 5173 CUT OVER TO THE CANONICAL `main` CHECKOUT.**
-- `main` is at or after `73fc000`, matching `origin/main`; the documents-only record rides above the gate-tested code head. No merge commit, no rebase, no force push.
-- Release tags `v1.1.0-rc.1` and `v1.1.0-public-controls` are unchanged; no npm publication. PR #9/#10/#11 handles are untouched.
-- `OMP_FINAL_RESPONSE.md` carries the integration addendum (root cause, bisect, fix design, gate ledger, canonical sync disclosure); `reports/progress_176_main_integration_mode_swap_fix.md` is the round record.
+- Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (`main`); this round's gates ran in the isolated standard worktree `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\qc-checkpoint` (detached, full dependency install, own runtime SQLite DB).
+- Status: **VERSION CHECKPOINT AUDITED — SAFE DESKTOP CLEANUP COMPLETE — NO TAG — NO RELEASE — NO PUBLISH.**
+- Fully validated code/tests head: `ef1d43eab73ff101b4c9cf0fdb0215a3b33d2f41` (vitest collector scoped away from the `.worktrees/` and `.research/` standards); the documents-only record rides above it per the usual convention.
+- Release inventory untouched: `v1.1.0-rc.1` (draft), `v1.1.0-rc.2` (public prerelease), `v1.1.0-public-controls`; package metadata stays the private `1.1.0-rc.1`. The next candidate is **proposed** as `v1.2.0-rc.1` (minor) — the user's approval is the gate, see `reports/progress_177_version_checkpoint_desktop_cleanup.md`.
+- Desktop cleanup: `keyframe-character-studio-omp-combined-qa`, `keyframe-character-studio-omp-manual-qa-r1` and `keyframe-character-studio-omp-ae-layout` verified data-safe and removed with `git worktree remove` only; their branches remain on `origin` (deletion needs separate approval). The user's `KCS\` host folders, the active research model's `effectcraft-reference-20261015`, `ograf-studio-stable` and the in-repo `.research/` clones were preserved untouched.
+- `OMP_FINAL_RESPONSE.md` carries the version-checkpoint addendum (inventory, SemVer assessment, cleanup table, standard); `reports/progress_177_version_checkpoint_desktop_cleanup.md` is the full round record.
 
-Local gates passed (code head `73fc000`, 2026-10-16): tsc/lint/build clean; unit 173 files / 2602 tests; `timeline-marquee` 6/6 twice in isolation (workers 1, retries 0); `npm run qa:release` passed for the candidate SHA; FULL Chromium **436 passed / 0 failed / 0 flaky** (workers 8, retries 0, isolated UI 5188 / API 5017; live API 5000 never touched). Earlier rounds on this lineage keep their records: V3.7 2601/436, V3.6 2599/426, first round 2598/415.
+Local gates passed (head `ef1d43e`, 2026-10-16): tsc/lint/build clean; unit 173 files / 2602 tests on the canonical tree; `npm run qa:release` passed for the exact candidate SHA; FULL Chromium **436 passed / 0 failed / 0 flaky** (workers 8, retries 0, isolated config; live API 5000 and the canonical-served 5173 never touched); `timeline-marquee` 6/6 (workers 1, retries 0); state consistency PASS (57 checks); `npm audit` 0. Earlier rounds on this lineage keep their records: integration 73fc000 (2602/436), V3.7 2601/436, V3.6 2599/426, first round 2598/415.
 
 ## Record precedence
 
-The integration addendum in `OMP_FINAL_RESPONSE.md`, the manifest and `progress_176` are the current task authority. The remediation records retained here are historical snapshots or exact mirrors of root documents; their old validation counts, canonical-position claims and next-session narratives are context, not current state.
+The version-checkpoint addendum in `OMP_FINAL_RESPONSE.md`, the manifest and `progress_177` are the current task authority. The integration and remediation records retained here are historical snapshots or exact mirrors of root documents; their counts, positions and next-inputs are context, not current state. No release, tag, npm publication, branch deletion or research-folder move was performed in this round.
 
 ## Upload
 
@@ -85,6 +86,12 @@ Regression the gate caught and the fix: two `timeline-marquee` specs failed dete
 Gate ledger on code head `73fc000`: tsc/oxlint/build clean; unit 173 files / 2602 tests; `timeline-marquee` 6/6 twice in isolation (workers 1, retries 0); `npm run qa:release` — release gate passed for the candidate SHA; FULL Chromium 436 passed / 0 failed / 0 flaky (workers 8, retries 0, isolated UI 5188 / API 5017; live API 5000 never touched).
 
 Canonical sync supersedes the 8e2df61 position claim and the metadata-only dirty-STOP exception stated above: the `matte.ts` marker was proven content-free (HEAD/index/worktree blob all `96d0b4ad2bed3326f8ff4f8e5df552c2ec93a3b5`), the stale index was rebuilt from HEAD (metadata-only), and the approved fast-forward checkout resolved the marker; canonical main/origin/main carry the delivered head and the tracked tree is clean. The untracked local research file on the canonical tree is the user's and was not touched. Live surfaces: 5173 now serves the canonical `main` checkout; API 5000 (listener 2308) was never restarted.
+
+## Version checkpoint addendum — 2026-10-16
+
+Audit-only on the version axis; full record: `reports/progress_177_version_checkpoint_desktop_cleanup.md`. Inventory (read-only): `origin` tags `v1.1.0-rc.1` (→ `46d2a3e…`, draft prerelease), `v1.1.0-rc.2` (→ `6c27ef3…`, public prerelease, run 37752015020) and `v1.1.0-public-controls` (→ `6351d1a…`) left exactly as found; `package.json`/`package-lock.json` stay `1.1.0-rc.1`, `private: true`, never npm-published; the OGraf contract is the EBU v1 schema and the project format stays `version: 1` with legacy acceptance; no in-app version string exists. Assessment: the delta since the last candidate is backward-compatible capability plus defect fixes with no API/format break → **`v1.2.0-rc.1` (minor) recommended, pending the user's explicit approval**; the approved surface removals (legacy single-file `.mjs` OGraf export entry, header `?` help, duplicate Inspector keyframe controls) belong to the changelog's Removed disclosure. Nothing was bumped or tagged; the bump's file list and the rc.1/rc.2 exact-SHA cut procedure are in the report.
+
+Desktop cleanup: `git worktree list --porcelain` plus per-folder tracked/untracked/ignored sweeps, ancestry proofs, `ls-remote` preservation checks and a process/port scan; the three retired `-omp-*` QA worktrees were removed with plain `git worktree remove` (no `git clean`, no reset, no force, no branch deletion, no user-file moves). Kept untouched: the user's `KCS\` host folders and archives, the active research model's desktop `effectcraft-reference-20261015` and `EFFECTCRAFT_DEEP_ARCHITECTURE_RESEARCH.md`, `ograf-studio-stable`, and all in-repo `.research/` clones. The workspace standard (temporary worktrees under `.worktrees/`, external clones under `.research/`, repo-local exclude only) was enforced; when the research clones made a bare unit run collect 152 external test files, the vitest collector was scoped to the standard (tooling commit `ef1d43e`) — no KCS test, assertion or threshold was touched. Re-validation on `ef1d43e`: unit 173/2602, FULL Chromium 436/0/0 (workers 8, retries 0), release gate passed for the exact candidate SHA, state consistency 57 checks PASS, `npm audit` 0, first-paint fade exemption re-verified live on the canonical-served 5173; API 5000 never restarted.
 
 ## Findings, root causes, and fixes
 
@@ -181,19 +188,22 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`. Other files retained un
 
 ## manifest.txt
 
-# PR #11 Main Integration + Mode-Swap Fade Fix Manifest
+# KCS Version Checkpoint + Safe Desktop Cleanup Manifest
 
 Repository: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio (main; validation in the isolated detached worktree .worktrees/main-2b14fa5)
 Lineage: qa/pr9-pr10-combined (V3.4 manual QA through V3.7 micro-polish), integrated head 2b14fa5
-Validated code/tests commits: 679f54f (PR #11 round), 08e52c7 (UI polish V3.6), the V3.7 final micro-polish round, and the integration fix 73fc000a54c6c50ce21b71822c16a954a27399c4
+Validated code/tests commits: 679f54f (PR #11 round), 08e52c7 (UI polish V3.6), the V3.7 final micro-polish round, the integration fix 73fc000a54c6c50ce21b71822c16a954a27399c4, and the checkpoint tooling head ef1d43eab73ff101b4c9cf0fdb0215a3b33d2f41
 Code CI: PR-round runs 38744301819 and 38785555323 SUCCESS; the integration head ran the full local gate (release gate passed for the exact SHA)
 Integration: main fast-forward-only to 2b14fa5 then 73fc000, matching origin/main; no merge commit, no rebase, no force push
 PR #9/#10/#11: handles unchanged by this task; the lineage itself is on main
+Checkpoint round: version audit (no bump, no tag), retired desktop worktree cleanup, workspace folder standard, vitest collector scoping; gates re-ran on ef1d43e in .worktrees/qc-checkpoint
 
 
 Scope: main integration of the PR #9/#10/#11 UI lineage, plus the targeted remediation of the regression the merge gate caught (first-paint chrome fade unsettling the timeline's initial layout). The underlying lineages they integrate: first round — generic affine group resizing; canonical property-channel projection; resolved snap/guide geometry; persistent primitive tools; direct toolbar and explicit gap/center naming; compact GIF dialog and duration-preserving 120 sampling; timeline-only keyframing controls; routine success-toast removal; boundary-centred panel handles; category-card Shortcut Reference. V3.6 polish (2026-10-15): armed-draw crosshair cursor; single dock-width token contract (56/304/372); single-close GIF panel with tooltip-carried format facts; documented align/distribute command set and order; free non-uniform corner resize with Shift aspect toggle; focus-visible pointer/keyboard select policy; quiet mode segment; dense one-line shortcut rows; LAN restored-project provenance chip. V3.7 final micro-polish (2026-10-15): announced Align/Center/Distribute/Rotate-Flip band grouping with a four-arrow both-axes Center glyph; compact restrained rail (42px items, 18px icons, one label voice, light active surface + accent bar) and quiet boundary-tab handles of one family; ONE inset focus-visible authority; presentation-only 180ms Edit/Broadcast chrome crossfade (reduced-motion honoured, camera-exact rapid switching); dense single-column Shortcut Reference sheet; GIF control renamed Sampling rate after verifying 0.5s/1s/2s at 120 encode 25/50/100 frames at the 2 cs delay floor with preserved wall-clock duration.
 
 Validation: integration head 73fc000 — TypeScript build and noEmit, lint, npm test (173 files / 2602 tests), production build and validate:ograf passed; timeline-marquee 6/6 twice in isolation (workers 1, retries 0); npm run qa:release passed for the exact candidate SHA; FULL Chromium 436 passed / 0 failed / 0 flaky (workers 8, retries 0, isolated UI 5188 / API 5017; live API 5000 never touched). Same no-weakening policy as earlier rounds: no assertion relax, skip, retry, arbitrary sleep or widened camera tolerance; new permanent pin in src/tests/useBroadcast.test.ts. V3.7 head — unit 173 files / 2601 tests; full Chromium 436 / 0 / 0; state consistency 56 checks; npm audit low 0; pins e2e/micro-polish-v37.spec.ts (8 tests), three 120-sampling browser rows in e2e/gif-export.spec.ts, two GIF delay-floor unit tests. V3.6 round: unit 2599, full Chromium 426 / 0 / 0, pin e2e/ui-polish-v36.spec.ts. First round additionally: focused Chromium 99; full 415 / 0 / 0; qa:release 2; qa:v6 3; exact production OGraf minification and exported-host load exercised.
+
+Checkpoint head ef1d43e (2026-10-16): tsc -b, lint, production build, validate:ograf clean; unit 173 files / 2602 tests (canonical, hardened collector); release gate passed for the exact candidate SHA; FULL Chromium 436 passed / 0 failed / 0 flaky (workers 8, retries 0, isolated config; live API 5000 and canonical-served 5173 never touched); timeline-marquee 6/6 (workers 1, retries 0); state consistency PASS (57 checks); npm audit low 0. Cleanup removed only the three verified-clean, process-free, ref-preserved -omp-* worktrees via git worktree remove; no git clean, no reset, no force, no branch deletion, no user-file moves; research folders preserved.
 
 Live: 5173 now serves the canonical main checkout (documented cutover in this round's report); API 5000 listener 2308, health HTTP 200, never restarted. No release, tag, npm, rebase, force push, branch deletion, dependency, workflow or OMP configuration change.
 Canonical sync: main/origin main carry the delivered head. The disclosed metadata-only matte.ts marker was proven content-free (HEAD/index/worktree blob 96d0b4ad2bed3326f8ff4f8e5df552c2ec93a3b5), the stale index was rebuilt from HEAD (metadata-only operation), and the approved fast-forward checkout resolved it; the tracked canonical tree is clean. The untracked EFFECTCRAFT_DEEP_ARCHITECTURE_RESEARCH.md is the user's local file and was not touched.
@@ -205,6 +215,7 @@ Current task documents:
 - progress_174_combined_pr9_pr10_ui_polish_v36.md — the V3.6 nine-findings remediation record
 - progress_175_pr11_final_micro_polish_v37.md — the V3.7 final micro-polish record
 - progress_176_main_integration_mode_swap_fix.md — the main integration and mode-swap fade fix record
+- progress_177_version_checkpoint_desktop_cleanup.md — the version checkpoint audit and safe desktop cleanup record
 
 Current mirrors of root state documents (re-copied from root after this round):
 - CHANGELOG.md

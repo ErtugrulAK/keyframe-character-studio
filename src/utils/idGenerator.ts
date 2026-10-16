@@ -27,6 +27,11 @@ export function generateId(prefix: string): string {
 export function initializeIdCounter(existingIds: string[]): void {
   let maxNum = 0;
   for (const id of existingIds) {
+    // Boundary documents may legitimately omit ids (the restore sweep reads
+    // validated-but-opaque JSON whose contract is `string[]`); only a shaped
+    // string can constrain the counter, so tolerate foreign entries in place
+    // of crashing mid-apply.
+    if (typeof id !== 'string') continue;
     // Extract the trailing number from IDs like "part_3", "track_12", "kf_5"
     const match = id.match(/_(\d+)$/);
     if (match) {

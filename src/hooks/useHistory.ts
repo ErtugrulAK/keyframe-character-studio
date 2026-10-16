@@ -65,6 +65,15 @@ export const useHistory = ({
   // Undo / Redo Stack State
   const [history, setHistory] = useState<HistoryState[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  // Baseline request (N1): a caller — the startup autosave restore — declares that
+  // the document about to be on screen is INITIALIZED, not user-edited. The
+  // recording effect consumes one pending request on its next run and replaces the
+  // whole stack, so the first Ctrl+Z can never drop below the restored scene into
+  // the empty mount-time state.
+  const baselineResetRef = useRef<boolean>(false);
+  // The token forces the recording effect to run even when a no-op restore left
+  // every recorded value unchanged.
+  const [baselineResetToken, setBaselineResetToken] = useState<number>(0);
   const isUndoRedoRef = useRef<boolean>(false);
   const isBatchInteractingRef = useRef<boolean>(false);
   const batchStartSnapshotRef = useRef<HistoryState | null>(null);
@@ -97,6 +106,15 @@ export const useHistory = ({
     historyRef.current = next;
     setHistory(next);
     setHistoryIndex(next.length - 1);
+  }, []);
+
+  /**
+   * Discard the current stack: the next recorded commit becomes the fresh S0
+   * (index 0, redo cleared). Used only by initialization paths — startup restore.
+   */
+  const requestBaselineReset = useCallback(() => {
+    baselineResetRef.current = true;
+    setBaselineResetToken((token) => token + 1);
   }, []);
 
   const startBatchInteraction = useCallback(() => {
@@ -149,9 +167,10 @@ export const useHistory = ({
   }, [endBatchInteraction]);
 
   // Record a history snapshot whenever tracks or characterParts change.
-  // On mount this seeds the initial state (S0), making the first action
-  // undoable. Identical consecutive states are deduplicated WITHOUT touching
-  // the index (StrictMode double-invocation safe).
+  // On mount this seeds a PROVISIONAL S0 from the live document, making the first
+  // action undoable; a startup restore replaces it via `requestBaselineReset`.
+  // Identical consecutive states are deduplicated WITHOUT touching the index
+  // (StrictMode double-invocation safe).
   useEffect(() => {
     if (isUndoRedoRef.current) {
       isUndoRedoRef.current = false;
@@ -167,6 +186,13 @@ export const useHistory = ({
       document: structuredClone(documentStateRef.current),
     };
 
+    if (baselineResetRef.current) {
+      // Initialization, not an edit: the restored document IS the baseline.
+      baselineResetRef.current = false;
+      commitHistory([snap]);
+      return;
+    }
+
     const current = historyRef.current;
     const last = current[current.length - 1];
     if (last && JSON.stringify(last) === JSON.stringify(snap)) {
@@ -181,7 +207,7 @@ export const useHistory = ({
 
     const trimmed = current.slice(0, historyIndexRef.current + 1);
     commitHistory([...trimmed, snap].slice(-50));
-  }, [tracks, characterParts, motionTemplates, documentStateKey, commitHistory]);
+  }, [tracks, characterParts, motionTemplates, documentStateKey, baselineResetToken, commitHistory]);
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
@@ -237,5 +263,6 @@ export const useHistory = ({
     canRedo,
     startBatchInteraction,
     endBatchInteraction,
+    requestBaselineReset,
   };
 };

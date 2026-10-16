@@ -470,6 +470,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     canRedo,
     startBatchInteraction,
     endBatchInteraction,
+    requestBaselineReset,
   } = useHistory({
     tracks,
     setTracks,
@@ -681,6 +682,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setTemplateCanvasStore,
     setCurrentFrame,
     setIsPlaying,
+    requestHistoryBaseline: requestBaselineReset,
   });
 
 

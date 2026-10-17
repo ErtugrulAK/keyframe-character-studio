@@ -91,6 +91,7 @@ export const HeaderBar: React.FC = () => {
     lastSavedAt,
     restoredFromLocalStorage,
     autosaveConflict,
+    manualSaveRejectedAt,
     triggerManualSave,
     showToast,
     appMode,
@@ -184,6 +185,7 @@ export const HeaderBar: React.FC = () => {
       showToast('Autosave paused: another tab changed the shared project. Reload to adopt it, or export this tab’s work — nothing here will be overwritten.', 'error', { title: 'Autosave paused' });
     }
   }, [autosaveConflict, showToast]);
+  /**   * SAFE-02: a manual save that never got the shared lock within its bounded   * wait is reported once per event. The edits stay in memory, autosave is   * NOT paused, and the next interval tick retries the write — so this is an   * info notice, deliberately not the conflict error.   */  const manualSaveRejectedAnnouncedRef = useRef<number | null>(null);  useEffect(() => {    if (typeof manualSaveRejectedAt === 'number' && manualSaveRejectedAnnouncedRef.current !== manualSaveRejectedAt) {      manualSaveRejectedAnnouncedRef.current = manualSaveRejectedAt;      showToast('Save not completed: another tab is writing the shared project. Your changes are kept; the next autosave tick will retry.', 'info', { title: 'Save deferred' });    }  }, [manualSaveRejectedAt, showToast]);
 
   const handleExport = () => {
     const json = exportProject();
@@ -469,6 +471,7 @@ export const HeaderBar: React.FC = () => {
           <div
             className={`autosave-status-badge${autosaveConflict ? ' autosave-status-badge--paused' : ''}`}
             onClick={triggerManualSave}
+            data-last-saved-at={lastSavedAt ? String(lastSavedAt.getTime()) : ''}
             title={autosaveConflict
               ? 'Autosave paused: another tab changed the shared project. Reload to adopt it, or export this tab\u2019s work — nothing here will be overwritten.'
               : 'Auto-saved every 10 seconds. Click to save manually.'}

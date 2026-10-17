@@ -44,7 +44,11 @@ async function seed(page: Page, layers = [layer('alpha', 'Alpha', -120, -60), la
 const toolbar = (page: Page) => page.getByRole('toolbar', { name: 'Authoring tools' });
 const toolbarButton = (page: Page, name: string) => toolbar(page).getByRole('button', { name, exact: true });
 const snapshot = async (page: Page): Promise<string> => {
+  const __savedBefore1 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
   await page.locator('.autosave-status-badge').click();
+  await expect
+    .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+    .toBeGreaterThan(Number(__savedBefore1 || '0'));
   return page.evaluate((key) => localStorage.getItem(key) ?? '', STORAGE_KEY);
 };
 const partBox = async (page: Page) => {

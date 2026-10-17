@@ -49,7 +49,11 @@ async function expectNoKeyframeEditor(page: Page): Promise<void> {
 
 
 async function saveNow(page: Page): Promise<void> {
+  const __savedBefore1 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
   await page.locator('.autosave-status-badge').click();
+  await expect
+    .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+    .toBeGreaterThan(Number(__savedBefore1 || '0'));
 }
 
 test.describe('editor interaction regressions', () => {

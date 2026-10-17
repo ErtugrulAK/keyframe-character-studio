@@ -71,7 +71,11 @@ test('square creation keeps active feedback and equal authored scales', async ({
   await page.mouse.up();
 
   await expect(page.locator('.actor-node', { hasText: 'Square' })).toHaveCount(1);
+  const __savedBefore1 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
   await page.locator('.autosave-status-badge').click();
+  await expect
+    .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+    .toBeGreaterThan(Number(__savedBefore1 || '0'));
   await expect.poll(() => page.evaluate(() => {
     const scene = JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5') ?? '{}');
     const layer = scene.layers?.find((candidate: { name?: string }) => candidate.name === 'Square');

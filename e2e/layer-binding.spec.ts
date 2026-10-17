@@ -43,8 +43,12 @@ async function seed(page: Page, layers: Record<string, unknown>[]): Promise<void
 
 async function saveNow(page: Page): Promise<void> {
   const badge = page.locator('.autosave-status-badge');
+  const __before = await badge.getAttribute('data-last-saved-at');
   if (await badge.count()) await badge.click();
   await expect(badge).toContainText('Just saved', { timeout: 10000 });
+  await expect
+    .poll(async () => Number((await badge.getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+    .toBeGreaterThan(Number(__before || '0'));
 }
 
 const storedLayers = (page: Page) => page.evaluate((key) => {

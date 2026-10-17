@@ -48,7 +48,11 @@ test.describe('modern stroke-aware editor bounds', () => {
     await page.mouse.down();
     await page.mouse.move(shapeBox!.x + 42, shapeBox!.y + shapeBox!.height / 2, { steps: 3 });
     await page.mouse.up();
+    const __savedBefore1 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
     await page.locator('.autosave-status-badge').click();
+    await expect
+      .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+      .toBeGreaterThan(Number(__savedBefore1 || '0'));
     await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '{}').layers?.[0]?.x, STORAGE_KEY)).toBeGreaterThan(0);
 
     await page.mouse.move(20, 20);
@@ -80,7 +84,11 @@ test.describe('modern stroke-aware editor bounds', () => {
     await page.mouse.down();
     await page.mouse.move(hitBox!.x + hitBox!.width / 2 + 30, hitBox!.y + hitBox!.height / 2, { steps: 3 });
     await page.mouse.up();
+    const __savedBefore2 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
     await page.locator('.autosave-status-badge').click();
+    await expect
+      .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+      .toBeGreaterThan(Number(__savedBefore2 || '0'));
     await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '{}').layers?.find((layer: { id?: string }) => layer.id === 'target')?.x, STORAGE_KEY)).toBeGreaterThan(220);
 
     await page.getByText('BROADCAST', { exact: true }).click();
@@ -138,7 +146,11 @@ test.describe('modern stroke-aware editor bounds', () => {
     await page.keyboard.press('Escape');
     await page.getByLabel('Stroke Width').fill('8');
     await page.getByLabel('Stroke Width').press('Tab');
+    const __savedBefore3 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
     await page.locator('.autosave-status-badge').click();
+    await expect
+      .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+      .toBeGreaterThan(Number(__savedBefore3 || '0'));
 
     await expect.poll(async () => page.evaluate((key) => {
       const layerData = JSON.parse(localStorage.getItem(key) || '{}').layers?.[0];
@@ -146,14 +158,22 @@ test.describe('modern stroke-aware editor bounds', () => {
     }, STORAGE_KEY)).toEqual([false, 128 / 255, 153 / 255, '#101218', 8]);
     await page.getByRole('button', { name: 'Collapse APPEARANCE' }).click();
     await page.keyboard.press('Control+Z');
+    const __savedBefore4 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
     await page.locator('.autosave-status-badge').click();
+    await expect
+      .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+      .toBeGreaterThan(Number(__savedBefore4 || '0'));
     await expect.poll(async () => page.evaluate((key) => {
       const layerData = JSON.parse(localStorage.getItem(key) || '{}').layers?.[0];
       return [layerData?.strokeOpacity, layerData?.strokeWidth];
     }, STORAGE_KEY)).toEqual([153 / 255, 1.5]);
 
     await page.keyboard.press('Control+Z');
+    const __savedBefore5 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
     await page.locator('.autosave-status-badge').click();
+    await expect
+      .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+      .toBeGreaterThan(Number(__savedBefore5 || '0'));
     await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '{}').layers?.[0]?.strokeOpacity, STORAGE_KEY)).toBe(1);
   });
 });

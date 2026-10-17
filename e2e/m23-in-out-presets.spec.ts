@@ -36,7 +36,11 @@ test.describe('M23 — procedural compatibility under the approved Transform Ins
     await expect(page.getByRole('button', { name: 'Copy Animation', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Clear Animation', exact: true })).toBeVisible();
 
+    const __savedBefore1 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
     await page.locator('.autosave-status-badge').click();
+    await expect
+      .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+      .toBeGreaterThan(Number(__savedBefore1 || '0'));
     await expect.poll(() => page.evaluate((key) => {
       const layer = JSON.parse(localStorage.getItem(key) ?? '{}').layers?.[0] ?? {};
       return [layer.inAnimPreset, layer.inAnimDuration, layer.outAnimPreset, layer.outAnimDuration];

@@ -39,7 +39,11 @@ test('M25/V2 — saved preset metadata and stable scene references survive the c
   await expect(page.getByRole('button', { name: 'Copy Animation', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Clear Animation', exact: true })).toBeVisible();
 
+  const __savedBefore1 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
   await page.locator('.autosave-status-badge').click();
+  await expect
+    .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+    .toBeGreaterThan(Number(__savedBefore1 || '0'));
   await expect.poll(() => page.evaluate(([sceneKey, presetKey]) => {
     const scene = JSON.parse(localStorage.getItem(sceneKey) ?? '{}');
     const presets = JSON.parse(localStorage.getItem(presetKey) ?? '[]');

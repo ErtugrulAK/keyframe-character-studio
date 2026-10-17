@@ -106,6 +106,8 @@ export const HeaderBar: React.FC = () => {
     fps,
     setFps,
     openShortcutReference,
+    characterParts,
+    tracks,
   } = useAnimator();
 
   const [editingTmplId, setEditingTmplId] = useState<string | null>(null);
@@ -114,8 +116,23 @@ export const HeaderBar: React.FC = () => {
   const [isOGrafExporting, setIsOGrafExporting] = useState<boolean>(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState<boolean>(false);
+  /** SAFE-03-A: reset waits for an explicit confirmation whenever the document has content. */
+  const [pendingResetConfirmation, setPendingResetConfirmation] = useState<boolean>(false);
   /** The scene snapshot the GIF panel summarises and exports, taken when it opens. */
   const [gifExportScene, setGifExportScene] = useState<ExportableSceneData | null>(null);
+
+  /**
+   * SAFE-03-A: one stray click must not discard an authored document. An empty
+   * document resets as the existing no-op; anything else asks first, and only
+   * the dialog's Confirm invokes the single existing reset operation.
+   */
+  const requestResetProject = () => {
+    if (characterParts.length === 0 && tracks.length === 0) {
+      resetProject();
+      return;
+    }
+    setPendingResetConfirmation(true);
+  };
 
   /**
    * The one OGraf compile path: the package export compiles the current scene
@@ -607,7 +624,7 @@ export const HeaderBar: React.FC = () => {
             )}
           </div>
 
-          <button className="btn-icon reset-btn" onClick={resetProject} title="Reset Canvas Project">
+          <button className="btn-icon reset-btn" onClick={requestResetProject} title="Reset Canvas Project">
             <RotateCcw size={15} />
           </button>
           <button
@@ -652,6 +669,17 @@ export const HeaderBar: React.FC = () => {
         confirmLabel="Create Template"
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={(val) => addProjectTemplate(val)}
+      />
+      <ConfirmationDialog
+        isOpen={pendingResetConfirmation}
+        title="Reset the project?"
+        description="Your current project content will be replaced with the default document. This is not recoverable if the page closes first."
+        confirmLabel="Reset"
+        onCancel={() => setPendingResetConfirmation(false)}
+        onConfirm={() => {
+          setPendingResetConfirmation(false);
+          resetProject();
+        }}
       />
       <ConfirmationDialog
         isOpen={pendingDeleteTemplate !== null}

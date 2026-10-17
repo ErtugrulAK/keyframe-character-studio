@@ -92,12 +92,18 @@ function assertExportable(sceneData: SceneData, options: OGrafExportOptions): vo
  * the editor's frames (the animated GIF export) instead of generating a runtime.
  * A scene that cannot be rendered at all is still caught — by the renderer
  * itself, and by `validateSceneForOGraf` where the caller chooses to ask.
+ *
+ * N2a: the sequence resolves in the order the generated runtime and the editor
+ * stage already use — an explicit override first, then the scene's persisted
+ * `activeTemplateId`, then the historical `'Sequence'`. An empty identifier is
+ * treated as absent on every path, matching the runtime's `||` convention.
  */
 export function evaluateSceneFrame(
   sceneData: SceneData,
   frame: number,
-  sequenceId: string = 'Sequence',
+  sequenceId?: string,
 ): OGrafEvaluatedScene {
+  const activeSequenceId = sequenceId || sceneData.activeTemplateId || 'Sequence';
   const layers = sceneData.layers.map(toCharacterPart);
   const evaluated: EvaluatedFrame = evaluateFrame(
     layers,
@@ -107,7 +113,7 @@ export function evaluateSceneFrame(
     createRuntime(),
     [],
     undefined,
-    sequenceId,
+    activeSequenceId,
   );
   const evaluatedLayers = evaluated.layers.map((layer) => {
     const source = sceneData.layers.find((candidate) => candidate.id === layer.id);
@@ -134,5 +140,5 @@ export function evaluateOGrafScene(
   options: OGrafExportOptions = {},
 ): OGrafEvaluatedScene {
   assertExportable(sceneData, options);
-  return evaluateSceneFrame(sceneData, frame, options.sequenceId || 'Sequence');
+  return evaluateSceneFrame(sceneData, frame, options.sequenceId);
 }

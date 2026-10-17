@@ -53,10 +53,10 @@ describe('usePresets Hook', () => {
     expect(result.current.customPresets).toEqual(mockSaved);
   });
 
-  it('updates localStorage when customPresets changes (simulated via ref)', () => {
+  it('persists nothing on boot (N3 PR-2b)', () => {
     renderHook(() => usePresets());
-    // Since customPresets is not exported with a setter, we just ensure it sets on mount
-    expect(localStorage.setItem).toHaveBeenCalledWith(STORAGE_KEY, JSON.stringify(DEFAULT_INITIAL_PRESETS));
+    // Mount is a read, not a write: booting must not rewrite the library.
+    expect(localStorage.setItem).not.toHaveBeenCalledWith(STORAGE_KEY, expect.anything());
   });
 });
 

@@ -110,3 +110,5 @@ SAFE-02 files were rebuilt and are now staged plus backed up outside the repo
   (boolean-text-operands :223/:252 — a pre-existing font/box-timing flake family,
   green under isolated repeats; history-restore clean) — release gate result at the
   bottom of this report.
+
+Gate at the guard commit: npm run qa:release PASSED for candidate SHA af3d7ba1dcc0d2a27498ebcd37d538cd1beddc22; GitHub Actions Build, Lint & Test Verification passed at the same SHA; the autosave e2e trio (contention, multi-tab, layer-binding) re-ran green afterward (8/8).

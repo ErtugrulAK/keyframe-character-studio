@@ -45,7 +45,20 @@ export interface UpdatePresetInput {
   category?: string;
 }
 
-export const usePresets = () => {
+export interface UsePresetsOptions {
+  /**
+   * SAFE-03-B: called once per failed persistence attempt (never on mount,
+   * never on success) so the editor can surface one honest visible warning.
+   * The library stays usable in session memory regardless.
+   */
+  onPersistenceFailure?: (error: unknown) => void;
+}
+
+export const usePresets = (options: UsePresetsOptions = {}) => {
+  const onPersistenceFailureRef = useRef(options.onPersistenceFailure);
+  // Latest-callback mirror, same pattern as the library mirror below.
+  // oxlint-disable-next-line react/refs
+  onPersistenceFailureRef.current = options.onPersistenceFailure;
   const [customPresets, setCustomPresets] = useState<CustomMotionPreset[]>(readStoredPresets);
 
   const customPresetsRef = useRef(customPresets);
@@ -68,8 +81,11 @@ export const usePresets = () => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(customPresets));
     } catch (error) {
       // A full or blocked store must not fail the edit that is already in
-      // memory; the library keeps working for this session.
+      // memory; the library keeps working for this session. SAFE-03-B: the
+      // session-only reality is also reported to the UI authority exactly
+      // once for this attempt — never as a false success.
       console.warn('[Presets] Could not persist the preset library.', error);
+      onPersistenceFailureRef.current?.(error);
     }
   }, [customPresets]);
 

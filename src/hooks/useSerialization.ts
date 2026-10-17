@@ -699,7 +699,9 @@ export const useSerialization = ({
     if (buildSceneJson() === settledSaveRef.current) return;
     // A busy lock skips the tick: no token advances, so the next interval
     // re-observes reality (SAFE-02; never a queue behind another writer).
-    void runWithAutosaveLock(() => casWrite(false), 'try');
+    // The boundary is a browser API: a rejection (not just a busy skip) must be
+    // equally silent — the tick advances no token either way.
+    void runWithAutosaveLock(() => casWrite(false), 'try').catch(() => undefined);
   }, [buildSceneJson, casWrite, runWithAutosaveLock]);
 
   useEffect(() => {

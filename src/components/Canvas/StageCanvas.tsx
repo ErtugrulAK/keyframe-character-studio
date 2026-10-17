@@ -4,6 +4,7 @@ import { useAnimator } from '../../context/useAnimator';
 import { useEditorContextMenu } from '../../context/editorContextMenu';
 import type { CharacterPart, Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
+import { parseElementDropPayload } from '../../utils/elementDropPayload';
 import { getPartBounds } from '../../utils/bounds';
 import { getSelectionFrameBounds } from '../../utils/selectionFrame';
 import { rotateAboutWorldPivot, selectionFrameCenterWorld, type WorldPoint } from '../../utils/rotationGesture';
@@ -1163,25 +1164,26 @@ export const StageCanvas: React.FC = () => {
       }
     }
 
-    // Handle UI Panel JSON drops
+    // Handle UI Panel JSON drops. The payload rides an attacker-creatable MIME
+    // type, so elementDropPayload.ts is the single authority that narrows it;
+    // anything it refuses changes nothing in the document.
     const rawData = e.dataTransfer.getData('application/json');
     if (!rawData) return;
-    try {
-      const data = JSON.parse(rawData);
-
-      addCustomPart(data.type, data.name || 'Dropped Element', {
-        baseTransform: {
-          x: Math.round(svgX - EDITOR_CAMERA_CENTER.x),
-          y: Math.round(svgY - EDITOR_CAMERA_CENTER.y),
-          rotation: 0,
-          scaleX: 1,
-          scaleY: 1,
-          opacity: 1,
-        },
-      });
-    } catch {
+    const dropPayload = parseElementDropPayload(rawData);
+    if (!dropPayload) {
       console.warn("Invalid drop payload");
+      return;
     }
+    addCustomPart(dropPayload.type, dropPayload.name, {
+      baseTransform: {
+        x: Math.round(svgX - EDITOR_CAMERA_CENTER.x),
+        y: Math.round(svgY - EDITOR_CAMERA_CENTER.y),
+        rotation: 0,
+        scaleX: 1,
+        scaleY: 1,
+        opacity: 1,
+      },
+    });
   };
 
   const sortedParts = stackingOrder(characterParts);

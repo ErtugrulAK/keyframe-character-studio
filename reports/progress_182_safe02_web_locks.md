@@ -88,6 +88,8 @@ too, so a silent manual save cannot hide behind a passing content poll.
    deferred-save toast was dead in DEV (the prod build would have worked, but
    QA runs the dev server). Fixed by re-arming the flag in effect setup.
 
+3. **Partial-mock toast leak**: tests that render HeaderBar with a partial context mock (no manualSaveRejectedAt key) saw the deferred notice fire because the effect guarded on `!== null` — `undefined !== null` is true. The guard is now `typeof === 'number'`, which is also the honest runtime boundary. CI mode (retry=2) surfaced it because the spy assertion runs before retries can paper over a real unexpected toast.
+
 ## Environment incident (unrelated to the change)
 
 During this task an external process reverted working-tree files to

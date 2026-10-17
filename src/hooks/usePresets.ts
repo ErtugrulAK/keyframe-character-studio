@@ -53,7 +53,17 @@ export const usePresets = () => {
   // oxlint-disable-next-line react/refs
   customPresetsRef.current = customPresets;
 
+  // N3 PR-2b: persistence is change-driven, never mount-driven. Booting a tab
+  // has nothing to save, and writing the just-read (or just-defaulted) value
+  // back would destroy corrupt-but-recoverable bytes and clobber fresher
+  // writes from other tabs inside the boot window. The effect only persists
+  // once a user-triggered mutation has marked the library dirty.
+  const presetLibraryDirtyRef = useRef(false);
+
   useEffect(() => {
+    if (!presetLibraryDirtyRef.current) {
+      return;
+    }
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(customPresets));
     } catch (error) {
@@ -106,6 +116,7 @@ export const usePresets = () => {
       ...(input.showInDirector !== undefined ? { showInDirector: input.showInDirector } : {}),
     };
 
+    presetLibraryDirtyRef.current = true;
     setCustomPresets((prev) => [...prev, preset]);
     return preset;
   }, []);
@@ -129,6 +140,7 @@ export const usePresets = () => {
       name,
       category: category || undefined,
     };
+    presetLibraryDirtyRef.current = true;
     setCustomPresets((prev) => prev.map((preset) => preset?.id === id ? updated : preset));
     return updated;
   }, []);
@@ -139,6 +151,9 @@ export const usePresets = () => {
    * are only re-seeded when storage is empty/corrupt.
    */
   const deletePreset = useCallback((id: string): void => {
+    if (customPresetsRef.current.some((p) => p != null && p.id === id)) {
+      presetLibraryDirtyRef.current = true;
+    }
     setCustomPresets((prev) => {
       // Null-safe: malformed stored entries never crash the filter.
       if (!prev.some((p) => p != null && p.id === id)) return prev;
@@ -153,6 +168,7 @@ export const usePresets = () => {
    * Library operation: no history, no scene mutation.
    */
   const importPresets = useCallback((presets: CustomMotionPreset[]): void => {
+    presetLibraryDirtyRef.current = true;
     setCustomPresets(presets);
   }, []);
 

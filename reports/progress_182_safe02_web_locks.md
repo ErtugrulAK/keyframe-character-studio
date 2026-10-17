@@ -102,4 +102,9 @@ SAFE-02 files were rebuilt and are now staged plus backed up outside the repo
   twelve).
 - Full vitest: 2677 passed / 176 files (no regressions).
 - `tsc --noEmit`, `oxlint`, `npm run build`, `npm run validate:ograf`: clean.
-- Chromium e2e: (pending final numbers)
+- Chromium e2e: contention specs W1/W2 green first try (workers=1); the 15-test deterministic red cluster
+  (authoring-toolbar, authoring-ux-interactions, corner-anchor-resize) green at the
+  same run; the full suite on the fixed tree: 437 passed + 2 flaky
+  (boolean-text-operands :223/:252 — a pre-existing font/box-timing flake family,
+  green under isolated repeats; history-restore clean) — release gate result at the
+  bottom of this report.

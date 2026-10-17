@@ -72,6 +72,9 @@ function useContext(overrides: Record<string, unknown> = {}) {
     openShortcutReference: vi.fn(),
     characterParts: [],
     tracks: [],
+    coordinateSystem: 'project-unit-center-v1',
+    currentFrame: 0,
+    isPlaying: false,
     ...overrides,
   };
   return animatorCtx.value;
@@ -152,5 +155,65 @@ describe('SAFE-03-A — reset confirmation', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(ctx.resetProject).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SAFE-03-A — replacement-set completeness (review repair)', () => {
+  it('a legacy coordinate system makes the reset meaningful even with empty parts and tracks', () => {
+    const ctx = useContext({ coordinateSystem: 'legacy-centi-unit' });
+    render(<HeaderBar />);
+
+    fireEvent.click(resetButton());
+
+    expect(ctx.resetProject).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('an off-zero frame cursor makes the reset meaningful', () => {
+    const ctx = useContext({ currentFrame: 24 });
+    render(<HeaderBar />);
+    fireEvent.click(resetButton());
+    expect(ctx.resetProject).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('playing transport makes the reset meaningful (it stops and homes playback)', () => {
+    const ctx = useContext({ isPlaying: true });
+    render(<HeaderBar />);
+    fireEvent.click(resetButton());
+    expect(ctx.resetProject).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('fields reset does NOT replace (title, fps) do not fabricate a destructive prompt', () => {
+    const ctx = useContext({ sceneTitle: 'My Masterpiece', fps: 24 });
+    render(<HeaderBar />);
+
+    fireEvent.click(resetButton());
+
+    // Reset preserves title/fps; with every replaced field at its default the
+    // operation is the existing no-op and a dialog would be noise.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(ctx.resetProject).toHaveBeenCalledTimes(1);
+  });
+
+  it('the dialog focus trap wraps at both ends (keyboard access repair)', () => {
+    useContext({ characterParts: [part], tracks: [track] });
+    render(<HeaderBar />);
+    fireEvent.click(resetButton());
+
+    const dialog = screen.getByRole('dialog');
+    const cancel = within(dialog).getByRole('button', { name: /cancel/i });
+    const confirm = within(dialog).getByRole('button', { name: /reset/i });
+    expect(cancel).toHaveFocus();
+
+    // From the LAST stop, Tab wraps to the first focusable element.
+    confirm.focus();
+    fireEvent.keyDown(dialog, { key: 'Tab' });
+    expect(cancel).toHaveFocus();
+
+    // From the FIRST stop, Shift+Tab wraps to the last.
+    fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
+    expect(confirm).toHaveFocus();
   });
 });

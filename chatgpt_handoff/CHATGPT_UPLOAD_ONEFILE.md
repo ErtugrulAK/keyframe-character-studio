@@ -22,6 +22,14 @@ This task-specific bundle carries the post-merge round: the documentation reconc
 
 The docs-sync round's `OMP_FINAL_RESPONSE.md` addenda (N3 PR-1 + SAFE-02 preflight), the manifest and `PROJECT_STATE.md`/`NEXT_SESSION.md` mirrors are the current task authority. Earlier addenda and retained records are historical snapshots or exact mirrors; their counts and positions are context, not current state.
 
+## SAFE-02 implementation addendum — 2026-10-17
+
+- Status: **SAFE-02 IMPLEMENTED — PR #15 OPEN — GATE + CI GREEN AT `af3d7ba` — RELEASE/TAG/PUBLISH UNTOUCHED.**
+- The autosave critical section is now serialized behind the Web Lock `kcs-autosave:SEQUENCER_STUDIO_PRO_V5`: interval ticks skip-if-busy (never queue), manual saves queue FIFO with a bounded 1 s wait whose timeout is an honest info notice (`manualSaveRejectedAt` + one toast per event) and never a fake conflict, and reset's key removal runs inside the same grant with a settle-epoch re-arm. Without `navigator.locks` the exact SAFE-01 synchronous window runs unchanged (jsdom included). Preflight decisions landed as recommended: D1 = queue with bounded wait, D2 = no `storage` events.
+- Deltas beyond the preflight: three production bugs surfaced only under live Chromium or CI mode — `ifAvailable` contention hands the callback `null` (not `undefined`); the DEV StrictMode cleanup poisoned the unmount flag (now re-armed at setup); the notice guard needs `typeof === 'number'` because partial context mocks leave `undefined`. The manual save is asynchronous by API nature, so the badge surfaces `data-last-saved-at` and 16 e2e helpers wait that clock instead of reading storage the moment the click returns.
+- Validation: unit 2677/2677 in normal and CI mode; full chromium green at the final head; `qa:release` exact-SHA gate PASS at `7739f81`; Actions Verification PASS at `af3d7ba`. Record: `reports/progress_182_safe02_web_locks.md`.
+- Retained environment note: an external process twice reverted in-flight working-tree files to HEAD during this round (test file, then HeaderBar); all work was rebuilt, staged immediately, and backed up outside the repo. Cause unidentified.
+
 ## Upload
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`. The one-file is regenerated from this scoped handoff before delivery; do not upload individual bundle files.

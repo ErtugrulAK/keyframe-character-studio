@@ -38,7 +38,11 @@ async function selectPart(page: Page, name: string): Promise<void> {
 }
 
 async function savedScene(page: Page): Promise<Record<string, unknown>> {
+  const __savedBefore1 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
   await page.locator('.autosave-status-badge').click();
+  await expect
+    .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+    .toBeGreaterThan(Number(__savedBefore1 || '0'));
   return page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}'), SCENE_KEY);
 }
 

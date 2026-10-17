@@ -99,6 +99,8 @@ export interface AnimatorContextType {
   restoredFromLocalStorage: boolean;
   /** True when another writer changed the shared autosave outside this tab; autosave is paused until reload. */
   autosaveConflict: boolean;
+  /** Timestamp of the last manual save deferred by a busy autosave lock; not a conflict pause. */
+  manualSaveRejectedAt: number | null;
   triggerManualSave: () => void;
 
   // Undo / Redo History
@@ -655,6 +657,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     lastSavedAt,
     restoredFromLocalStorage,
     autosaveConflict,
+    manualSaveRejectedAt,
     triggerManualSave,
     exportProject,
     importProject,
@@ -780,6 +783,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         lastSavedAt,
         restoredFromLocalStorage,
         autosaveConflict,
+        manualSaveRejectedAt,
         triggerManualSave,
         undo,
         redo,

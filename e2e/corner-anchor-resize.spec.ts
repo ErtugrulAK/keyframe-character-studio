@@ -420,7 +420,11 @@ function expectDrag(label: string, corner: Corner, result: DragResult): void {
 
 /** The authored document, as persisted (proves the write path, not the pixels). */
 async function snapshot(page: Page): Promise<string> {
+  const __savedBefore1 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
   await page.locator('.autosave-status-badge').click();
+  await expect
+    .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+    .toBeGreaterThan(Number(__savedBefore1 || '0'));
   return page.evaluate((key) => localStorage.getItem(key) ?? '', STORAGE_KEY);
 }
 

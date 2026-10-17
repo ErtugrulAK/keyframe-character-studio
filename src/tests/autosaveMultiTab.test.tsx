@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useSerialization, type UseSerializationApi } from '../hooks/useSerialization';
-import { AUTOSAVE_STORAGE_KEY } from '../utils/constants';
+import { AUTOSAVE_STORAGE_KEY, AUTOSAVE_LOCK_NAME } from '../utils/constants';
 import type { CharacterPart, MotionTemplate, Track } from '../types/animator';
 import type { SceneCoordinateSystem } from '../types/composition';
 
@@ -89,12 +89,14 @@ interface Harness {
   autosaveConflict: boolean;
   triggerManualSave: () => void;
   resetProject: () => void;
+  manualSaveRejectedAt: number | null;
+  unmount: () => void;
 }
 
 const renderSession = (): Harness => {
   let latest!: UseSerializationApi;
   let setParts: React.Dispatch<React.SetStateAction<CharacterPart[]>> = () => undefined;
-  renderHook(() => {
+  const hook = renderHook(() => {
     const [tracks, setTracks] = useState<Track[]>([]);
     const [characterParts, setCharacterParts] = useState<CharacterPart[]>([]);
     const [fps, setFps] = useState(24);
@@ -136,6 +138,8 @@ const renderSession = (): Harness => {
     get autosaveConflict() { return latest.autosaveConflict; },
     get triggerManualSave() { return latest.triggerManualSave; },
     get resetProject() { return latest.resetProject; },
+    get manualSaveRejectedAt() { return (latest as { manualSaveRejectedAt?: number | null }).manualSaveRejectedAt ?? null; },
+    unmount: () => hook.unmount(),
   };
 };
 
@@ -278,5 +282,358 @@ describe('SAFE-01 — autosave only writes what this tab earned', () => {
     editWithPart(harness, 'after-reset');
     tickPastInterval();
     expect(storedLayers()).toContain('after-reset');
+  });
+});
+
+/**
+ * SAFE-02 — the cooperative multi-tab race closes behind a Web Lock.
+ *
+ * SAFE-01 made a tab write only when the key still holds what it last
+ * observed; within ONE tick that synchronous block is atomic, but two tabs
+ * can still interleave read-compare-write across macrotasks (the K1 pin).
+ * These tests pin the lock discipline with a deterministic in-process lock
+ * stub that mimics the Web Locks queue semantics:
+ *   - a tick never queues: busy lock means the tick is skipped and retried
+ *     later (no falsely advanced save state);
+ *   - a manual save queues FIFO with a bounded wait; a timeout cancels safely,
+ *     writes nothing, keeps the edits, tells the user truthfully, and does NOT
+ *     pretend an ownership conflict (that stays reserved for a real mismatch);
+ *   - the whole read-compare-write-adopt runs INSIDE one grant;
+ *   - reset's key removal runs inside the same lock;
+ *   - no Web Locks means the exact SAFE-01 synchronous fallback (jsdom default).
+ */
+describe('SAFE-02 — the CAS critical section runs inside one lock grant', () => {
+  const LOCK_WAIT_TIMEOUT_MARGIN_MS = 1_200;
+
+  interface StubWaiter { run: () => void; abort: () => void }
+  const installLockStub = () => {
+    const events: string[] = [];
+    const names: string[] = [];
+    const queue: StubWaiter[] = [];
+    let held = false;
+    let writeCount: () => number = () => 0;
+    const grantAndRun = async (cb: (lock: { name: string } | null) => Promise<unknown>): Promise<unknown> => {
+      held = true;
+      events.push(`acquire:${writeCount()}`);
+      try {
+        return await cb({ name: AUTOSAVE_LOCK_NAME });
+      } finally {
+        events.push(`release:${writeCount()}`);
+        held = false;
+        const next = queue.shift();
+        if (next) next.run();
+      }
+    };
+    const manager = {
+      async request(name: string, options: { ifAvailable?: boolean; signal?: AbortSignal }, cb: (lock: { name: string } | undefined) => Promise<unknown>): Promise<unknown> {
+        names.push(name);
+        if (options.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+        if (options.ifAvailable && held) {
+          events.push('skip');
+          // Real Chromium hands the callback  (not undefined) when
+          // ifAvailable gives up — pin that fidelity so a ===undefined check
+          // can never ship green again (the L4 red it causes is the point).
+          return cb(null);
+        }
+        if (!held) return grantAndRun(cb);
+        events.push('wait');
+        return new Promise<void>((resolve, reject) => {
+          const entry: StubWaiter = {
+            run: () => { void grantAndRun(cb).then(() => resolve(), reject); },
+            abort: () => {
+              const index = queue.indexOf(entry);
+              if (index >= 0) queue.splice(index, 1);
+              reject(new DOMException('Aborted', 'AbortError'));
+            },
+          };
+          queue.push(entry);
+          options.signal?.addEventListener('abort', () => entry.abort(), { once: true });
+        });
+      },
+    };
+    Object.defineProperty(window.navigator, 'locks', { value: manager, configurable: true });
+    return {
+      events,
+      names,
+      setWriteCounter: (fn: () => number) => { writeCount = fn; },
+      holdExternally: () => {
+        held = true;
+        events.push('hold');
+        return () => {
+          held = false;
+          events.push('unhold');
+          const next = queue.shift();
+          if (next) next.run();
+        };
+      },
+    };
+  };
+
+  const uninstallLockStub = () => { Reflect.deleteProperty(window.navigator, 'locks'); };
+
+  const flushAsync = async () => {
+    await act(async () => {
+      for (let hop = 0; hop < 8; hop += 1) await Promise.resolve();
+    });
+  };
+
+  const tickAsync = async () => {
+    await act(async () => {
+      vi.advanceTimersByTime(11_000);
+      for (let hop = 0; hop < 8; hop += 1) await Promise.resolve();
+    });
+  };
+
+  const manualWithBoundedWait = async (harness: Harness) => {
+    await act(async () => {
+      harness.triggerManualSave();
+      vi.advanceTimersByTime(LOCK_WAIT_TIMEOUT_MARGIN_MS);
+      for (let hop = 0; hop < 8; hop += 1) await Promise.resolve();
+    });
+  };
+
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    uninstallLockStub();
+    vi.restoreAllMocks();
+  });
+
+  it('L1 wraps the read-compare-write-adopt inside one named-grant', async () => {
+    const stub = installLockStub();
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    stub.setWriteCounter(() => autosaveWrites(setItem).length);
+    const harness = renderSession();
+    tickPastInterval();
+    editWithPart(harness, 'mine');
+    await tickAsync();
+
+    expect(stub.names).toContain(AUTOSAVE_LOCK_NAME);
+    expect(stub.events).toContain('acquire:0');
+    expect(stub.events).toContain('release:1');
+    const acquireIndex = stub.events.indexOf('acquire:0');
+    const releaseIndex = stub.events.indexOf('release:1');
+    expect(acquireIndex).toBeGreaterThanOrEqual(0);
+    expect(releaseIndex).toBeGreaterThan(acquireIndex);
+    expect(storedLayers()).toContain('mine');
+  });
+
+  it('L2 falls back to the exact SAFE-01 synchronous path when Web Locks are absent', () => {
+    Object.defineProperty(window.navigator, 'locks', { value: undefined, configurable: true });
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const harness = renderSession();
+    tickPastInterval();
+    editWithPart(harness, 'mine');
+    tickPastInterval();
+
+    expect(autosaveWrites(setItem)).toHaveLength(1);
+    expect(harness.lastSavedAt).not.toBeNull();
+    expect(harness.manualSaveRejectedAt).toBeNull();
+    uninstallLockStub();
+  });
+
+  it('L3 two cooperating writers: the stale tab pauses, never overwrites', async () => {
+    window.localStorage.setItem(AUTOSAVE_STORAGE_KEY, seedSceneJson(['a', 'b', 'c']));
+    const stub = installLockStub();
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const tabA = renderSession();
+    const tabB = renderSession();
+    tickPastInterval();
+    editWithPart(tabA, 'fromA');
+    await tickAsync();
+    editWithPart(tabB, 'fromB');
+    await tickAsync();
+
+    console.warn('L3EV', JSON.stringify(stub.events), 'WRITES', autosaveWrites(setItem).length);
+    console.warn('L3DOCS', autosaveWrites(setItem).map(c=>JSON.parse(c[1] as string).layers.map((l:{id:string})=>l.id).join('+')).join(' | '));
+    expect(autosaveWrites(setItem)).toHaveLength(1);
+    expect(storedLayers()).toEqual(expect.arrayContaining(['a', 'b', 'c', 'fromA']));
+    expect(tabB.autosaveConflict).toBe(true);
+    // A paused tab earned no save; its clock must not point at its own write.
+  });
+
+  it('L4 a busy lock makes the tick skip: no write, no state change, retried later', async () => {
+    const stub = installLockStub();
+    const release = stub.holdExternally();
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const harness = renderSession();
+    tickPastInterval();
+    editWithPart(harness, 'mine');
+    await tickAsync();
+
+    expect(stub.events).toContain('skip');
+    expect(autosaveWrites(setItem)).toHaveLength(0);
+    expect(harness.lastSavedAt).toBeNull();
+    expect(harness.autosaveConflict).toBe(false);
+
+    release();
+    await tickAsync();
+    expect(autosaveWrites(setItem)).toHaveLength(1);
+    expect(harness.lastSavedAt).not.toBeNull();
+  });
+
+  it('L5 a manual save queues FIFO and re-checks storage under the grant', async () => {
+    const stub = installLockStub();
+    const release = stub.holdExternally();
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const harness = renderSession();
+    tickPastInterval();
+    editWithPart(harness, 'mine');
+
+    await act(async () => {
+      harness.triggerManualSave();
+      for (let hop = 0; hop < 8; hop += 1) await Promise.resolve();
+    });
+    expect(stub.events).toContain('wait');
+    expect(autosaveWrites(setItem)).toHaveLength(0);
+
+    release();
+    await flushAsync();
+    expect(autosaveWrites(setItem)).toHaveLength(1);
+    expect(harness.lastSavedAt).not.toBeNull();
+    expect(harness.manualSaveRejectedAt).toBeNull();
+  });
+
+  it('L6 the bounded wait cancels a queued manual save: no write, edits kept, truthful notice, retried by the tick', async () => {
+    const stub = installLockStub();
+    const release = stub.holdExternally();
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const harness = renderSession();
+    tickPastInterval();
+    editWithPart(harness, 'mine');
+
+    await manualWithBoundedWait(harness);
+    expect(autosaveWrites(setItem)).toHaveLength(0);
+    expect(harness.lastSavedAt).toBeNull();
+    expect(typeof harness.manualSaveRejectedAt).toBe('number');
+
+    release();
+    await tickAsync();
+    expect(autosaveWrites(setItem)).toHaveLength(1);
+    expect(storedLayers()).toContain('mine');
+  });
+
+  it('L7 a lock timeout is NOT reported as an ownership conflict', async () => {
+    const stub = installLockStub();
+    const release = stub.holdExternally();
+    const harness = renderSession();
+    tickPastInterval();
+    editWithPart(harness, 'mine');
+
+    await manualWithBoundedWait(harness);
+    expect(harness.autosaveConflict).toBe(false);
+    release();
+  });
+
+  it('L8 a real external mismatch still pauses with the SAFE-01 warning even with locks available', async () => {
+    const stub = installLockStub();
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const harness = renderSession();
+    tickPastInterval();
+    editWithPart(harness, 'mine');
+    await tickAsync();
+    window.localStorage.setItem(AUTOSAVE_STORAGE_KEY, seedSceneJson(['x', 'y', 'z']));
+    editWithPart(harness, 'mine2');
+    await tickAsync();
+
+    // The external seed itself went through the spied prototype; count only
+    // writes of THIS tabs document, the way G1c does.
+    expect(autosaveWrites(setItem).filter((call) => String(call[1]).includes('mine'))).toHaveLength(1);
+    expect(storedLayers()).toEqual(['x', 'y', 'z']);
+    expect(harness.autosaveConflict).toBe(true);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Paused'));
+    expect(stub.events).toContain('acquire:0');
+  });
+
+  it('L9 reset removes the key inside the lock and survives contention', async () => {
+    window.localStorage.setItem(AUTOSAVE_STORAGE_KEY, seedSceneJson(['a', 'b', 'c']));
+    const stub = installLockStub();
+    const removeItem = vi.spyOn(Storage.prototype, 'removeItem');
+    const harness = renderSession();
+    await tickAsync();
+    const release = stub.holdExternally();
+
+    act(() => { harness.resetProject(); });
+    expect(removeItem).not.toHaveBeenCalled();
+    expect(storedLayers()).toEqual(['a', 'b', 'c']);
+
+    release();
+    await flushAsync();
+    expect(removeItem).toHaveBeenCalledWith(AUTOSAVE_STORAGE_KEY);
+    expect(window.localStorage.getItem(AUTOSAVE_STORAGE_KEY)).toBeNull();
+
+    editWithPart(harness, 'after-reset');
+    await tickAsync();
+    expect(storedLayers()).toContain('after-reset');
+  });
+
+  it('L9b a refused reset removal keeps SAFE-01 parity: warn, drop ownership, earn the next write', async () => {
+    installLockStub();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const removeItem = vi.spyOn(Storage.prototype, 'removeItem').mockImplementationOnce(() => {
+      throw new Error('denied');
+    });
+    const harness = renderSession();
+    await tickAsync();
+
+    act(() => { harness.resetProject(); });
+    await flushAsync();
+    expect(removeItem).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Could not clear autosave key'), expect.anything());
+
+    // SAFE-01 parity: the refused removal still lifts the pause and adopts
+    // empty ownership (the key started absent in this session), so the reset
+    // tab earns its next write exactly like the synchronous fallback (G5b).
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    editWithPart(harness, 'after-reset');
+    await tickAsync();
+    expect(autosaveWrites(setItem)).toHaveLength(1);
+    expect(storedLayers()).toContain('after-reset');
+    expect(harness.autosaveConflict).toBe(false);
+  });
+
+  it('L10 an unmount while queued cannot write afterwards', async () => {
+    const stub = installLockStub();
+    const release = stub.holdExternally();
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const harness = renderSession();
+    tickPastInterval();
+    editWithPart(harness, 'mine');
+
+    await act(async () => { harness.triggerManualSave(); await Promise.resolve(); });
+    harness.unmount();
+    release();
+    await flushAsync();
+    await tickAsync();
+
+    expect(autosaveWrites(setItem)).toHaveLength(0);
+  });
+
+  it('L11 repeated manual intents keep one pending request and write once', async () => {
+    const stub = installLockStub();
+    const release = stub.holdExternally();
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const harness = renderSession();
+    tickPastInterval();
+    editWithPart(harness, 'mine');
+
+    await act(async () => {
+      harness.triggerManualSave();
+      harness.triggerManualSave();
+      harness.triggerManualSave();
+      for (let hop = 0; hop < 8; hop += 1) await Promise.resolve();
+    });
+    expect(stub.events.filter((event) => event === 'wait')).toHaveLength(1);
+
+    release();
+    await flushAsync();
+    expect(autosaveWrites(setItem)).toHaveLength(1);
+    expect(harness.manualSaveRejectedAt).toBeNull();
   });
 });

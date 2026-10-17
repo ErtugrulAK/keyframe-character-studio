@@ -22,7 +22,12 @@ async function createShapeByDrag(page: Page, name: string): Promise<void> {
 }
 
 async function saveAndReadScene(page: Page) {
-  await page.getByTitle('Auto-saved every 10 seconds. Click to save manually.').click();
+  const badge = page.locator('.autosave-status-badge');
+  const before = await badge.getAttribute('data-last-saved-at');
+  await badge.click();
+  await expect
+    .poll(async () => Number((await badge.getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+    .toBeGreaterThan(Number(before || '0'));
   return page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '{}'), STORAGE_KEY);
 }
 

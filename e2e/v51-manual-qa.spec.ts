@@ -103,7 +103,11 @@ test.describe('KCS V5.1 manual QA gates', () => {
     await page.mouse.down();
     await page.mouse.move(box!.x + box!.width / 2 + 73, box!.y + box!.height / 2 + 31, { steps: 4 });
     await page.mouse.up();
+    const __savedBefore1 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
     await page.locator('.autosave-status-badge').click();
+    await expect
+      .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+      .toBeGreaterThan(Number(__savedBefore1 || '0'));
     await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').layers?.find((item: { id: string }) => item.id === 'a')?.x, STORAGE_KEY)).not.toBe(0);
   });
 });

@@ -811,7 +811,11 @@ for (const rotation of [90, 30]) {
     expect(Math.abs(after.width - before.width * ratio)).toBeLessThanOrEqual(1);
     expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
     expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(1);
+    const __savedBefore1 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
     await page.locator('.autosave-status-badge').click();
+    await expect
+      .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+      .toBeGreaterThan(Number(__savedBefore1 || '0'));
     const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!).layers.find((layer: { id: string }) => layer.id === 'a'), STORAGE_KEY);
     expect(saved.rotation).toBe(rotation);
     expect(saved).not.toHaveProperty('affine');

@@ -72,7 +72,11 @@ async function persistedFill(page: Page): Promise<string | undefined> {
 
 test('opening the paint popover writes nothing to the project', async ({ page }) => {
   await seed(page, shape('alpha', 'Alpha'));
+  const __savedBefore1 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
   await page.locator('.autosave-status-badge').click();
+  await expect
+    .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+    .toBeGreaterThan(Number(__savedBefore1 || '0'));
   const before = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
 
   await swatch(page, 'FILL COLOR').click();
@@ -84,7 +88,11 @@ test('opening the paint popover writes nothing to the project', async ({ page })
   await swatch(page, 'FILL COLOR').click();
   await expect(popover(page)).toHaveCount(0);
 
+  const __savedBefore2 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
   await page.locator('.autosave-status-badge').click();
+  await expect
+    .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+    .toBeGreaterThan(Number(__savedBefore2 || '0'));
   await expect.poll(() => persistedFill(page)).toBe(ORIGINAL_FILL);
   expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe(before);
 });
@@ -148,7 +156,11 @@ test('real pointer drags on the hue and alpha sliders author and persist the pai
   expect(alpha).toBeLessThan(1);
 
   await page.keyboard.press('Escape');
+  const __savedBefore3 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
   await page.locator('.autosave-status-badge').click();
+  await expect
+    .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+    .toBeGreaterThan(Number(__savedBefore3 || '0'));
   await expect.poll(() => persistedFill(page)).toBe(afterHue);
   const persistedOpacity = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key) || '{}').layers?.[0]?.fillOpacity as number,
@@ -208,7 +220,11 @@ test('fill and stroke stay independent paints', async ({ page }) => {
   expect(stroke).not.toBe(fill);
   expect(await readPaint(page, 'FILL COLOR')).toBe(fill);
   await page.keyboard.press('Escape');
+  const __savedBefore4 = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
   await page.locator('.autosave-status-badge').click();
+  await expect
+    .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+    .toBeGreaterThan(Number(__savedBefore4 || '0'));
   await expect.poll(() => persistedFill(page)).toBe(fill);
   await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '{}').layers?.[0]?.strokeColor, STORAGE_KEY))
     .not.toBe(fill);

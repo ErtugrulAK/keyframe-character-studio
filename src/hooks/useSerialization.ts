@@ -5,7 +5,7 @@ import { initializeIdCounter } from '../utils/idGenerator';
 import { makeEmptyChannels, DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../utils/defaults';
 import { convertLegacyKeyframesToChannels, fillChannelsFromLegacyKeyframes } from '../utils/legacyKeyframeConversion';
 import { resolveAuthoredBasePose } from '../utils/channelKeyframeGroups';
-import { AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
+import { AUTOSAVE_LOCK_NAME, AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
 import { DEFAULT_SCENE_COORDINATE_SYSTEM, isSceneCoordinateSystem, migrateSceneCoordinates } from '../utils/coordinateMigration';
 import { normalizeMotionTemplates } from '../utils/motionTemplates';
 import { migrateSceneLayerV6 } from '../utils/v6Migration';
@@ -410,6 +410,24 @@ interface UseSerializationOptions {
 }
 
 /**
+ * SAFE-02: bounded wait a manual save gives the shared autosave lock before
+ * its intent is reported as not completed. Interval ticks never wait.
+ */
+const MANUAL_SAVE_LOCK_WAIT_MS = 1_000;
+
+/** The part of the Web Locks API this module uses, declared structurally:
+ *  environments without navigator.locks (and jsdom) fall through the guard
+ *  to the documented SAFE-01 synchronous window instead. */
+interface AutosaveLockLike {
+  request<T>(name: string, options: { ifAvailable?: boolean; signal?: AbortSignal }, callback: (lock: { name: string } | null) => T | Promise<T>): Promise<T>;
+}
+
+const autosaveLockManager = (): AutosaveLockLike | null => {
+  const locks = (navigator as unknown as { locks?: { request?: unknown } }).locks;
+  return typeof locks?.request === 'function' ? (locks as unknown as AutosaveLockLike) : null;
+};
+
+/**
  * The serialization hook's public surface. Exported so consumers (and tests that
  * have to hold a rendered hook's value) name the contract instead of deriving it
  * from the implementation.
@@ -431,6 +449,13 @@ export interface UseSerializationApi {
    * reload to adopt the external document.
    */
   autosaveConflict: boolean;
+  /**
+   * SAFE-02: wall-clock timestamp of the last manual save whose bounded Web
+   * Lock wait expired, or null when none needs attention. A deferred save is
+   * NOT a conflict pause: the edits are kept and the next autosave tick
+   * retries; the header surfaces exactly one notice per event.
+   */
+  manualSaveRejectedAt: number | null;
   triggerManualSave: () => void;
   exportProject: () => string;
   importProject: (jsonStr: string, defaultName?: string) => ImportResult;
@@ -469,6 +494,12 @@ export const useSerialization = ({
 
   const [restoredFromLocalStorage, setRestoredFromLocalStorage] = useState<boolean>(false);
 
+  // SAFE-02: bumped when a queued reset finalizes outside a render
+  // commit, so the settle effect re-runs for the post-reset document exactly
+  // like the synchronous fallback does (adopted ownership must not wait for
+  // the next unrelated state change to capture its baseline).
+  const [settleEpoch, setSettleEpoch] = useState(0);
+
   // SAFE-01 — cross-tab write discipline. storageKnownRef holds the exact
   // string this tab last READ at boot (a refused/corrupted value included:
   // "whatever was there") or last WROTE itself: every attempted save compares
@@ -485,6 +516,17 @@ export const useSerialization = ({
   const autosavePausedRef = useRef<boolean>(false);
   const restoreDecidedRef = useRef<boolean>(false);
   const restoreAppliedRef = useRef<boolean>(false);
+
+  // SAFE-02 — the SAFE-01 read-compare-write runs as one critical section
+  // inside the Web Lock named after the guarded key. manualPendingRef keeps a
+  // single queued manual intent (the grant re-reads state, so the pending
+  // save always writes the LATEST document — extra clicks add nothing);
+  // manualAbortRef can cancel a queued wait; unmountedRef stops any late
+  // continuation from touching state or notifications.
+  const [manualSaveRejectedAt, setManualSaveRejectedAt] = useState<number | null>(null);
+  const manualPendingRef = useRef<boolean>(false);
+  const manualAbortRef = useRef<AbortController | null>(null);
+  const unmountedRef = useRef<boolean>(false);
 
   // 1. Initial Load: Restore from LocalStorage (SceneData v1 or legacy AnimationProject)
   useEffect(() => {
@@ -589,25 +631,24 @@ export const useSerialization = ({
     if (settledSaveRef.current !== null || !restoreDecidedRef.current) return;
     if (restoreAppliedRef.current && !restoredFromLocalStorage) return;
     settledSaveRef.current = buildSceneJson();
-  }, [restoredFromLocalStorage, buildSceneJson]);
+  }, [restoredFromLocalStorage, buildSceneJson, settleEpoch]);
 
-  const performSave = useCallback((options?: { force?: boolean }) => {
-    if (autosavePausedRef.current) return;
+  /**
+   * SAFE-01 read-compare-write as one callable so SAFE-02 can run the whole
+   * critical section — candidate serialization, conflict pause and write —
+   * inside a single lock grant (or synchronously, as the documented fallback,
+   * where Web Locks are unavailable). Returns true only when this call wrote
+   * the key; every refusal is already reported by the side it belongs to.
+   */
+  const casWrite = useCallback((force: boolean): boolean => {
     const nextJson = buildSceneJson();
-    if (settledSaveRef.current === null) {
-      // The settle effect has not captured the boot document yet (same-commit
-      // window): nothing is dirty yet either, so no write is owed.
-      return;
-    }
-    // An idle session earned no write (K1/K2/K3); a manual save is explicit
-    // user intent and always proceeds to the concurrency check below.
-    if (!options?.force && nextJson === settledSaveRef.current) return;
+    if (!force && nextJson === settledSaveRef.current) return false;
     let currentStored: string | null;
     try {
       currentStored = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
     } catch {
       // Storage unreadable: honest no-op. Tokens untouched, retried next tick.
-      return;
+      return false;
     }
     if (currentStored !== storageKnownRef.current) {
       // The shared key changed outside this tab since its last read or write:
@@ -615,18 +656,51 @@ export const useSerialization = ({
       autosavePausedRef.current = true;
       setAutosaveConflict(true);
       console.warn('[AutoSave] Paused: the shared project was changed outside this tab. Reload to adopt it, or export this tab to keep its work.');
-      return;
+      return false;
     }
     try {
       localStorage.setItem(AUTOSAVE_STORAGE_KEY, nextJson);
       storageKnownRef.current = nextJson;
       settledSaveRef.current = nextJson;
       setLastSavedAt(new Date());
+      return true;
     } catch (e) {
       // Honest failure: neither lastSavedAt nor the write tokens advance.
       console.error('[AutoSave] Failed to save project to LocalStorage', e);
+      return false;
     }
   }, [buildSceneJson]);
+
+  type LockRunOutcome<T> = { ran: boolean; value?: T };
+
+  /** Run `task` with the autosave lock held, in exactly one grant. 'try' gives
+   *  up immediately while another writer holds the lock (the interval tick
+   *  defers; nothing advances); 'queue' waits FIFO for the grant and honors
+   *  `signal`. Without Web Locks support the task runs directly — the same
+   *  single synchronous block SAFE-01 documented as the residual race. */
+  const runWithAutosaveLock = useCallback(async <T>(task: () => T, mode: 'try' | 'queue', signal?: AbortSignal): Promise<LockRunOutcome<T>> => {
+    const manager = autosaveLockManager();
+    if (!manager) return { ran: true, value: task() };
+    if (mode === 'try') {
+      return manager.request(AUTOSAVE_LOCK_NAME, { ifAvailable: true }, (lock) => (
+        lock ? { ran: true, value: task() } : { ran: false }
+      ));
+    }
+    return { ran: true, value: await manager.request(AUTOSAVE_LOCK_NAME, { signal }, () => task()) };
+  }, []);
+
+  const performSave = useCallback((): void => {
+    if (autosavePausedRef.current) return;
+    // The settle effect has not captured the boot document yet (same-commit
+    // window): nothing is dirty yet either, so no write is owed.
+    if (settledSaveRef.current === null) return;
+    // An idle session earned no write (K1/K2/K3). Cheap pre-check outside the
+    // grant; the authoritative comparison re-runs inside it.
+    if (buildSceneJson() === settledSaveRef.current) return;
+    // A busy lock skips the tick: no token advances, so the next interval
+    // re-observes reality (SAFE-02; never a queue behind another writer).
+    void runWithAutosaveLock(() => casWrite(false), 'try');
+  }, [buildSceneJson, casWrite, runWithAutosaveLock]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -635,10 +709,43 @@ export const useSerialization = ({
     return () => clearInterval(timer);
   }, [performSave]);
 
-  const triggerManualSave = useCallback(() => {
-    // Explicit intent: writes an unchanged document too, but never across a conflict.
-    performSave({ force: true });
-  }, [performSave]);
+  const triggerManualSave = useCallback((): void => {
+    // Explicit intent: writes an unchanged document too, but never across a
+    // conflict pause or before the boot document has settled (SAFE-01).
+    if (autosavePausedRef.current) return;
+    if (settledSaveRef.current === null) return;
+    // One queued intent at a time: the grant re-serializes the state, so the
+    // pending save already carries the latest document (SAFE-02).
+    if (manualPendingRef.current) return;
+    const controller = new AbortController();
+    manualPendingRef.current = true;
+    manualAbortRef.current = controller;
+    void (async () => {
+      let timedOut = false;
+      const timer = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, MANUAL_SAVE_LOCK_WAIT_MS);
+      const outcome = await runWithAutosaveLock(() => casWrite(true), 'queue', controller.signal).catch(() => null);
+      clearTimeout(timer);
+      if (manualAbortRef.current === controller) manualPendingRef.current = false;
+      if (unmountedRef.current) return;
+      if (timedOut && outcome === null) setManualSaveRejectedAt(Date.now());
+    })();
+  }, [casWrite, runWithAutosaveLock]);
+
+  // SAFE-02: a late continuation after unmount must not touch state, notify,
+  // or (worse) write: drop the queued manual intent at the boundary.
+  useEffect(() => {
+    // StrictMode remounts effects in dev: the flag must be re-armed at setup,
+    // or a cleanup from the discarded first mount poisons the live session.
+    unmountedRef.current = false;
+    return () => {
+      unmountedRef.current = true;
+      manualAbortRef.current?.abort();
+      manualPendingRef.current = false;
+    };
+  }, []);
 
   /**
    * SAFE-01: import and reset are EXPLICIT document replacements — the user's
@@ -741,19 +848,51 @@ export const useSerialization = ({
     setCurrentFrame(0);
     setIsPlaying(false);
     setCoordinateSystem('project-unit-center-v1');
-    try {
-      localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
-    } catch (e) {
-      console.warn('[Storage] Could not clear autosave key:', e);
+    // SAFE-02: removal of the key joins the same critical section as saves,
+    // so a concurrent tab's write can neither slip between the reset tabs
+    // intent and the deletion, nor be clobbered by a reset-time snapshot.
+    // Synchronous fallback where Web Locks are unavailable (SAFE-01).
+    const manager = autosaveLockManager();
+    const removeAutosaveKey = (): boolean => {
+      try {
+        localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
+        return true;
+      } catch (e) {
+        console.warn('[Storage] Could not clear autosave key:', e);
+        // The reset tab is the legitimate deleter that tried: with removal
+        // refused, ownership still re-observes reality below (SAFE-01 parity).
+        return false;
+      }
+    };
+    const finalizeReset = (): void => {
+      // The reset tab is the legitimate deleter of the key: the cleared state
+      // is its own last-known value, and the default document it now shows
+      // settles without an idle write until the next user action earns one
+      // (SAFE-01). An earlier conflict pause is lifted — the user deliberately
+      // replaced it.
+      adoptOwnershipAfterReplacement(null);
+      setLastSavedAt(null);
+      setRestoredFromLocalStorage(false);
+      setSettleEpoch((epoch) => epoch + 1);
+    };
+    if (!manager) {
+      removeAutosaveKey();
+      finalizeReset();
+      return;
     }
-    // The reset tab is the legitimate deleter of the key: the cleared state is
-    // its own last-known value, and the default document it now shows settles
-    // without an idle write until the next user action earns one (SAFE-01).
-    // An earlier conflict pause is lifted — the user deliberately replaced it.
-    adoptOwnershipAfterReplacement(null);
-    setLastSavedAt(null);
-    setRestoredFromLocalStorage(false);
-  }, [setTracks, setCharacterParts, setCurrentFrame, setIsPlaying, setCoordinateSystem, adoptOwnershipAfterReplacement]);
+    manualAbortRef.current?.abort();
+    manualPendingRef.current = false;
+    const controller = new AbortController();
+    manualAbortRef.current = controller;
+    void (async () => {
+      // No bounded wait: reset queues its removal without a deadline (a
+      // replaced document must never be resurrected by a skipped removal).
+      // Finalization is idempotent, so a superseded reset still lands safe.
+      await runWithAutosaveLock(() => removeAutosaveKey(), 'queue', controller.signal).catch(() => undefined);
+      if (unmountedRef.current) return;
+      finalizeReset();
+    })();
+  }, [setTracks, setCharacterParts, setCurrentFrame, setIsPlaying, setCoordinateSystem, adoptOwnershipAfterReplacement, runWithAutosaveLock]);
 
   /**
    * Explicitly opt a legacy-centi scene into the project-unit contract.
@@ -802,6 +941,7 @@ export const useSerialization = ({
     lastSavedAt,
     restoredFromLocalStorage,
     autosaveConflict,
+    manualSaveRejectedAt,
     triggerManualSave,
     exportProject,
     importProject,

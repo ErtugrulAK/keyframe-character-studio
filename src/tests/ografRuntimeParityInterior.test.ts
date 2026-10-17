@@ -90,6 +90,69 @@ const DUPLICATE_KEYS = [
   key('d3', 100, 11, 'linear'),
 ];
 
+// Hold-BRIDGE keys: the HOLD easing sits on the FIRST key, so the segment
+// 0->100 is frozen at 10 and the value must switch to the key at 100 exactly
+// at frame 100. This is the fixture where the editor's exact-keyframe
+// short-circuit and the runtime's first-matching-bracket + `hold => 0` arm
+// genuinely differ (the one-frame lag): editor 50, runtime 10 at f=100.
+const HOLD_BRIDGE_KEYS = [
+  key('b0', 0, 10, 'hold'),
+  key('b1', 100, 50, 'linear'),
+  key('b2', 200, 80, 'linear'),
+];
+const BRIDGE_EDITOR_AT_100 = 50;    // exact key value (independent semantics)
+const BRIDGE_FROZEN_BEFORE = 10;    // every probe in [0, 100), both sides
+const BRIDGE_RESUME_AT_100_5 = 50.15; // linear-prev segment resumes motion immediately after the key
+const BRIDGE_RUNTIME_DRIFT_AT_100 = 10; // recorded current runtime (N2-DRIFT)
+
+// Fully hand-derived AutoBezier control points for segment a1->a2 of
+// AUTOBZ_KEYS (independent of the production derivation code):
+//   duration=50, delta=-80
+//   previousSlope = (20-0)/100  = 0.2   -> normalized = 0.2*50/-80 = -0.125
+//   nextSlope     = (90-100)/100 = -0.1 -> normalized = -0.1*50/-80 = 0.0625
+//   CP = [1/3, clamp01(-0.125/3)=0, 2/3, clamp01(1-0.0625/3)=0.9791666667]
+const HAND_AUTOBZ_CP: [number, number, number, number] = [1 / 3, 0, 2 / 3, 0.9791666667];
+// x(t)=3(1-t)^2 t(1/3)+3(1-t)t^2(2/3)+t^3 gives x(0.5)=0.5 exactly, so the
+// root is t=0.5 and y(0.5)=3(1-t)t^2(0.9791667)+t^3=0.4921875.
+// value = 100 + (20-100) * 0.4921875 = 60.625 (fully hand-checked).
+const HAND_AUTOBZ_VALUE_AT_75 = 60.625;
+
+// One-sided freeform handle: only handleOut exists at frame 0, none at frame
+// 100 — the editor falls back to the point anchor, the runtime mirrors the
+// present handle; the two emit different C control positions at mid-tween.
+function oneSidedHandleScene(): SceneData {
+  const pathA = {
+    version: 1, coordinateSpace: 'normalized', closed: false,
+    points: [{ id: 'p', x: 0.5, y: 0.5, kind: 'corner', handleOut: { x: 0.6, y: 0.5 } }],
+  };
+  const pathB = {
+    version: 1, coordinateSpace: 'normalized', closed: false,
+    points: [{ id: 'p', x: 0.5, y: 0.5, kind: 'corner' }],
+  };
+  return {
+    version: 1,
+    coordinateSystem: 'project-unit-center-v1',
+    name: 'N2b S0 path',
+    width: 320,
+    height: 180,
+    fps: 60,
+    totalFrames: 100,
+    layers: [{
+      id: 'shape', name: 'Shape', type: 'custom_freeform', x: 0, y: 0, rotation: 0,
+      scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1,
+      fillColor: '#ff0000', strokeEnabled: false, fillEnabled: true, path: pathA,
+    }],
+    tracks: [{
+      partId: 'shape',
+      channels: {
+        path: [
+          { id: 'p0', frame: 0, easing: 'linear', value: pathA },
+          { id: 'p1', frame: 100, easing: 'linear', value: pathB },
+        ],
+      },
+    }],
+  } as unknown as SceneData;
+}
 // --- emitted runtime (production-minified, same pipeline as the prod spec) ---
 
 const runtimePath = fileURLToPath(new URL('../ograf/runtimeTemplate.ts', import.meta.url)).replaceAll('\\', '/');
@@ -235,6 +298,28 @@ describe('N2b-S0 — class 2: production-minified runtime characterization', () 
     const graphic = await instantiate(sceneWith(STORED_CP_KEYS));
     expect(renderedX(graphic, 50)).toBeCloseTo(100 * solveCubicY([0.1, 0.9, 0.9, 0.1], 0.5), 6);
   });
+
+  test('N2-DRIFT hold bridge: exact interior key loses one frame in the runtime', async () => {
+    const graphic = await instantiate(sceneWith(HOLD_BRIDGE_KEYS));
+    // The drift: at the exact key the runtime is still on the frozen value
+    // (recorded characterization — NOT the target, see class 3).
+    expect(renderedX(graphic, 100)).toBe(BRIDGE_RUNTIME_DRIFT_AT_100);
+    // Agreement first: the frozen segment behaves identically on both sides.
+    expect(renderedX(graphic, 99)).toBe(BRIDGE_FROZEN_BEFORE);
+    expect(renderedX(graphic, 100.5)).toBeCloseTo(BRIDGE_RESUME_AT_100_5, 9);
+  });
+
+  test('hand-derived autoBezier oracle agrees with the code path within hand precision', () => {
+    // Independent literal vs the derivation the editor uses: two oracles.
+    const cp = deriveAutoBezierControlPoints(AUTOBZ_KEYS[1], AUTOBZ_KEYS[2], AUTOBZ_KEYS[0], AUTOBZ_KEYS[3]);
+    expect(cp[0]).toBeCloseTo(HAND_AUTOBZ_CP[0], 9);
+    expect(cp[1]).toBeCloseTo(HAND_AUTOBZ_CP[1], 9);
+    expect(cp[2]).toBeCloseTo(HAND_AUTOBZ_CP[2], 9);
+    expect(cp[3]).toBeCloseTo(HAND_AUTOBZ_CP[3], 9);
+    expect(interpolateChannel(AUTOBZ_KEYS, 75, 0)).toBeCloseTo(HAND_AUTOBZ_VALUE_AT_75, 3);
+  });
+
+  // Class 1 additions (editor side of the bridge rows live in class 1 above).
 });
 
 describe('N2b-S0 — class 3: parity targets (red until N2b-S2)', () => {
@@ -243,45 +328,34 @@ describe('N2b-S0 — class 3: parity targets (red until N2b-S2)', () => {
     expect(renderedX(graphic, 75)).toBeCloseTo(AUTOBZ_EXPECTED_AT_75, 6);
   });
 
-  test.fails('one-sided path handle parity: runtime must fall back to the anchor', async () => {
-    const pathA = {
-      version: 1, coordinateSpace: 'normalized', closed: false,
-      points: [{ id: 'p', x: 0.5, y: 0.5, kind: 'corner', handleOut: { x: 0.6, y: 0.5 } }],
-    };
-    const pathB = {
-      version: 1, coordinateSpace: 'normalized', closed: false,
-      points: [{ id: 'p', x: 0.5, y: 0.5, kind: 'corner' }],
-    };
-    const scene = {
-      version: 1,
-      coordinateSystem: 'project-unit-center-v1',
-      name: 'N2b S0 path',
-      width: 320,
-      height: 180,
-      fps: 60,
-      totalFrames: 100,
-      layers: [{
-        id: 'shape', name: 'Shape', type: 'custom_freeform', x: 0, y: 0, rotation: 0,
-        scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1,
-        fillColor: '#ff0000', strokeEnabled: false, fillEnabled: true, path: pathA,
-      }],
-      tracks: [{
-        partId: 'shape',
-        channels: {
-          path: [
-            { id: 'p0', frame: 0, easing: 'linear', value: pathA },
-            { id: 'p1', frame: 100, easing: 'linear', value: pathB },
-          ],
-        },
-      }],
-    } as unknown as SceneData;
-    const graphic = await instantiate(scene);
-    graphic._currentFrame = 50;
-    graphic._render();
-    // Runtime mirrors the missing handle from the OTHER handle (start=0.6 ->
-    // lerped 0.55?? no: start=a||b uses the present handle itself); the editor
-    // lerps from the ANCHOR 0.5. The emitted C control x must show the editor's
-    // 0.55 — the runtime currently emits its mirrored value instead.
-    expect(graphic.innerHTML).toMatch(/C ?0?\.55/u);
+  // Honest boundary note (review repair): single-path authored shapes animate
+  // through the editor's freeform path channel, which is NOT part of the
+  // runtime TrackChannel set, and the emitted runtime rejects a fabricated
+  // `channels.path` fixture at construction time (assertSafeScene). The
+  // one-sided-handle numeric comparison therefore rides the mask-path channel
+  // (LayerMaskPathChannel) fixture in N2b-S2 planning — asserting it here via
+  // an unsupported channel would let a broken harness pass silently.
+  test('N2-BOUNDARY: fabricated path-channel fixtures are refused at construction', async () => {
+    await expect(instantiate(oneSidedHandleScene())).rejects.toThrow(/Invalid keyframe value/u);
+  });
+});
+
+describe('N2b-S0 — class 1 additions: hold bridge and hand oracle', () => {
+  test('editor resolves the exact interior key of a hold-frozen segment to the key value', () => {
+    expect(interpolateChannel(HOLD_BRIDGE_KEYS, 100, 0)).toBe(BRIDGE_EDITOR_AT_100);
+    expect(interpolateChannel(HOLD_BRIDGE_KEYS, 99, 0)).toBe(BRIDGE_FROZEN_BEFORE);
+    expect(interpolateChannel(HOLD_BRIDGE_KEYS, 100.5, 0)).toBeCloseTo(BRIDGE_RESUME_AT_100_5, 9);
+  });
+});
+
+describe('N2b-S0 — class 3 additions: bridge parity target', () => {
+  test.fails('hold bridge parity: at the exact key the runtime must show 50, not the stale 10', async () => {
+    const graphic = await instantiate(sceneWith(HOLD_BRIDGE_KEYS));
+    expect(renderedX(graphic, 100)).toBe(BRIDGE_EDITOR_AT_100);
+  });
+
+  test.fails('hand oracle parity: autoBezier runtime must match the hand-derived 60.625', async () => {
+    const graphic = await instantiate(sceneWith(AUTOBZ_KEYS));
+    expect(renderedX(graphic, 75)).toBeCloseTo(HAND_AUTOBZ_VALUE_AT_75, 3);
   });
 });

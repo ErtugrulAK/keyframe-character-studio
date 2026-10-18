@@ -94,23 +94,36 @@ describe('fileAdmission authority', () => {
 });
 
 describe('HeaderBar pre-admission guards', () => {
-  let readAsTextSpy: ReturnType<typeof vi.spyOn>;
-  let readAsArrayBufferSpy: ReturnType<typeof vi.spyOn>;
+  // A VALID READER MOCK. jsdom's real FileReader demands a real Blob, so the
+  // synthetic descriptors this suite deliberately keeps (no 64 MiB allocation)
+  // made the spied native method throw an uncaught TypeError the CI failed on
+  // (bbb8b9a run). The stub records exactly the boundary the suite owns —
+  // whether the guard let the reader be reached at all — and never touches
+  // content; onload stays unfired, mirroring the previous jsdom reality.
+  class RecordingFileReader {
+    static textCalls = 0;
+    static bufferCalls = 0;
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    readAsText(): void { RecordingFileReader.textCalls += 1; }
+    readAsArrayBuffer(): void { RecordingFileReader.bufferCalls += 1; }
+  }
 
   beforeEach(() => {
-    readAsTextSpy = vi.spyOn(FileReader.prototype, 'readAsText');
-    readAsArrayBufferSpy = vi.spyOn(FileReader.prototype, 'readAsArrayBuffer');
+    RecordingFileReader.textCalls = 0;
+    RecordingFileReader.bufferCalls = 0;
+    vi.stubGlobal('FileReader', RecordingFileReader);
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('an oversized project file is refused before readAsText, with one toast and no import call', () => {
     const ctx = mountHeaderBar();
     pickFile(fileOf('huge.kcs', PROJECT_IMPORT_MAX_FILE_BYTES + 1));
 
-    expect(readAsTextSpy).not.toHaveBeenCalled();
+    expect(RecordingFileReader.textCalls).toBe(0);
     expect(ctx.showToast).toHaveBeenCalledTimes(1);
     expect(String((ctx.showToast as ReturnType<typeof vi.fn>).mock.calls[0][0])).toMatch(/too large/i);
     expect(ctx.importProject).not.toHaveBeenCalled();
@@ -121,7 +134,7 @@ describe('HeaderBar pre-admission guards', () => {
     const ctx = mountHeaderBar();
     pickFile(fileOf('huge.zip', PACKAGE_IMPORT_MAX_FILE_BYTES + 1));
 
-    expect(readAsArrayBufferSpy).not.toHaveBeenCalled();
+    expect(RecordingFileReader.bufferCalls).toBe(0);
     expect(ctx.showToast).toHaveBeenCalledTimes(1);
     expect(String((ctx.showToast as ReturnType<typeof vi.fn>).mock.calls[0][0])).toMatch(/too large/i);
   });
@@ -129,13 +142,13 @@ describe('HeaderBar pre-admission guards', () => {
   it('a file exactly at the project limit still reaches the reader (inclusive boundary)', () => {
     mountHeaderBar();
     pickFile(fileOf('edge.kcs', PROJECT_IMPORT_MAX_FILE_BYTES));
-    expect(readAsTextSpy).toHaveBeenCalledTimes(1);
+    expect(RecordingFileReader.textCalls).toBe(1);
   });
 
   it('a small project file still flows through to importProject (regression)', () => {
     const ctx = mountHeaderBar();
     pickFile(fileOf('small.kcs', 128));
-    expect(readAsTextSpy).toHaveBeenCalledTimes(1);
+    expect(RecordingFileReader.textCalls).toBe(1);
     // The read callback is async in production; jsdom fires no onload here, so
     // the admission contract ends at "reached the reader" plus the refusal-row
     // guarantees above. importProject remains the post-read authority.

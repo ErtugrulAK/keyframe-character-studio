@@ -279,7 +279,7 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
       .filter((keyframe) => (keyframe.templateId || 'Sequence') === activeTmpl)
       .sort((a, b) => a.frame - b.frame) as (PropertyKeyframe | PathKeyframe)[];
     return (
-      <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }}>
+      <div key={ch} className="ue-channel-lane" data-lane-channel={ch} style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }}>
         {chKfs.length > 0 && resolveConnectorSegments(
           chKfs.map((keyframe) => keyframe.frame),
           frameWidth,
@@ -483,13 +483,15 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               authored opacity keys are visible on the timeline. */}
           {renderChannelLane('opacity')}
 
-          {/* V6 Layer Mask channels share the track and evaluator. */}
-          {Object.keys(track.maskChannels ?? {}).map((channel) => renderChannelLane(channel as AnimationChannel))}
-          {Object.keys(track.maskPathChannels ?? {}).map((channel) => renderChannelLane(channel as LayerMaskPathChannel))}
-
           {/* Trim Path is a peer of the transform channels in the tree, so its lanes are too. */}
           <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
           {isTrimPathExpanded && ['trimPathStart', 'trimPathEnd', 'trimPathOffset'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
+
+          {/* K3 — V6 Layer Mask channels share the track and evaluator, and
+              their lanes sit exactly where the tree lists them: after Trim
+              Path, one lane per authored property per mask. */}
+          {Object.keys(track.maskChannels ?? {}).map((channel) => renderChannelLane(channel as AnimationChannel))}
+          {Object.keys(track.maskPathChannels ?? {}).map((channel) => renderChannelLane(channel as LayerMaskPathChannel))}
         </div>
       )}
 

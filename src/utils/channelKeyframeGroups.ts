@@ -7,11 +7,20 @@
  * authored pose a keyframe must capture (see `resolveAuthoredLocalTransform`).
  */
 
-import type { CharacterPart, PropertyKeyframe, Track, TrackChannel, Transform } from '../types/animator';
+import type { AnimationChannel, CharacterPart, PropertyKeyframe, Track, TrackChannel, Transform } from '../types/animator';
 import { worldToContainerLocal } from './containerMath';
 import { authoredBasePose } from './evaluateTransform';
 import { fillChannelsFromLegacyKeyframes } from './legacyKeyframeConversion';
 import { relationshipParentId } from './partBinding';
+
+const MASK_SCALAR_PROPERTIES = ['opacity', 'feather', 'expansion'] as const;
+/** K3 — a per-mask scalar channel (`maskId:opacity|feather|expansion`). Path
+ * channels carry geometry, not a number, and stay outside this pair. */
+const asMaskScalarChannel = (channel: string): string | null => {
+  if (!channel.includes(':')) return null;
+  const [, property] = channel.split(':');
+  return (MASK_SCALAR_PROPERTIES as readonly string[]).includes(property) ? channel : null;
+};
 
 export interface ChannelKeyframeGroup {
   /** Shared frame number */
@@ -168,9 +177,15 @@ export const resolveAuthoredLocalTransform = (
  */
 export const applyChannelStaticValue = (
   part: CharacterPart,
-  channel: TrackChannel,
+  channel: AnimationChannel,
   value: number,
 ): CharacterPart => {
+  const maskScalar = asMaskScalarChannel(channel);
+  if (maskScalar) {
+    const [maskId, property] = maskScalar.split(':') as [string, 'opacity' | 'feather' | 'expansion'];
+    if (!part.masks?.some((mask) => mask.id === maskId)) return part;
+    return { ...part, masks: part.masks.map((mask) => (mask.id === maskId ? { ...mask, [property]: value } : mask)) };
+  }
   switch (channel) {
     case 'x':
     case 'y':
@@ -199,10 +214,16 @@ export const applyChannelStaticValue = (
  * authored-local pose the aggregate `+` captures (finding F safe) and the
  * part fields the trim/mask-offset channels are authored in. */
 export const channelArmValue = (
-  channel: TrackChannel,
+  channel: AnimationChannel,
   authored: Transform,
   part: CharacterPart,
 ): number => {
+  // K3 — a per-mask scalar arms from its own mask's authored static value.
+  const maskScalar = asMaskScalarChannel(channel);
+  if (maskScalar) {
+    const [maskId, property] = maskScalar.split(':') as [string, 'opacity' | 'feather' | 'expansion'];
+    return part.masks?.find((mask) => mask.id === maskId)?.[property] ?? 0;
+  }
   switch (channel) {
     case 'x':
     case 'y':

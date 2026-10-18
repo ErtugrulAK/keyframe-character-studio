@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { CharacterPart, Track, TrackChannel, AnimationChannel, EasingType, Transform, BezierPath, LayerMaskPathChannel } from '../types/animator';
+import type { CharacterPart, PropertyKeyframe, Track, TrackChannel, AnimationChannel, EasingType, Transform, BezierPath, LayerMaskPathChannel } from '../types/animator';
 import { layerMaskPathChannel } from '../types/animator';
 import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
 import { hasChannelDataForTemplate, resolveChannelAnimationState } from '../utils/timelineMetrics';
@@ -432,7 +432,7 @@ export const useTimeline = ({
    * authored-local capture the aggregate `+` uses — finding F safe); an
    * already-animated channel is never re-initialised and never duplicated.
    */
-  const armChannel = (trackId: string, channel: TrackChannel) => {
+  const armChannel = (trackId: string, channel: AnimationChannel) => {
     const track = tracks.find((candidate) => candidate.id === trackId);
     const part = track ? characterParts.find((candidate) => candidate.id === track.partId) : undefined;
     if (!track || !part) return;
@@ -458,11 +458,12 @@ export const useTimeline = ({
    * (one history entry). Other sequences' keys survive untouched. The caller
    * owns the confirmation; this function is only reached through it.
    */
-  const disableChannelAnimation = (trackId: string, channel: TrackChannel) => {
+  const disableChannelAnimation = (trackId: string, channel: AnimationChannel) => {
     const track = tracks.find((candidate) => candidate.id === trackId);
     if (!track) return;
     const scope = activeTemplateId || 'Sequence';
-    const inScopeKeys = (track.channels?.[channel] ?? []).filter((k) => (k.templateId || 'Sequence') === scope);
+    const store = (channel.includes(':') ? track.maskChannels : track.channels) as Record<string, PropertyKeyframe[]> | undefined;
+    const inScopeKeys = (store?.[channel] ?? []).filter((k) => (k.templateId || 'Sequence') === scope);
     if (inScopeKeys.length === 0) return;
     const part = characterParts.find((candidate) => candidate.id === track.partId);
     if (!part) return;

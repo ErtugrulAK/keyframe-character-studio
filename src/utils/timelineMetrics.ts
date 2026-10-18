@@ -132,11 +132,18 @@ const templateKeyframeFrames = (
  */
 export function resolveChannelKeyframeFrames(
   track: Track,
-  channel: TrackChannel,
+  channel: AnimationChannel,
   activeTemplateId: string,
   basePose?: Partial<Transform>,
 ): number[] {
-  return templateKeyframeFrames(resolveTrackChannels(track, basePose)[channel] ?? [], activeTemplateId);
+  // K3 — per-mask channels read their own stores; the projection behind the
+  // transform channels stays exactly as it was.
+  const keyframes = channel.includes(':')
+    ? ((channel.endsWith(':path')
+      ? (track.maskPathChannels as Record<string, PropertyKeyframe[] | undefined> | undefined)?.[channel]
+      : (track.maskChannels as Record<string, PropertyKeyframe[] | undefined> | undefined)?.[channel]) ?? [])
+    : (resolveTrackChannels(track, basePose)[channel as TrackChannel] ?? []);
+  return templateKeyframeFrames(keyframes, activeTemplateId);
 }
 
 /**

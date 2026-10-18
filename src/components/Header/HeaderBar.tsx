@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeFilenameComponent } from '../../utils/pathSafety';
+import { packageFileAdmissionProblem, projectFileAdmissionProblem } from '../../utils/fileAdmission';
 import { downloadBlob } from '../../utils/fileDownload';
 import { GifExportPanel } from './GifExportPanel';
 import type { SceneData as ExportableSceneData } from '../../types/composition';
@@ -282,6 +283,13 @@ export const HeaderBar: React.FC = () => {
     const lowerName = file.name.toLowerCase();
     const looksLikePackage = lowerName.endsWith('.zip') || lowerName.endsWith('.ograf');
     if (looksLikePackage) {
+      // N3 PR-2c1: a package over the importer's own ceiling is refused on its
+      // declared size, before any bytes are allocated for it.
+      const packageRefusal = packageFileAdmissionProblem(file);
+      if (packageRefusal) {
+        showToast(packageRefusal.message, 'error');
+        return;
+      }
       // A package is an archive: read it as bytes and let the package reader
       // decode it under its own guards. Nothing is applied until the report is
       // accepted, exactly like the Lottie import.
@@ -296,6 +304,13 @@ export const HeaderBar: React.FC = () => {
       };
       packageReader.onerror = () => showToast('The selected package could not be read.', 'error');
       packageReader.readAsArrayBuffer(file);
+      return;
+    }
+    // N3 PR-2c1: oversized text imports are refused on declared size before
+    // FileReader allocates them; the post-read validators stay the authority.
+    const projectRefusal = projectFileAdmissionProblem(file);
+    if (projectRefusal) {
+      showToast(projectRefusal.message, 'error');
       return;
     }
     const fileNameWithoutExt = file.name.replace(/\.(?:lottie\.)?(?:json|kcs)$/i, '').trim();

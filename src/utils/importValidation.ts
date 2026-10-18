@@ -269,9 +269,16 @@ const pathProblem = (value: unknown, path: string, owner: string, code: string):
   return undefined;
 };
 
-/** The V6 same-layer masks; the migration dereferences `mask.path` unguarded. */
+/**
+ * The V6 same-layer masks; the migration dereferences `mask.path` unguarded.
+ * N3 PR-2d: `mask.id` keys the channel lookup (`${id}:opacity`), the animated
+ * path channel and the SVG def id (`kcs-layer-mask-<part>-<id>`), so two masks
+ * of one layer sharing a present id collide their data and their defs. A mask
+ * WITHOUT an id keeps the documented acceptance (C11 open decision).
+ */
 const masksProblem = (value: unknown, path: string, owner: string): SceneProblem | undefined => {
   if (!Array.isArray(value)) return sceneProblem('KCS_IMPORT_INVALID_LAYER', path, `${owner} carries masks that are not a list.`);
+  const seenMaskIds = new Set<string>();
   for (const [index, mask] of value.entries()) {
     const maskPath = `${path}[${index}]`;
     const record = asRecord(mask);
@@ -281,6 +288,17 @@ const masksProblem = (value: unknown, path: string, owner: string): SceneProblem
     }
     const nested = pathProblem(record.path, `${maskPath}.path`, `${owner}'s mask`, 'KCS_IMPORT_INVALID_LAYER');
     if (nested) return nested;
+    if (typeof record.id === 'string' && record.id.length > 0) {
+      if (seenMaskIds.has(record.id)) {
+        return sceneProblem(
+          'KCS_IMPORT_DUPLICATE_MASK_ID',
+          `${maskPath}.id`,
+          `Two masks of ${owner} share the id "${record.id}", so their animated properties and their render definitions address the same channel.`,
+          'Give the masks distinct ids in the source document, or re-export the project.',
+        );
+      }
+      seenMaskIds.add(record.id);
+    }
     for (const field of ['opacity', 'feather', 'expansion'] as const) {
       if (record[field] !== undefined && !isFiniteNumberValue(record[field])) {
         return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${maskPath}.${field}`, `${owner} has a mask with a non-numeric ${field}.`);
@@ -440,8 +458,41 @@ const legacyPartProblem = (value: unknown, index: number, seenIds: Set<string>):
   return sharedLayerValueProblem(record, path, `Layer "${id}"`);
 };
 
+/**
+ * N3 PR-2d: one keyframe-id register per track. `locateKeyframe` addresses a
+ * keyframe by id across ALL stores of one track (legacy composite first, then
+ * channels, mask channels, mask paths), so an id repeated anywhere inside a
+ * track makes every timeline edit hit the first holder. Ids shared between
+ * DIFFERENT tracks are unambiguous and stay accepted. Missing ids keep their
+ * documented acceptance — only duplicates of present string ids refuse (C11).
+ */
+const keyframeIdProblem = (
+  keyframeRecord: Record<string, unknown>,
+  idPath: string,
+  owner: string,
+  seenKeyframeIds: Set<string>,
+): SceneProblem | undefined => {
+  const id = keyframeRecord.id;
+  if (typeof id !== 'string' || id.length === 0) return undefined;
+  if (seenKeyframeIds.has(id)) {
+    return sceneProblem(
+      'KCS_IMPORT_DUPLICATE_KEYFRAME_ID',
+      idPath,
+      `${owner} has two keyframes sharing the id "${id}", so selection and timeline edits address only the first of them.`,
+      'Give every keyframe a distinct id in the source document, or re-export the project.',
+    );
+  }
+  seenKeyframeIds.add(id);
+  return undefined;
+};
+
 /** Numeric channels (`channels`, `maskChannels`): the evaluator interpolates every value. */
-const numericChannelProblem = (value: unknown, path: string, owner: string): SceneProblem | undefined => {
+const numericChannelProblem = (
+  value: unknown,
+  path: string,
+  owner: string,
+  seenKeyframeIds?: Set<string>,
+): SceneProblem | undefined => {
   const record = asRecord(value);
   if (!record) return sceneProblem('KCS_IMPORT_INVALID_TRACK', path, `${owner} carries channels that are not an object.`);
   for (const [channel, keyframes] of Object.entries(record)) {
@@ -457,13 +508,22 @@ const numericChannelProblem = (value: unknown, path: string, owner: string): Sce
       if (!isFiniteNumberValue(keyframeRecord.value)) {
         return sceneProblem('KCS_IMPORT_INVALID_TRACK', `${channelPath}[${index}].value`, `${owner}'s "${channel}" channel has a keyframe whose value is not a finite number.`);
       }
+      if (seenKeyframeIds) {
+        const duplicate = keyframeIdProblem(keyframeRecord, `${channelPath}[${index}].id`, owner, seenKeyframeIds);
+        if (duplicate) return duplicate;
+      }
     }
   }
   return undefined;
 };
 
 /** Animated mask geometry: every keyframe carries a canonical path. */
-const maskPathChannelProblem = (value: unknown, path: string, owner: string): SceneProblem | undefined => {
+const maskPathChannelProblem = (
+  value: unknown,
+  path: string,
+  owner: string,
+  seenKeyframeIds?: Set<string>,
+): SceneProblem | undefined => {
   const record = asRecord(value);
   if (!record) return sceneProblem('KCS_IMPORT_INVALID_TRACK', path, `${owner} carries mask paths that are not an object.`);
   for (const [channel, keyframes] of Object.entries(record)) {
@@ -478,13 +538,22 @@ const maskPathChannelProblem = (value: unknown, path: string, owner: string): Sc
       }
       const valuePath = pathProblem(keyframeRecord.value, `${channelPath}[${index}].value`, owner, 'KCS_IMPORT_INVALID_TRACK');
       if (valuePath) return valuePath;
+      if (seenKeyframeIds) {
+        const duplicate = keyframeIdProblem(keyframeRecord, `${channelPath}[${index}].id`, owner, seenKeyframeIds);
+        if (duplicate) return duplicate;
+      }
     }
   }
   return undefined;
 };
 
 /** Legacy composite keyframes, kept for backward compatibility. */
-const legacyKeyframeProblem = (value: unknown, path: string, owner: string): SceneProblem | undefined => {
+const legacyKeyframeProblem = (
+  value: unknown,
+  path: string,
+  owner: string,
+  seenKeyframeIds?: Set<string>,
+): SceneProblem | undefined => {
   if (!Array.isArray(value)) return sceneProblem('KCS_IMPORT_INVALID_TRACK', path, `${owner} carries keyframes that are not a list.`);
   for (const [index, keyframe] of value.entries()) {
     const keyframePath = `${path}[${index}]`;
@@ -499,11 +568,15 @@ const legacyKeyframeProblem = (value: unknown, path: string, owner: string): Sce
         return sceneProblem('KCS_IMPORT_INVALID_TRACK', `${keyframePath}.transform.${field}`, `${owner} has a keyframe transform with a non-numeric ${field}.`);
       }
     }
+    if (seenKeyframeIds) {
+      const duplicate = keyframeIdProblem(record, `${keyframePath}.id`, owner, seenKeyframeIds);
+      if (duplicate) return duplicate;
+    }
   }
   return undefined;
 };
 
-const trackProblem = (value: unknown, index: number): SceneProblem | undefined => {
+const trackProblem = (value: unknown, index: number, seenPartIds: Set<string>): SceneProblem | undefined => {
   const path = `$.tracks[${index}]`;
   const record = asRecord(value);
   if (!record) return sceneProblem('KCS_IMPORT_INVALID_TRACK', path, `Track ${index} is not an object.`);
@@ -514,23 +587,40 @@ const trackProblem = (value: unknown, index: number): SceneProblem | undefined =
   if (typeof partId !== 'string' || partId.length === 0) {
     return sceneProblem('KCS_IMPORT_INVALID_TRACK', `${path}.partId`, `Track ${index} names no layer, so its animation cannot be attached.`);
   }
+  // N3 PR-2d: the evaluator addresses tracks by partId with a first-match
+  // find, and the apply path DERIVES `track_<partId>` as the track id, so a
+  // second track naming the same layer is never evaluated, selected or edited
+  // and collides with the first on the derived id. The editor keeps one track
+  // per layer, so no legitimate document can carry this shape.
+  if (seenPartIds.has(partId)) {
+    return sceneProblem(
+      'KCS_IMPORT_DUPLICATE_TRACK_TARGET',
+      `${path}.partId`,
+      `Two tracks animate layer "${partId}", so only the first of them is ever evaluated or edited.`,
+      'Remove the extra track in the source document, or re-export the project.',
+    );
+  }
+  seenPartIds.add(partId);
   const owner = `Track ${index} (layer "${partId}")`;
+  const seenKeyframeIds = new Set<string>();
 
+  // Scan order matches `locateKeyframe`: legacy composite store first, then
+  // channels, mask channels, mask path channels.
+  if (record.keyframes !== undefined) {
+    const keyframes = legacyKeyframeProblem(record.keyframes, `${path}.keyframes`, owner, seenKeyframeIds);
+    if (keyframes) return keyframes;
+  }
   if (record.channels !== undefined) {
-    const channels = numericChannelProblem(record.channels, `${path}.channels`, owner);
+    const channels = numericChannelProblem(record.channels, `${path}.channels`, owner, seenKeyframeIds);
     if (channels) return channels;
   }
   if (record.maskChannels !== undefined) {
-    const maskChannels = numericChannelProblem(record.maskChannels, `${path}.maskChannels`, owner);
+    const maskChannels = numericChannelProblem(record.maskChannels, `${path}.maskChannels`, owner, seenKeyframeIds);
     if (maskChannels) return maskChannels;
   }
   if (record.maskPathChannels !== undefined) {
-    const maskPathChannels = maskPathChannelProblem(record.maskPathChannels, `${path}.maskPathChannels`, owner);
+    const maskPathChannels = maskPathChannelProblem(record.maskPathChannels, `${path}.maskPathChannels`, owner, seenKeyframeIds);
     if (maskPathChannels) return maskPathChannels;
-  }
-  if (record.keyframes !== undefined) {
-    const keyframes = legacyKeyframeProblem(record.keyframes, `${path}.keyframes`, owner);
-    if (keyframes) return keyframes;
   }
   if (record.sequencerTemplateId !== undefined && typeof record.sequencerTemplateId !== 'string') {
     return sceneProblem('KCS_IMPORT_INVALID_TRACK', `${path}.sequencerTemplateId`, `${owner} names a sequence that is not text.`);
@@ -583,8 +673,9 @@ const legacyProjectProblem = (project: LegacyProjectDocument): SceneProblem | un
     const partProblem = legacyPartProblem(part, index, seenIds);
     if (partProblem) return partProblem;
   }
+  const seenTrackTargets = new Set<string>();
   for (const [index, track] of project.tracks.entries()) {
-    const trackIssue = trackProblem(track, index);
+    const trackIssue = trackProblem(track, index, seenTrackTargets);
     if (trackIssue) return trackIssue;
   }
   return undefined;
@@ -625,8 +716,9 @@ const sceneSemanticProblem = (scene: SceneData): SceneProblem | undefined => {
     const problem = layerProblem(layer, index, seenIds);
     if (problem) return problem;
   }
+  const seenTrackTargets = new Set<string>();
   for (const [index, track] of scene.tracks.entries()) {
-    const problem = trackProblem(track, index);
+    const problem = trackProblem(track, index, seenTrackTargets);
     if (problem) return problem;
   }
 

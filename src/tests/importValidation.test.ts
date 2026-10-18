@@ -499,3 +499,229 @@ describe('N3 PR-1 — timeline and canvas numeric bounds at the import boundary'
     }
   });
 });
+
+/**
+ * N3 PR-2d — structural id integrity at the single import boundary.
+ *
+ * Confirmed consumer contracts this matrix pins:
+ * - The evaluator addresses tracks by `partId` with a first-match `find`, and
+ *   the apply path DERIVES `track_${partId}` as the track id, so two tracks
+ *   naming one layer mean the second is never evaluated, selected or edited.
+ * - `locateKeyframe` searches one track across ALL its stores by id, so a
+ *   keyframe id repeated inside one track (same or different channel, same or
+ *   legacy store) makes timeline edits address the wrong keyframe.
+ * - Layer masks are dereferenced by `mask.id` (channel key `${id}:opacity`,
+ *   DOM id `kcs-layer-mask-<part>-<id>`), so duplicate mask ids inside one
+ *   layer collide their animated data and their SVG definitions.
+ * The JSON `track.id` field is NOT read by the apply path (the id is derived),
+ * so duplicated track ids are pinned as ACCEPTED — refusing them would reject
+ * documents nothing breaks on. Missing ids stay accepted (C11 open product
+ * decision); only duplicates of present string ids refuse.
+ */
+describe('N3 PR-2d — structural id integrity at the import boundary', () => {
+  const scene = (overrides: Record<string, unknown> = {}) => JSON.stringify({
+    version: 2,
+    fps: 30,
+    totalFrames: 90,
+    width: 1920,
+    height: 1080,
+    layers: [],
+    tracks: [],
+    ...overrides,
+  });
+  const layer = (overrides: Record<string, unknown> = {}) => ({ id: 'L1', zIndex: 0, type: 'custom_box', ...overrides });
+  const track = (partId: string, channels: Record<string, unknown[]> = {}) => ({ partId, channels });
+  const kf = (id: string, frame: number) => ({ id, frame, value: frame, easing: 'linear' });
+  const legacy = (characterParts: unknown[], tracks: unknown[]) =>
+    JSON.stringify({ version: '5.0', characterParts, tracks, fps: 30, totalFrames: 60 });
+  const part = (overrides: Record<string, unknown> = {}) => ({
+    id: 'p1', name: 'Part', type: 'custom_rect', zIndex: 1,
+    baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    ...overrides,
+  });
+  const refusal = (text: string) => {
+    const result = validateImportedDocument(text);
+    return result.ok ? undefined : result.diagnostics[0];
+  };
+  const maskPath = {
+    version: 1, coordinateSpace: 'local', closed: true,
+    points: [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 40 }],
+  };
+
+  it('refuses two tracks that animate the same layer', () => {
+    const result = refusal(scene({
+      layers: [layer({ id: 'L1' }), layer({ id: 'L2', zIndex: 1 })],
+      tracks: [track('L1'), track('L1', { x: [kf('k1', 0)] })],
+    }));
+
+    expect(result?.code).toBe('KCS_IMPORT_DUPLICATE_TRACK_TARGET');
+    expect(result?.path).toBe('$.tracks[1].partId');
+    expect(result?.action.length).toBeGreaterThan(0);
+  });
+
+  it('refuses a second track naming the same layer through the legacy layerId alias', () => {
+    const result = refusal(scene({
+      layers: [layer({ id: 'L1' })],
+      tracks: [track('L1'), { layerId: 'L1', channels: {} }],
+    }));
+
+    expect(result?.code).toBe('KCS_IMPORT_DUPLICATE_TRACK_TARGET');
+    expect(result?.path).toBe('$.tracks[1].partId');
+  });
+
+  it('refuses a duplicate track target before reporting its inner keyframe collision', () => {
+    const result = refusal(scene({
+      layers: [layer({ id: 'L1' })],
+      tracks: [track('L1', { x: [kf('k1', 0)] }), track('L1', { x: [kf('k1', 0)] })],
+    }));
+
+    expect(result?.code).toBe('KCS_IMPORT_DUPLICATE_TRACK_TARGET');
+    expect(result?.path).toBe('$.tracks[1].partId');
+  });
+
+  it('refuses two keyframes sharing an id inside one channel', () => {
+    const result = refusal(scene({
+      layers: [layer()],
+      tracks: [track('L1', { x: [kf('k1', 0), kf('k1', 45)] })],
+    }));
+
+    expect(result?.code).toBe('KCS_IMPORT_DUPLICATE_KEYFRAME_ID');
+    expect(result?.path).toBe('$.tracks[0].channels.x[1].id');
+  });
+
+  it('refuses one id shared across two channels of the same track (locateKeyframe spans stores)', () => {
+    const result = refusal(scene({
+      layers: [layer()],
+      tracks: [track('L1', { x: [kf('k1', 0)], y: [kf('k1', 30)] })],
+    }));
+
+    expect(result?.code).toBe('KCS_IMPORT_DUPLICATE_KEYFRAME_ID');
+    expect(result?.path).toBe('$.tracks[0].channels.y[0].id');
+  });
+
+  it('refuses a channel keyframe reusing a legacy composite id in the same track (legacy store wins locate)', () => {
+    const result = refusal(scene({
+      layers: [layer()],
+      tracks: [{ ...track('L1', { x: [kf('k1', 0)] }), keyframes: [{ id: 'k1', frame: 0, transform: { x: 0, y: 0 }, easing: 'linear' }] }],
+    }));
+
+    expect(result?.code).toBe('KCS_IMPORT_DUPLICATE_KEYFRAME_ID');
+    expect(result?.path).toBe('$.tracks[0].channels.x[0].id');
+  });
+
+  it('refuses duplicate keyframe ids in mask channels and mask path channels of one track', () => {
+    const maskDup = refusal(scene({
+      layers: [layer()],
+      tracks: [{ ...track('L1'), maskChannels: { 'm1:opacity': [kf('k1', 0), kf('k1', 10)] } }],
+    }));
+    const maskPathDup = refusal(scene({
+      layers: [layer()],
+      tracks: [{
+        ...track('L1'),
+        maskPathChannels: { 'm1:path': [
+          { id: 'p1', frame: 0, value: maskPath },
+          { id: 'p1', frame: 10, value: maskPath },
+        ] },
+      }],
+    }));
+
+    expect(maskDup?.code).toBe('KCS_IMPORT_DUPLICATE_KEYFRAME_ID');
+    expect(maskDup?.path).toBe('$.tracks[0].maskChannels.m1:opacity[1].id');
+    expect(maskPathDup?.code).toBe('KCS_IMPORT_DUPLICATE_KEYFRAME_ID');
+    expect(maskPathDup?.path).toBe('$.tracks[0].maskPathChannels.m1:path[1].id');
+  });
+
+  it('accepts the same keyframe id in two different tracks and a distinct-id document throughout', () => {
+    const reusedAcrossTracks = validateImportedDocument(scene({
+      layers: [layer({ id: 'L1' }), layer({ id: 'L2', zIndex: 1 })],
+      tracks: [track('L1', { x: [kf('k1', 0)] }), track('L2', { x: [kf('k1', 0)] })],
+    }));
+    const distinct = validateImportedDocument(scene({
+      layers: [
+        layer({ id: 'L1', masks: [{ id: 'm1', mode: 'add', path: maskPath }, { id: 'm2', mode: 'subtract', path: maskPath }] }),
+        layer({ id: 'L2', zIndex: 1, masks: [{ id: 'm1', mode: 'add', path: maskPath }] }),
+      ],
+      tracks: [
+        track('L1', { x: [kf('k1', 0), kf('k2', 45)] }),
+        track('L2', { x: [kf('k1', 0)] }),
+      ],
+    }));
+
+    expect(reusedAcrossTracks.ok).toBe(true);
+    expect(distinct.ok).toBe(true);
+  });
+
+  it('accepts duplicated JSON track id fields because the apply path derives its own ids', () => {
+    const result = validateImportedDocument(scene({
+      layers: [layer({ id: 'L1' }), layer({ id: 'L2', zIndex: 1 })],
+      tracks: [
+        { ...track('L1'), id: 'same' },
+        { ...track('L2'), id: 'same' },
+      ],
+    }));
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('refuses two masks sharing an id inside one layer but accepts the id across layers', () => {
+    const refused = refusal(scene({
+      layers: [layer({ masks: [{ id: 'm1', mode: 'add', path: maskPath }, { id: 'm1', mode: 'subtract', path: maskPath }] })],
+    }));
+    const acrossLayers = validateImportedDocument(scene({
+      layers: [
+        layer({ id: 'L1', masks: [{ id: 'm1', mode: 'add', path: maskPath }] }),
+        layer({ id: 'L2', zIndex: 1, masks: [{ id: 'm1', mode: 'add', path: maskPath }] }),
+      ],
+    }));
+
+    expect(refused?.code).toBe('KCS_IMPORT_DUPLICATE_MASK_ID');
+    expect(refused?.path).toBe('$.layers[0].masks[1].id');
+    expect(acrossLayers.ok).toBe(true);
+  });
+
+  it('keeps missing ids accepted on every store shape (C11 open decision, duplicates-only rule)', () => {
+    const noKeyframeIds = validateImportedDocument(scene({
+      layers: [layer()],
+      tracks: [{ partId: 'L1', channels: { x: [{ frame: 0, value: 3, easing: 'linear' }] }, keyframes: [{ frame: 0, transform: { x: 0, y: 0 }, easing: 'linear' }] }],
+    }));
+    const noMaskId = validateImportedDocument(scene({
+      layers: [layer({ masks: [{ mode: 'add', path: maskPath }] })],
+    }));
+    const noTrackIdField = validateImportedDocument(scene({
+      layers: [layer()],
+      tracks: [{ partId: 'L1', channels: {}, keyframes: [{ frame: 0, transform: { x: 0, y: 0 }, easing: 'linear' }] }],
+    }));
+
+    expect(noKeyframeIds.ok).toBe(true);
+    expect(noMaskId.ok).toBe(true);
+    expect(noTrackIdField.ok).toBe(true);
+  });
+
+  it('refuses the same duplicates on the legacy route', () => {
+    const duplicateTarget = refusal(legacy([part()], [track('p1'), track('p1')]));
+    expect(duplicateTarget?.code).toBe('KCS_IMPORT_DUPLICATE_TRACK_TARGET');
+    expect(duplicateTarget?.path).toBe('$.tracks[1].partId');
+
+    const duplicateKeyframe = refusal(legacy([part()], [{ partId: 'p1', channels: { x: [kf('k1', 0), kf('k1', 9)] } }]));
+    expect(duplicateKeyframe?.code).toBe('KCS_IMPORT_DUPLICATE_KEYFRAME_ID');
+    expect(duplicateKeyframe?.path).toBe('$.tracks[0].channels.x[1].id');
+
+    const duplicateMask = refusal(legacy([part({ masks: [{ id: 'm1', path: maskPath }, { id: 'm1', path: maskPath }] })], []));
+    expect(duplicateMask?.code).toBe('KCS_IMPORT_DUPLICATE_MASK_ID');
+    expect(duplicateMask?.path).toBe('$.characterParts[0].masks[1].id');
+  });
+
+  it('emits exactly one error diagnostic and prefers the earliest refusal class', () => {
+    const result = validateImportedDocument(scene({
+      layers: [layer({ masks: [{ id: 'm1', mode: 'add', path: maskPath }, { id: 'm1', mode: 'add', path: maskPath }] })],
+      tracks: [track('L1'), track('L1')],
+    }));
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      const errors = result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error');
+      expect(errors).toHaveLength(1);
+      expect(errors[0]?.path).toBe('$.layers[0].masks[1].id');
+    }
+  });
+});

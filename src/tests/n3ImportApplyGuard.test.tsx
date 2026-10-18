@@ -189,3 +189,30 @@ describe('N3 PR-1 — refused imports are true no-ops at the apply path', () => 
     expect(after.projectResolution).toEqual({ width: 1920.5, height: 1080 });
   });
 });
+
+describe('N3 PR-2d — refused id-integrity documents are true no-ops too', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('T13 applies zero state setters for a document refused on duplicate track targets', () => {
+    const editor = renderGuardedEditor();
+    const before = editor.read();
+
+    const result = editor.read().importProject(sceneDocument({
+      layers: [
+        { id: 'L1', name: 'A', type: 'custom_box', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 0, fillColor: '#fff', strokeColor: '#000' },
+      ],
+      tracks: [{ partId: 'L1', channels: {} }, { partId: 'L1', channels: {} }],
+    }));
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0]?.code).toBe('KCS_IMPORT_DUPLICATE_TRACK_TARGET');
+    expect(result.diagnostics[0]?.path).toBe('$.tracks[1].partId');
+    expect(editor.counts).toEqual({ fps: 0, totalFrames: 0, resolution: 0, tracks: 0, parts: 0 });
+    expect(editor.baselineCalls.count).toBe(0);
+    const after = editor.read();
+    expect(after.tracks).toBe(before.tracks);
+    expect(after.characterParts).toBe(before.characterParts);
+  });
+});

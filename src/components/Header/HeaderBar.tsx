@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeFilenameComponent } from '../../utils/pathSafety';
+import { packageFileAdmissionProblem, projectFileAdmissionProblem } from '../../utils/fileAdmission';
 import { downloadBlob } from '../../utils/fileDownload';
 import { GifExportPanel } from './GifExportPanel';
 import type { SceneData as ExportableSceneData } from '../../types/composition';
@@ -106,6 +107,11 @@ export const HeaderBar: React.FC = () => {
     fps,
     setFps,
     openShortcutReference,
+    characterParts,
+    tracks,
+    coordinateSystem,
+    currentFrame,
+    isPlaying,
   } = useAnimator();
 
   const [editingTmplId, setEditingTmplId] = useState<string | null>(null);
@@ -114,8 +120,34 @@ export const HeaderBar: React.FC = () => {
   const [isOGrafExporting, setIsOGrafExporting] = useState<boolean>(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState<boolean>(false);
+  /** SAFE-03-A: reset waits for an explicit confirmation whenever the document has content. */
+  const [pendingResetConfirmation, setPendingResetConfirmation] = useState<boolean>(false);
   /** The scene snapshot the GIF panel summarises and exports, taken when it opens. */
   const [gifExportScene, setGifExportScene] = useState<ExportableSceneData | null>(null);
+
+  /**
+   * SAFE-03-A (review repair): "meaningful" is decided over exactly the set
+   * of fields `resetProject` replaces — parts, tracks, coordinate system,
+   * frame cursor and playback. Anything else (title, fps, template tabs) is
+   * preserved by reset and cannot be destroyed by it, so it must not
+   * fabricate a destructive prompt either. A legacy coordinate system, an
+   * off-zero cursor or running transport is authentic authored state even
+   * with empty parts/tracks, so the no-op path stays provably inert.
+   */
+  const requestResetProject = () => {
+    // Evaluated at click time over exactly the replacement set.
+    const carriesResettableState =
+      characterParts.length > 0 ||
+      tracks.length > 0 ||
+      coordinateSystem !== 'project-unit-center-v1' ||
+      currentFrame !== 0 ||
+      isPlaying;
+    if (!carriesResettableState) {
+      resetProject();
+      return;
+    }
+    setPendingResetConfirmation(true);
+  };
 
   /**
    * The one OGraf compile path: the package export compiles the current scene
@@ -251,6 +283,13 @@ export const HeaderBar: React.FC = () => {
     const lowerName = file.name.toLowerCase();
     const looksLikePackage = lowerName.endsWith('.zip') || lowerName.endsWith('.ograf');
     if (looksLikePackage) {
+      // N3 PR-2c1: a package over the importer's own ceiling is refused on its
+      // declared size, before any bytes are allocated for it.
+      const packageRefusal = packageFileAdmissionProblem(file);
+      if (packageRefusal) {
+        showToast(packageRefusal.message, 'error');
+        return;
+      }
       // A package is an archive: read it as bytes and let the package reader
       // decode it under its own guards. Nothing is applied until the report is
       // accepted, exactly like the Lottie import.
@@ -265,6 +304,13 @@ export const HeaderBar: React.FC = () => {
       };
       packageReader.onerror = () => showToast('The selected package could not be read.', 'error');
       packageReader.readAsArrayBuffer(file);
+      return;
+    }
+    // N3 PR-2c1: oversized text imports are refused on declared size before
+    // FileReader allocates them; the post-read validators stay the authority.
+    const projectRefusal = projectFileAdmissionProblem(file);
+    if (projectRefusal) {
+      showToast(projectRefusal.message, 'error');
       return;
     }
     const fileNameWithoutExt = file.name.replace(/\.(?:lottie\.)?(?:json|kcs)$/i, '').trim();
@@ -607,7 +653,7 @@ export const HeaderBar: React.FC = () => {
             )}
           </div>
 
-          <button className="btn-icon reset-btn" onClick={resetProject} title="Reset Canvas Project">
+          <button className="btn-icon reset-btn" onClick={requestResetProject} title="Reset Canvas Project">
             <RotateCcw size={15} />
           </button>
           <button
@@ -652,6 +698,17 @@ export const HeaderBar: React.FC = () => {
         confirmLabel="Create Template"
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={(val) => addProjectTemplate(val)}
+      />
+      <ConfirmationDialog
+        isOpen={pendingResetConfirmation}
+        title="Reset the project?"
+        description="Your current project content will be replaced with the default document. This is not recoverable if the page closes first."
+        confirmLabel="Reset"
+        onCancel={() => setPendingResetConfirmation(false)}
+        onConfirm={() => {
+          setPendingResetConfirmation(false);
+          resetProject();
+        }}
       />
       <ConfirmationDialog
         isOpen={pendingDeleteTemplate !== null}

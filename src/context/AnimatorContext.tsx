@@ -288,7 +288,11 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   
   const { tracks, setTracks, tracksRef, characterParts, setCharacterParts, characterPartsRef } = useProjectState();
 
-  const { customPresets, customPresetsRef, savePreset, updatePreset, deletePreset, importPresets } = usePresets();
+  const { customPresets, customPresetsRef, savePreset, updatePreset, deletePreset, importPresets } = usePresets({
+    // SAFE-03-B: one honest visible warning per failed write; the session
+    // keeps the edited library, and nothing is reported as saved when it is not.
+    onPersistenceFailure: () => showToast('Preset library could not be saved to browser storage. Changes remain available in this session only.', 'error'),
+  });
 
   const {
     appMode,

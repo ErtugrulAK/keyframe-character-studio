@@ -2,8 +2,9 @@
 
 Date: 2026-10-18T10:14Z (UTC)
 Base: `main@0ec6ce2` (PR #18 merge lineage)
-Head: `30d9802` on `fix/n3-structural-id-integrity-2d` (worktree
-`.worktrees/n3-pr2d-id-integrity`)
+Head: `30d9802` (code) on `fix/n3-structural-id-integrity-2d`, worktree
+`.worktrees/n3-pr2d-id-integrity`; docs-only commits follow it on the branch -
+every pushed PR head is CI-verified (this file's own commit included).
 PR: https://github.com/ErtugrulAK/keyframe-character-studio/pull/23 (OPEN, CI
 `Build, Lint & Test Verification` green at the exact pushed head, 2m14s)
 Task: N3 PR-2d - investigate and harden imported scene identity invariants

@@ -181,8 +181,12 @@ const channelNav = (container: HTMLElement, name: string, label: string): { prev
   const row = Array.from(trackRow(container, name).querySelectorAll('.ue-channel-row'))
     .find((candidate) => candidate.getAttribute('data-property-channel') === label);
   if (!row) throw new Error(`no ${label} property row for ${name}`);
-  const nav = Array.from(row.querySelectorAll('button'));
-  return { previous: !(nav[0] as HTMLButtonElement).disabled, next: !(nav[2] as HTMLButtonElement).disabled };
+  // Select by the nav buttons' accessible names, not by child index: K1's
+  // stopwatch is a new button in the same control strip, and the contract
+  // under test is the prev/next ENABLED STATE, not button order.
+  const previous = row.querySelector('button[aria-label^="Previous "]') as HTMLButtonElement;
+  const next = row.querySelector('button[aria-label^="Next "]') as HTMLButtonElement;
+  return { previous: !previous.disabled, next: !next.disabled };
 };
 
 /** The enabled state of the layer row's own keyframe navigation. */

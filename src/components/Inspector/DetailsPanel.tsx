@@ -3,6 +3,7 @@ import { useAnimator } from '../../context/useAnimator';
 import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
 import { makeEmptyChannels } from '../../utils/defaults';
 import { evaluateLayerMasks } from '../../utils/evaluateLayerMasks';
+import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
 import { evaluateTrimPath } from '../../utils/trimPath';
@@ -21,6 +22,7 @@ import {
  * editor's context menu), so they are not duplicated here.
  */
 export const DetailsPanel: React.FC = () => {
+  const [pendingClear, setPendingClear] = useState(false);
   const {
     currentFrame,
     selectedPartId,
@@ -92,6 +94,19 @@ export const DetailsPanel: React.FC = () => {
     pasteAnimationOntoSelected(selectedPartId);
     endBatchInteraction();
   };
+
+  /**
+   * D2 (K1): deleting authored animation is never silent. The button only
+   * arms the request; the batch runs behind the dialog's Confirm, and
+   * Cancel/Esc mutate nothing.
+   */
+  const clearKeyCount = (() => {
+    const scope = activeTemplateId || 'Sequence';
+    const track = tracks.find((t) => t.partId === selectedPartId);
+    if (!track) return 0;
+    const channelKeys = Object.values(track.channels ?? {}).reduce((sum, keys) => sum + keys.filter((k) => (k.templateId || 'Sequence') === scope).length, 0);
+    return channelKeys + (track.keyframes ?? []).filter((k) => (k.templateId || 'Sequence') === scope).length;
+  })();
 
   const handleClearAnimation = () => {
     if (!selectedPartId) return;
@@ -189,7 +204,7 @@ export const DetailsPanel: React.FC = () => {
                 showToast={showToast}
                 onCopyAnimation={handleCopyAnimation}
                 onPasteAnimation={handlePasteAnimation}
-                onClearAnimation={handleClearAnimation}
+                onClearAnimation={() => setPendingClear(true)}
                 clipboardSourceId={clipboardData?.part.id ?? null}
               />
 
@@ -220,6 +235,16 @@ export const DetailsPanel: React.FC = () => {
         </div>
       )}
 
+      <ConfirmationDialog
+        isOpen={pendingClear}
+        title="Clear this layer's animation?"
+        description={`Clearing removes the IN/OUT presets and ${clearKeyCount} authored keyframe${clearKeyCount === 1 ? '' : 's'} of the selected layer in the active sequence. The authored property values stay. This edit is undoable.`}
+        onCancel={() => setPendingClear(false)}
+        onConfirm={() => {
+          setPendingClear(false);
+          handleClearAnimation();
+        }}
+      />
     </div>
   );
 };

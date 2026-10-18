@@ -326,6 +326,30 @@ export const deletePropertyKeyframeMutator = (
   });
 };
 
+/**
+ * K1 (contract D2): remove every keyframe one channel holds in ONE template
+ * scope. Keys belonging to other sequences are authored animation and survive;
+ * the mutator is the only disarm writer, so no surface can "stop" a property
+ * by silently clearing across sequences.
+ */
+export const clearChannelAnimationMutator = (
+  tracks: Track[],
+  trackId: string,
+  channel: AnimationChannel,
+  templateId: string,
+): Track[] => {
+  return tracks.map((t) => {
+    if (t.id !== trackId) return t;
+    const isMask = isLayerMaskChannel(channel);
+    const channelMap = (isMask ? (t.maskChannels ?? {}) : (t.channels ?? makeEmptyChannels())) as Record<string, PropertyKeyframe[]>;
+    const keyframes = channelMap[channel] ?? [];
+    const updated = keyframes.filter((k) => (k.templateId || 'Sequence') !== templateId);
+    if (updated.length === keyframes.length) return t;
+    return isMask
+      ? { ...t, maskChannels: { ...t.maskChannels, [channel]: updated } }
+      : { ...t, channels: { ...channelMap, [channel]: updated } as Track['channels'] };
+  });
+};
 export interface DeleteSelectedKeyframeResult {
   tracks: Track[];
   deleted: boolean;

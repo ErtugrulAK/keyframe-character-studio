@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import type { BodyPartType } from '../../types/animator';
 import { booleanOperationLabel } from '../../utils/booleanGeometry';
-import { resolveMatteSource } from '../../utils/matte';
+import { isMatteSourceSuppressed, resolveMatteSource } from '../../utils/matte';
 import {
   SHAPE_ICON_MAP,
   SHAPE_ICON_SIZE,
@@ -204,10 +204,10 @@ export const OutlinerPanel: React.FC = () => {
           {matteRelationship && (
             <span
               title={matteSource
-                ? `${matteRelationship.kind === 'track' ? 'Track matte' : 'Matte'} source: ${matteSource.name || matteSource.id}`
+                ? `${matteRelationship.kind === 'track' ? 'Track matte' : 'Matte'} source: ${matteSource.name || matteSource.id}${isMatteSourceSuppressed(part) ? ' (source hidden — still clipping)' : ''}`
                 : `${matteRelationship.kind === 'track' ? 'Missing track matte' : 'Missing matte'} source${matteRelationship.sourceId ? ` (${matteRelationship.sourceId})` : ''}`}
               aria-label={matteSource
-                ? `${matteRelationship.kind === 'track' ? 'Track matte' : 'Matte'} source: ${matteSource.name || matteSource.id}`
+                ? `${matteRelationship.kind === 'track' ? 'Track matte' : 'Matte'} source: ${matteSource.name || matteSource.id}${isMatteSourceSuppressed(part) ? ' (source hidden)' : ''}`
                 : matteRelationship.kind === 'track' ? 'Missing track matte source' : 'Missing matte source'}
               style={{
                 display: 'flex',

@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import type { BezierPath, CharacterPart, LayerMask, MatteMode, PartMatte } from '../../../../types/animator';
 import { BezierPathEditor } from '../../BezierPathEditor';
 import { createBezierPath } from '../../../../utils/bezierPath';
-import { resolveMatteMode, normalizeFeather, isMatteEligible, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/matte';
+import { resolveMatteMode, normalizeFeather, isMatteEligible, isMatteSourceSuppressed, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/matte';
 import type { MatteGradientStop } from '../../../../utils/matte';
 import { StyleCard } from './StyleCard';
 interface StyleMatteSectionProps {
@@ -629,7 +629,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             }}
           >
             <option value="">None</option>
-            {trackMatteSources.map((part) => <option key={part.id} value={part.id}>{part.name || part.id}</option>)}
+            {trackMatteSources.map((part) => <option key={part.id} value={part.id}>{`${part.name || part.id}${isMatteSourceSuppressed(part) ? ' (hidden)' : ''}`}</option>)}
           </select>
         </div>
         {trackMatteSourceMissing && (

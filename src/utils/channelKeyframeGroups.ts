@@ -157,3 +157,76 @@ export const resolveAuthoredLocalTransform = (
   if (!parentId) return world;
   return worldToContainerLocal(world, source.worldOf(parentId, frame));
 };
+
+/**
+ * K1 (contract D2) — the static half of the stopwatch: when a property stops
+ * being animated, the value the timeline evaluates AT THE PLAYHEAD becomes the
+ * property's authored static value, written through the same fields
+ * `authoredBasePose` reads. Every canonical channel has one, so disarm never
+ * needs a parallel "static override" store. Mask scalars/paths write their own
+ * part fields and are the K3/K5 slice's responsibility.
+ */
+export const applyChannelStaticValue = (
+  part: CharacterPart,
+  channel: TrackChannel,
+  value: number,
+): CharacterPart => {
+  switch (channel) {
+    case 'x':
+    case 'y':
+    case 'rotation':
+    case 'scaleX':
+    case 'scaleY':
+    case 'opacity':
+    case 'maskOffsetX':
+    case 'maskOffsetY':
+    case 'maskScale':
+    case 'maskRotation':
+      return { ...part, baseTransform: { ...part.baseTransform, [channel]: value } };
+    case 'trimPathStart':
+      return { ...part, trimPathStart: value };
+    case 'trimPathEnd':
+      return { ...part, trimPathEnd: value };
+    case 'trimPathOffset':
+      return { ...part, trimPathOffset: value };
+    default:
+      // Exhaustive over TrackChannel; an unknown channel must never guess-write.
+      return part;
+  }
+};
+
+/** K1 — the arm value: the property's value at a frame, read from the SAME
+ * authored-local pose the aggregate `+` captures (finding F safe) and the
+ * part fields the trim/mask-offset channels are authored in. */
+export const channelArmValue = (
+  channel: TrackChannel,
+  authored: Transform,
+  part: CharacterPart,
+): number => {
+  switch (channel) {
+    case 'x':
+    case 'y':
+    case 'rotation':
+    case 'scaleX':
+    case 'scaleY':
+    case 'opacity':
+      return authored[channel];
+    case 'maskOffsetX':
+      return part.baseTransform.maskOffsetX ?? 0;
+    case 'maskOffsetY':
+      return part.baseTransform.maskOffsetY ?? 0;
+    case 'maskScale':
+      return part.baseTransform.maskScale ?? 1;
+    case 'maskRotation':
+      return part.baseTransform.maskRotation ?? 0;
+    case 'trimPathStart':
+      return part.trimPathStart ?? 0;
+    case 'trimPathEnd':
+      return part.trimPathEnd ?? 1;
+    case 'trimPathOffset':
+      return part.trimPathOffset ?? 0;
+    default:
+      // Unreachable for the exhaustive TrackChannel union.
+      return authored.x;
+  }
+};

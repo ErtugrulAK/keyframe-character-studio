@@ -2,8 +2,9 @@ import { useState, useCallback } from 'react';
 import type { CharacterPart, Track, TrackChannel, AnimationChannel, EasingType, Transform, BezierPath, LayerMaskPathChannel } from '../types/animator';
 import { layerMaskPathChannel } from '../types/animator';
 import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
-import { hasChannelDataForTemplate } from '../utils/timelineMetrics';
-import { buildTransformSnapshot, resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../utils/channelKeyframeGroups';
+import { hasChannelDataForTemplate, resolveChannelAnimationState } from '../utils/timelineMetrics';
+import { buildTransformSnapshot, resolveAuthoredLocalTransform, resolveAuthoredBasePose, applyChannelStaticValue, channelArmValue } from '../utils/channelKeyframeGroups';
+import { interpolateChannel } from '../utils/defaults';
 import { 
   updateKeyframeBezierPointsMutator,
   addPropertyKeyframeMutator,
@@ -23,7 +24,8 @@ import {
   updateMaskPathKeyframeFrameMutator,
   deleteMaskPathKeyframeMutator,
   applyTransitionChannelsMutator,
-  applyTransitionToTrackCanonicalMutator
+  applyTransitionToTrackCanonicalMutator,
+  clearChannelAnimationMutator
 } from '../utils/trackMutations';
 import { deleteParts } from '../utils/partDeletion';
 
@@ -424,8 +426,55 @@ export const useTimeline = ({
   }, [setCharacterParts, setTracks]);
 
 
+  /**
+   * K1 (contract D2) — the stopwatch. Arm writes the FIRST key of one channel
+   * at the playhead with the property's evaluated current value (the same
+   * authored-local capture the aggregate `+` uses — finding F safe); an
+   * already-animated channel is never re-initialised and never duplicated.
+   */
+  const armChannel = (trackId: string, channel: TrackChannel) => {
+    const track = tracks.find((candidate) => candidate.id === trackId);
+    const part = track ? characterParts.find((candidate) => candidate.id === track.partId) : undefined;
+    if (!track || !part) return;
+    const scope = activeTemplateId || 'Sequence';
+    if (resolveChannelAnimationState(track, channel, currentFrame, scope) !== 'off') return;
+    const authored = resolveAuthoredLocalTransform(track.partId, currentFrame, { parts: characterParts, worldOf: getComputedTransform });
+    const value = channelArmValue(channel, authored, part);
+    setTracks((prev) => addPropertyKeyframeMutator(
+      migrateTrackLegacyKeyframes(prev, trackId, basePoseOfTrack(track.partId)),
+      trackId,
+      channel,
+      currentFrame,
+      value,
+      'easeInOut',
+      scope,
+    ));
+  };
+
+  /**
+   * K1 (contract D2) — disarm, the confirmed half: every key the channel holds
+   * IN THE ACTIVE SEQUENCE is removed and the value the timeline evaluates at
+   * the playhead survives as the authored static value, in one state batch
+   * (one history entry). Other sequences' keys survive untouched. The caller
+   * owns the confirmation; this function is only reached through it.
+   */
+  const disableChannelAnimation = (trackId: string, channel: TrackChannel) => {
+    const track = tracks.find((candidate) => candidate.id === trackId);
+    if (!track) return;
+    const scope = activeTemplateId || 'Sequence';
+    const inScopeKeys = (track.channels?.[channel] ?? []).filter((k) => (k.templateId || 'Sequence') === scope);
+    if (inScopeKeys.length === 0) return;
+    const part = characterParts.find((candidate) => candidate.id === track.partId);
+    if (!part) return;
+    const authored = resolveAuthoredLocalTransform(track.partId, currentFrame, { parts: characterParts, worldOf: getComputedTransform });
+    const staticValue = interpolateChannel(inScopeKeys, currentFrame, channelArmValue(channel, authored, part));
+    setTracks((prev) => clearChannelAnimationMutator(prev, trackId, channel, scope));
+    setCharacterParts((prev) => prev.map((candidate) => (candidate.id === part.id ? applyChannelStaticValue(candidate, channel, staticValue) : candidate)));
+  };
 
   return {
+    armChannel,
+    disableChannelAnimation,
     timelineZoom,
     setTimelineZoom,
     showGrid,

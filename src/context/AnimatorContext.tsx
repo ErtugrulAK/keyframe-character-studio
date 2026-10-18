@@ -195,6 +195,12 @@ export interface AnimatorContextType {
   canCropStageToSelection: boolean;
   canCropStageToVisibleContent: boolean;
   addPropertyKeyframe: (trackId: string, channel: AnimationChannel, frame: number, value: number, easing?: EasingType) => void;
+  /** K1 (D2) — stopwatch: arm writes the first key at the playhead with the
+   * evaluated current value; only an unanimated channel arms. */
+  armChannel: (trackId: string, channel: TrackChannel) => void;
+  /** K1 (D2) — confirmed disarm: clear the channel's active-sequence keys and
+   * keep the evaluated playhead value as static, in one history entry. */
+  disableChannelAnimation: (trackId: string, channel: TrackChannel) => void;
   updatePropertyKeyframeValue: (trackId: string, channel: AnimationChannel, keyframeId: string, value: number) => void;
   updatePropertyKeyframeTemporalHandles: (trackId: string, channel: AnimationChannel, keyframeId: string, patch: { bezierIn?: { x: number; y: number }; bezierOut?: { x: number; y: number } }) => void;
   updatePropertyKeyframeFrame: (trackId: string, channel: AnimationChannel, keyframeId: string, frame: number) => void;
@@ -404,6 +410,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     toggleTrackLock,
     toggleTrackExpanded,
     addPropertyKeyframe,
+    armChannel,
+        disableChannelAnimation,
     moveSelectedKeyframes,
     deleteKeyframeFrameGroup,
     updatePropertyKeyframeValue,
@@ -814,6 +822,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         showToast,
         updatePropertyKeyframeFrame,
         addPropertyKeyframe,
+        armChannel,
+        disableChannelAnimation,
         updatePropertyKeyframeValue,
         updatePropertyKeyframeTemporalHandles,
         deletePropertyKeyframe,

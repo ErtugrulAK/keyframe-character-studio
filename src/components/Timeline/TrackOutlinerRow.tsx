@@ -1,8 +1,8 @@
 import React from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Lock, Plus, Tv, Unlock } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Lock, Plus, Tv, Unlock } from 'lucide-react';
 import type { CharacterPart, Track, TrackChannel } from '../../types/animator';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
-import { resolveAdjacentKeyframeFrame, resolveChannelKeyframeFrames, resolveLayerKeyframeFrames } from '../../utils/timelineMetrics';
+import { resolveAdjacentKeyframeFrame, resolveChannelAnimationState, resolveChannelKeyframeFrames, resolveLayerKeyframeFrames } from '../../utils/timelineMetrics';
 import { resolveAuthoredBasePose } from '../../utils/channelKeyframeGroups';
 import { InlineRename } from '../Shared/InlineRename';
 
@@ -28,6 +28,8 @@ interface TrackOutlinerRowProps {
   onToggleLock: (trackId: string) => void;
   onAddKeyframe: (trackId: string, frame: number) => void;
   onAddChannelKeyframe: (trackId: string, channel: TrackChannel, partId: string) => void;
+  /** K1 (D2) — stopwatch press: arm when off, request disarm when on. */
+  onToggleChannelAnimation: (trackId: string, channel: TrackChannel) => void;
   /** R3-07 — moves the playhead to a frame. Navigation only: never a document write. */
   onJumpToFrame: (frame: number) => void;
   isGroupExpanded: (key: string, defaultVal?: boolean) => boolean;
@@ -93,6 +95,7 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
   onToggleLock,
   onAddKeyframe,
   onAddChannelKeyframe,
+  onToggleChannelAnimation,
   onJumpToFrame,
   isGroupExpanded,
   onToggleSubGroup,
@@ -137,6 +140,7 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
     const channelKeyframeFrames = resolveChannelKeyframeFrames(track, ch, activeTmpl, basePose);
     const previousChannelFrame = resolveAdjacentKeyframeFrame(channelKeyframeFrames, currentFrame, 'previous');
     const nextChannelFrame = resolveAdjacentKeyframeFrame(channelKeyframeFrames, currentFrame, 'next');
+    const animationState = resolveChannelAnimationState(track, ch, currentFrame, activeTmpl);
     return (
       <div
         key={ch}
@@ -160,6 +164,23 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
               level down: the row states its property, its nav strip states the
               property's keys. The strip is neutral (R5-06/R5-07): a plain plus
               adds the key, a greyed pair means that side has nothing. */}
+          {/* K1 (D2) — the stopwatch owns the property's animation state; the
+              plus below stays the "add a key here" action it has always been. */}
+          <button
+            className="btn-icon ue-channel-stopwatch"
+            data-property-channel={ch}
+            data-animation-state={animationState}
+            aria-pressed={animationState !== 'off'}
+            onClick={(e) => { e.stopPropagation(); onToggleChannelAnimation(track.id, ch); }}
+            title={animationState === 'off'
+              ? `Animate ${meta.label} of ${displayName}`
+              : `Stop animating ${meta.label} of ${displayName} (${chKfs.length} keyframe${chKfs.length === 1 ? '' : 's'} in this sequence)`}
+            aria-label={animationState === 'off'
+              ? `Animate ${meta.label} of ${displayName}`
+              : `Stop animating ${meta.label} of ${displayName}`}
+          >
+            <Clock size={12} aria-hidden="true" />
+          </button>
           <button
             className="btn-icon track-icon-btn"
             onClick={(e) => { e.stopPropagation(); if (previousChannelFrame !== null) onJumpToFrame(previousChannelFrame); }}

@@ -821,6 +821,24 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   flex-shrink: 0;
 }
 
+/* K1 (D2) — the per-property stopwatch. Three honest visual states:
+   off (neutral), animated (accent outline, no key at the playhead),
+   keyed (accent filled — the property is animated AND holds a key here). */
+.ue-channel-stopwatch {
+  opacity: 0.45;
+}
+
+.ue-channel-stopwatch[data-animation-state="animated"],
+.ue-channel-stopwatch[data-animation-state="keyed"] {
+  opacity: 1;
+  color: var(--accent-cyan);
+}
+
+.ue-channel-stopwatch[data-animation-state="keyed"] {
+  background: color-mix(in srgb, var(--accent-cyan) 18%, transparent);
+  border-radius: 3px;
+}
+
 /* Trajectory Line Connecting Keyframes Across Channel Lane */
 .ue-trajectory-line {
   position: absolute;

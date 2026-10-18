@@ -300,3 +300,20 @@ export function resolveCurveTarget(
   const legacy = (track.keyframes ?? []).filter(isActive);
   return legacy.length > 0 ? { channel: null, keyframes: legacy, channelKeyframes: [] } : null;
 }
+
+/** K1 (contract D2) — the three stopwatch states, read from the channel a row
+ * actually shows: keys OUTSIDE the active template scope are another
+ * sequence's animation and must not light this sequence's stopwatch. */
+export type ChannelAnimationState = 'off' | 'animated' | 'keyed';
+
+export const resolveChannelAnimationState = (
+  track: Track,
+  channel: AnimationChannel,
+  frame: number,
+  templateId: string,
+): ChannelAnimationState => {
+  const store = (channel.includes(':') ? track.maskChannels : track.channels) as Record<string, PropertyKeyframe[]> | undefined;
+  const keyframes = (store?.[channel] ?? []).filter((k) => (k.templateId || 'Sequence') === templateId);
+  if (keyframes.length === 0) return 'off';
+  return keyframes.some((k) => k.frame === frame) ? 'keyed' : 'animated';
+};

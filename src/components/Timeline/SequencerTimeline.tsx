@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/useAnimator';
 import { commitWorkspaceLayout, createFrameEase, type FrameEase } from '../../utils/workspaceLayout';
 import { type TrackChannel, type AnimationChannel } from '../../types/animator';
-import { computeMaxFrame, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/timelineMetrics';
+import { computeMaxFrame, resolveChannelAnimationState, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/timelineMetrics';
 import { resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../../utils/channelKeyframeGroups';
 import { locateKeyframe } from '../../utils/trackMutations';
 import {
@@ -117,6 +117,8 @@ export const SequencerTimeline: React.FC = () => {
     canUndo,
     canRedo,
     addPropertyKeyframe,
+    armChannel,
+    disableChannelAnimation,
     deletePropertyKeyframe,
     duplicateKeyframeGroup,
     pasteKeyframeClipboard,
@@ -140,6 +142,7 @@ export const SequencerTimeline: React.FC = () => {
   const [editingSeqId, setEditingSeqId] = useState<string | null>(null);
   const [editingSeqName, setEditingSeqName] = useState<string>('');
   const [pendingDeleteSequence, setPendingDeleteSequence] = useState<{ id: string; name: string } | null>(null);
+  const [pendingStopAnim, setPendingStopAnim] = useState<{ trackId: string; channel: TrackChannel; label: string; partName: string; keyCount: number } | null>(null);
   const seqMenuRef = useRef<HTMLDivElement>(null);
   const selectedTrack = selectedPartId
     ? tracks.find((track) => track.partId === selectedPartId) ?? null
@@ -796,6 +799,25 @@ export const SequencerTimeline: React.FC = () => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}:${String(subFrames).padStart(2, '0')}`;
   };
 
+  /**
+   * K1 (D2) — the stopwatch press. Reading the state decides the flow:
+   * unanimated arms directly; animated asks first, and only the confirmed
+   * dialog mutates (cancel leaves even the state object identity untouched).
+   */
+  const handleToggleChannelAnimation = (trackId: string, channel: TrackChannel) => {
+    const track = tracks.find((candidate) => candidate.id === trackId);
+    if (!track) return;
+    const scope = activeTemplateId || 'Sequence';
+    const state = resolveChannelAnimationState(track, channel, currentFrame, scope);
+    if (state === 'off') {
+      armChannel(trackId, channel);
+      return;
+    }
+    const keyCount = (track.channels?.[channel] ?? []).filter((k) => (k.templateId || 'Sequence') === scope).length;
+    const partName = characterParts.find((candidate) => candidate.id === track.partId)?.name ?? track.name;
+    setPendingStopAnim({ trackId, channel, label: CHANNEL_META[channel].label, partName, keyCount });
+  };
+
   // Add property keyframe at current frame for given channel
   const handleAddChannelKeyframe = (trackId: string, channel: AnimationChannel, partId: string) => {
     const transform = resolveAuthoredLocalTransform(partId, currentFrame, { parts: characterParts, worldOf: getComputedTransform });
@@ -962,6 +984,19 @@ export const SequencerTimeline: React.FC = () => {
         }}
       />
 
+
+      <ConfirmationDialog
+        isOpen={pendingStopAnim !== null}
+        title="Stop animating this property?"
+        description={pendingStopAnim
+          ? `“${pendingStopAnim.label}” of ${pendingStopAnim.partName} is animated. Stopping deletes its ${pendingStopAnim.keyCount} keyframe${pendingStopAnim.keyCount === 1 ? '' : 's'} in this sequence; the value the timeline shows at the playhead is kept as the static value.`
+          : ''}
+        onCancel={() => setPendingStopAnim(null)}
+        onConfirm={() => {
+          if (pendingStopAnim) disableChannelAnimation(pendingStopAnim.trackId, pendingStopAnim.channel);
+          setPendingStopAnim(null);
+        }}
+      />
       {/* Header Bar */}
       <div className="timeline-header">
         <div className="timeline-header-left timeline-header-band timeline-header-band-timing">
@@ -1112,6 +1147,9 @@ export const SequencerTimeline: React.FC = () => {
                   // any legacy composite animation instead of hiding it.
                   onAddKeyframe={addKeyframeToTrack}
                   onAddChannelKeyframe={handleAddChannelKeyframe}
+                  // K1 (D2) — stopwatch: arms an unanimated channel, or asks
+                  // before removing the animation of an animated one.
+                  onToggleChannelAnimation={handleToggleChannelAnimation}
                   isGroupExpanded={isGroupExpanded}
                   onToggleSubGroup={toggleSubGroup}
                   // R3-07 — the layer row's keyframe navigation moves the playhead

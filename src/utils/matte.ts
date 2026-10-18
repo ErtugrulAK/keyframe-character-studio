@@ -89,6 +89,42 @@ export function isMatteActive(matte: { enabled?: boolean } | undefined): boolean
 }
 
 /**
+ * K5 — does an ACTIVE Track Matte V2 relationship suppress its source layer
+ * from painting (the matte switch: `sourceVisible:false` — not painted, still
+ * clipping; see `StagePartLayers` hiddenMatteSources)? Legacy mattes carry no
+ * such flag; only an active V2 record can suppress. Pure read of the
+ * persisted fields, mirroring `resolveMatteSource`.
+ */
+export function isMatteSourceSuppressed(part: { matte?: PartMatte; trackMatte?: TrackMatteV2 }): boolean {
+  const track = part.trackMatte;
+  return !!track && track.enabled !== false && track.sourceVisible === false;
+}
+
+export interface MatteSuppressionCarrier {
+  id?: string;
+  matte?: PartMatte;
+  trackMatte?: TrackMatteV2;
+}
+
+/** Which source layers are currently suppressed (not painted) because an
+ * ACTIVE Track Matte V2 relationship points at them with
+ * `sourceVisible:false` — the TARGET-direction question a source picker must
+ * answer, computed from the same persisted fields `StagePartLayers` filters
+ * on (per-source-id: one switched-off target suppresses the layer even while
+ * another target shows it; `enabled:false` and legacy mattes suppress
+ * nothing). Pure read; carries no new authority. */
+export function suppressedMatteSourceIds(parts: readonly MatteSuppressionCarrier[]): Set<string> {
+  const ids = new Set<string>();
+  for (const part of parts) {
+    const track = part.trackMatte;
+    if (track && track.enabled !== false && track.sourceVisible === false && track.sourceLayerId) {
+      ids.add(track.sourceLayerId);
+    }
+  }
+  return ids;
+}
+
+/**
  * Shared world-space geometry for a matte source — the SINGLE geometry
  * computation used by both the clipPath and the <mask> pipelines, so the
  * same source is never computed twice with different math.

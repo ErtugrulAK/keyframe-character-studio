@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import type { BezierPath, CharacterPart, LayerMask, MatteMode, PartMatte } from '../../../../types/animator';
 import { BezierPathEditor } from '../../BezierPathEditor';
 import { createBezierPath } from '../../../../utils/bezierPath';
-import { resolveMatteMode, normalizeFeather, isMatteEligible, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/matte';
+import { resolveMatteMode, normalizeFeather, isMatteEligible, suppressedMatteSourceIds, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/matte';
 import type { MatteGradientStop } from '../../../../utils/matte';
 import { StyleCard } from './StyleCard';
 interface StyleMatteSectionProps {
@@ -310,6 +310,10 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   const trackMatte = selectedPart.trackMatte;
   const trackMatteSourceMissing = !!trackMatte && !characterParts.some((part) => part.id === trackMatte.sourceLayerId);
   const trackMatteSources = characterParts.filter((part) => part.id !== selectedPart.id);
+  // K5 (review fix): the (hidden) label answers the TARGET-direction question —
+  // is this CANDIDATE suppressed because some other part uses it as a
+  // switched-off matte source — never the candidate's own relationship flag.
+  const suppressedSourceIds = suppressedMatteSourceIds(characterParts);
   const setTrackMatte = (next: CharacterPart['trackMatte'] | undefined) => onPartPropChange('trackMatte', next);
 
   return (
@@ -629,7 +633,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             }}
           >
             <option value="">None</option>
-            {trackMatteSources.map((part) => <option key={part.id} value={part.id}>{part.name || part.id}</option>)}
+            {trackMatteSources.map((part) => <option key={part.id} value={part.id}>{`${part.name || part.id}${suppressedSourceIds.has(part.id) ? ' (hidden)' : ''}`}</option>)}
           </select>
         </div>
         {trackMatteSourceMissing && (

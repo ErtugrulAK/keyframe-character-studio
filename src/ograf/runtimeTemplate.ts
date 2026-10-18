@@ -134,16 +134,18 @@ function applyEasing(value, type, controlPoints, temporal) {
   if (type === 'overshoot') return solveCubicBezier(0.175, 0.885, 0.32, 1.275, progress);
   return progress;
 }
+function deriveAutoBezier(previous, next, previousPrevious, nextNext) { const duration = Math.max(1, next.frame - previous.frame); const delta = next.value - previous.value; if (Math.abs(delta) < 1e-8) return [1 / 3, 0, 2 / 3, 1]; const previousSlope = previousPrevious ? (next.value - previousPrevious.value) / Math.max(1, next.frame - previousPrevious.frame) : delta / duration; const nextSlope = nextNext ? (nextNext.value - previous.value) / Math.max(1, nextNext.frame - previous.frame) : delta / duration; return [1 / 3, clamp(previousSlope * duration / delta / 3, 0, 1), 2 / 3, clamp(1 - nextSlope * duration / delta / 3, 0, 1)]; }
 function channelValue(keyframes, frame, fallback) {
   const values = (keyframes || []).filter((keyframe) => (keyframe.templateId || 'Sequence') === (SCENE.activeTemplateId || 'Sequence')).slice().sort((a, b) => a.frame - b.frame);
   if (!values.length) return fallback;
   if (frame <= values[0].frame) return values[0].value;
   if (frame >= values[values.length - 1].frame) return values[values.length - 1].value;
-  let previous = values[0]; let next = values[values.length - 1];
-  for (let index = 0; index < values.length - 1; index += 1) { if (frame >= values[index].frame && frame <= values[index + 1].frame) { previous = values[index]; next = values[index + 1]; break; } }
+  let previous = values[0]; let next = values[values.length - 1]; let bracket = 0;
+  for (let exact = 0; exact < values.length; exact += 1) { if (values[exact].frame === frame) return values[exact].value; }
+  for (let index = 0; index < values.length - 1; index += 1) { if (frame >= values[index].frame && frame <= values[index + 1].frame) { previous = values[index]; next = values[index + 1]; bracket = index; break; } }
   const progress = (frame - previous.frame) / Math.max(1, next.frame - previous.frame);
   const temporal = previous.bezierOut && next.bezierIn ? { out: previous.bezierOut, in: next.bezierIn } : undefined;
-  const eased = applyEasing(progress, previous.easing, previous.bezierControlPoints, temporal);
+  const eased = applyEasing(progress, previous.easing, previous.bezierControlPoints || (previous.easing === 'autoBezier' ? deriveAutoBezier(previous, next, values[bracket - 1], values[bracket + 2]) : undefined), temporal);
   return previous.value + (next.value - previous.value) * eased;
 }
 function topologyCompatible(first, second) { return Boolean(first && second && first.closed === second.closed && first.coordinateSpace === second.coordinateSpace && first.points.length === second.points.length && first.points.every((point, index) => point.id === second.points[index].id)); }
@@ -159,6 +161,7 @@ function pathChannelValue(keyframes, frame, fallback) {
   if (frame <= values[0].frame) return values[0].value;
   if (frame >= values[values.length - 1].frame) return values[values.length - 1].value;
   let previous = values[0]; let next = values[values.length - 1];
+  for (let exact = 0; exact < values.length; exact += 1) { if (values[exact].frame === frame) return values[exact].value; }
   for (let index = 0; index < values.length - 1; index += 1) { if (frame >= values[index].frame && frame <= values[index + 1].frame) { previous = values[index]; next = values[index + 1]; break; } }
   const progress = (frame - previous.frame) / Math.max(1, next.frame - previous.frame);
   const temporal = previous.bezierOut && next.bezierIn ? { out: previous.bezierOut, in: next.bezierIn } : undefined;

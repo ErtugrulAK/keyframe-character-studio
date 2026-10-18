@@ -75,8 +75,9 @@ const AUTOBZ_EXPECTED_AT_75 = 100 + (20 - 100) * solveCubicY(
   deriveAutoBezierControlPoints(AUTOBZ_KEYS[1], AUTOBZ_KEYS[2], AUTOBZ_KEYS[0], AUTOBZ_KEYS[3]),
   0.5,
 );
-// The runtime's CURRENT fallback: fixed easeInOut handles.
-const AUTOBZ_DRIFTED_AT_75 = 100 + (20 - 100) * solveCubicY([0.42, 0, 0.58, 1], 0.5);
+// (N2b-S2: the old fixed-easeInOut drift constant is retired — the runtime
+// now derives neighbor tangents; coverage of the difference lives in the
+// independent bisection oracle below.)
 
 const STORED_CP_KEYS = [
   key('c0', 0, 0, 'cubic_bezier', { bezierControlPoints: [0.1, 0.9, 0.9, 0.1] }),
@@ -103,7 +104,6 @@ const HOLD_BRIDGE_KEYS = [
 const BRIDGE_EDITOR_AT_100 = 50;    // exact key value (independent semantics)
 const BRIDGE_FROZEN_BEFORE = 10;    // every probe in [0, 100), both sides
 const BRIDGE_RESUME_AT_100_5 = 50.15; // linear-prev segment resumes motion immediately after the key
-const BRIDGE_RUNTIME_DRIFT_AT_100 = 10; // recorded current runtime (N2-DRIFT)
 
 // Fully hand-derived AutoBezier control points for segment a1->a2 of
 // AUTOBZ_KEYS (independent of the production derivation code):
@@ -273,11 +273,11 @@ describe('N2b-S0 — class 2: production-minified runtime characterization', () 
     expect(renderedX(graphic, 150)).toBe(EXPECT_HOLD_FROZEN);
   });
 
-  test('N2-DRIFT autoBezier: emitted runtime uses the fixed easeInOut curve', async () => {
+  test('autoBezier parity: the emitted runtime derives neighbor tangents', async () => {
     const graphic = await instantiate(sceneWith(AUTOBZ_KEYS));
-    expect(renderedX(graphic, 75)).toBeCloseTo(AUTOBZ_DRIFTED_AT_75, 6);
-    // The drifted value is NOT the target; see class 3 for the parity row.
-    expect(AUTOBZ_DRIFTED_AT_75).not.toBeCloseTo(AUTOBZ_EXPECTED_AT_75, 6);
+    // N2b-S2 flip: the fixed easeInOut fallback is gone; the runtime now
+    // ports the editor derivation, so the drifted pin became the parity pin.
+    expect(renderedX(graphic, 75)).toBeCloseTo(AUTOBZ_EXPECTED_AT_75, 6);
   });
 
   test('duplicate/zero-duration frames agree across authorities', async () => {
@@ -299,12 +299,11 @@ describe('N2b-S0 — class 2: production-minified runtime characterization', () 
     expect(renderedX(graphic, 50)).toBeCloseTo(100 * solveCubicY([0.1, 0.9, 0.9, 0.1], 0.5), 6);
   });
 
-  test('N2-DRIFT hold bridge: exact interior key loses one frame in the runtime', async () => {
+  test('hold bridge parity: the exact interior key wins over the frozen segment', async () => {
     const graphic = await instantiate(sceneWith(HOLD_BRIDGE_KEYS));
-    // The drift: at the exact key the runtime is still on the frozen value
-    // (recorded characterization — NOT the target, see class 3).
-    expect(renderedX(graphic, 100)).toBe(BRIDGE_RUNTIME_DRIFT_AT_100);
-    // Agreement first: the frozen segment behaves identically on both sides.
+    // N2b-S2 flip: exact-key short-circuit ported; the one-frame lag is gone.
+    expect(renderedX(graphic, 100)).toBe(BRIDGE_EDITOR_AT_100);
+    // Frozen-segment agreement, unchanged.
     expect(renderedX(graphic, 99)).toBe(BRIDGE_FROZEN_BEFORE);
     expect(renderedX(graphic, 100.5)).toBeCloseTo(BRIDGE_RESUME_AT_100_5, 9);
   });
@@ -322,8 +321,8 @@ describe('N2b-S0 — class 2: production-minified runtime characterization', () 
   // Class 1 additions (editor side of the bridge rows live in class 1 above).
 });
 
-describe('N2b-S0 — class 3: parity targets (red until N2b-S2)', () => {
-  test.fails('autoBezier parity: runtime must equal the derived-tangent value', async () => {
+describe('N2b-S0 — class 3: parity targets (flipped green by N2b-S2)', () => {
+  test('autoBezier parity: runtime must equal the derived-tangent value', async () => {
     const graphic = await instantiate(sceneWith(AUTOBZ_KEYS));
     expect(renderedX(graphic, 75)).toBeCloseTo(AUTOBZ_EXPECTED_AT_75, 6);
   });
@@ -349,12 +348,12 @@ describe('N2b-S0 — class 1 additions: hold bridge and hand oracle', () => {
 });
 
 describe('N2b-S0 — class 3 additions: bridge parity target', () => {
-  test.fails('hold bridge parity: at the exact key the runtime must show 50, not the stale 10', async () => {
+  test('hold bridge parity: at the exact key the runtime must show 50, not the stale 10', async () => {
     const graphic = await instantiate(sceneWith(HOLD_BRIDGE_KEYS));
     expect(renderedX(graphic, 100)).toBe(BRIDGE_EDITOR_AT_100);
   });
 
-  test.fails('hand oracle parity: autoBezier runtime must match the hand-derived 60.625', async () => {
+  test('hand oracle parity: autoBezier runtime must match the hand-derived 60.625', async () => {
     const graphic = await instantiate(sceneWith(AUTOBZ_KEYS));
     expect(renderedX(graphic, 75)).toBeCloseTo(HAND_AUTOBZ_VALUE_AT_75, 3);
   });

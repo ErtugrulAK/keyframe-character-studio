@@ -163,6 +163,7 @@ export interface AnimatorContextType {
   pasteAnimationOntoSelected: (targetPartId: string) => void;
   // M27 — duplicate the keyframe frame-group at `frame` of `trackId` (27A pure helper)
   duplicateKeyframeGroup: (trackId: string, frame: number) => void;
+  duplicateKeyframeGroupAt: (trackId: string, sourceFrame: number, targetFrame: number) => boolean;
   // M28 — paste a copied keyframe frame-group onto `trackId` at `frame` (28A pure helper)
   pasteKeyframeClipboard: (trackId: string, frame: number, payload: KeyframeCopyPayload) => void;
   applyMotionTransition: (partId: string, transitionType: string) => void;
@@ -720,6 +721,24 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [setTracks, startBatchInteraction, endBatchInteraction, totalFrames]
   );
 
+  // K2 — the alt-drag duplicate: the same pure helper with a dynamic target
+  // frame. Returns whether the copy landed (false = refused, zero mutation;
+  // the caller owns the single D1 warning). No batch of its own: the gesture
+  // already owns one, and a nested pair would record a spurious undo entry.
+  const duplicateKeyframeGroupAt = useCallback(
+    (trackId: string, sourceFrame: number, targetFrame: number): boolean => {
+      const track = tracks.find((t) => t.id === trackId);
+      if (!track) return false;
+      const result = duplicateKeyframeGroupTrack(track, sourceFrame, targetFrame - sourceFrame, totalFrames);
+      if (!result.duplicated) return false;
+      setTracks((prev) =>
+        prev.map((t) => (t.id === trackId ? result.track : t)),
+      );
+      return true;
+    },
+    [tracks, totalFrames, setTracks]
+  );
+
   // M28 — paste copied keyframe frame-group (28A pure helper) as ONE logical
   // undo entry (existing batch pattern). Collision/invalid frames → helper
   // no-op → setTracks returns identical state → no history entry.
@@ -843,6 +862,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         pasteAnimationOntoSelected,
         clipboardData,
         duplicateKeyframeGroup,
+        duplicateKeyframeGroupAt,
         pasteKeyframeClipboard,
         appMode,
         setAppMode,

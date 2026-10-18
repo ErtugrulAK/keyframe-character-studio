@@ -75,6 +75,8 @@ export interface KeyframePress {
   pointerId: number;
   clientX: number;
   captureTarget: Element | null;
+  /** Alt arms the K2 duplicate gesture instead of a move. */
+  altKey: boolean;
 }
 
 /**
@@ -313,6 +315,7 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
                   pointerId: e.pointerId,
                   clientX: e.clientX,
                   captureTarget: e.currentTarget,
+                  altKey: e.altKey,
                 });
               }}
               onMouseEnter={() => onHoverKf({ frame: keyframe.frame, label: `${meta.label}: ${valueLabel}` })}
@@ -402,6 +405,7 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
                   pointerId: e.pointerId,
                   clientX: e.clientX,
                   captureTarget: e.currentTarget,
+                  altKey: e.altKey,
                 });
               }}
               onMouseEnter={() => onHoverKf({ frame: group.frame, label: `${track.name} | ${group.channels.join(',')} | ${group.easing}` })}
@@ -436,6 +440,7 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
                   pointerId: e.pointerId,
                   clientX: e.clientX,
                   captureTarget: e.currentTarget,
+                  altKey: e.altKey,
                 });
               }}
               onMouseEnter={() => onHoverKf({ frame: kf.frame, label: `${track.name} | ${kf.easing}` })}

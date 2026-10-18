@@ -6,6 +6,7 @@ import { type TrackChannel, type AnimationChannel } from '../../types/animator';
 import { computeMaxFrame, resolveChannelAnimationState, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/timelineMetrics';
 import { resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../../utils/channelKeyframeGroups';
 import { locateKeyframe } from '../../utils/trackMutations';
+import { duplicateKeyframeGroup as previewKeyframeDuplicate } from '../../utils/keyframeDuplicate';
 import {
   Plus,
   ZoomIn,
@@ -65,6 +66,10 @@ interface KeyframePressArm {
   originClientX: number;
   /** The element the press landed on: it keeps the pointer captured while dragging. */
   captureTarget: Element | null;
+  /** K2: the pressed diamond's owner track (the duplicate lands there). */
+  trackId: string;
+  /** Alt at press time arms the duplicate gesture once travel crosses the threshold. */
+  altKey: boolean;
 }
 
 /** The keyframe drag in flight. */
@@ -76,6 +81,10 @@ interface KeyframeDrag {
   expandFrameGroups: boolean;
   /** The pointer that owns the drag; -1 when the event carried no identity. */
   pointerId: number;
+  /** K2: 'duplicate' copies the source group to `appliedFrame`; source unmoved. */
+  mode: 'move' | 'duplicate';
+  /** The track the copy lands on (duplicate) — the pressed diamond's owner. */
+  trackId: string;
 }
 
 
@@ -121,6 +130,8 @@ export const SequencerTimeline: React.FC = () => {
     disableChannelAnimation,
     deletePropertyKeyframe,
     duplicateKeyframeGroup,
+    duplicateKeyframeGroupAt,
+    showToast,
     pasteKeyframeClipboard,
     updateKeyframeBezierPoints,
     updatePropertyKeyframeValue,
@@ -289,6 +300,8 @@ export const SequencerTimeline: React.FC = () => {
       pointerId: Number.isFinite(press.pointerId) ? press.pointerId : -1,
       originClientX: press.clientX,
       captureTarget: press.captureTarget,
+      trackId: press.trackId,
+      altKey: press.altKey,
     };
   };
 
@@ -492,6 +505,36 @@ export const SequencerTimeline: React.FC = () => {
     setCurrentFrame(getFrameFromMouse(e.clientX));
   };
 
+  // K2 — duplicate-mode drop frame: RAW, no clamp. Clamping would turn a
+  // drop past the timeline edge into a legal-looking frame; D1 demands a
+  // refusal with one warning instead of a silent relocation.
+  const getDuplicateDropFrame = useCallback(
+    (clientX: number): number => {
+      if (!timelineGridRef.current) return 0;
+      const rect = timelineGridRef.current.getBoundingClientRect();
+      const scrollLeft = timelineGridRef.current.scrollLeft;
+      return Math.round((clientX - rect.left + scrollLeft) / FRAME_WIDTH);
+    },
+    [FRAME_WIDTH]
+  );
+
+  const setDuplicatePreview = useCallback((state: 'valid' | 'blocked' | null) => {
+    const grid = timelineGridRef.current;
+    if (!grid) return;
+    if (state) grid.setAttribute('data-duplicate-target', state);
+    else grid.removeAttribute('data-duplicate-target');
+  }, []);
+
+  const canDropDuplicate = useCallback(
+    (trackId: string, sourceFrame: number, targetFrame: number): boolean => {
+      if (targetFrame < 0 || targetFrame > totalFrames || targetFrame === sourceFrame) return false;
+      const track = tracks.find((t) => t.id === trackId);
+      if (!track) return false;
+      return previewKeyframeDuplicate(track, sourceFrame, targetFrame - sourceFrame, totalFrames).duplicated;
+    },
+    [tracks, totalFrames]
+  );
+
   /**
    * The pointer was released, cancelled, or its capture was lost: the gesture is
    * over AT ONCE. Moving the pointer afterwards must change nothing, and the
@@ -499,11 +542,29 @@ export const SequencerTimeline: React.FC = () => {
    * ends a batch, and a second end has nothing left to commit).
    */
   const endTimelineGesture = useCallback(() => {
+    const drag = keyframeDragRef.current;
+    if (drag?.mode === 'duplicate') {
+      setDuplicatePreview(null);
+      // Re-validate against the CURRENT document (the same authority the
+      // right-click duplicate uses), land the copy as ONE entry, and on
+      // refusal emit the single D1 warning. A neutral drop says nothing.
+      const target = drag.appliedFrame;
+      if (target !== drag.anchorFrame) {
+        if (!duplicateKeyframeGroupAt(drag.trackId, drag.anchorFrame, target)) {
+          showToast(
+            target < 0 || target > totalFrames
+              ? 'Duplicate blocked: outside the timeline range'
+              : 'Duplicate blocked: that frame already has keyframes',
+            'error',
+          );
+        }
+      }
+    }
     keyframeDragRef.current = null;
     pendingKeyframePressRef.current = null;
     scrubPointerRef.current = null;
     endBatchInteraction();
-  }, [endBatchInteraction]);
+  }, [setDuplicatePreview, duplicateKeyframeGroupAt, showToast, totalFrames, endBatchInteraction]);
 
   /**
    * The pointer moved. Three stages share this one handler: the scrub, the
@@ -529,6 +590,14 @@ export const SequencerTimeline: React.FC = () => {
 
     const drag = keyframeDragRef.current;
     if (drag) {
+      if (drag.mode === 'duplicate') {
+        // A duplicate drag mutates nothing in flight: it only moves the
+        // previewed drop target. The commit (or refusal) happens on release.
+        const target = getDuplicateDropFrame(e.clientX);
+        setDuplicatePreview(canDropDuplicate(drag.trackId, drag.anchorFrame, target) ? 'valid' : 'blocked');
+        keyframeDragRef.current = { ...drag, appliedFrame: target };
+        return;
+      }
       // A second pointer is a different interaction: it may not move these keys.
       if (drag.pointerId >= 0 && e.pointerId !== undefined && e.pointerId !== drag.pointerId) return;
       if (e.buttons === 0) {
@@ -564,6 +633,21 @@ export const SequencerTimeline: React.FC = () => {
     // travel commits as ONE history entry.
     startBatchInteraction();
     if (press.pointerId >= 0) press.captureTarget?.setPointerCapture?.(press.pointerId);
+    if (press.altKey) {
+      // K2: the travel arms a duplicate, never a move — the source stays.
+      const target = getDuplicateDropFrame(e.clientX);
+      setDuplicatePreview(canDropDuplicate(press.trackId, press.anchorFrame, target) ? 'valid' : 'blocked');
+      keyframeDragRef.current = {
+        ids: press.ids,
+        anchorFrame: press.anchorFrame,
+        appliedFrame: target,
+        expandFrameGroups: false,
+        pointerId: press.pointerId,
+        mode: 'duplicate',
+        trackId: press.trackId,
+      };
+      return;
+    }
     const applied = moveSelectedKeyframes(
       press.ids,
       getFrameFromMouse(e.clientX) - press.anchorFrame,
@@ -575,8 +659,10 @@ export const SequencerTimeline: React.FC = () => {
       appliedFrame: press.anchorFrame + applied,
       expandFrameGroups: press.expandFrameGroups,
       pointerId: press.pointerId,
+      mode: 'move',
+      trackId: press.trackId,
     };
-  }, [endTimelineGesture, getFrameFromMouse, moveSelectedKeyframes, setCurrentFrame, startBatchInteraction]);
+  }, [endTimelineGesture, getFrameFromMouse, getDuplicateDropFrame, canDropDuplicate, moveSelectedKeyframes, setCurrentFrame, setDuplicatePreview, startBatchInteraction]);
 
   const gestureMoveRef = useRef(handleGestureMove);
   const gestureEndRef = useRef(endTimelineGesture);
@@ -603,6 +689,22 @@ export const SequencerTimeline: React.FC = () => {
       window.removeEventListener('pointercancel', handleEnd);
       window.removeEventListener('lostpointercapture', handleEnd);
     };
+  }, []);
+
+  // K2/D1: Escape aborts an in-flight duplicate BEFORE any commit — no copy,
+  // no toast, preview cleared. A plain move drag is deliberately untouched
+  // (its semantics predate K2); neutralizing `appliedFrame` makes the
+  // release path take the silent neutral-drop branch.
+  useEffect(() => {
+    const cancelDuplicateOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      const drag = keyframeDragRef.current;
+      if (drag?.mode !== 'duplicate') return;
+      keyframeDragRef.current = { ...drag, appliedFrame: drag.anchorFrame };
+      gestureEndRef.current();
+    };
+    window.addEventListener('keydown', cancelDuplicateOnEscape);
+    return () => window.removeEventListener('keydown', cancelDuplicateOnEscape);
   }, []);
 
   /**

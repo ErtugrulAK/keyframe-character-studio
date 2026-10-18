@@ -12,7 +12,7 @@
  * deliberately out of this slice, see the semantics map DEFER list.)
  */
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { isMatteSourceSuppressed } from '../utils/matte';
+import { isMatteSourceSuppressed, suppressedMatteSourceIds } from '../utils/matte';
 import { StyleMatteSection } from '../components/Inspector/sections/style/StyleMatteSection';
 import type { CharacterPart } from '../types/animator';
 
@@ -37,33 +37,103 @@ describe('K5 — isMatteSourceSuppressed', () => {
   });
 });
 
-describe('K5 — V2 picker option labels state the suppressed truth', () => {
+describe('K5 — suppressedMatteSourceIds (the TARGET-direction truth the picker needs)', () => {
+  const v2 = (sourceLayerId: string, over: Record<string, unknown> = {}) =>
+    ({ sourceLayerId, mode: 'alpha', ...over });
+
+  it('collects the SOURCE ids of active switched-off V2 relationships only', () => {
+    const ids = suppressedMatteSourceIds([
+      { id: 'A', trackMatte: v2('B', { sourceVisible: false }) },
+      { id: 'B' },
+      { id: 'C', trackMatte: v2('D') },
+    ]);
+    expect(ids.has('B')).toBe(true); // A hides B
+    expect(ids.has('C')).toBe(false); // C hiding nothing says nothing about C
+    expect(ids.has('D')).toBe(false); // C's source is visible
+  });
+
+  it('respects enabled:false and ignores legacy matte entirely', () => {
+    const ids = suppressedMatteSourceIds([
+      { id: 'A', trackMatte: v2('B', { sourceVisible: false, enabled: false }) },
+      { id: 'E', matte: { sourcePartId: 'F', mode: 'alpha' } },
+    ]);
+    expect(ids.has('B')).toBe(false);
+    expect(ids.has('F')).toBe(false);
+  });
+
+  it('one switched-off target suppresses even when another target shows the same source', () => {
+    const ids = suppressedMatteSourceIds([
+      { id: 'T1', trackMatte: v2('S', { sourceVisible: false }) },
+      { id: 'T2', trackMatte: v2('S', { sourceVisible: true }) },
+    ]);
+    expect(ids.has('S')).toBe(true); // mirrors StagePartLayers: suppression is per-source-id
+  });
+});
+
+describe('K5 — V2 picker labels reflect WHO IS SUPPRESSED AS A SOURCE (target direction)', () => {
   beforeEach(() => {
     vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
   });
   afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
-  it('suffixes (hidden) for candidates whose matte switch is off', () => {
-    const target = partOf({ id: 'p1', trackMatte: { sourceLayerId: 'p2', mode: 'alpha' } });
-    const candidates: CharacterPart[] = [
-      target,
-      partOf({ id: 'p2', name: 'Plain source' }),
-      partOf({ id: 'p3', name: 'Switched off', trackMatte: { sourceLayerId: 'p1', mode: 'alpha', sourceVisible: false } }),
-    ];
-    const view = render(
-      <StyleMatteSection
-        selectedPart={target}
-        characterParts={candidates}
-        onPartPropChange={vi.fn()}
-      />,
-    );
-    // Two cards, two `.matte-source-field`s: open TRACK MATTE V2 and read
-    // its select by its own accessible name.
+  // Review fix: the label must answer "is this candidate hidden because some
+  // TARGET uses it with sourceVisible:false" — not the candidate's OWN
+  // relationship flag. p4 suppresses p2; p3's own switch hiding p5 must NOT
+  // mark p3; legacy matte (p6→p7) has no suppression semantics.
+  const parts = (): CharacterPart[] => [
+    partOf({ id: 'p1', trackMatte: { sourceLayerId: 'p2', mode: 'alpha' } }),
+    partOf({ id: 'p2', name: 'Suppressed source' }),
+    partOf({ id: 'p3', name: 'Hides another', trackMatte: { sourceLayerId: 'p5', mode: 'alpha', sourceVisible: false } }),
+    partOf({ id: 'p4', name: 'Suppressor', trackMatte: { sourceLayerId: 'p2', mode: 'alpha', sourceVisible: false } }),
+    partOf({ id: 'p5', name: 'Also suppressed' }),
+    partOf({ id: 'p6', name: 'Legacy user', matte: { sourcePartId: 'p7', mode: 'alpha' } }),
+    partOf({ id: 'p7', name: 'Legacy source' }),
+  ];
+
+  function picker(view: ReturnType<typeof render>) {
     fireEvent.click(view.getByRole('button', { name: 'Expand TRACK MATTE V2' }));
-    const select = view.container.querySelector('select[aria-label="Track matte source"]') as HTMLSelectElement;
+    return view.container.querySelector('select[aria-label="Track matte source"]') as HTMLSelectElement;
+  }
+
+  it('marks the candidate suppressed by another part, and NOT a candidate that merely suppresses someone else', () => {
+    const all = parts();
+    const view = render(
+      <StyleMatteSection selectedPart={all[0]} characterParts={all} onPartPropChange={vi.fn()} />,
+    );
+    const select = picker(view);
     expect(select).not.toBeNull();
     const labels = Array.from(select.options).map((option) => option.textContent ?? '');
-    expect(labels).toContain('Plain source');
-    expect(labels).toContain('Switched off (hidden)');
+    expect(labels).toContain('Suppressed source (hidden)'); // p2 via p4
+    expect(labels).toContain('Hides another');               // p3: no label
+    expect(labels).toContain('Suppressor');                  // p4: no label
+    expect(labels).toContain('Also suppressed (hidden)');   // p5: suppressed BY p3 — target direction
+    expect(labels).toContain('Legacy source');              // p7: legacy hides nothing
+  });
+
+  it('a source suppressed by multiple targets carries one label; the option values are the raw ids and selection is preserved', () => {
+    const all = parts();
+    const view = render(
+      <StyleMatteSection selectedPart={all[0]} characterParts={all} onPartPropChange={vi.fn()} />,
+    );
+    const select = picker(view);
+    const hidden = Array.from(select.options).filter((option) => (option.textContent ?? '').endsWith(' (hidden)')).map((option) => option.value);
+    expect(hidden).toEqual(['p2', 'p5']);
+    expect(select.value).toBe('p2'); // p1's own relationship stays selected
+    expect(Array.from(select.options).map((option) => option.value))
+      .toEqual(['', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7']);
+  });
+
+  it('label rendering mutates nothing: parts, callbacks, history, storage all untouched', () => {
+    const all = parts();
+    const before = JSON.stringify(all);
+    const onPartPropChange = vi.fn();
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const view = render(
+      <StyleMatteSection selectedPart={all[0]} characterParts={all} onPartPropChange={onPartPropChange} />,
+    );
+    picker(view);
+    expect(JSON.stringify(all)).toBe(before);
+    expect(onPartPropChange).not.toHaveBeenCalled();
+    expect(setItem).not.toHaveBeenCalled();
   });
 });

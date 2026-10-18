@@ -35,8 +35,9 @@ Full map with file:line evidence: `local://k5-matte-semantics-map.md`
 - Outliner matte badge: `Track matte source: Alpha (source hidden — still
   clipping)` (title) / `(source hidden)` (aria-label) — the UI no longer
   presents a suppressed source as a painted one.
-- V2 picker options: ` (hidden)` suffix on candidates whose own matte
-  switch is off.
+- V2 picker options: ` (hidden)` suffix on candidates that ARE suppressed as
+  a matte source (review fix — see addendum; the first version keyed on the
+  candidate's OWN relationship, the wrong direction).
 
 No render, serialization, runtime, or validation behavior moved.
 
@@ -50,3 +51,25 @@ No render, serialization, runtime, or validation behavior moved.
   oxlint 0.
 - Chromium isolated spec **1/1**: seeded V2-suppressed pair restores through
   the real route and the badge title states the hidden-still-clipping truth.
+
+## Review-fix addendum (same branch, after head `972988f`)
+
+Independent review of PR #27 caught a real direction error in the picker
+label: `isMatteSourceSuppressed(candidate)` answers "does THIS part suppress
+its own source", but the picker asks "is this CANDIDATE suppressed BY SOME
+TARGET". New pure helper `suppressedMatteSourceIds(parts)` computes the
+source-id set from the same fields `StagePartLayers` filters on (active V2 +
+`sourceVisible:false` + non-empty id; per-source-id, so one switched-off
+target suppresses even while another target shows the layer; legacy matte
+contributes nothing). The outliner badge deliberately keeps
+`isMatteSourceSuppressed` — the direction is correct there (it renders on
+the TARGET row about its own relationship). No render, serialization,
+runtime, or validation behavior moved.
+
+- RED (behavioral, via an empty-set shim over the old lookup): util truth
+  rows + both picker label rows failed the old direction; GREEN: focused
+  330/330 (k5 + matte + outlinerPanel + styleMatteSection), full Vitest
+  **183 files / 2742 tests**, `tsc -b` 0, oxlint 0, production build clean,
+  `validate:ograf` valid.
+- Matte Playwright set on the isolated lane — track-matte, m21, m22, k5, F:
+  **120 passed / 0 failed** (workers=1, release-gate mode).

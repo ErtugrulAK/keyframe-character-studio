@@ -100,6 +100,30 @@ export function isMatteSourceSuppressed(part: { matte?: PartMatte; trackMatte?: 
   return !!track && track.enabled !== false && track.sourceVisible === false;
 }
 
+export interface MatteSuppressionCarrier {
+  id?: string;
+  matte?: PartMatte;
+  trackMatte?: TrackMatteV2;
+}
+
+/** Which source layers are currently suppressed (not painted) because an
+ * ACTIVE Track Matte V2 relationship points at them with
+ * `sourceVisible:false` — the TARGET-direction question a source picker must
+ * answer, computed from the same persisted fields `StagePartLayers` filters
+ * on (per-source-id: one switched-off target suppresses the layer even while
+ * another target shows it; `enabled:false` and legacy mattes suppress
+ * nothing). Pure read; carries no new authority. */
+export function suppressedMatteSourceIds(parts: readonly MatteSuppressionCarrier[]): Set<string> {
+  const ids = new Set<string>();
+  for (const part of parts) {
+    const track = part.trackMatte;
+    if (track && track.enabled !== false && track.sourceVisible === false && track.sourceLayerId) {
+      ids.add(track.sourceLayerId);
+    }
+  }
+  return ids;
+}
+
 /**
  * Shared world-space geometry for a matte source — the SINGLE geometry
  * computation used by both the clipPath and the <mask> pipelines, so the

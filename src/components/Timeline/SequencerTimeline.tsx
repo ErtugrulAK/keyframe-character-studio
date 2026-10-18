@@ -153,7 +153,7 @@ export const SequencerTimeline: React.FC = () => {
   const [editingSeqId, setEditingSeqId] = useState<string | null>(null);
   const [editingSeqName, setEditingSeqName] = useState<string>('');
   const [pendingDeleteSequence, setPendingDeleteSequence] = useState<{ id: string; name: string } | null>(null);
-  const [pendingStopAnim, setPendingStopAnim] = useState<{ trackId: string; channel: TrackChannel; label: string; partName: string; keyCount: number } | null>(null);
+  const [pendingStopAnim, setPendingStopAnim] = useState<{ trackId: string; channel: AnimationChannel; label: string; partName: string; keyCount: number } | null>(null);
   const seqMenuRef = useRef<HTMLDivElement>(null);
   const selectedTrack = selectedPartId
     ? tracks.find((track) => track.partId === selectedPartId) ?? null
@@ -906,7 +906,7 @@ export const SequencerTimeline: React.FC = () => {
    * unanimated arms directly; animated asks first, and only the confirmed
    * dialog mutates (cancel leaves even the state object identity untouched).
    */
-  const handleToggleChannelAnimation = (trackId: string, channel: TrackChannel) => {
+  const handleToggleChannelAnimation = (trackId: string, channel: AnimationChannel) => {
     const track = tracks.find((candidate) => candidate.id === trackId);
     if (!track) return;
     const scope = activeTemplateId || 'Sequence';
@@ -915,9 +915,22 @@ export const SequencerTimeline: React.FC = () => {
       armChannel(trackId, channel);
       return;
     }
-    const keyCount = (track.channels?.[channel] ?? []).filter((k) => (k.templateId || 'Sequence') === scope).length;
+    // K3 — the count and the label come from the channel's OWN store and the
+    // mask's OWN name, the same reads the row and the lane paint from.
+    const store = (channel.includes(':')
+      ? (channel.endsWith(':path') ? track.maskPathChannels : track.maskChannels)
+      : track.channels) as Record<string, { templateId?: string }[]> | undefined;
+    const keyCount = (store?.[channel] ?? []).filter((k) => (k.templateId || 'Sequence') === scope).length;
     const partName = characterParts.find((candidate) => candidate.id === track.partId)?.name ?? track.name;
-    setPendingStopAnim({ trackId, channel, label: CHANNEL_META[channel].label, partName, keyCount });
+    const label = channel.includes(':')
+      ? (() => {
+          const separator = channel.lastIndexOf(':');
+          const maskId = channel.slice(0, separator);
+          const mask = characterParts.find((candidate) => candidate.id === track.partId)?.masks?.find((m) => m.id === maskId);
+          return `${mask?.name ?? maskId} ${channel.slice(separator + 1)}`;
+        })()
+      : CHANNEL_META[channel as TrackChannel].label;
+    setPendingStopAnim({ trackId, channel, label, partName, keyCount });
   };
 
   // Add property keyframe at current frame for given channel

@@ -197,11 +197,12 @@ export interface AnimatorContextType {
   canCropStageToVisibleContent: boolean;
   addPropertyKeyframe: (trackId: string, channel: AnimationChannel, frame: number, value: number, easing?: EasingType) => void;
   /** K1 (D2) — stopwatch: arm writes the first key at the playhead with the
-   * evaluated current value; only an unanimated channel arms. */
-  armChannel: (trackId: string, channel: TrackChannel) => void;
+   * evaluated current value; only an unanimated channel arms. K3 widens the
+   * channel to per-mask scalars, which arm and disarm identically. */
+  armChannel: (trackId: string, channel: AnimationChannel) => void;
   /** K1 (D2) — confirmed disarm: clear the channel's active-sequence keys and
    * keep the evaluated playhead value as static, in one history entry. */
-  disableChannelAnimation: (trackId: string, channel: TrackChannel) => void;
+  disableChannelAnimation: (trackId: string, channel: AnimationChannel) => void;
   updatePropertyKeyframeValue: (trackId: string, channel: AnimationChannel, keyframeId: string, value: number) => void;
   updatePropertyKeyframeTemporalHandles: (trackId: string, channel: AnimationChannel, keyframeId: string, patch: { bezierIn?: { x: number; y: number }; bezierOut?: { x: number; y: number } }) => void;
   updatePropertyKeyframeFrame: (trackId: string, channel: AnimationChannel, keyframeId: string, frame: number) => void;

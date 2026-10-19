@@ -22,9 +22,10 @@ import {
 import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { InlineRename } from '../Shared/InlineRename';
-import { compileOGrafPackage } from '../../ograf/packageCompiler';
-import { createOGrafBrowserZip } from '../../ograf/browserZip';
-import { prepareLegacyOGrafExport } from '../../ograf/legacyCompatibility';
+// The OGraf compile/package chain (validation, compiler, runtime template,
+// legacy preparation, ZIP writer) is only reachable through an actual export,
+// so it is imported lazily inside `compileOGrafPlan`/`handleOGrafExport`
+// instead of weighing down the editor's initial chunk.
 import {
   describeOGrafPackageWriteFailure,
   getOGrafExportRemediationReport,
@@ -162,6 +163,10 @@ export const HeaderBar: React.FC = () => {
    */
   const compileOGrafPlan = async () => {
     const sceneData = JSON.parse(exportProject()) as SceneData;
+    const [{ prepareLegacyOGrafExport }, { compileOGrafPackage }] = await Promise.all([
+      import('../../ograf/legacyCompatibility'),
+      import('../../ograf/packageCompiler'),
+    ]);
     const preparation = prepareLegacyOGrafExport(sceneData);
     const prepared = preparation instanceof Promise ? await preparation : preparation;
     return compileOGrafPackage(prepared.sceneData, prepared.options);
@@ -256,6 +261,7 @@ export const HeaderBar: React.FC = () => {
       if (notifyOGrafDiagnostics(showToast, plan.diagnostics)) return;
 
       setOgrafStage('package');
+      const { createOGrafBrowserZip } = await import('../../ograf/browserZip');
       const archive = await createOGrafBrowserZip(plan);
       downloadBlob(archive.bytes, archive.fileName, 'application/zip');
       showToast(`Exported "${archive.fileName}"`, 'success');

@@ -74,6 +74,12 @@ test.describe('M26 — animation data actions in the current Transform UI', () =
     await seed(page);
     await selectPart(page, 'Source');
     await page.getByRole('button', { name: 'Clear Animation', exact: true }).click();
+    // Clearing authored animation asks first (K1/D2 confirmation contract);
+    // this test covers the confirmed path, the cancel path is pinned in
+    // k1-property-animation.spec.ts.
+    const dialog = page.locator('.confirmation-dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.locator('.confirmation-dialog-confirm').click();
 
     const scene = await savedScene(page) as { layers: Array<Record<string, unknown>>; tracks: Array<{ partId: string; channels: ReturnType<typeof channels> }> };
     const source = scene.layers.find((p) => p.id === 'a')!;

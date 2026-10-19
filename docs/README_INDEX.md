@@ -143,3 +143,4 @@ OMP optimization remains on `chore/omp-kcs-config-optimization`:
 - `docs/KCS_CI_STATUS.md` — GitHub Actions inventory, remote status, local reproduction, and diagnosis.
 - `docs/KCS_CHROMIUM_SMOKE.md` — the nonblocking Chromium smoke workflow: spec set, port isolation, bounds, extension rules.
 - `reports/progress_067.md` — CI audit result and no-fix decision.
+- `docs/KCS_SPRINT_BLUEPRINTS_AND_AUDITS.md` — production profiling baseline, keyboard/chrome/design audits, Graph Editor V2 and migration pipeline blueprints, UX backlog, release-readiness facts.

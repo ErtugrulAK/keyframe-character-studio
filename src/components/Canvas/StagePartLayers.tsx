@@ -10,6 +10,7 @@ import type { RuntimeData, BroadcastRuntime, RuntimeTrackState } from '../../typ
 import { PartRenderer } from './renderers/PartRenderer';
 import { evaluateFrame } from '../../utils/evaluateFrame';
 import { validateCritical, hasCriticalErrors } from '../../utils/validateScene';
+import { perfCount } from '../../perf/perfMonitor';
 import {
   buildMattePath,
   buildMatteClipPath,
@@ -138,6 +139,8 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
       }
     }
   }
+  perfCount('stageRenders');
+
 
   const runtime: RuntimeData = {
     appMode,
@@ -182,6 +185,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     activeNamedSequence ? undefined : frameOverrides,
     appMode === 'edit' ? activeTemplateId : activeNamedSequence?.sequenceId ?? 'Sequence',
   );
+  perfCount('partEvaluations', evaluatedFrame.layers.length);
   const booleanContoursByGroup = new Map<string, CharacterPart['booleanContours']>();
   for (const group of sortedParts) {
     if (!group.booleanOperandIds || !group.booleanOperation) continue;

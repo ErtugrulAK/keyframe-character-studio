@@ -380,3 +380,25 @@ for (const row of GIF_SAMPLING_ROWS) {
     expect(opaqueCentroidX(gif, gif.frames.length - 1)).toBeGreaterThan(opaqueCentroidX(gif, 0) + 100);
   });
 }
+
+test('shows a retryable failure card when the GIF chunk cannot load and recovers on retry', async ({ page }) => {
+  await seed(page, [rect()], [moverTrack]);
+  // Kill the lazy chunk the way a flaky CDN does, then let it heal.
+  await page.route('**/GifExportPanel*', (route) => route.abort());
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Animated GIF', exact: true }).click();
+
+  const card = page.getByRole('alertdialog', { name: 'GIF export unavailable' });
+  await expect(card).toBeVisible();
+  await expect(card).toContainText('could not be loaded');
+  // Localized: the editor itself is fully alive around the card.
+  await expect(page.locator('.app-container')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Export', exact: true })).toBeVisible();
+
+  await page.unroute('**/GifExportPanel*');
+  await card.getByRole('button', { name: 'Retry' }).click();
+  const panel = page.getByRole('dialog', { name: 'Export animated GIF' });
+  await expect(panel).toBeVisible();
+  // The recovered panel is the real one: it can still drive an export.
+  await expect(panel.getByRole('button', { name: 'Export GIF', exact: true })).toBeEnabled();
+});

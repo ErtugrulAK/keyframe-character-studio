@@ -1,11 +1,12 @@
-import React, { lazy, Suspense, useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeFilenameComponent } from '../../utils/pathSafety';
 import { packageFileAdmissionProblem, projectFileAdmissionProblem } from '../../utils/fileAdmission';
 import { downloadBlob } from '../../utils/fileDownload';
 // The GIF export pipeline (panel + encoder + OGraf svg/validation chain) is
 // only reachable when the panel is open, so it ships as a lazy chunk instead
-// of weighing down the editor's initial bundle.
-const GifExportPanel = lazy(() => import('./GifExportPanel').then((m) => ({ default: m.GifExportPanel })));
+// of weighing down the editor's initial bundle. The gate owns the lazy
+// mount, its loading state and a localized failure/retry card.
+import { GifPanelGate } from './GifPanelGate';
 import type { SceneData as ExportableSceneData } from '../../types/composition';
 import { useAnimator } from '../../context/useAnimator';
 import {
@@ -646,15 +647,13 @@ export const HeaderBar: React.FC = () => {
               </div>
             )}
             {gifExportScene && (
-              <Suspense fallback={null}>
-                <GifExportPanel
-                  scene={gifExportScene}
-                  sceneTitle={sceneTitle}
-                  onClose={() => setGifExportScene(null)}
-                  onBlocked={(diagnostics) => { notifyOGrafDiagnostics(showToast, diagnostics); }}
-                  showToast={showToast}
-                />
-              </Suspense>
+              <GifPanelGate
+                scene={gifExportScene}
+                sceneTitle={sceneTitle}
+                onClose={() => setGifExportScene(null)}
+                onBlocked={(diagnostics) => { notifyOGrafDiagnostics(showToast, diagnostics); }}
+                showToast={showToast}
+              />
             )}
           </div>
 

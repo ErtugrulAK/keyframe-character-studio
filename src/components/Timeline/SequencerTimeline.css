@@ -876,6 +876,12 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   cursor: pointer;
   user-select: none;
 }
+
+/* U1: the ruler doubles as the keyboard playhead slider. */
+.time-ruler:focus-visible {
+  outline: 2px solid var(--kcs-focus);
+  outline-offset: -2px;
+}
 .ruler-mark {
   position: absolute; top: 0; height: 100%;
   border-left: 1px solid rgba(255,255,255,0.04);

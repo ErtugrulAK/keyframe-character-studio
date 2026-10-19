@@ -64,7 +64,30 @@ async function combine(page: Page, first: string, second: string, operation: Boo
   await page.locator('.actor-node', { hasText: first }).first().click();
   await page.locator('.actor-node', { hasText: second }).first().click({ modifiers: ['Control'] });
   await clickBoolean(page, operation);
+  await waitBooleanCommitted(page, operation);
 }
+
+/**
+ * Applying a Boolean awaits the text trace asynchronously (font raster +
+ * contour extraction), so the button click alone is not a commit point.
+ * The outliner's group node is: wait for it before touching autosave, or
+ * the `Just saved` badge check passes against the PREVIOUS autosave and the
+ * test reads a pre-group document (deterministic first-attempt failure on a
+ * cold font cache; retry passes because the font is warm).
+ */
+const waitBooleanCommitted = async (page: Page, operation: BooleanOperation): Promise<void> => {
+  const label = `${operation[0].toUpperCase()}${operation.slice(1)}`;
+  // The outliner row carries the derived group name ('… · Subtract') plus a
+  // badge with the same word, so match the row element, not the a11y name.
+  await expect(page.locator('.actor-node', { hasText: `· ${label}` }).first())
+    .toBeVisible({ timeout: 15000 });
+};
+
+/** The refusal counterpart: the command reports "no geometry" before storage is read. */
+const waitBooleanRefused = async (page: Page): Promise<void> => {
+  await expect(page.getByText(/Could not build the Boolean/).first())
+    .toBeVisible({ timeout: 15000 });
+};
 
 /** The autosave runs on a timer; the badge saves now, like the other specs. */
 async function saveNow(page: Page): Promise<void> {
@@ -80,6 +103,18 @@ const storedGroup = (page: Page) => page.evaluate((key) => {
   return (scene.layers ?? []).find((layer) => layer.booleanOperation) ?? null;
 }, STORAGE_KEY);
 
+/**
+ * The badge click can be coalesced away while an (auto)save is already in
+ * flight (`useSerialization` SAFE-02 pending guard), so the document right
+ * after `saveNow` is not guaranteed to carry the new group. The durable
+ * contract is that the next autosave tick persists it: assert content, not
+ * the badge label, then read the settled document once.
+ */
+async function savedGroup(page: Page): Promise<NonNullable<Awaited<ReturnType<typeof storedGroup>>>> {
+  await expect.poll(() => storedGroup(page), { timeout: 15000 }).not.toBeNull();
+  return (await storedGroup(page))!;
+}
+
 test('a text layer and a shape combine with the letters traced, counters included', async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });
@@ -93,7 +128,7 @@ test('a text layer and a shape combine with the letters traced, counters include
   await combine(page, 'Box', 'O text', 'intersect');
   await saveNow(page);
 
-  const group = await storedGroup(page);
+  const group = await savedGroup(page);
   expect(group?.type).toBe('custom_freeform');
   expect(group?.booleanOperation).toBe('intersect');
 
@@ -134,7 +169,7 @@ test('a text layer and a shape can be subtracted, and the operands stay editable
   await combine(page, 'Box', 'O text', 'subtract');
   await saveNow(page);
 
-  const group = await storedGroup(page);
+  const group = await savedGroup(page);
   expect(group?.booleanOperation).toBe('subtract');
   expect((group?.booleanContours ?? []).length).toBeGreaterThan(0);
 
@@ -179,7 +214,7 @@ for (const [label, fontFamily] of [
     await combine(page, 'Box', 'O text', 'intersect');
     await saveNow(page);
 
-    const group = await storedGroup(page);
+    const group = await savedGroup(page);
     expect(group?.type).toBe('custom_freeform');
     expect(group?.booleanOperation).toBe('intersect');
     // 'O' has a counter, so a successful trace carries at least two rings.
@@ -205,6 +240,9 @@ test('an untraceable text operand refuses the Boolean instead of changing it', a
   await page.locator('.actor-node', { hasText: 'Box Two' }).first().click({ modifiers: ['Control'] });
   await page.locator('.actor-node', { hasText: 'O text' }).first().click({ modifiers: ['Control'] });
   await clickBoolean(page, 'subtract');
+  // The refusal must be observed, not assumed: without this the created==0
+  // read can pass simply because the async trace has not been refused yet.
+  await waitBooleanRefused(page);
   await saveNow(page);
 
   const created = await page.evaluate((key) => {
@@ -234,7 +272,7 @@ test('text combines with a freeform and with another text', async ({ page }) => 
 
   await combine(page, 'Free Shape', 'A text', 'union');
   await saveNow(page);
-  const group = await storedGroup(page);
+  const group = await savedGroup(page);
   expect(group?.booleanOperation).toBe('union');
   expect((group?.booleanContours ?? []).length).toBeGreaterThan(0);
 
@@ -244,7 +282,7 @@ test('text combines with a freeform and with another text', async ({ page }) => 
   ]);
   await combine(page, 'A text', 'B text2', 'exclude');
   await saveNow(page);
-  const textGroup = await storedGroup(page);
+  const textGroup = await savedGroup(page);
   expect(textGroup?.booleanOperation).toBe('exclude');
   expect((textGroup?.booleanContours ?? []).length).toBeGreaterThan(0);
 });
@@ -260,13 +298,14 @@ test('a three-operand Subtract keeps every operand', async ({ page }) => {
   await page.locator('.actor-node', { hasText: 'O text' }).first().click({ modifiers: ['Control'] });
   await page.locator('.actor-node', { hasText: 'Box Two' }).first().click({ modifiers: ['Control'] });
   await clickBoolean(page, 'subtract');
+  await waitBooleanCommitted(page, 'subtract');
   await saveNow(page);
 
-  const operandIds = await page.evaluate((key) => {
+  const storedOperandIds = () => page.evaluate((key) => {
     const scene = JSON.parse(localStorage.getItem(key) ?? '{}') as {
       layers?: { booleanOperandIds?: string[] }[];
     };
     return (scene.layers ?? []).find((layer) => layer.booleanOperandIds?.length)?.booleanOperandIds ?? [];
   }, STORAGE_KEY);
-  expect(operandIds).toEqual(['box1', 'text', 'box2']);
+  await expect.poll(storedOperandIds, { timeout: 15000 }).toEqual(['box1', 'text', 'box2']);
 });

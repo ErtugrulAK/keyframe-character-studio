@@ -292,8 +292,13 @@ test('R5-02 — an open overlay paints over the dock handles, never under them',
   // GIF panel open: it really overlaps the right handle, and it wins the hit
   // test there — the handle is below the overlay.
   await page.locator('[role="menuitem"]', { hasText: 'Animated GIF' }).click();
+  // The panel is lazy: the gate first paints a loading card with the same
+  // footprint class, and the measured node is replaced when the chunk mounts.
+  // Wait for the real panel (role=dialog, the same `.gif-export-panel` node)
+  // so the hit test measures mounted layout, never the Suspense-to-panel
+  // replacement window.
+  await expect(page.getByRole('dialog', { name: 'Export animated GIF' })).toBeVisible();
   const panel = page.locator('.gif-export-panel');
-  await expect(panel).toBeVisible();
   const covered = await page.evaluate(() => {
     const handle = document.querySelector('.inspector-dock-toggle') as HTMLElement;
     const overlay = document.querySelector('.gif-export-panel') as HTMLElement;

@@ -417,3 +417,82 @@ test('shows a retryable failure card when the GIF chunk cannot load and recovers
   await expect(panel).toBeVisible({ timeout: 15_000 });
   await expect(panel.getByRole('button', { name: 'Export GIF', exact: true })).toBeEnabled();
 });
+
+// A1 — the reload guard in a real browser, against real persistence.
+const openFailureCard = async (page: import('@playwright/test').Page) => {
+  await page.route('**/GifExportPanel*', (route) => route.abort());
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Animated GIF', exact: true }).click();
+  const card = page.getByRole('alertdialog', { name: 'GIF export unavailable' });
+  await expect(card).toBeVisible();
+  await card.getByRole('button', { name: 'Retry' }).click();
+  const reloadButton = card.getByRole('button', { name: 'Reload editor' });
+  await expect(reloadButton).toBeVisible({ timeout: 10_000 });
+  await page.unroute('**/GifExportPanel*');
+  return { card, reloadButton };
+};
+
+// A real dirty state through the header FPS control (fps is part of the scene).
+const earnDirtyEdit = async (page: import('@playwright/test').Page) => {
+  await page.locator(`select[title="Animation Frame Rate (FPS)"]`).selectOption({ index: 1 });
+};
+const fpsValue = (page: import('@playwright/test').Page) =>
+  page.locator(`select[title="Animation Frame Rate (FPS)"]`).evaluate((node) => (node as HTMLSelectElement).value);
+
+test('A1 guard: an unsaved edit stops the reload at the informed choice and Save-and-reload keeps it', async ({ page }) => {
+  test.info().setTimeout(120_000);
+  await seed(page, [rect()], [moverTrack]);
+  const before = await fpsValue(page);
+  await earnDirtyEdit(page);
+  const dirty = await fpsValue(page);
+  expect(dirty).not.toBe(before);
+  const { reloadButton } = await openFailureCard(page);
+  await reloadButton.click();
+  const group = page.getByRole('group', { name: 'Reload confirmation' });
+  await expect(group).toBeVisible();
+  await expect(group).toContainText(/unsaved/i);
+  await group.getByRole('button', { name: 'Save and reload' }).click();
+
+  // The reload landed; the changed value itself proves the write survived.
+  await expect(page.locator('.app-container')).toBeVisible();
+  await expect(page.locator(`select[title="Animation Frame Rate (FPS)"]`)).toHaveValue(dirty);
+});
+
+test('A1 guard: cancel keeps the in-memory edit and the card stays actionable', async ({ page }) => {
+  test.info().setTimeout(120_000);
+  await seed(page, [rect()], [moverTrack]);
+  await earnDirtyEdit(page);
+  const dirty = await fpsValue(page);
+  const { card, reloadButton } = await openFailureCard(page);
+  await reloadButton.click();
+  await expect(card.getByRole('group', { name: 'Reload confirmation' })).toBeVisible();
+  await card.getByRole('button', { name: 'Cancel' }).click();
+  await expect(card.getByRole('group', { name: 'Reload confirmation' })).toHaveCount(0);
+  expect(await fpsValue(page)).toBe(dirty);
+  await expect(card.getByRole('button', { name: 'Reload editor' })).toBeVisible();
+});
+
+test('A1 guard: a blocked quota surfaces write-failed and the failed save says so without reloading', async ({ page }) => {
+  test.info().setTimeout(120_000);
+  await seed(page, [rect()], [moverTrack]);
+  await page.evaluate(() => {
+    const real = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key: string, value: string) {
+      if (key === 'SEQUENCER_STUDIO_PRO_V5') {
+        throw new DOMException('quota', 'QuotaExceededError');
+      }
+      return real.call(this, key, value);
+    };
+  });
+  await earnDirtyEdit(page);
+  // The honest badge reports the failing persistence before any reload choice.
+  await expect(page.locator('.autosave-status-badge--error')).toBeVisible({ timeout: 15_000 });
+  const dirty = await fpsValue(page);
+  const { card, reloadButton } = await openFailureCard(page);
+  await reloadButton.click();
+  await expect(card.getByRole('group', { name: 'Reload confirmation' })).toContainText(/save failed|stale/i);
+  await card.getByRole('button', { name: 'Save and reload' }).click();
+  await expect(card.getByRole('group', { name: 'Reload confirmation' })).toContainText(/could not be saved/i);
+  // Still on the page, still holding the edit in memory.
+  expect(await fpsValue(page)).toBe(dirty);
+});

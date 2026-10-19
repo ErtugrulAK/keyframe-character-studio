@@ -100,6 +100,8 @@ export const HeaderBar: React.FC = () => {
     manualSaveRejectedAt,
     autosaveError,
     triggerManualSave,
+    getPersistenceSafety,
+    forceSaveNow,
     showToast,
     appMode,
     setAppMode,
@@ -682,6 +684,8 @@ export const HeaderBar: React.FC = () => {
                 onClose={() => setGifExportScene(null)}
                 onBlocked={(diagnostics) => { notifyOGrafDiagnostics(showToast, diagnostics); }}
                 showToast={showToast}
+                persistenceStatus={getPersistenceSafety}
+                saveBeforeReload={forceSaveNow}
               />
             )}
           </div>

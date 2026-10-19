@@ -415,6 +415,17 @@ interface UseSerializationOptions {
  */
 const MANUAL_SAVE_LOCK_WAIT_MS = 1_000;
 
+/** D2: the last persistence failure, exposed so the badge can speak instead
+ *  of showing a stale success. Cleared by the first write that lands. */
+export type AutosavePersistenceError = { kind: 'quota' | 'unavailable'; at: number };
+
+const isQuotaError = (error: unknown): boolean => {
+  const candidate = error as { name?: string; code?: number };
+  return candidate?.name === 'QuotaExceededError'
+    || candidate?.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+    || candidate?.code === 22;
+};
+
 /** The part of the Web Locks API this module uses, declared structurally:
  *  environments without navigator.locks (and jsdom) fall through the guard
  *  to the documented SAFE-01 synchronous window instead. */
@@ -456,6 +467,7 @@ export interface UseSerializationApi {
    * retries; the header surfaces exactly one notice per event.
    */
   manualSaveRejectedAt: number | null;
+  autosaveError: AutosavePersistenceError | null;
   triggerManualSave: () => void;
   exportProject: () => string;
   importProject: (jsonStr: string, defaultName?: string) => ImportResult;
@@ -524,6 +536,7 @@ export const useSerialization = ({
   // manualAbortRef can cancel a queued wait; unmountedRef stops any late
   // continuation from touching state or notifications.
   const [manualSaveRejectedAt, setManualSaveRejectedAt] = useState<number | null>(null);
+  const [autosaveError, setAutosaveError] = useState<AutosavePersistenceError | null>(null);
   const manualPendingRef = useRef<boolean>(false);
   const manualAbortRef = useRef<AbortController | null>(null);
   const unmountedRef = useRef<boolean>(false);
@@ -646,8 +659,10 @@ export const useSerialization = ({
     let currentStored: string | null;
     try {
       currentStored = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
-    } catch {
+    } catch (e) {
       // Storage unreadable: honest no-op. Tokens untouched, retried next tick.
+      setAutosaveError((previous) => previous ?? { kind: 'unavailable', at: Date.now() });
+      console.error('[AutoSave] Storage unreadable; the save is deferred', e);
       return false;
     }
     if (currentStored !== storageKnownRef.current) {
@@ -663,9 +678,12 @@ export const useSerialization = ({
       storageKnownRef.current = nextJson;
       settledSaveRef.current = nextJson;
       setLastSavedAt(new Date());
+      setAutosaveError(null);
       return true;
     } catch (e) {
-      // Honest failure: neither lastSavedAt nor the write tokens advance.
+      // Honest failure: neither lastSavedAt nor the write tokens advance, and
+      // the badge reports the failure instead of a stale success.
+      setAutosaveError((previous) => previous ?? { kind: isQuotaError(e) ? 'quota' : 'unavailable', at: Date.now() });
       console.error('[AutoSave] Failed to save project to LocalStorage', e);
       return false;
     }
@@ -944,6 +962,7 @@ export const useSerialization = ({
     restoredFromLocalStorage,
     autosaveConflict,
     manualSaveRejectedAt,
+    autosaveError,
     triggerManualSave,
     exportProject,
     importProject,

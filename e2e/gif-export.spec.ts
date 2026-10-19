@@ -381,9 +381,9 @@ for (const row of GIF_SAMPLING_ROWS) {
   });
 }
 
-test('shows a retryable failure card when the GIF chunk cannot load and recovers on retry', async ({ page }) => {
+test('shows a retryable failure card when the GIF chunk cannot load and recovers on reload', async ({ page }) => {
   await seed(page, [rect()], [moverTrack]);
-  // Kill the lazy chunk the way a flaky CDN does, then let it heal.
+  // Kill the lazy chunk the way a flaky CDN does.
   await page.route('**/GifExportPanel*', (route) => route.abort());
   await page.getByRole('button', { name: 'Export', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Animated GIF', exact: true }).click();
@@ -394,11 +394,26 @@ test('shows a retryable failure card when the GIF chunk cannot load and recovers
   // Localized: the editor itself is fully alive around the card.
   await expect(page.locator('.app-container')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Export', exact: true })).toBeVisible();
+  // First failure offers only the in-page retry.
+  await expect(card.getByRole('button', { name: 'Reload editor' })).toHaveCount(0);
 
   await page.unroute('**/GifExportPanel*');
   await card.getByRole('button', { name: 'Retry' }).click();
+  // Platform reality: once the first fetch of a module URL fails, Chromium
+  // keeps that failure in the document's module map, so an in-page retry
+  // cannot re-fetch it — the contract is that the card comes back (no blank
+  // screen, no crash) and now carries the documented hard-recovery action.
+  const reloadButton = card.getByRole('button', { name: 'Reload editor' });
+  await expect(reloadButton).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('.app-container')).toBeVisible();
+
+  // Recovery is real: the reload fetches the now-healthy chunk and the panel
+  // is fully interactive; the seeded document survived (storage-restored).
+  await reloadButton.click();
+  await expect(page.locator('.app-container')).toBeVisible();
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Animated GIF', exact: true }).click();
   const panel = page.getByRole('dialog', { name: 'Export animated GIF' });
-  await expect(panel).toBeVisible();
-  // The recovered panel is the real one: it can still drive an export.
+  await expect(panel).toBeVisible({ timeout: 15_000 });
   await expect(panel.getByRole('button', { name: 'Export GIF', exact: true })).toBeEnabled();
 });

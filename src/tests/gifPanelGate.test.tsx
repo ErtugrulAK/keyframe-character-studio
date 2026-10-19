@@ -117,4 +117,35 @@ describe('D1 — GifPanelGate', () => {
     expect(calls).toBe(2);
     expect(screen.getByTestId('editor-still-here')).toBeInTheDocument();
   });
+
+  it('offers hard reload only after an in-page retry has failed once', async () => {
+    calls = 0;
+    outcomes = [failOnce];
+    const reload = vi.fn();
+    render(
+      <div>
+        <div data-testid="editor-still-here">editor alive</div>
+        <GifPanelGate
+          scene={scene}
+          sceneTitle="d1"
+          onClose={() => undefined}
+          onBlocked={() => undefined}
+          showToast={() => undefined}
+          loadPanel={loader}
+          reloadApp={reload}
+        />
+      </div>,
+    );
+    await screen.findByRole('alertdialog', { name: 'GIF export unavailable' });
+    // First failure: the in-page retry is the only offered action.
+    expect(screen.queryByRole('button', { name: 'Reload editor' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await screen.findByRole('alertdialog', { name: 'GIF export unavailable' });
+    // A chunk whose first fetch failed stays failed in the module map for this
+    // document, so the second failure must surface the documented recovery.
+    const reloadButton = await screen.findByRole('button', { name: 'Reload editor' });
+    fireEvent.click(reloadButton);
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('editor-still-here')).toBeInTheDocument();
+  });
 });

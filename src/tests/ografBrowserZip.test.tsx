@@ -248,12 +248,34 @@ describe('HeaderBar OGraf export integration', () => {
     // disabled flag; JSON and the GIF panel stay available throughout.
     const menuItems = screen.getAllByRole('menuitem') as HTMLButtonElement[];
     expect(menuItems.map((item) => item.disabled)).toEqual([false, true, false]);
-    expect(menuItems[1].textContent).toContain('Exporting OGraf');
+    expect(menuItems[1].textContent).toContain('Packaging OGraf');
     fireEvent.click(menuItems[1]);
     expect(createZipMock).toHaveBeenCalledTimes(1);
 
     resolveZip?.({ fileName: 'project-ograf.zip', bytes: new Uint8Array([1]) });
     await waitFor(() => expect((screen.getAllByRole('menuitem') as HTMLButtonElement[])[1].disabled).toBe(false));
+  });
+
+  it('labels the pending package stage and returns to the idle label when it lands', async () => {
+    // The compile stage is a real transition but sub-millisecond with a
+    // synchronous scene snapshot; the observable contract of the staged label
+    // is: while the zip is in flight the menu says 'Packaging', and it never
+    // sticks after completion.
+    context.exportProject.mockReturnValue(JSON.stringify(makeScene()));
+    const { promise: zipPromise, resolve: resolveZip } = Promise.withResolvers<{ fileName: string; bytes: Uint8Array }>();
+    createZipMock.mockReturnValue(zipPromise);
+    render(<HeaderBar />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
+
+    await waitFor(() => expect(createZipMock).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    expect((screen.getAllByRole('menuitem') as HTMLButtonElement[])[1].textContent).toContain('Packaging OGraf');
+
+    resolveZip({ fileName: 'project-ograf.zip', bytes: new Uint8Array([1]) });
+    await waitFor(() => expect((screen.getAllByRole('menuitem') as HTMLButtonElement[])[1].disabled).toBe(false));
+    expect((screen.getAllByRole('menuitem') as HTMLButtonElement[])[1].textContent).toContain('OGraf Package');
   });
   it('explains when an OGraf manifest is supplied to KCS project import', async () => {
     render(<HeaderBar />);

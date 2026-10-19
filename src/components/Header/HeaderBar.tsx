@@ -121,6 +121,9 @@ export const HeaderBar: React.FC = () => {
   const [editingTmplName, setEditingTmplName] = useState<string>('');
   const [pendingDeleteTemplate, setPendingDeleteTemplate] = useState<{ id: string; name: string } | null>(null);
   const [isOGrafExporting, setIsOGrafExporting] = useState<boolean>(false);
+  // Honest export stages: each transition is a real await boundary in
+  // `handleOGrafExport`, never an invented percentage.
+  const [ografStage, setOgrafStage] = useState<'compile' | 'package' | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState<boolean>(false);
   /** SAFE-03-A: reset waits for an explicit confirmation whenever the document has content. */
@@ -247,10 +250,12 @@ export const HeaderBar: React.FC = () => {
   const handleOGrafExport = async () => {
     if (isOGrafExporting) return;
     setIsOGrafExporting(true);
+    setOgrafStage('compile');
     try {
       const plan = await compileOGrafPlan();
       if (notifyOGrafDiagnostics(showToast, plan.diagnostics)) return;
 
+      setOgrafStage('package');
       const archive = await createOGrafBrowserZip(plan);
       downloadBlob(archive.bytes, archive.fileName, 'application/zip');
       showToast(`Exported "${archive.fileName}"`, 'success');
@@ -271,6 +276,7 @@ export const HeaderBar: React.FC = () => {
       }
     } finally {
       setIsOGrafExporting(false);
+      setOgrafStage(null);
     }
   };
   /**
@@ -632,7 +638,7 @@ export const HeaderBar: React.FC = () => {
                     void handleOGrafExport();
                   }}
                 >
-                  {isOGrafExporting ? 'Exporting OGraf…' : 'OGraf Package'}
+                  {isOGrafExporting ? (ografStage === 'package' ? 'Packaging OGraf…' : 'Compiling OGraf…') : 'OGraf Package'}
                 </button>
                 <button
                   type="button"

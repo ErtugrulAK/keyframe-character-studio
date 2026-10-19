@@ -232,8 +232,11 @@ test('a restored project says where it came from, and a reset stops saying it', 
   await expect(chip).toBeVisible();
   await expect(chip).toContainText("Restored from this browser's autosave");
 
-  // A reset replaces the document with the defaults, so the provenance
-  // statement goes away with the restored one.
+  // SAFE-03-A made reset a confirmed action; the provenance statement goes
+  // away only when the confirmation replaces the document — assert that flow.
   await page.getByRole('button', { name: 'Reset Canvas Project' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: /reset/i }).click();
   await expect(chip).toHaveCount(0);
 });

@@ -154,7 +154,13 @@ test.describe('Milestone B — keyboard accessibility', () => {
     await page.keyboard.press('ArrowUp');
     await expect.poll(async () => point.getAttribute('aria-label')).not.toBe(before);
 
-    // Decorative geometry stays out of the accessibility tree.
-    await expect(graphGroup.locator('[aria-hidden="true"]')).toHaveCount(3);
+    // Decorative geometry stays out of the accessibility tree (semantic:
+    // every axis line, the curve and the axis/segment labels are hidden;
+    // the count grew with D1 Increment 1, the invariant did not change).
+    const decorative = await graphGroup.evaluate((group) => Array.from(
+      (group as Element).querySelectorAll('line, path, svg text'),
+    ).map((node) => node.getAttribute('aria-hidden')));
+    expect(decorative.length).toBeGreaterThanOrEqual(3);
+    expect(decorative.every((value) => value === 'true')).toBe(true);
   });
 });

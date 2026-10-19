@@ -33,7 +33,7 @@ import { useInspector } from '../hooks/useInspector';
 import { useTimeline } from '../hooks/useTimeline';
 import { useTemplates } from '../hooks/useTemplates';
 import { useMath } from '../hooks/useMath';
-import { useSerialization } from '../hooks/useSerialization';
+import { useSerialization, type AutosavePersistenceError } from '../hooks/useSerialization';
 import { useToast, type ToastOptions } from '../hooks/useToast';
 import { usePresets, type SavePresetInput, type UpdatePresetInput } from '../hooks/usePresets';
 import { useProjectState } from '../hooks/useProjectState';
@@ -101,6 +101,8 @@ export interface AnimatorContextType {
   autosaveConflict: boolean;
   /** Timestamp of the last manual save deferred by a busy autosave lock; not a conflict pause. */
   manualSaveRejectedAt: number | null;
+  /** D2: last persistence failure behind the badge; null while saves land. */
+  autosaveError: AutosavePersistenceError | null;
   triggerManualSave: () => void;
 
   // Undo / Redo History
@@ -672,6 +674,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     restoredFromLocalStorage,
     autosaveConflict,
     manualSaveRejectedAt,
+    autosaveError,
     triggerManualSave,
     exportProject,
     importProject,
@@ -816,6 +819,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         restoredFromLocalStorage,
         autosaveConflict,
         manualSaveRejectedAt,
+        autosaveError,
         triggerManualSave,
         undo,
         redo,

@@ -96,6 +96,7 @@ export const HeaderBar: React.FC = () => {
     restoredFromLocalStorage,
     autosaveConflict,
     manualSaveRejectedAt,
+    autosaveError,
     triggerManualSave,
     showToast,
     appMode,
@@ -229,6 +230,20 @@ export const HeaderBar: React.FC = () => {
     showToast(`Exported "${cleanFileName}"`, 'success');
   };
 
+
+  /**
+   * D2: a failed persistence attempt is announced once per event, never on
+   * every retried tick. The document stays in memory untouched; the badge
+   * keeps showing the failure until a write lands, and the manual click is
+   * the immediate retry.
+   */
+  const autosaveErrorAnnouncedRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (autosaveError && autosaveErrorAnnouncedRef.current !== autosaveError.at) {
+      autosaveErrorAnnouncedRef.current = autosaveError.at;
+      showToast(`Auto-save failed: browser storage ${autosaveError.kind === 'quota' ? 'is full' : 'is unavailable'}. Your changes are kept in memory — export the project to keep them. Autosave retries every 10 seconds.`, 'error', { title: 'Save failed' });
+    }
+  }, [autosaveError, showToast]);
   /**
    * Opens the GIF panel on a SNAPSHOT of the current scene: the summary the user
    * reads and the frames that are written come from the same document, so an edit
@@ -518,16 +533,18 @@ export const HeaderBar: React.FC = () => {
         <div className="header-actions">
           {/* Auto-Save */}
           <div
-            className={`autosave-status-badge${autosaveConflict ? ' autosave-status-badge--paused' : ''}`}
+            className={`autosave-status-badge${autosaveConflict ? ' autosave-status-badge--paused' : autosaveError ? ' autosave-status-badge--error' : ''}`}
             onClick={triggerManualSave}
             data-last-saved-at={lastSavedAt ? String(lastSavedAt.getTime()) : ''}
             title={autosaveConflict
               ? 'Autosave paused: another tab changed the shared project. Reload to adopt it, or export this tab\u2019s work — nothing here will be overwritten.'
-              : 'Auto-saved every 10 seconds. Click to save manually.'}
+              : autosaveError
+                ? `Auto-save failed: browser storage ${autosaveError.kind === 'quota' ? 'is full' : 'is unavailable'}. Your changes are kept in memory — export the project to keep them. Autosave retries every 10 seconds; clicking saves now.`
+                : 'Auto-saved every 10 seconds. Click to save manually.'}
           >
-            <div className={autosaveConflict ? 'pulse-amber-dot' : 'pulse-green-dot'} />
-            {autosaveConflict ? <AlertTriangle size={13} /> : <CheckCircle2 size={13} className="text-green" />}
-            <span className="autosave-text">{timeAgoStr}</span>
+            <div className={autosaveConflict ? 'pulse-amber-dot' : autosaveError ? 'pulse-red-dot' : 'pulse-green-dot'} />
+            {autosaveConflict || autosaveError ? <AlertTriangle size={13} /> : <CheckCircle2 size={13} className="text-green" />}
+            <span className="autosave-text">{autosaveConflict || autosaveError ? 'Not saved' : timeAgoStr}</span>
           </div>
 
           {/*

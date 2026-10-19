@@ -57,6 +57,32 @@ describe('C2 — perfMonitor', () => {
     }
   });
 
+  it('with ?perf: every observer is armed with its entry type', async () => {
+    // C1 usage caught the original bug: observe(options) without `type` arms
+    // nothing and the overlay silently reports every collector unavailable.
+    const observed: PerformanceObserverInit[] = [];
+    class SpyPO {
+      constructor(_cb: PerformanceObserverCallback) { /* capture only */ }
+      observe(options?: PerformanceObserverInit) { observed.push(options ?? {}); }
+      disconnect() { /* noop */ }
+      takeRecords(): PerformanceEntry[] { return []; }
+    }
+    const Original = window.PerformanceObserver;
+    // @ts-expect-error structural spy
+    window.PerformanceObserver = SpyPO;
+    try {
+      const { installPerfMonitor, perfSnapshot } = await loadMonitor('?perf');
+      expect(installPerfMonitor()).toBe(true);
+      const types = observed.map((options) => options.type);
+      expect(types).toContain('longtask');
+      expect(types).toContain('long-animation-frame');
+      expect(types).toContain('event');
+      expect(perfSnapshot().unsupported).not.toContain('longtask');
+    } finally {
+      window.PerformanceObserver = Original;
+    }
+  });
+
   it('with ?perf: labels carry the sampling caveats', async () => {
     // The heap caveat string only renders on the value branch; jsdom has no
     // performance.memory, so the probe arrives via the install seam.

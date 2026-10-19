@@ -69,7 +69,10 @@ function observe(type: string, options: PerformanceObserverInit, onEntry: (entry
   }
   try {
     const observer = new PerformanceObserver((list) => list.getEntries().forEach(onEntry));
-    observer.observe(options);
+    // The type is mandatory in the observe call — options without it arm
+    // nothing and fail only later, which is how the first version died
+    // silently in Chromium.
+    observer.observe({ ...options, type });
     return true;
   } catch {
     unsupported.push(type);

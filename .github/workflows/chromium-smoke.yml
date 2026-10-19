@@ -1,0 +1,69 @@
+name: Chromium Smoke
+
+# Nonblocking browser smoke over a small, known-stable set of Chromium specs.
+# This workflow is NOT a merge gate and never blocks a PR: it exists to catch
+# browser-environment regressions between releases. The full browser suite
+# stays in the release gate (`npm run qa:release`, Release Smoke Gate workflow).
+#
+# Design notes:
+#   - Chromium comes from the lockfile Playwright version (`npx playwright
+#     install` reads package-lock), so the browser build is pinned by tooling.
+#   - `CI=1` makes playwright.config.ts bind vite + API to isolated ports
+#     (127.0.0.1:5188) and refuse to reuse an existing server, so this run
+#     cannot collide with any other checkout on a self-hosted machine.
+#   - Workers and the job timeout bound time and resource usage; traces and
+#     the HTML report are uploaded when anything fails.
+#   - See docs/KCS_CHROMIUM_SMOKE.md for the spec rationale and how to extend.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '27 4 * * 1'  # Mondays 04:27 UTC, off the hour on purpose
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-smoke:
+    name: Chromium Smoke (stable specs)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Chromium Smoke
+        timeout-minutes: 15
+        run: >-
+          npx playwright test
+          e2e/ograf-phase2d-interoperability.spec.ts
+          e2e/ograf-editor-export.spec.ts
+          e2e/gif-export.spec.ts
+          e2e/k1-property-animation.spec.ts
+          --workers=2 --reporter=line
+        env:
+          CI: '1'
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chromium-smoke-artifacts
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7

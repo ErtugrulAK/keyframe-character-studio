@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { sanitizeProjectFps } from '../utils/timebase';
+import { perfCount } from '../perf/perfMonitor';
 
 /**
  * Timeline playback.
@@ -72,6 +73,7 @@ export const usePlayback = () => {
     frameRemainderMsRef.current = 0;
 
     const tick = (now: number) => {
+      perfCount('playbackTicks');
       const elapsedMs = now - lastTimeRef.current;
       lastTimeRef.current = now;
       // Guard against a non-monotonic clock so time can never run backwards.

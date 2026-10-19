@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { retireStaleDevServiceWorker } from './utils/devFreshness'
+import { installPerfMonitor } from './perf/perfMonitor'
 
 // DEV FRESHNESS CONTRACT — a dev session must never be served by a stale
 // service worker left on this origin by an earlier dev server. Dev-only: a
@@ -17,3 +18,8 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+// OPT-IN PERFORMANCE DIAGNOSTICS — attaches collectors and an overlay only
+// when the page URL carries ?perf; without the flag this call touches
+// nothing and the counters at each call site are single null checks.
+installPerfMonitor()

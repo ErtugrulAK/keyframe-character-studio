@@ -14,6 +14,8 @@ The checked-in `.github/workflows/ci.yml` runs on pushes to `main`, pull request
 
 The checked-in `.github/workflows/ci.yml` remains the fast push/PR validation path and does not install browsers. The checked-in `.github/workflows/release-smoke.yml` is the manual browser path: it requires a full candidate SHA, installs Chromium, verifies the resolved checkout, and runs the isolated `npm run qa:release` gate.
 
+A third checked-in workflow, `.github/workflows/chromium-smoke.yml`, is a nonblocking browser smoke: manual dispatch plus a weekly schedule, lockfile-pinned Chromium, the isolated `CI=1` QA ports, a bounded spec set, and failure artifacts. It gates nothing and is documented in `docs/KCS_CHROMIUM_SMOKE.md`.
+
 ## Current validation
 
 - Workflow-tested release code candidate SHA: `46d2a3e59e065816d972dcd56951803951b577f6`.

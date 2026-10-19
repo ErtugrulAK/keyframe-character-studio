@@ -139,9 +139,9 @@ function channelValue(keyframes, frame, fallback) {
   const values = (keyframes || []).filter((keyframe) => (keyframe.templateId || 'Sequence') === (SCENE.activeTemplateId || 'Sequence')).slice().sort((a, b) => a.frame - b.frame);
   if (!values.length) return fallback;
   if (frame <= values[0].frame) return values[0].value;
+  for (let exact = 0; exact < values.length; exact += 1) { if (values[exact].frame === frame) return values[exact].value; }
   if (frame >= values[values.length - 1].frame) return values[values.length - 1].value;
   let previous = values[0]; let next = values[values.length - 1]; let bracket = 0;
-  for (let exact = 0; exact < values.length; exact += 1) { if (values[exact].frame === frame) return values[exact].value; }
   for (let index = 0; index < values.length - 1; index += 1) { if (frame >= values[index].frame && frame <= values[index + 1].frame) { previous = values[index]; next = values[index + 1]; bracket = index; break; } }
   const progress = (frame - previous.frame) / Math.max(1, next.frame - previous.frame);
   const temporal = previous.bezierOut && next.bezierIn ? { out: previous.bezierOut, in: next.bezierIn } : undefined;
@@ -158,10 +158,10 @@ function interpolatePath(first, second, progress) {
 function pathChannelValue(keyframes, frame, fallback) {
   const values = (keyframes || []).filter((keyframe) => (keyframe.templateId || 'Sequence') === (SCENE.activeTemplateId || 'Sequence')).slice().sort((a, b) => a.frame - b.frame);
   if (!values.length) return fallback;
+  for (let exact = 0; exact < values.length; exact += 1) { if (values[exact].frame === frame) return values[exact].value; }
   if (frame <= values[0].frame) return values[0].value;
   if (frame >= values[values.length - 1].frame) return values[values.length - 1].value;
   let previous = values[0]; let next = values[values.length - 1];
-  for (let exact = 0; exact < values.length; exact += 1) { if (values[exact].frame === frame) return values[exact].value; }
   for (let index = 0; index < values.length - 1; index += 1) { if (frame >= values[index].frame && frame <= values[index + 1].frame) { previous = values[index]; next = values[index + 1]; break; } }
   const progress = (frame - previous.frame) / Math.max(1, next.frame - previous.frame);
   const temporal = previous.bezierOut && next.bezierIn ? { out: previous.bezierOut, in: next.bezierIn } : undefined;

@@ -98,7 +98,11 @@
   --kcs-bg-active: rgba(20, 184, 166, 0.14);
   --kcs-border-subtle: rgba(148, 163, 184, 0.16);
   --kcs-border-default: var(--border-color);
-  --kcs-border-focus: var(--accent-cyan);
+  /* D2/U3: `--kcs-border-focus` has exactly ONE definition — kcsEditorTheme.css
+   * (imported unconditionally by App). The previous redefinition here to
+   * `var(--accent-cyan)` lost the cascade in every measured run and only made
+   * the resolved colour depend on bundle order; the computed value at every
+   * consumer is unchanged (#52e2c7, verified against the running app). */
   --kcs-text-primary: var(--text-primary);
   --kcs-text-secondary: var(--text-secondary);
   --kcs-text-muted: var(--text-muted);

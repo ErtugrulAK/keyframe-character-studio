@@ -26,9 +26,17 @@ describe('TemporalGraphPanel', () => {
     expect(points[1].getAttribute('aria-label')).toContain('frame 10');
     expect(points[1].getAttribute('tabindex')).toBe('0');
     // The decorative axes, curve and labels are hidden from the accessibility
-    // tree; the interactive points are not.
+    // tree; the interactive points are not. V6: segment badges moved OUT of
+    // decoration — they carry the applied-authority truth and must be exposed
+    // (role=img + aria-label), so the loop excludes them explicitly.
     for (const node of container.querySelectorAll('line, path, svg text')) {
-      expect(node.getAttribute('aria-hidden')).toBe('true');
+      if (node.classList.contains('temporal-graph-segment-badge')) {
+        expect(node.getAttribute('aria-hidden')).toBeNull();
+        expect(node.getAttribute('role')).toBe('img');
+        expect(node.getAttribute('aria-label')).toContain('Segment frame');
+      } else {
+        expect(node.getAttribute('aria-hidden')).toBe('true');
+      }
     }
     expect(screen.getAllByRole('button').every((node) => node.getAttribute('aria-hidden') === null)).toBe(true);
   });

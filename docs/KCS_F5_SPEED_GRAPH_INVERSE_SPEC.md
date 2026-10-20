@@ -78,9 +78,13 @@ i.e. dimensionless $E'$), the unique preimages are:
 
 $$y_1=g_0\,x_1,\qquad y_2=1-g_1\,(1-x_2)$$
 
-Validity envelope (storage stays in the range the evaluator and existing presets
-produce): $y_i\in[-\alpha,1+\alpha]$ with $\alpha=0.5$ (covers `anticipate`
-$y=-0.28$, `overshoot` $y=1.275$). Outside: clamp + report, never write silently.
+Validity envelope (storage stays in the range the evaluator and the
+endpoint-slope gesture can legitimately ask for):
+$y_i\in[-\alpha,1+\alpha]$ with $\alpha=0.5$. Erratum (audit): two built-in
+PRESETS (Elastic: $y=-0.55,1.55$) sit marginally outside this envelope; presets
+write handles directly through the value graph and are not bound by the
+speed-gesture envelope — the inverse mapping clamps its own outputs at the
+envelope and reports the clamp, never writing silently.
 Segment coupling at a shared key is natural, not ambiguous: $h_{out}$ of key $k$
 owns the entry of the segment that STARTS at $k$; $h_{in}$ of key $k$ owns the exit
 of the segment that ENDS at $k$. A key-centric gesture edits both with a documented

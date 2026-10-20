@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { TemporalGraphPanel } from '../components/Inspector/TemporalGraphPanel';
 import type { PropertyKeyframe } from '../types/animator';
@@ -116,5 +116,44 @@ describe('TemporalGraphPanel — D1 Increment 1 presentation', () => {
     expect(badges[0].textContent).toBe('HOLD');
     expect(badges[1].getAttribute('data-segment-easing')).toBe('easeInOut');
     expect(badges[1].textContent).toBe('IN/OUT');
+  });
+});
+
+describe('TemporalGraphPanel — E1 built-in easing presets', () => {
+  const keyed: PropertyKeyframe[] = [
+    { id: 'a', frame: 0, value: 0, easing: 'linear' },
+    { id: 'b', frame: 10, value: 100, easing: 'linear' },
+  ];
+
+  it('offers every built-in preset per keyframe through the handle row', () => {
+    const onChange = vi.fn();
+    render(<TemporalGraphPanel keyframes={keyed} mode="value" onChangeKeyframeHandles={onChange} />);
+    const selects = screen.getAllByRole('combobox', { name: /Apply easing preset to keyframe/ });
+    expect(selects).toHaveLength(2);
+    expect(selects[0]).toHaveAttribute('aria-label', 'Apply easing preset to keyframe 0');
+    for (const label of ['Ease In Out', 'Overshoot', 'Anticipate', 'Elastic']) {
+      expect(within(selects[0]).getByRole('option', { name: label, exact: true })).toBeInTheDocument();
+    }
+  });
+
+  it('writes one handle patch per preset choice through the existing authority', () => {
+    const onChange = vi.fn();
+    render(<TemporalGraphPanel keyframes={keyed} mode="value" onChangeKeyframeHandles={onChange} />);
+    const select = screen.getAllByRole('combobox', { name: /Apply easing preset to keyframe/ })[0];
+    fireEvent.change(select, { target: { value: 'Ease In Out' } });
+    // Exactly one call: the preset is one gesture, hence one undo transaction.
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith('a', {
+      bezierOut: { x: 0.42, y: 0 },
+      bezierIn: { x: 0.58, y: 1 },
+    });
+    // Transient affordance: the select never keeps a phantom selection.
+    expect((select as unknown as HTMLSelectElement).value).toBe('');
+  });
+
+  it('keeps the derived speed graph free of editing affordances', () => {
+    const onChange = vi.fn();
+    render(<TemporalGraphPanel keyframes={keyed} mode="speed" onChangeKeyframeHandles={onChange} />);
+    expect(screen.queryByRole('combobox', { name: /Apply easing preset/ })).not.toBeInTheDocument();
   });
 });

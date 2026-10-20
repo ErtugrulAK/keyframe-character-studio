@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import type { PropertyKeyframe, TemporalHandle } from '../../types/animator';
 import { interpolateChannel } from '../../utils/defaults';
+import { PRESET_BEZIERS } from './easingPresets';
 
 interface TemporalHandlePatch {
   bezierIn?: TemporalHandle;
@@ -239,7 +240,7 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
         </svg>
       )}
       {mode === 'value' && onChangeKeyframeHandles && sorted.map((keyframe) => (
-        <div key={`${keyframe.id}-handles`} style={{ display: 'grid', gridTemplateColumns: 'auto repeat(4, 1fr)', gap: 4, alignItems: 'center', marginTop: 4 }}>
+        <div key={`${keyframe.id}-handles`} style={{ display: 'grid', gridTemplateColumns: 'auto repeat(4, 1fr) minmax(96px, 1.3fr)', gap: 4, alignItems: 'center', marginTop: 4 }}>
           <span style={{ fontSize: 10, color: '#94a3b8' }}>F{keyframe.frame}</span>
           {(['bezierIn', 'bezierOut'] as const).flatMap((handleName) => (['x', 'y'] as const).map((axis) => (
             <input
@@ -257,6 +258,30 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
               })}
             />
           )))}
+          {/* E1: built-in curve presets, authored through the same handle-patch
+           * pipeline the numeric inputs drive — one call is one transaction.
+           * Transient control (value always resets): a preset is an action,
+           * not state. */}
+          <select
+            className="select-control"
+            aria-label={`Apply easing preset to keyframe ${keyframe.frame}`}
+            value=""
+            onChange={(event) => {
+              const preset = PRESET_BEZIERS.find((candidate) => candidate.label === event.target.value);
+              if (!preset) return;
+              const [x1, y1, x2, y2] = preset.points;
+              onChangeKeyframeHandles(keyframe.id, {
+                bezierOut: { x: x1, y: y1 },
+                bezierIn: { x: x2, y: y2 },
+              });
+              event.currentTarget.value = '';
+            }}
+          >
+            <option value="">Preset…</option>
+            {PRESET_BEZIERS.map((preset) => (
+              <option key={preset.label} value={preset.label}>{preset.label}</option>
+            ))}
+          </select>
         </div>
       ))}
     </div>

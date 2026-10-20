@@ -14,7 +14,14 @@ export default defineConfig({
   reporter: 'html',
   // V1: the @visual screenshot suite is opt-in via npm run qa:visual (the
   // runner script sets KCS_VISUAL=1); no default behavior run ever asserts
-  // pixels. Baselines are per-platform — see docs/KCS_VISUAL_QA.md.
+  // pixels. Baselines are per-platform ({-platform} template) — see
+  // docs/KCS_VISUAL_QA.md. Portability honesty (V6): the COMMITTED baselines
+  // are win32-only, CI does not run @visual, and no CI job generates them;
+  // a different OS/browser build must regenerate with
+  // `npx playwright test --update-snapshots` after enabling KCS_VISUAL.
+  // The settle predicate (fonts.ready + layer count + two-frame layout
+  // equality, V6) improves cross-machine determinism but does not promise
+  // pixel identity across platform text-rasterizer differences.
   grepInvert: process.env.KCS_VISUAL === '1' ? undefined : /@visual/,
   snapshotPathTemplate: '{testDir}/visual/{arg}{-platform}{ext}',
   use: {

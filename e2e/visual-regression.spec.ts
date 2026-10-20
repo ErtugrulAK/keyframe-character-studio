@@ -54,9 +54,27 @@ async function settleForCapture(page: Page): Promise<void> {
   await page.setViewportSize({ width: 1440, height: 900 });
   // Web fonts materially change glyph pixels; wait for the real face set.
   await page.evaluate(() => document.fonts.ready);
+  // The seeded document is fully applied: all three layers render.
+  await expect(page.locator('.actor-node')).toHaveCount(3);
   // Freeze the authored start frame — no playback clock in any capture.
   await page.keyboard.press('Home');
-  await page.waitForTimeout(120); // one commit margin; not a readiness substitute
+  // V6: layout-settled replaces the fixed 120 ms margin — both capture
+  // regions must measure identical across two consecutive animation frames
+  // (a real stability predicate, not a hidden delay).
+  await page.waitForFunction(() => {
+    const measure = () => {
+      const ruler = document.querySelector('.time-ruler')?.getBoundingClientRect();
+      const rail = document.querySelector('.left-sidebar-nav')?.getBoundingClientRect();
+      return ruler && rail ? [ruler.width, ruler.height, rail.width, rail.height].join('|') : null;
+    };
+    const first = measure();
+    if (!first) return false;
+    return new Promise<boolean>((resolve) => {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => resolve(measure() === first));
+      });
+    });
+  }, undefined, { timeout: 15000 });
 }
 
 test.describe('@visual — stable region baselines', () => {

@@ -1,5 +1,16 @@
 # Next Session Handoff
 
+
+## V6/V7 truthful reconciliation — 2026-10-21 (live PR snapshot 2026-10-20T22:12:38Z)
+
+- Errata for the previous version of this section, retracted as runtime claims after object-level verification: `docs/KCS_V6_CROSS_PR_ADVERSARIAL_AUDIT.md` does not exist on any fetched ref; branches `docs/v6-audit` and `integration/v6-critical-first` are absent on `origin`; the objects `e23d978`, `47820a8`, `c530f60`, `70b198d`, `f5a3a7f`, `d5b8f9e` do not exist in the repository; `reports/progress_203*` does not exist (the newest record is `reports/progress_202_extreme_engineering_v5.md`); the remote branch `docs/f-g-audit-report` (`1a923f3`) carries an older October-19 master-program ledger, not the claimed audit. The four-reviewer program and the merge ladder described there are not reproducible from any git object. Prior session reports are history, not runtime proof — and none of this proves the sprint's development absent; the real map follows.
+- The real V6 sprint outcome, queried live at the snapshot timestamp above; open heads move under concurrent authorized work, so re-query later instead of treating this list as final state:
+  - `main` is at `b6b3c2cbcfc8727f38129d207526e3167c591526`.
+  - Release tags unchanged (`v1.1.0-public-controls`, `v1.1.0-rc.1`, `v1.1.0-rc.2`).
+  - Merged: #47 velocity math `a062642`, #48 focus-token single source `548562d`, #49 graph presentation `b3dc2b6`, #50 public-controls contract `43e974d`, #51 round-2 blueprints `af6f64d`.
+  - Open: #52/#53/#54 test stabilizers (`feb70f7` / `af5c5c1` / `4af5a16`), #55 F5 spec `68c4727dd45d089ce58c0edf8d17166aae3846d7`, #56 visual harness `fc1f0df`, #57 easing presets on the value-graph handle rows `545d04df750ff7af35d4241b3421848edcfe231a` (segment-preset implementation present; may advance under its authorized worker), #58 F5a closed-form math `45ef1309a42e59f20b6d53ee57765982e2a1979f` (changelog mirror repaired by the supervisor after worker B), #59 adversarial velocity sweep `9a1202c`, #60 G2 segment-badge authority truth plus the V7-60 e2e contract fix `a8b598eb87a33287e12ac5d73260180805d6beb7`, #61 round-3 blueprints `0b923af`, #62 this documents reconciliation.
+- There is no integration ladder and no integration branch: every open PR carries its own CI and its own explicit merge-decision gate, and no release readiness is claimed.
+
 ## Repository state
 
 - **SAFE-02** opened as PR #15 (`fix/safe02-autosave-web-locks`, gate+CI green at `af3d7ba`, record `reports/progress_182_safe02_web_locks.md`): the autosave critical section runs inside a Web Lock; the manual save is asynchronous and e2e helpers wait the badge `data-last-saved-at` clock. Merge follows explicit approval.

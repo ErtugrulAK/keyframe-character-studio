@@ -486,6 +486,14 @@ test('A1 guard: a blocked quota surfaces write-failed and the failed save says s
   });
   await earnDirtyEdit(page);
   // The honest badge reports the failing persistence before any reload choice.
+  // Readiness is event-driven, not clock-driven: the badge click runs the very
+  // same save path the 10-second autosave tick drives, so the failing write
+  // happens NOW instead of after the next tick — under full-suite CPU
+  // contention the tick-plus-commit could exceed any fixed short budget
+  // (observed first-attempt red in a loaded run, green isolated), while the
+  // click-driven state flip is deterministic and the 15 s allowance now only
+  // covers the React commit.
+  await page.locator('.autosave-status-badge').click();
   await expect(page.locator('.autosave-status-badge--error')).toBeVisible({ timeout: 15_000 });
   const dirty = await fpsValue(page);
   const { card, reloadButton } = await openFailureCard(page);

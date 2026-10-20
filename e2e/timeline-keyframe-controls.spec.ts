@@ -181,12 +181,17 @@ test('R5-07 — the property rows use one neutral [◀][+][▶] strip', async ({
   const strip = await page.evaluate(() => {
     const row = document.querySelector('[data-property-channel="x"]') as HTMLElement;
     const controls = row.querySelector('.ue-channel-controls') as HTMLElement;
-    const buttons = Array.from(controls.querySelectorAll('button'));
+    // R5-07 scopes the neutral trio; K1's stopwatch shares the strip and is
+    // asserted separately — counting raw <button> children conflates the two
+    // contracts and fails the moment either side legitimately changes.
+    const buttons = Array.from(controls.querySelectorAll('.track-icon-btn, .track-add-kf-btn'));
+    const stopwatch = controls.querySelector('.ue-channel-stopwatch') as HTMLElement | null;
     const colour = (node: Element) => getComputedStyle(node).color;
     const addButton = row.querySelector('.track-add-kf-btn') as HTMLElement;
     const lane = document.querySelector('.ue-channel-lane .ue-prop-diamond') as HTMLElement;
     return {
       buttonCount: buttons.length,
+      stopwatchPressed: stopwatch?.getAttribute('aria-pressed') ?? null,
       cursors: buttons.map((button) => getComputedStyle(button).cursor),
       arrowColours: Array.from(row.querySelectorAll('.track-icon-btn')).map((node) => colour(node)),
       addColour: colour(addButton),
@@ -200,8 +205,10 @@ test('R5-07 — the property rows use one neutral [◀][+][▶] strip', async ({
     };
   });
 
-  // The trio, in order: previous, add, next — as bare icon buttons.
+  // The trio, in order: previous, add, next — as bare icon buttons, and the
+  // K1 stopwatch present alongside them in its armed (pressed) state.
   expect(strip.buttonCount).toBe(3);
+  expect(strip.stopwatchPressed, 'the animated channel keeps its armed stopwatch').toBe('true');
   expect(strip.addGlyph).toContain('lucide-plus');
   expect(strip.addGlyph, 'the add action is still a coloured keyframe glyph').not.toContain('diamond');
   expect(strip.addGlyphStroke, 'the plus must inherit the strip colour instead of carrying its own').toBe('currentColor');

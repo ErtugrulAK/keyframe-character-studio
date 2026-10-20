@@ -33,7 +33,7 @@ import { useInspector } from '../hooks/useInspector';
 import { useTimeline } from '../hooks/useTimeline';
 import { useTemplates } from '../hooks/useTemplates';
 import { useMath } from '../hooks/useMath';
-import { useSerialization, type AutosavePersistenceError } from '../hooks/useSerialization';
+import { useSerialization, type AutosavePersistenceError, type PersistenceSafety } from '../hooks/useSerialization';
 import { useToast, type ToastOptions } from '../hooks/useToast';
 import { usePresets, type SavePresetInput, type UpdatePresetInput } from '../hooks/usePresets';
 import { useProjectState } from '../hooks/useProjectState';
@@ -104,6 +104,10 @@ export interface AnimatorContextType {
   /** D2: last persistence failure behind the badge; null while saves land. */
   autosaveError: AutosavePersistenceError | null;
   triggerManualSave: () => void;
+  /** A1: point-in-time reload-safety verdict for destructive navigation guards. */
+  getPersistenceSafety: () => PersistenceSafety;
+  /** A1: forced durable write resolving true only when the key advanced. */
+  forceSaveNow: () => Promise<boolean>;
 
   // Undo / Redo History
   undo: () => void;
@@ -676,6 +680,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     manualSaveRejectedAt,
     autosaveError,
     triggerManualSave,
+    getPersistenceSafety,
+    forceSaveNow,
     exportProject,
     importProject,
     resetProject,
@@ -821,6 +827,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         manualSaveRejectedAt,
         autosaveError,
         triggerManualSave,
+        getPersistenceSafety,
+        forceSaveNow,
         undo,
         redo,
         canUndo,

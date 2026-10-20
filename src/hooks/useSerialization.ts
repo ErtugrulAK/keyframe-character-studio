@@ -419,6 +419,10 @@ const MANUAL_SAVE_LOCK_WAIT_MS = 1_000;
  *  of showing a stale success. Cleared by the first write that lands. */
 export type AutosavePersistenceError = { kind: 'quota' | 'unavailable'; at: number };
 
+export type PersistenceSafety =
+  | { safe: true; reason: 'clean' }
+  | { safe: false; reason: 'unsaved-changes' | 'save-in-flight' | 'write-failed' | 'conflict-paused' };
+
 const isQuotaError = (error: unknown): boolean => {
   const candidate = error as { name?: string; code?: number };
   return candidate?.name === 'QuotaExceededError'
@@ -469,6 +473,20 @@ export interface UseSerializationApi {
   manualSaveRejectedAt: number | null;
   autosaveError: AutosavePersistenceError | null;
   triggerManualSave: () => void;
+  /**
+   * Point-in-time persistence verdict for destructive navigation decisions
+   * (the GIF chunk-reload recovery). Computed from refs and the current
+   * serialization, never a boolean guess: `safe` is true only when nothing
+   * is in flight, no conflict pause is latched, no write has failed and the
+   * screen document is exactly what the last landed write covered.
+   */
+  getPersistenceSafety: () => PersistenceSafety;
+  /**
+   * One forced durable write through the existing SAFE-01/02 critical section,
+   * for callers that must know the outcome before a destructive action.
+   * Resolves true only when the shared key actually advanced.
+   */
+  forceSaveNow: () => Promise<boolean>;
   exportProject: () => string;
   importProject: (jsonStr: string, defaultName?: string) => ImportResult;
   resetProject: () => void;
@@ -957,6 +975,30 @@ export const useSerialization = ({
     return true;
   }, [activeProjectTemplateId, activeTemplateId, characterParts, coordinateSystem, fps, motionTemplates, projectResolution, sceneTitle, setCharacterParts, setCoordinateSystem, setTemplateCanvasStore, setTracks, totalFrames, tracks]);
 
+  // A1: single synchronous verdict for destructive-navigation callers. All
+  // state lives in refs set synchronously by the write path, so this is a
+  // point-in-time fact, not a render-time approximation.
+  const getPersistenceSafety = useCallback((): PersistenceSafety => {
+    if (autosavePausedRef.current) return { safe: false, reason: 'conflict-paused' };
+    if (manualPendingRef.current) return { safe: false, reason: 'save-in-flight' };
+    if (autosaveError !== null) return { safe: false, reason: 'write-failed' };
+    try {
+      if (buildSceneJson() !== settledSaveRef.current) return { safe: false, reason: 'unsaved-changes' };
+    } catch {
+      return { safe: false, reason: 'write-failed' };
+    }
+    return { safe: true, reason: 'clean' };
+  }, [buildSceneJson, autosaveError]);
+
+  // A1: one forced durable write through the existing SAFE-01/02 critical
+  // section; resolves true only when the key actually advanced (casWrite's
+  // own honest contract).
+  const forceSaveNow = useCallback(async (): Promise<boolean> => {
+    if (autosavePausedRef.current) return false;
+    const outcome = await runWithAutosaveLock(() => casWrite(true), 'queue').catch(() => null);
+    return Boolean(outcome?.ran && outcome.value === true);
+  }, [casWrite, runWithAutosaveLock]);
+
   return {
     lastSavedAt,
     restoredFromLocalStorage,
@@ -964,6 +1006,8 @@ export const useSerialization = ({
     manualSaveRejectedAt,
     autosaveError,
     triggerManualSave,
+    getPersistenceSafety,
+    forceSaveNow,
     exportProject,
     importProject,
     resetProject,

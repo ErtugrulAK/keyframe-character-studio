@@ -6,7 +6,7 @@
 // host that never blanks when the chunk is gone.
 import React from 'react';
 import '@testing-library/jest-dom';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SceneData } from '../types/composition';
 import { GifPanelGate, type GifPanelGateProps } from '../components/Header/GifPanelGate';
@@ -116,5 +116,147 @@ describe('D1 — GifPanelGate', () => {
     await screen.findByRole('alertdialog', { name: 'GIF export unavailable' });
     expect(calls).toBe(2);
     expect(screen.getByTestId('editor-still-here')).toBeInTheDocument();
+  });
+
+  it('offers hard reload only after an in-page retry has failed once', async () => {
+    calls = 0;
+    outcomes = [failOnce];
+    const reload = vi.fn();
+    render(
+      <div>
+        <div data-testid="editor-still-here">editor alive</div>
+        <GifPanelGate
+          scene={scene}
+          sceneTitle="d1"
+          onClose={() => undefined}
+          onBlocked={() => undefined}
+          showToast={() => undefined}
+          loadPanel={loader}
+          reloadApp={reload}
+          persistenceStatus={() => ({ safe: true, reason: 'clean' })}
+        />
+      </div>,
+    );
+    await screen.findByRole('alertdialog', { name: 'GIF export unavailable' });
+    // First failure: the in-page retry is the only offered action.
+    expect(screen.queryByRole('button', { name: 'Reload editor' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await screen.findByRole('alertdialog', { name: 'GIF export unavailable' });
+    // A chunk whose first fetch failed stays failed in the module map for this
+    // document, so the second failure must surface the documented recovery.
+    const reloadButton = await screen.findByRole('button', { name: 'Reload editor' });
+    fireEvent.click(reloadButton);
+    // With a clean persistence verdict the guard lets the informed reload pass.
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('editor-still-here')).toBeInTheDocument();
+  });
+});
+
+describe('A1 — reload guard against unsaved work', () => {
+  const host = (over: Partial<GifPanelGateProps>) => (
+    <div>
+      <div data-testid="editor-still-here">editor alive</div>
+      <GifPanelGate
+        scene={scene}
+        sceneTitle="d1"
+        onClose={() => undefined}
+        onBlocked={() => undefined}
+        showToast={() => undefined}
+        loadPanel={loader}
+        {...over}
+      />
+    </div>
+  );
+
+  const openFailingCard = async (over: Partial<GifPanelGateProps>) => {
+    calls = 0;
+    outcomes = [failOnce];
+    render(host(over));
+    await screen.findByRole('alertdialog', { name: 'GIF export unavailable' });
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await screen.findByRole('alertdialog', { name: 'GIF export unavailable' });
+    return screen.getByRole('button', { name: 'Reload editor' });
+  };
+
+  it('A: clean persistence reloads immediately, without any confirmation', async () => {
+    const reload = vi.fn();
+    const reloadButton = await openFailingCard({ reloadApp: reload, persistenceStatus: () => ({ safe: true, reason: 'clean' }) });
+    fireEvent.click(reloadButton);
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('group', { name: 'Reload confirmation' })).not.toBeInTheDocument();
+  });
+
+  it('B: unsaved changes block a silent reload and surface the informed choice', async () => {
+    const reload = vi.fn();
+    const reloadButton = await openFailingCard({ reloadApp: reload, persistenceStatus: () => ({ safe: false, reason: 'unsaved-changes' }) });
+    fireEvent.click(reloadButton);
+    expect(reload).not.toHaveBeenCalled();
+    const group = await screen.findByRole('group', { name: 'Reload confirmation' });
+    expect(group).toHaveTextContent(/unsaved/i);
+    expect(within(group).getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    expect(within(group).getByRole('button', { name: 'Save and reload' })).toBeInTheDocument();
+    expect(within(group).getByRole('button', { name: 'Reload without saving' })).toBeInTheDocument();
+  });
+
+  it('C: an in-flight write is treated as unsaved work too', async () => {
+    const reloadButton = await openFailingCard({ reloadApp: vi.fn(), persistenceStatus: () => ({ safe: false, reason: 'save-in-flight' }) });
+    fireEvent.click(reloadButton);
+    await screen.findByRole('group', { name: 'Reload confirmation' });
+  });
+
+  it('D: a failed write offers save-retry and keeps the destructive path explicit', async () => {
+    const reload = vi.fn();
+    const save = vi.fn().mockResolvedValue(false);
+    const reloadButton = await openFailingCard({ reloadApp: reload, saveBeforeReload: save, persistenceStatus: () => ({ safe: false, reason: 'write-failed' }) });
+    fireEvent.click(reloadButton);
+    const group = await screen.findByRole('group', { name: 'Reload confirmation' });
+    fireEvent.click(within(group).getByRole('button', { name: 'Save and reload' }));
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    // The failed save must not reload and must say so; the card stays usable.
+    await waitFor(() => expect(within(group).getByText(/could not be saved/i)).toBeInTheDocument());
+    expect(reload).not.toHaveBeenCalled();
+    expect(screen.getByTestId('editor-still-here')).toBeInTheDocument();
+  });
+
+  it('F: cancel closes the confirmation with the editor untouched and nothing reloaded', async () => {
+    const reload = vi.fn();
+    const reloadButton = await openFailingCard({ reloadApp: reload, persistenceStatus: () => ({ safe: false, reason: 'unsaved-changes' }) });
+    fireEvent.click(reloadButton);
+    const group = await screen.findByRole('group', { name: 'Reload confirmation' });
+    fireEvent.click(within(group).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('group', { name: 'Reload confirmation' })).not.toBeInTheDocument());
+    expect(reload).not.toHaveBeenCalled();
+    // The card keeps both recovery actions available after cancel.
+    expect(screen.getByRole('button', { name: 'Reload editor' })).toBeInTheDocument();
+  });
+
+  it('G: the destructive choice reloads only after the explicit informed click', async () => {
+    const reload = vi.fn();
+    const reloadButton = await openFailingCard({ reloadApp: reload, persistenceStatus: () => ({ safe: false, reason: 'conflict-paused' }) });
+    fireEvent.click(reloadButton);
+    const group = await screen.findByRole('group', { name: 'Reload confirmation' });
+    // A conflict-paused document must not offer a save (writes are latched off).
+    expect(within(group).queryByRole('button', { name: 'Save and reload' })).not.toBeInTheDocument();
+    expect(reload).not.toHaveBeenCalled();
+    fireEvent.click(within(group).getByRole('button', { name: 'Reload without saving' }));
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('H: a save that lands proceeds to reload in one user action', async () => {
+    const reload = vi.fn();
+    const save = vi.fn().mockResolvedValue(true);
+    const reloadButton = await openFailingCard({ reloadApp: reload, saveBeforeReload: save, persistenceStatus: () => ({ safe: false, reason: 'unsaved-changes' }) });
+    fireEvent.click(reloadButton);
+    const group = await screen.findByRole('group', { name: 'Reload confirmation' });
+    fireEvent.click(within(group).getByRole('button', { name: 'Save and reload' }));
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+  });
+
+  it('J: no probe means no assumed-safe reload — the guard fails closed', async () => {
+    const reload = vi.fn();
+    const reloadButton = await openFailingCard({ reloadApp: reload });
+    fireEvent.click(reloadButton);
+    expect(reload).not.toHaveBeenCalled();
+    await screen.findByRole('group', { name: 'Reload confirmation' });
   });
 });

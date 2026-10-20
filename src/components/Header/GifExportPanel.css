@@ -136,6 +136,19 @@
   color: var(--kcs-accent);
 }
 
+/* A1: informed-choice sub-panel inside the failure card. */
+.gif-export-reload-confirm {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--kcs-border-subtle);
+  border-radius: var(--radius-xs);
+  background: var(--kcs-bg-shell);
+}
+.gif-export-danger {
+  border-color: var(--kcs-danger);
+  color: var(--kcs-danger);
+}
+
 .gif-export-progress {
   display: flex;
   flex-direction: column;

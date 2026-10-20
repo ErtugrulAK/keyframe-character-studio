@@ -12,7 +12,13 @@ Companion to Round-2 blueprint F5. Inputs: `applyEasing`/`interpolateChannel`
 For one segment between keyframes $k_0=(t_0,v_0,\text{out})$ and $k_1=(t_1,v_1,\text{in})$,
 $\Delta t=t_1-t_0>0$, local time $u=(t-t_0)/\Delta t\in[0,1]$:
 
-$$v(t)=\mathrm{lerp}(v_0,v_1,E(u)),\qquad E(u)=\frac{y(s)}{x(s)}\ \text{where}\ u=x(s)$$
+$$v(t)=\mathrm{lerp}(v_0,v_1,E(u)),\qquad u=x(s),\quad E(u)=y(s)=y\!\left(x^{-1}(u)\right)$$
+
+$E$ is the $y$-coordinate evaluated at the parameter whose $x$ equals $u$ — a
+parametric inverse, NOT the quotient $y(s)/x(s)$ (V6 correction; the earlier
+shorthand on this line was wrong and is retracted). Sanity anchor: the
+Ease-In-Out preset $(0.42,0,0.58,1)$ at $u=0.5$ gives $s=0.5$ and $E=0.5$ —
+the value-graph curve passes through its own midpoint, not $1$.
 
 with (P0=(0,0), P3=(1,1), $x_1=h_{out}.x, y_1=h_{out}.y, x_2=h_{in}.x, y_2=h_{in}.y$):
 
@@ -73,31 +79,42 @@ non-identifiability:
 ## 3. The representable editable subset (proposed contract)
 
 Speed editing = **endpoint-slope editing**, x-handles fixed by the value graph.
-Given user target slopes $g_0,g_1\ge0$ (in units of eased-progress per eased-progress,
-i.e. dimensionless $E'$), the unique preimages are:
+Given real target slopes $g_0,g_1\in\mathbb{R}$ (dimensionless eased-progress
+slopes $E'$; V6 correction — the previous "$\ge0$" was contradictory: negative
+slopes are exactly what anticipation writes), the unique preimages are:
 
 $$y_1=g_0\,x_1,\qquad y_2=1-g_1\,(1-x_2)$$
 
-Validity envelope (storage stays in the range the evaluator and the
-endpoint-slope gesture can legitimately ask for):
-$y_i\in[-\alpha,1+\alpha]$ with $\alpha=0.5$. Erratum (audit): two built-in
-PRESETS (Elastic: $y=-0.55,1.55$) sit marginally outside this envelope; presets
-write handles directly through the value graph and are not bound by the
-speed-gesture envelope — the inverse mapping clamps its own outputs at the
-envelope and reports the clamp, never writing silently.
+**Four distinct domains (V6 separation — never conflate them):**
+1. *Storage / evaluator acceptance*: any finite $x_i,y_i$; monotone-in-time
+   behaviour requires $x_i\in[0,1]$ (cone, §2.4) — outside it the Newton solver
+   is unreliable, which is a runtime property, not a validation rule.
+2. *Curve Studio UI clamp*: the modal clamps authored handles to its own on-screen
+   window ($y\in[-1,2]$ visible band) — a UI affordance bound only.
+3. *F5 gesture envelope*: $y_i\in[-\alpha,1+\alpha]$, $\alpha=0.5$ — the range a
+   slope gesture will write; outside it the inverse CLAMPS AND REPORTS
+   (`handlesFromEndpointSlopes` returns `clamped`/`lossy`), never writes silently.
+   This is NOT the storage domain: the built-in Elastic preset's y pair
+   ($-0.55,\,1.55$) sits outside it and writes through the value graph directly
+   (V6 wording correction — one preset with two y-values, not "two presets").
+4. *Write-conditioning policy*: the gesture refuses $x_i$ within
+   $\tau=10^{-6}$ of the singular endpoints (`out-x-not-representable`); the
+   READ side descends by derivative order and reads near-singular handles
+   exactly (§1 degenerate classes, PR #58).
+
 Segment coupling at a shared key is natural, not ambiguous: $h_{out}$ of key $k$
 owns the entry of the segment that STARTS at $k$; $h_{in}$ of key $k$ owns the exit
-of the segment that ENDS at $k$. A key-centric gesture edits both with a documented
-modifier (mirrored), reusing the value panel's existing handle patch format
-(`onChangeKeyframeHandles` — one write transaction per gesture, existing undo
-semantics).
+of the segment that ENDS at $k$. A preset applies to an OUTGOING segment as one
+atomic pair write (PR #57 `applyTemporalHandlesToSegmentMutator` — one gesture,
+one document write, one undo entry).
 
-Displayed speeds convert with the segment scale: $V=g\cdot k$ [value-units/frame],
-exactly the unit `TemporalGraphPanel` already labels (`value-units/frame`). When
-$k<0$ (decreasing channel) the UI must show that slope drags move the curve in the
-sign-flipped direction, or normalize internally and render signed speed — decided
-here: **render signed speed** (matching `channelVelocityAt`), convert at the
-authority boundary, never store speed.
+**Units and signs (V6)**: with the SIGNED scale $k=(v_1-v_0)/\Delta t$,
+$V=g\cdot k$ [value-units/frame]. On a descending channel ($k<0$) a non-negative
+slope $g$ yields negative physical velocity $V$; the speed view renders SIGNED
+$V$ (matching `channelVelocityAt`), converts at the authority boundary, and never
+stores speed. Overflow and non-identifiability are explicit refusals in the
+public API (`overflow-result`, `zero-displacement`, `zero-duration`), never
+silent infinities.
 
 ## 4. Worked numerical examples
 
@@ -115,6 +132,23 @@ Segment $t_0=0,t_1=10,v_0=0,v_1=100$ → $k=10$ [val-units/frame].
 4. **Hold** $v_0=v_1=5$: any $V$ target → disabled affordance; measured $V\equiv0$.
 5. **Zero displacement, non-hold** $(v_1=v_0)$: same — disabled, per Limit 2.
 
+## 4.5 Authority eligibility (V6) — which segment representations may use the inverse
+
+Evaluator precedence (defaults.applyEasing, mirrored by the runtime):
+**HOLD > complete temporal pair > bezierControlPoints/autoBezier > named easing.**
+
+| Segment state | Inverse edit meaningful? | Policy |
+|---|---|---|
+| Complete temporal pair (prev.out && next.in) | **yes** — this is the editable subset | gesture writes the pair |
+| HOLD start key | no — evaluator returns 0 before handles | affordance DISABLED (never an inert write) |
+| bezierControlPoints only (no pair) | no — cp wins until a pair exists | gate DISABLED or upgrade consciously; #57 chose atomic pair write that supersedes cp only when the evaluator will prefer the pair |
+| autoBezier (derived cp, no explicit cp) | no — same tier as cp | disabled for the gesture |
+| Named non-cubic (bounce/elastic/…) | no — switch branch wins until pair completes | disabled |
+| Partial pair (one side only) | target state only after the gesture completes it | atomic pair write IS the completion path (#57) |
+| Duplicate/zero-duration frames | no — no curve exists (Limit 2) | refused at scale (`zero-duration`) |
+| Zero displacement $v_1=v_0$ | no — $V\equiv0$ for all handles (Limit 2) | refused at scale (`zero-displacement`) |
+| Singular x handles ($x_i\in\{0,1\}$ or near) | read: exact by derivative-order descent; write: refused within $\tau$ | see §3 domain 4 |
+
 ## 5. Test vectors (RED/GREEN plan for a future PR)
 
 - T1 endpoint-slope table: for 20 sampled handle pairs (property-based over the cone),
@@ -127,7 +161,11 @@ Segment $t_0=0,t_1=10,v_0=0,v_1=100$ → $k=10$ [val-units/frame].
 
 ## 6. PR decomposition if ever approved
 
-- F5a (pure math): `speedInverse.ts` — slope↔handle formulas + cone projection + T1–T3. No UI.
+- F5a (pure math): **implemented as PR #58 (OPEN — not main behavior)**:
+  `src/utils/speedInverse.ts` exposes `endpointSlopesFromHandles`,
+  `handlesFromEndpointSlopes`, `segmentVelocityScale`,
+  `physicalVelocityToNormalized`, `normalizedSlopeToPhysicalVelocity`;
+  V6-corrected classification and explicit refusals. No UI caller until F5b.
 - F5b (UI, gated on F5a + product approval): slope handles on the speed panel via
   existing `onChangeKeyframeHandles`; disabled-state rules above; keyboard parity.
 - Explicitly out of any first PR: interior reshaping (needs a residual indicator and

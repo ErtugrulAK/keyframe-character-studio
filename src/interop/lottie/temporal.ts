@@ -126,7 +126,11 @@ const toSceneFrame = (time: number, context: TemporalMappingContext): number =>
  *
  * The `in` handle of a segment becomes `bezierIn` on the keyframe that ends the
  * segment, and the `out` handle becomes `bezierOut` on the keyframe that starts
- * it, so a converted channel keeps both sides of every curve.
+ * it, so a converted channel keeps both sides of every curve. KCS evaluates a
+ * segment only from the complete pair, so a segment whose readable handles never
+ * form one is reported with the easing it actually gets — the default cubic when
+ * the outgoing half was read, linear when it was not — and the mapped timings
+ * themselves are left exactly as the halves describe them.
  */
 export const mapLottieSegmentTiming = (
   keyframes: LottieKeyframe[],
@@ -169,6 +173,18 @@ export const mapLottieSegmentTiming = (
         message: `The outgoing easing handle of keyframe ${index} of "${context.channel}" carries no value this channel can read, so the segment that starts there was imported as linear.`,
         action: 'Export the document again from its source application so the keyframe handles carry numeric values.',
       });
+    } else if (continues && resolveHandle(keyframe.in, context.dimension) !== undefined) {
+      // The outgoing half is simply absent while the incoming one is readable:
+      // the lone handle cannot form the pair KCS evaluates, so the segment runs
+      // linear and says so at the handle that is missing.
+      diagnostics.push({
+        code: 'LOTTIE_UNREADABLE_EASING',
+        severity: 'warning',
+        feature: 'lottie-import',
+        path: `${context.path}[${index}].o`,
+        message: `Keyframe ${index} of "${context.channel}" carries an incoming easing handle but no outgoing one, so the segment that starts there was imported as linear.`,
+        action: 'Model the easing as a complete outgoing/incoming handle pair in the source document and export again.',
+      });
     }
     if (keyframe.roving) {
       diagnostics.push({
@@ -198,21 +214,38 @@ export const mapLottieSegmentTiming = (
   accepted.forEach((keyframe, index) => {
     if (keyframe.hold === true || keyframe.roving === true || keyframe.expression !== undefined) return;
     const target = timing[index + 1];
-    if (!keyframe.in || !target) return;
-    const inHandle = resolveHandle(keyframe.in, context.dimension);
-    if (!inHandle) {
+    if (!target) return;
+    const inHandle = keyframe.in ? resolveHandle(keyframe.in, context.dimension) : undefined;
+    if (inHandle) {
+      target.easing = 'bezier';
+      target.bezierIn = inHandle;
+      return;
+    }
+    // An outgoing handle that was read makes the segment evaluate on the
+    // default cubic; without one the easing stays linear. The report names
+    // whichever outcome this segment actually gets — never the other.
+    const pairedOutgoing = timing[index].bezierOut !== undefined;
+    if (keyframe.in) {
       diagnostics.push({
         code: 'LOTTIE_UNREADABLE_EASING',
         severity: 'warning',
         feature: 'lottie-import',
         path: `${context.path}[${index}].i`,
-        message: `The incoming easing handle of keyframe ${index} of "${context.channel}" carries no value this channel can read, so the segment that ends at keyframe ${index + 1} was imported as linear.`,
+        message: pairedOutgoing
+          ? `The incoming easing handle of keyframe ${index} of "${context.channel}" carries no value this channel can read, so the segment that ends at keyframe ${index + 1} is evaluated with the default cubic easing instead of the curve the source described.`
+          : `The incoming easing handle of keyframe ${index} of "${context.channel}" carries no value this channel can read, so the segment that ends at keyframe ${index + 1} was imported as linear.`,
         action: 'Export the document again from its source application so the keyframe handles carry numeric values.',
       });
-      return;
+    } else if (pairedOutgoing) {
+      diagnostics.push({
+        code: 'LOTTIE_UNREADABLE_EASING',
+        severity: 'warning',
+        feature: 'lottie-import',
+        path: `${context.path}[${index}].i`,
+        message: `Keyframe ${index} of "${context.channel}" carries an outgoing easing handle but no incoming one, so the segment that ends at keyframe ${index + 1} is evaluated with the default cubic easing instead of the curve the source described.`,
+        action: 'Model the easing as a complete outgoing/incoming handle pair in the source document and export again.',
+      });
     }
-    target.easing = 'bezier';
-    target.bezierIn = inHandle;
   });
 
   return { accepted, timing, diagnostics };

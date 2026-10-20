@@ -114,4 +114,15 @@ describe('#57 GREEN — segment-level atomic application', () => {
     // and the untouched track instance identity proves nothing else moved
     expect((after as Array<{ id: string }>)[0].id).toBe('t1');
   });
+
+  it('cross-sequence segment resolves inside the start key scope — the NEXT in-sequence key gets the pair', () => {
+    const mixed: PropertyKeyframe[] = [
+      { id: 'a', frame: 0, value: 0, easing: 'linear', templateId: 'Sequence' },
+      { id: 'x', frame: 40, value: 40, easing: 'linear', templateId: 'Named' },
+      { id: 'b', frame: 100, value: 100, easing: 'linear', templateId: 'Sequence' },
+    ];
+    const after = keysOf(apply(mixed, 'a'));
+    expect(after.find((k) => k.id === 'x')).toEqual(mixed[1]); // foreign scope untouched
+    expect(after.find((k) => k.id === 'b')!.bezierIn).toEqual(EASE_IN_OUT.in);
+  });
 });

@@ -12,6 +12,11 @@ export default defineConfig({
   forbidOnly: isCiRun,
   retries: isCiRun ? 2 : 0,
   reporter: 'html',
+  // V1: the @visual screenshot suite is opt-in via npm run qa:visual (the
+  // runner script sets KCS_VISUAL=1); no default behavior run ever asserts
+  // pixels. Baselines are per-platform — see docs/KCS_VISUAL_QA.md.
+  grepInvert: process.env.KCS_VISUAL === '1' ? undefined : /@visual/,
+  snapshotPathTemplate: '{testDir}/visual/{arg}{-platform}{ext}',
   use: {
     baseURL: `http://${qaHost}:${qaPort}`,
     trace: 'on-first-retry',

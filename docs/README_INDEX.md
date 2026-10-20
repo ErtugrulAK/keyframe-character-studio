@@ -99,6 +99,7 @@ Most recent checkpoint (a historical record, kept unchanged): `docs/checkpoints/
 - `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` — Milestone F study and per-item approval gates.
 - `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` — Milestone E study and implementation plan.
 - `docs/KCS_SPRINT_BLUEPRINTS_AND_AUDITS.md` — production profiling baseline, keyboard/chrome/design audits, Graph Editor V2 and migration pipeline blueprints, UX backlog, release-readiness facts.
+- `docs/KCS_FEATURE_BLUEPRINTS_ROUND_2.md` — round-2 feature blueprints (canvas tangent editing, matte picker, Lottie mapping v1, SVG mask gate, speed-graph editability spec) with owners, non-goals and acceptance gates.
 
 ## Checkpoints
 

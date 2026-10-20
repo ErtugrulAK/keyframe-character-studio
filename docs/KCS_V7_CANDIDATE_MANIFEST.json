@@ -1,0 +1,48 @@
+{
+  "purpose": "V7 candidate assembly manifest: immutable record of this bounded source-assembly phase. Not a working ledger and not a final certification.",
+  "scope": "PRE_LOTTIE_ASSEMBLY",
+  "base": "b6b3c2cbcfc8727f38129d207526e3167c591526",
+  "method": "Source-patch assembly: full reviewed diff of each exact head applied with git apply (binary-safe); overlapping paths hand-merged with keep-all surgical edits. No git merge, cherry-pick, or rebase.",
+  "applyOrder": [52, 53, 54, 59, 56, 55, 61, 58, 57, 60, 62],
+  "heads": [
+    { "pr": 52, "head": "feb70f71b7213e341a9468213ce9e243f9cd786d", "title": "test(gif): event-driven badge readiness in the A1 quota e2e" },
+    { "pr": 53, "head": "af5c5c17d91a88deb1914034342091c2bca0c209", "title": "test(history): race-free import-confirmation readiness" },
+    { "pr": 54, "head": "4af5a1666bafe8f63066172ea3afcb4e73ecf806", "title": "test(toolbar): settle-gate for the collapse geometry baseline" },
+    { "pr": 55, "head": "68c4727dd45d089ce58c0edf8d17166aae3846d7", "title": "docs(f5): speed-graph inverse-mapping specification" },
+    { "pr": 56, "head": "fc1f0df1bee07dda5ea45371dd674891a05d6051", "title": "test(visual): opt-in screenshot harness with per-platform baselines (V1)" },
+    { "pr": 57, "head": "a16063980c1811f76f682a7f6f6bb84845e0c34d", "title": "feat(graph): built-in easing presets on value-graph handle rows (E1)" },
+    { "pr": 58, "head": "45ef1309a42e59f20b6d53ee57765982e2a1979f", "title": "feat(math): F5a endpoint-slope <-> handle closed form" },
+    { "pr": 59, "head": "9a1202ce30813512eaeea9c5a4d2c76dfa6a46b8", "title": "test(math): adversarial velocity counterexample sweep (M2)" },
+    { "pr": 60, "head": "a432dbc2541f51276fb7c2298db7311efaada29c", "title": "fix(graph): segment badges name the curve the authority applies (G2)" },
+    { "pr": 61, "head": "0b923afac5577b3c69e7b2915cbf9f302a434eaa", "title": "docs(round3): graph-editing gates, markers, palette, visual plan + O4 guard extension" },
+    { "pr": 62, "head": "95e94760f37497836e35e1ce96aaa18bf1d5166d", "title": "docs: V6 session handoff" }
+  ],
+  "overlapResolutions": [
+    {
+      "paths": ["CHANGELOG.md", "chatgpt_handoff/latest/CHANGELOG.md"],
+      "prs": [58, 60, 57],
+      "resolution": "keep-all bullets in resolved order 58, 60, 57 (Fixed: P0-58 then P0-57; Added: badge-truth then provider-history note); tracked mirror rewritten byte-identical to root CHANGELOG.md."
+    },
+    {
+      "paths": ["src/components/Inspector/TemporalGraphPanel.tsx"],
+      "prs": [57, 60],
+      "resolution": "Import line carries effectiveSegmentAuthority (PR60) and PRESET_BEZIERS (PR57); PR60 badge/authority body and PR57 presetAPI prop + preset row body both preserved (body hunks disjoint)."
+    },
+    {
+      "paths": ["src/tests/TemporalGraphPanel.test.tsx"],
+      "prs": [57, 60],
+      "resolution": "keep-all: PR60 a11y badge-exclusion loop and G2/V6 describes first, PR57 E1 describe last."
+    },
+    {
+      "paths": ["docs/README_INDEX.md"],
+      "prs": [55, 61],
+      "resolution": "keep-all row additions from both PRs."
+    }
+  ],
+  "notes": [
+    "PR56 win32 binary baselines applied via git apply --binary and byte-verified against the head blobs; no baselines generated or updated.",
+    "PR57 head a160639 includes src/tests/temporalPresetHistory.test.tsx (provider-seam history regression).",
+    "PR62 applied last; chatgpt_handoff/latest/NEXT_SESSION.md byte-identical to root NEXT_SESSION.md.",
+    "Not included: the in-progress Lottie diagnostics PR; full unit/Chromium suites belong to the separate final QA stage."
+  ]
+}

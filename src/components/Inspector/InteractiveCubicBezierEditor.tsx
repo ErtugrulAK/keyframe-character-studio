@@ -4,6 +4,7 @@ import { Copy, Check, X, Play, Pause, Sparkles } from 'lucide-react';
 import type { PropertyKeyframe, TemporalHandle } from '../../types/animator';
 import { TemporalGraphPanel } from './TemporalGraphPanel';
 import { solveCubicBezier } from '../../utils/defaults';
+import { PRESET_BEZIERS } from './easingPresets';
 interface InteractiveCubicBezierEditorProps {
   controlPoints?: [number, number, number, number]; // [x1, y1, x2, y2]
   onChange: (points: [number, number, number, number]) => void;
@@ -24,21 +25,14 @@ interface InteractiveCubicBezierEditorProps {
     keyframeId: string,
     patch: { bezierIn?: TemporalHandle; bezierOut?: TemporalHandle },
   ) => void;
+  /** #57 (V6): forwarded segment-scope preset application (host-provided). */
+  onApplySegmentPreset?: (keyframeId: string, outgoing: TemporalHandle, incoming: TemporalHandle) => void;
   /** Opens/closes ONE undo entry around a continuous curve or graph drag. */
   onBatchStart?: () => void;
   onBatchEnd?: () => void;
 }
 
-const PRESET_BEZIERS: { label: string; points: [number, number, number, number] }[] = [
-  { label: 'Linear', points: [0.25, 0.25, 0.75, 0.75] },
-  { label: 'Ease In', points: [0.42, 0.0, 1.0, 1.0] },
-  { label: 'Ease Out', points: [0.0, 0.0, 0.58, 1.0] },
-  { label: 'Ease In Out', points: [0.42, 0.0, 0.58, 1.0] },
-  { label: 'Overshoot', points: [0.175, 0.885, 0.32, 1.275] },
-  { label: 'Anticipate', points: [0.6, -0.28, 0.735, 0.045] },
-  { label: 'Slow Mo', points: [0.1, 1.0, 0.1, 1.0] },
-  { label: 'Elastic', points: [0.68, -0.55, 0.265, 1.55] },
-];
+
 const clampControlPoint = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));
 
@@ -53,6 +47,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
   inactiveReason = null,
   onChangeKeyframeValue,
   onChangeKeyframeHandles,
+  onApplySegmentPreset,
   onBatchStart,
   onBatchEnd,
 }) => {
@@ -594,6 +589,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                   mode={graphMode}
                   onChangeKeyframeValue={onChangeKeyframeValue}
                   onChangeKeyframeHandles={onChangeKeyframeHandles}
+                  onApplySegmentPreset={onApplySegmentPreset}
                   onInteractionStart={onBatchStart}
                   onInteractionEnd={onBatchEnd}
                 />

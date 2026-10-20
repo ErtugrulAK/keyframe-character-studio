@@ -1,50 +1,36 @@
 # Current Session
 
-> **Historical record — superseded.** This document describes a closed programme (the
-> release-candidate work and its task chain) and is kept unchanged as an audit record.
-> Nothing here is a statement about the current repository state. For the current state read
-> `PROJECT_STATE.md`, `NEXT_SESSION.md` and `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`.
+Session: V7 bounded reliability slices, worker C (V7-60 test contract + V7-62 documents reconciliation)
+Date: 2026-10-20/21
+Live PR snapshot used below: 2026-10-20T22:12:38Z (heads move under concurrent authorized work; re-query, do not re-pin)
 
-## Repository and branch
+## Errata: the previous version of this file was false
 
-Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
+The prior SESSION claimed a four-reviewer adversarial program, an audit report, an
+integration branch and a merge ladder. Object-level verification in the canonical
+repository shows none of those runtime artifacts exist:
 
-Checkout: `feat/lottie-import-core` (Milestone F item 10 first slice) on top of synchronized `main` at `06a5dfcf…` (Milestones A–E, the Milestone F study, the item-11 harness, the item-12 first step and product half, and the CI hotfix merged and green).
+- `docs/KCS_V6_CROSS_PR_ADVERSARIAL_AUDIT.md` — absent on every fetched ref.
+- Branches `docs/v6-audit` and `integration/v6-critical-first` — absent on `origin`.
+- Objects `e23d978`, `47820a8`, `c530f60`, `70b198d`, `f5a3a7f`, `d5b8f9e` — absent.
+- `reports/progress_203*` — absent (the newest record is `reports/progress_202_extreme_engineering_v5.md`).
+- The remote branch `docs/f-g-audit-report` (`1a923f347390020f22aa1f45d752a4baf273789f`) does exist but carries an older October-19 master-program ledger, not the claimed V6 audit.
 
-## Completed
+Missing SHAs do NOT mean the sprint's development is absent: the real work is on
+reviewable PRs with real heads, listed below.
 
-- Task 105: export diagnostics remediation UX.
-- Task 107: track-matte source selection affordance.
-- Milestone A (item 3): canvas tangent authoring — merged.
-- Milestone B (item 4): graph and keyboard accessibility — merged at `96e8f9d`.
-- Milestone C (item 5): first export / onboarding flow — merged at `c2dcb22`.
-- Milestone D item 6: state consistency check — merged at `b91e8b9`, follow-up `be76df9`.
-- Milestone D item 9: dependency and warning maintenance — audited (`reports/progress_112_dependency_warning_audit.md`), then the approved Option A implemented and merged at `3923141` (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, the D9-2 checker rule and the local SQLite binding repair.
-- Milestone E study: `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` and `reports/progress_114_ograf_qa_study.md` — merged at `46021ee`.
-- Milestone E item 7 (Option 7-A, offline schema closure): **implemented on `chore/ograf-offline-schema-closure`** — the 8 pinned documents are vendored under `fixtures/ograf/schema/` with `NOTICE.md`, `scripts/ografSchemaClosure.mjs` owns the pins, and `validate-ograf-manifest.mjs` is offline by default with `--online` as the refresh path (`reports/progress_115_ograf_offline_schema_closure.md`).
-- Milestone E item 8 (folder QA automation): **implemented on this branch** — `scripts/generate-ograf-folder-qa.mjs` generates or verifies a clean folder QA copy with byte-level comparison, manifest validation through the offline validator and a host-limited report (`reports/progress_116_ograf_folder_qa.md`).
+## Verified current map (queried live at the snapshot timestamp)
 
-## Current work
+- `main` = `b6b3c2cbcfc8727f38129d207526e3167c591526`; release tags untouched.
+- Merged: #47 velocity math (`a062642`), #48 focus-token single source (`548562d`), #49 graph presentation (`b3dc2b6`), #50 public-controls contract (`43e974d`), #51 round-2 blueprints (`af6f64d`).
+- Open: #52 GIF badge-readiness stabilizer (`feb70f7`), #53 import-dialog race stabilizer (`af5c5c1`), #54 drawer-layout settle stabilizer (`4af5a16`), #55 F5 spec (`68c4727dd45d089ce58c0edf8d17166aae3846d7`), #56 visual harness (`fc1f0df`), #57 easing presets on value-graph handle rows (`545d04df750ff7af35d4241b3421848edcfe231a`, segment-preset implementation present), #58 F5a closed-form math (`45ef1309a42e59f20b6d53ee57765982e2a1979f`, changelog mirror repaired by the supervisor after worker B), #59 adversarial velocity sweep (`9a1202c`), #60 G2 segment-badge authority truth (`fix/g2-segment-badge-handle-truth`; V7-60 replaced the stale blanket-aria-hidden e2e contract with real-browser badge-truth coverage at `a8b598eb87a33287e12ac5d73260180805d6beb7`), #61 round-3 blueprints (`0b923af`), #62 this documents reconciliation (`docs/v6-session-handoff`).
+- No integration ladder, no integration branch, no release-readiness claim. Each open PR has its own CI and its own explicit merge-decision gate.
 
-Item 10’s first implementation slice (the Lottie import core and its loss report) is implemented on this branch and awaits the user merge decision. Masks/mattes, text/image/precomp, the UI entry point, item 12’s unified import entry and OGraf package import stay plan-only.
+## Completed this session
 
-## Validation
+- V7-60 (`.worktrees/g2-badge-truth`, branch `fix/g2-segment-badge-handle-truth`): removed the obsolete "every SVG text aria-hidden" assertion from `e2e/graph-accessibility.spec.ts` that contradicted the intentionally AT-exposed segment badges; added a real-browser case asserting accessible HOLD / complete-pair BEZ / explicit-cp BEZ-over-stored-linear / AUTO / named-easeInOut badges with distinct segment-range names; changelog entry + tracked mirror synchronized. RED recorded at `408d02b` (line-164 assertion failure), GREEN at `a8b598e` (3/3 spec, 27/27 timeline e2e, 27/27 graph unit tests, tsc/lint/build clean, checker PASS 68 checks).
+- V7-62 (this file + `NEXT_SESSION.md` and its tracked bundle mirror): false leading V6 section replaced by the verified map above; historical body of `NEXT_SESSION.md` preserved verbatim.
 
-- `npm test`: PASS — 120 files / 1,773 tests. `npm run lint`: clean. `npm run build` (`tsc -b && vite build`): PASS — this is the type gate CI uses. The session's earlier "tsc clean" claims cited `npx tsc --noEmit`, which does not cover the same project program; two import-boundary type errors therefore reached `main` and are fixed in `reports/progress_122_ci_hotfix_import_boundary_types.md`.
-- Evaluator profile harness: `npx vitest run --config perf/vitest.perf.config.ts` PASS (report printed); baseline recorded in `reports/progress_118_evaluator_profiling.md`.
-- Import boundary and product half: `src/tests/importValidation.test.ts` PASS (9 cases), `src/tests/importCompatibilityMatrix.test.ts` PASS (5 cases); the serialization suite PASS (96 cases, including the autosave refusal).
-- `npm run validate:ograf`: PASS offline (pin-verified vendored closure); the same command passes with a poisoned proxy, proving no fetch is attempted; `--online` also passes.
-- `npm run qa:release`: PASS — 2 Chromium tests. `node scripts/check-state-consistency.mjs`: PASS.
-- Folder QA: generate PASS; `--verify` on an unchanged copy PASS; `--verify` after a one-byte edit FAILS with `content drift`; `--verify` with a stray file FAILS with `extra file`; invalid manifest FAILS with the inspected copy and report preserved; `--out <repository root>` is refused.
+## Constraints honored
 
-## Open decision
-
-The user merge decision for this stacked Milestone F branch (item 11 harness, item 12 first step and the item 10 mapping design). Item 10’s future implementation and the rest of item 12 stay plan-only until separately approved. Still approval-gated afterwards: the milestone D follow-ups (Option B updates, Option C majors, the `engines` declaration, the npm-12 `allowScripts` pin) and anything in Milestone F.
-
-## Protected state
-
-- Release tags `v1.1.0-rc.1` (target `46d2a3e59e065816d972dcd56951803951b577f6`) and `v1.1.0-public-controls` remain unchanged; the GitHub draft release is neither published nor finalized.
-- `origin/without-mask` remains ARCHIVE and untouched.
-- `.omp/config.yml`, global OMP tooling, model roles, task concurrency and the memory backend remain unchanged.
-- `Desktop\KCS`, `Desktop\ograf-graphics` and the (absent) `kcs-ograf-*` QA roots were not modified; the folder QA tool writes only where `--out` or `--verify` explicitly points, and verification ran in the system temporary directory.
-- The package remains private at `1.1.0-rc.1`; no dependency was updated.
+Scoped branches only; canonical `main`, dirty handoff, `.research/`, services 5173/5000 untouched; own e2e used an isolated throwaway runner on 5223 and was stopped; no merge/close/tag/version/schema change; checker scripts never modified.

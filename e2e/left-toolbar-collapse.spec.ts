@@ -39,6 +39,21 @@ async function seed(page: Page) {
   await page.addInitScript(([k, d]: [string, string]) => { localStorage.setItem(k, d); }, [STORAGE_KEY, JSON.stringify(scene)]);
   await page.goto('/');
   await page.waitForFunction(() => document.querySelectorAll('g[transform^="translate"]').length >= 1, undefined, { timeout: 15000 });
+  // Layout-settled gate (root cause of the load-only red): the left dock
+  // reaches its expanded width through a mount transition. Measuring the
+  // expanded baseline mid-transition breaks the arithmetic contract
+  // (dockWidth = railWidth + drawerWidth) — under contention the first
+  // evaluate could land there while a clean run measured after settle.
+  // This waits for the real condition: a consistent, non-zero geometry.
+  await page.waitForFunction(() => {
+    const dock = document.querySelector('.left-toolbar-container');
+    const rail = document.querySelector('.left-sidebar-nav');
+    const drawer = document.querySelector('.left-drawer-panel');
+    if (!dock || !rail || !drawer) return false;
+    const dockWidth = dock.getBoundingClientRect().width;
+    const drawerWidth = drawer.getBoundingClientRect().width;
+    return drawerWidth > 0 && Math.abs(dockWidth - (rail.getBoundingClientRect().width + drawerWidth)) <= 1;
+  }, undefined, { timeout: 15000 });
 }
 
 /**

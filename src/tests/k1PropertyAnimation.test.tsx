@@ -19,6 +19,7 @@ import { AnimatorProvider, type AnimatorContextType } from '../context/AnimatorC
 import { useAnimator } from '../context/useAnimator';
 import { SequencerTimeline } from '../components/Timeline/SequencerTimeline';
 import type { Track, TrackChannel } from '../types/animator';
+import { worldToContainerLocal } from '../utils/containerMath';
 
 const Consumer = ({ onCtx }: { onCtx: (ctx: AnimatorContextType) => void }) => {
   const ctx = useAnimator();
@@ -279,5 +280,35 @@ describe('K1 — other property families', () => {
     expand(container, 'Box');
     fireEvent.click(stopwatch(container, 'Box', 'x'));
     expect(keysOf(partId, 'x')[0].frame).toBe(ctx().totalFrames - 1);
+  });
+});
+
+describe('K1 — arm captures the authored-local pose under a transformed parent (P0-57)', () => {
+  it('arming at an evaluated animated pose stores the container-local value and keeps the world pose', () => {
+    const { container } = renderEditor();
+    const parentId = addRect('Parent', 200, 150);
+    const childId = addRect('Child', 380, 300);
+    act(() => {
+      ctx().updateCurrentTransform({ rotation: 30, scaleX: 2, scaleY: 0.5 }, parentId);
+      ctx().setCharacterParts((prev) => prev.map((p) => (p.id === childId ? { ...p, parentId } : p)));
+    });
+    const worldBefore = ctx().getComputedTransform(childId, ctx().currentFrame);
+    const parentWorld = ctx().getComputedTransform(parentId, ctx().currentFrame);
+    // The capture must be observable as non-trivial: world differs from local here.
+    const captured = worldToContainerLocal(worldBefore, parentWorld);
+    expect(captured.x).not.toBeCloseTo(worldBefore.x, 4);
+
+    expand(container, 'Child');
+    fireEvent.click(stopwatch(container, 'Child', 'x'));
+
+    const keys = keysOf(childId, 'x');
+    expect(keys).toHaveLength(1);
+    expect(keys[0].value).toBeCloseTo(captured.x, 9);
+
+    // Arming must not move the child: the evaluated world pose is intact.
+    const after = ctx().getComputedTransform(childId, ctx().currentFrame);
+    (['x', 'y', 'rotation', 'scaleX', 'scaleY'] as const).forEach((property) => {
+      expect(after[property], property).toBeCloseTo(worldBefore[property], 9);
+    });
   });
 });

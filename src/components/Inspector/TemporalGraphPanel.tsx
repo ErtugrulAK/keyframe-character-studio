@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import type { PropertyKeyframe, TemporalHandle } from '../../types/animator';
-import { interpolateChannel } from '../../utils/defaults';
+import { effectiveSegmentAuthority, interpolateChannel } from '../../utils/defaults';
+import { PRESET_BEZIERS } from './easingPresets';
 
 interface TemporalHandlePatch {
   bezierIn?: TemporalHandle;
@@ -12,6 +13,13 @@ interface TemporalGraphPanelProps {
   mode: 'value' | 'speed';
   onChangeKeyframeValue?: (keyframeId: string, value: number) => void;
   onChangeKeyframeHandles?: (keyframeId: string, patch: TemporalHandlePatch) => void;
+  /**
+   * #57 (V6): segment-scope preset application. The evaluator needs the
+   * COMPLETE pair prev.bezierOut && next.bezierIn, so a preset writes the
+   * outgoing segment's BOTH endpoints in one atomic write. Provided by the
+   * Motion Curves host; the select renders only when present.
+   */
+  onApplySegmentPreset?: (keyframeId: string, outgoing: TemporalHandle, incoming: TemporalHandle) => void;
   /** Opens/closes ONE undo entry around a continuous value drag. */
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
@@ -53,6 +61,7 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
   mode,
   onChangeKeyframeValue,
   onChangeKeyframeHandles,
+  onApplySegmentPreset,
   onInteractionStart,
   onInteractionEnd,
 }) => {
@@ -191,23 +200,36 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
           </text>
           <text className="temporal-graph-axis-label" x={PAD} y={HEIGHT - 8} fontSize={8} fill="#64748b" aria-hidden="true">F{startFrame}</text>
           <text className="temporal-graph-axis-label" x={WIDTH - PAD} y={HEIGHT - 8} fontSize={8} fill="#64748b" textAnchor="end" aria-hidden="true">F{endFrame}</text>
-          {/* One badge per segment, named by the easing the authority applies
-           * from the segment's start key. */}
+          {/* One badge per segment, named by the branch the authority ACTUALLY
+           * takes (V6 full precedence): HOLD > complete handle pair > stored
+           * controlPoints > autoBezier > named. The classification comes from
+           * effectiveSegmentAuthority in defaults.ts — the authority's own
+           * module, not a second evaluator. Screen-reader semantics ride on
+           * the badge itself (role=img + aria-label), so the truth is not
+           * carried by an aria-hidden decoration alone. */}
           {sorted.slice(0, -1).map((keyframe, index) => {
             const next = sorted[index + 1];
+            const authority = effectiveSegmentAuthority(keyframe, next);
+            const badgeEasing = authority === 'handles'
+              ? 'bezier'
+              : authority === 'controlPoints'
+                ? 'cubic_bezier'
+                : keyframe.easing;
+            const badgeText = EASING_BADGE[badgeEasing] ?? badgeEasing;
             return (
               <text
                 key={`badge-${keyframe.id}`}
                 className="temporal-graph-segment-badge"
-                data-segment-easing={keyframe.easing}
+                data-segment-easing={badgeEasing}
                 x={toSvg((keyframe.frame + next.frame) / 2, minValue).x}
                 y={HEIGHT - PAD - 5}
                 fontSize={8}
                 fill="#64748b"
                 textAnchor="middle"
-                aria-hidden="true"
+                role="img"
+                aria-label={`Segment frame ${keyframe.frame} to ${next.frame}: ${badgeText === 'IN/OUT' ? 'ease in out' : badgeText}`}
               >
-                {EASING_BADGE[keyframe.easing] ?? keyframe.easing}
+                {badgeText}
               </text>
             );
           })}
@@ -239,7 +261,7 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
         </svg>
       )}
       {mode === 'value' && onChangeKeyframeHandles && sorted.map((keyframe) => (
-        <div key={`${keyframe.id}-handles`} style={{ display: 'grid', gridTemplateColumns: 'auto repeat(4, 1fr)', gap: 4, alignItems: 'center', marginTop: 4 }}>
+        <div key={`${keyframe.id}-handles`} style={{ display: 'grid', gridTemplateColumns: 'auto repeat(4, 1fr) minmax(96px, 1.3fr)', gap: 4, alignItems: 'center', marginTop: 4 }}>
           <span style={{ fontSize: 10, color: '#94a3b8' }}>F{keyframe.frame}</span>
           {(['bezierIn', 'bezierOut'] as const).flatMap((handleName) => (['x', 'y'] as const).map((axis) => (
             <input
@@ -257,6 +279,41 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
               })}
             />
           )))}
+          {/* E1/V6: built-in curve presets applied to the OUTGOING SEGMENT of
+           * this keyframe — both endpoints, one atomic write, one undo entry
+           * (the evaluator needs the complete pair). Explicitly DISABLED, not
+           * silently inert, where the evaluator would ignore the pair: HOLD
+           * start keys and the last key (no outgoing segment). Transient
+           * control: a preset is an action, not state. */}
+          {onApplySegmentPreset && (() => {
+            const isLastOfScope = sorted.findIndex((candidate) => candidate.id === keyframe.id) === sorted.length - 1;
+            const blocked = keyframe.easing === 'hold'
+              ? 'Hold outranks curve presets in the evaluator'
+              : isLastOfScope
+                ? 'No outgoing segment starts at this keyframe'
+                : undefined;
+            return (
+              <select
+                className="select-control"
+                aria-label={`Apply easing preset to segment starting at frame ${keyframe.frame}`}
+                disabled={blocked !== undefined}
+                title={blocked}
+                value=""
+                onChange={(event) => {
+                  const preset = PRESET_BEZIERS.find((candidate) => candidate.label === event.target.value);
+                  if (!preset) return;
+                  const [x1, y1, x2, y2] = preset.points;
+                  onApplySegmentPreset(keyframe.id, { x: x1, y: y1 }, { x: x2, y: y2 });
+                  event.currentTarget.value = '';
+                }}
+              >
+                <option value="">Preset…</option>
+                {PRESET_BEZIERS.map((preset) => (
+                  <option key={preset.label} value={preset.label}>{preset.label}</option>
+                ))}
+              </select>
+            );
+          })()}
         </div>
       ))}
     </div>

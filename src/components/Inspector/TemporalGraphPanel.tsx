@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import type { PropertyKeyframe, TemporalHandle } from '../../types/animator';
-import { interpolateChannel } from '../../utils/defaults';
+import { effectiveSegmentAuthority, interpolateChannel } from '../../utils/defaults';
 
 interface TemporalHandlePatch {
   bezierIn?: TemporalHandle;
@@ -191,16 +191,22 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
           </text>
           <text className="temporal-graph-axis-label" x={PAD} y={HEIGHT - 8} fontSize={8} fill="#64748b" aria-hidden="true">F{startFrame}</text>
           <text className="temporal-graph-axis-label" x={WIDTH - PAD} y={HEIGHT - 8} fontSize={8} fill="#64748b" textAnchor="end" aria-hidden="true">F{endFrame}</text>
-          {/* One badge per segment, named by the easing the authority ACTUALLY
-           * applies from the segment's start key — including the temporal-handle
-           * override (G2): applyEasing short-circuits on a COMPLETE handle pair
-           * (prev.bezierOut && next.bezierIn), so a segment whose stored easing
-           * name is overridden by handles must not badge the stale name. */}
+          {/* One badge per segment, named by the branch the authority ACTUALLY
+           * takes (V6 full precedence): HOLD > complete handle pair > stored
+           * controlPoints > autoBezier > named. The classification comes from
+           * effectiveSegmentAuthority in defaults.ts — the authority's own
+           * module, not a second evaluator. Screen-reader semantics ride on
+           * the badge itself (role=img + aria-label), so the truth is not
+           * carried by an aria-hidden decoration alone. */}
           {sorted.slice(0, -1).map((keyframe, index) => {
             const next = sorted[index + 1];
-            const badgeEasing = keyframe.easing === 'hold'
-              ? 'hold' // the authority checks hold BEFORE the handle override
-              : keyframe.bezierOut && next.bezierIn ? 'bezier' : keyframe.easing;
+            const authority = effectiveSegmentAuthority(keyframe, next);
+            const badgeEasing = authority === 'handles'
+              ? 'bezier'
+              : authority === 'controlPoints'
+                ? 'cubic_bezier'
+                : keyframe.easing;
+            const badgeText = EASING_BADGE[badgeEasing] ?? badgeEasing;
             return (
               <text
                 key={`badge-${keyframe.id}`}
@@ -211,9 +217,10 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
                 fontSize={8}
                 fill="#64748b"
                 textAnchor="middle"
-                aria-hidden="true"
+                role="img"
+                aria-label={`Segment frame ${keyframe.frame} to ${next.frame}: ${badgeText === 'IN/OUT' ? 'ease in out' : badgeText}`}
               >
-                {EASING_BADGE[badgeEasing] ?? badgeEasing}
+                {badgeText}
               </text>
             );
           })}

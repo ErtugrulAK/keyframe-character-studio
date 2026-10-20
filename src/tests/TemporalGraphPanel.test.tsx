@@ -153,3 +153,57 @@ describe('TemporalGraphPanel — G2 badge truth under the handle override', () =
     expect(badgeOf(container).textContent).toBe('HOLD');
   });
 });
+
+describe('TemporalGraphPanel — V6 full authority precedence', () => {
+  const pair2 = (over: Record<string, unknown>): PropertyKeyframe[] => [
+    { id: 'a', frame: 0, value: 0, easing: 'linear', ...over },
+    { id: 'b', frame: 10, value: 100, easing: 'linear' },
+  ] as PropertyKeyframe[];
+
+  it('stored controlPoints outrank the easing NAME: linear+cp badges BEZ, not LIN', () => {
+    const { container } = render(<TemporalGraphPanel keyframes={pair2({ bezierControlPoints: [0.42, 0, 1, 1] })} mode="value" />);
+    const badge = container.querySelectorAll('.temporal-graph-segment-badge')[0];
+    expect(badge.getAttribute('data-segment-easing')).toBe('cubic_bezier');
+    expect(badge.textContent).toBe('BEZ');
+  });
+
+  it('autoBezier badges AUTO (derived control points, named fallback impossible)', () => {
+    const { container } = render(<TemporalGraphPanel keyframes={pair2({ easing: 'autoBezier' })} mode="value" />);
+    const badge = container.querySelectorAll('.temporal-graph-segment-badge')[0];
+    expect(badge.textContent).toBe('AUTO');
+  });
+
+  it('a complete pair outranks stored controlPoints', () => {
+    const keys: PropertyKeyframe[] = [
+      { id: 'a', frame: 0, value: 0, easing: 'linear', bezierControlPoints: [0.42, 0, 1, 1], bezierOut: { x: 0.2, y: 0.8 } },
+      { id: 'b', frame: 10, value: 100, easing: 'linear', bezierIn: { x: 0.8, y: 0.2 } },
+    ];
+    const { container } = render(<TemporalGraphPanel keyframes={keys} mode="value" />);
+    expect(container.querySelectorAll('.temporal-graph-segment-badge')[0].getAttribute('data-segment-easing')).toBe('bezier');
+  });
+
+  it('the segment truth is exposed to assistive tech on the badge itself', () => {
+    const { container } = render(<TemporalGraphPanel keyframes={pair2({})} mode="value" />);
+    const badge = container.querySelectorAll('.temporal-graph-segment-badge')[0];
+    expect(badge.getAttribute('role')).toBe('img');
+    expect(badge.getAttribute('aria-label')).toBe('Segment frame 0 to 10: LIN');
+  });
+
+  it('classifier agrees with the evaluator branch order behaviorally', async () => {
+    const { applyEasing, effectiveSegmentAuthority } = await import('../utils/defaults');
+    const cp: [number, number, number, number] = [0.42, 0, 1, 1];
+    const out = { x: 0.2, y: 0.8 };
+    const inH = { x: 0.8, y: 0.2 };
+    // hold wins over everything: eased value 0 regardless of pair/cp
+    expect(applyEasing(0.5, 'hold', cp, { in: inH, out })).toBe(0);
+    expect(effectiveSegmentAuthority({ easing: 'hold', bezierControlPoints: cp, bezierOut: out }, { bezierIn: inH })).toBe('hold');
+    // pair outranks cp: output equals the pair's solve, not the cp's
+    const viaPair = applyEasing(0.5, 'linear', cp, { in: inH, out });
+    expect(viaPair).toBe(applyEasing(0.5, 'linear', undefined, { in: inH, out }));
+    expect(effectiveSegmentAuthority({ easing: 'linear', bezierControlPoints: cp, bezierOut: out }, { bezierIn: inH })).toBe('handles');
+    // cp outranks the named branch: a 'linear' key with cp does NOT ease linearly
+    expect(applyEasing(0.5, 'linear', cp)).not.toBe(0.5);
+    expect(effectiveSegmentAuthority({ easing: 'linear', bezierControlPoints: cp }, {})).toBe('controlPoints');
+    expect(effectiveSegmentAuthority({ easing: 'easeInOut' }, {})).toBe('named');
+  });
+});

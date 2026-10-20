@@ -138,6 +138,26 @@ export function solveCubicBezier(x1: number, y1: number, x2: number, y2: number,
   return Y;
 }
 
+/**
+ * Which branch applyEasing will ACTUALLY take for a segment (G2/V6):
+ * HOLD > complete temporal pair > controlPoints (explicit or autoBezier —
+ * autoBezier always derives control points at the call site) > named easing.
+ * Presentation code uses this to describe a segment honestly; it is a
+ * classification of the authority's branch order, not a second evaluator.
+ */
+export type SegmentEasingAuthority = 'hold' | 'handles' | 'controlPoints' | 'autoBezier' | 'named';
+
+export function effectiveSegmentAuthority(
+  prev: { easing: EasingType; bezierControlPoints?: [number, number, number, number]; bezierOut?: { x: number; y: number } },
+  next: { bezierIn?: { x: number; y: number } },
+): SegmentEasingAuthority {
+  if (prev.easing === 'hold') return 'hold';
+  if (prev.bezierOut && next.bezierIn) return 'handles';
+  if (prev.bezierControlPoints) return 'controlPoints';
+  if (prev.easing === 'autoBezier') return 'autoBezier';
+  return 'named';
+}
+
 export function applyEasing(
   t: number,
   easing: EasingType,

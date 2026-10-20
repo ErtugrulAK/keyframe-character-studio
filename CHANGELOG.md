@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Actionable OGraf export diagnostics: every blocking diagnostic now reports a stable title, the failing layer or feature, the reason, and a concrete next step, and it never reports success while export is blocked.
 - Non-blocking OGraf warnings are surfaced as a compact grouped notification instead of being silently dropped.
 - Package materialization failures now carry stable failure codes; filesystem guidance states the trusted-directory requirement, the unsupported hostile-concurrency case, and avoids claiming perfect OS-level protection. Machine paths are reduced to a display-safe form.
+- The value graph's per-segment badges now state which easing the evaluator ACTUALLY applies — HOLD first, then a complete temporal handle pair, stored control points, autoBezier, stored name (`effectiveSegmentAuthority`, the evaluator's own module) — and ride on screen-reader semantics: each badge is a `role="img"` node named `Segment frame X to Y: …`, the handle-pair and control-point branches share the BEZ label distinguished by `data-segment-easing` (`bezier` vs `cubic_bezier`), and the real-browser accessibility contract asserts this exposed segment truth (a segment stored as `linear` yet driven by its control points is announced BEZ, never LIN) instead of the old blanket demand that every graph SVG text be `aria-hidden`.
 
 ### Changed
 

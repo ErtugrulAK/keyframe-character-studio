@@ -21,13 +21,13 @@ function makeLayer(id: string, name: string): Record<string, unknown> {
   };
 }
 
-function kf(id: string, frame: number, value: number): Record<string, unknown> {
-  return { id, frame, value, easing: 'easeInOut', templateId: 'Sequence' };
+function kf(id: string, frame: number, value: number, extra?: Record<string, unknown>): Record<string, unknown> {
+  return { id, frame, value, easing: 'easeInOut', templateId: 'Sequence', ...extra };
 }
 
-async function seed(page: Page): Promise<void> {
+async function seed(page: Page, xKeyframes?: Record<string, unknown>[]): Promise<void> {
   const channels: Record<string, unknown[]> = {
-    x: [kf('x_0', 0, 10), kf('x_12', 12, 60), kf('x_30', 30, 20)],
+    x: xKeyframes ?? [kf('x_0', 0, 10), kf('x_12', 12, 60), kf('x_30', 30, 20)],
     y: [], rotation: [], scaleX: [], scaleY: [], opacity: [],
     maskOffsetX: [], maskOffsetY: [], maskScale: [], maskRotation: [],
   };
@@ -154,13 +154,53 @@ test.describe('Milestone B — keyboard accessibility', () => {
     await page.keyboard.press('ArrowUp');
     await expect.poll(async () => point.getAttribute('aria-label')).not.toBe(before);
 
-    // Decorative geometry stays out of the accessibility tree (semantic:
-    // every axis line, the curve and the axis/segment labels are hidden;
-    // the count grew with D1 Increment 1, the invariant did not change).
-    const decorative = await graphGroup.evaluate((group) => Array.from(
-      (group as Element).querySelectorAll('line, path, svg text'),
-    ).map((node) => node.getAttribute('aria-hidden')));
-    expect(decorative.length).toBeGreaterThanOrEqual(3);
-    expect(decorative.every((value) => value === 'true')).toBe(true);
+  });
+
+  test('segment badges expose the authority branch that actually drives each segment', async ({ page }) => {
+    // The stored easing NAME may be stale; the badge must describe the branch
+    // applyEasing actually takes (effectiveSegmentAuthority order):
+    // HOLD > complete handle pair > control points > autoBezier > named.
+    // f0 hold; f6 stores control points YET a complete pair drives it; f12
+    // stores the name "linear" YET its control points drive it; f18 autoBezier;
+    // f24 named easeInOut.
+    await seed(page, [
+      kf('b_0', 0, 10, { easing: 'hold' }),
+      kf('b_6', 6, 60, {
+        easing: 'cubic_bezier',
+        bezierControlPoints: [0.42, 0, 0.58, 1],
+        bezierOut: { x: 0.7, y: 0.1 },
+      }),
+      kf('b_12', 12, 20, {
+        easing: 'linear',
+        bezierControlPoints: [0.33, 0, 0.67, 1],
+        bezierIn: { x: 0.3, y: 0.9 },
+      }),
+      kf('b_18', 18, 50, { easing: 'autoBezier' }),
+      kf('b_24', 24, 30, { easing: 'easeInOut' }),
+      kf('b_30', 30, 5, { easing: 'easeInOut' }),
+    ]);
+    await page.locator('.actor-node', { hasText: 'Part A' }).click();
+    await page.locator('.keyframe-diamond[aria-label*="frame 12"]').click();
+    await page.getByTitle('Open Expanded Pro Cubic Bezier Motion Curve Studio Modal').click();
+    await expect(page.getByRole('group', { name: 'Value Graph' })).toBeVisible({ timeout: 10000 });
+
+    const badge = (range: string, label: string) => page.getByRole('img', { name: `Segment frame ${range}: ${label}` });
+    await expect(badge('0 to 6', 'HOLD')).toHaveCount(1);
+    await expect(badge('6 to 12', 'BEZ')).toHaveCount(1);
+    await expect(badge('12 to 18', 'BEZ')).toHaveCount(1);
+    await expect(badge('18 to 24', 'AUTO')).toHaveCount(1);
+    await expect(badge('24 to 30', 'ease in out')).toHaveCount(1);
+
+    // The stored name must not outlive the authority: the control-point-driven
+    // segment is never announced as LIN.
+    await expect(badge('12 to 18', 'LIN')).toHaveCount(0);
+
+    // The two BEZ badges carry the same visible label reached by DIFFERENT
+    // authority branches; the carried attribute distinguishes them.
+    await expect(badge('0 to 6', 'HOLD')).toHaveAttribute('data-segment-easing', 'hold');
+    await expect(badge('6 to 12', 'BEZ')).toHaveAttribute('data-segment-easing', 'bezier');
+    await expect(badge('12 to 18', 'BEZ')).toHaveAttribute('data-segment-easing', 'cubic_bezier');
+    await expect(badge('18 to 24', 'AUTO')).toHaveAttribute('data-segment-easing', 'autoBezier');
+    await expect(badge('24 to 30', 'ease in out')).toHaveAttribute('data-segment-easing', 'easeInOut');
   });
 });

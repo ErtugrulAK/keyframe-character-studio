@@ -119,7 +119,7 @@ describe('TemporalGraphPanel — D1 Increment 1 presentation', () => {
   });
 });
 
-describe('TemporalGraphPanel — E1 built-in easing presets', () => {
+describe('TemporalGraphPanel — E1/V6 segment-scope easing presets', () => {
   const keyed: PropertyKeyframe[] = [
     { id: 'a', frame: 0, value: 0, easing: 'linear' },
     { id: 'b', frame: 10, value: 100, easing: 'linear' },
@@ -127,33 +127,58 @@ describe('TemporalGraphPanel — E1 built-in easing presets', () => {
 
   it('offers every built-in preset per keyframe through the handle row', () => {
     const onChange = vi.fn();
-    render(<TemporalGraphPanel keyframes={keyed} mode="value" onChangeKeyframeHandles={onChange} />);
-    const selects = screen.getAllByRole('combobox', { name: /Apply easing preset to keyframe/ });
+    const onPreset = vi.fn();
+    render(<TemporalGraphPanel keyframes={keyed} mode="value" onChangeKeyframeHandles={onChange} onApplySegmentPreset={onPreset} />);
+    const selects = screen.getAllByRole('combobox', { name: /Apply easing preset to segment starting at frame/ });
     expect(selects).toHaveLength(2);
-    expect(selects[0]).toHaveAttribute('aria-label', 'Apply easing preset to keyframe 0');
+    expect(selects[0]).toHaveAccessibleName('Apply easing preset to segment starting at frame 0');
     for (const label of ['Ease In Out', 'Overshoot', 'Anticipate', 'Elastic']) {
       expect(within(selects[0]).getByRole('option', { name: label, exact: true })).toBeInTheDocument();
     }
   });
 
-  it('writes one handle patch per preset choice through the existing authority', () => {
+  it('one select change = one segment call with BOTH endpoints (one transaction)', () => {
+    const onChange = vi.fn();
+    const onPreset = vi.fn();
+    render(<TemporalGraphPanel keyframes={keyed} mode="value" onChangeKeyframeHandles={onChange} onApplySegmentPreset={onPreset} />);
+    const select = screen.getAllByRole('combobox', { name: /Apply easing preset to segment/ })[0];
+    fireEvent.change(select, { target: { value: 'Ease In Out' } });
+    expect(onPreset).toHaveBeenCalledTimes(1);
+    expect(onPreset).toHaveBeenCalledWith('a', { x: 0.42, y: 0 }, { x: 0.58, y: 1 });
+    expect((select as unknown as HTMLSelectElement).value).toBe(''); // transient, no phantom selection
+  });
+
+  it('the LAST key cannot receive a preset: no outgoing segment, explicitly disabled', () => {
+    const onChange = vi.fn();
+    const onPreset = vi.fn();
+    render(<TemporalGraphPanel keyframes={keyed} mode="value" onChangeKeyframeHandles={onChange} onApplySegmentPreset={onPreset} />);
+    const last = screen.getAllByRole('combobox', { name: /Apply easing preset to segment/ })[1];
+    expect(last).toBeDisabled();
+    expect(last.getAttribute('title')).toMatch(/No outgoing segment/);
+  });
+
+  it('a HOLD key is explicitly disabled rather than silently inert', () => {
+    const onChange = vi.fn();
+    const onPreset = vi.fn();
+    const held: PropertyKeyframe[] = [
+      { id: 'a', frame: 0, value: 0, easing: 'hold' },
+      { id: 'b', frame: 10, value: 100, easing: 'linear' },
+    ];
+    render(<TemporalGraphPanel keyframes={held} mode="value" onChangeKeyframeHandles={onChange} onApplySegmentPreset={onPreset} />);
+    const first = screen.getAllByRole('combobox', { name: /Apply easing preset to segment/ })[0];
+    expect(first).toBeDisabled();
+    expect(first.getAttribute('title')).toMatch(/Hold outranks/);
+  });
+
+  it('without a segment host the affordance is absent, not broken', () => {
     const onChange = vi.fn();
     render(<TemporalGraphPanel keyframes={keyed} mode="value" onChangeKeyframeHandles={onChange} />);
-    const select = screen.getAllByRole('combobox', { name: /Apply easing preset to keyframe/ })[0];
-    fireEvent.change(select, { target: { value: 'Ease In Out' } });
-    // Exactly one call: the preset is one gesture, hence one undo transaction.
-    expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange).toHaveBeenCalledWith('a', {
-      bezierOut: { x: 0.42, y: 0 },
-      bezierIn: { x: 0.58, y: 1 },
-    });
-    // Transient affordance: the select never keeps a phantom selection.
-    expect((select as unknown as HTMLSelectElement).value).toBe('');
+    expect(screen.queryByRole('combobox', { name: /Apply easing preset/ })).not.toBeInTheDocument();
   });
 
   it('keeps the derived speed graph free of editing affordances', () => {
     const onChange = vi.fn();
-    render(<TemporalGraphPanel keyframes={keyed} mode="speed" onChangeKeyframeHandles={onChange} />);
+    render(<TemporalGraphPanel keyframes={keyed} mode="speed" onChangeKeyframeHandles={onChange} onApplySegmentPreset={vi.fn()} />);
     expect(screen.queryByRole('combobox', { name: /Apply easing preset/ })).not.toBeInTheDocument();
   });
 });

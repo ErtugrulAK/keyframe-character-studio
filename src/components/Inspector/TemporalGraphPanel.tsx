@@ -13,6 +13,13 @@ interface TemporalGraphPanelProps {
   mode: 'value' | 'speed';
   onChangeKeyframeValue?: (keyframeId: string, value: number) => void;
   onChangeKeyframeHandles?: (keyframeId: string, patch: TemporalHandlePatch) => void;
+  /**
+   * #57 (V6): segment-scope preset application. The evaluator needs the
+   * COMPLETE pair prev.bezierOut && next.bezierIn, so a preset writes the
+   * outgoing segment's BOTH endpoints in one atomic write. Provided by the
+   * Motion Curves host; the select renders only when present.
+   */
+  onApplySegmentPreset?: (keyframeId: string, outgoing: TemporalHandle, incoming: TemporalHandle) => void;
   /** Opens/closes ONE undo entry around a continuous value drag. */
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
@@ -54,6 +61,7 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
   mode,
   onChangeKeyframeValue,
   onChangeKeyframeHandles,
+  onApplySegmentPreset,
   onInteractionStart,
   onInteractionEnd,
 }) => {
@@ -258,30 +266,41 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
               })}
             />
           )))}
-          {/* E1: built-in curve presets, authored through the same handle-patch
-           * pipeline the numeric inputs drive — one call is one transaction.
-           * Transient control (value always resets): a preset is an action,
-           * not state. */}
-          <select
-            className="select-control"
-            aria-label={`Apply easing preset to keyframe ${keyframe.frame}`}
-            value=""
-            onChange={(event) => {
-              const preset = PRESET_BEZIERS.find((candidate) => candidate.label === event.target.value);
-              if (!preset) return;
-              const [x1, y1, x2, y2] = preset.points;
-              onChangeKeyframeHandles(keyframe.id, {
-                bezierOut: { x: x1, y: y1 },
-                bezierIn: { x: x2, y: y2 },
-              });
-              event.currentTarget.value = '';
-            }}
-          >
-            <option value="">Preset…</option>
-            {PRESET_BEZIERS.map((preset) => (
-              <option key={preset.label} value={preset.label}>{preset.label}</option>
-            ))}
-          </select>
+          {/* E1/V6: built-in curve presets applied to the OUTGOING SEGMENT of
+           * this keyframe — both endpoints, one atomic write, one undo entry
+           * (the evaluator needs the complete pair). Explicitly DISABLED, not
+           * silently inert, where the evaluator would ignore the pair: HOLD
+           * start keys and the last key (no outgoing segment). Transient
+           * control: a preset is an action, not state. */}
+          {onApplySegmentPreset && (() => {
+            const isLastOfScope = sorted.findIndex((candidate) => candidate.id === keyframe.id) === sorted.length - 1;
+            const blocked = keyframe.easing === 'hold'
+              ? 'Hold outranks curve presets in the evaluator'
+              : isLastOfScope
+                ? 'No outgoing segment starts at this keyframe'
+                : undefined;
+            return (
+              <select
+                className="select-control"
+                aria-label={`Apply easing preset to segment starting at frame ${keyframe.frame}`}
+                disabled={blocked !== undefined}
+                title={blocked}
+                value=""
+                onChange={(event) => {
+                  const preset = PRESET_BEZIERS.find((candidate) => candidate.label === event.target.value);
+                  if (!preset) return;
+                  const [x1, y1, x2, y2] = preset.points;
+                  onApplySegmentPreset(keyframe.id, { x: x1, y: y1 }, { x: x2, y: y2 });
+                  event.currentTarget.value = '';
+                }}
+              >
+                <option value="">Preset…</option>
+                {PRESET_BEZIERS.map((preset) => (
+                  <option key={preset.label} value={preset.label}>{preset.label}</option>
+                ))}
+              </select>
+            );
+          })()}
         </div>
       ))}
     </div>

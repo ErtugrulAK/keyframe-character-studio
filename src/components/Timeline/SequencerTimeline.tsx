@@ -136,6 +136,7 @@ export const SequencerTimeline: React.FC = () => {
     updateKeyframeBezierPoints,
     updatePropertyKeyframeValue,
     updatePropertyKeyframeTemporalHandles,
+    applyTemporalHandlesToSegment,
     updateMaskPathKeyframeFrame,
     deleteMaskPathKeyframe,
     getComputedTransform,
@@ -1392,6 +1393,9 @@ export const SequencerTimeline: React.FC = () => {
           }}
           onChangeKeyframeHandles={(keyframeId, patch) => {
             if (selectedTrack && graphChannel) updatePropertyKeyframeTemporalHandles(selectedTrack.id, graphChannel as AnimationChannel, keyframeId, patch);
+          }}
+          onApplySegmentPreset={(keyframeId, outgoing, incoming) => {
+            if (selectedTrack && graphChannel) applyTemporalHandlesToSegment(selectedTrack.id, graphChannel as AnimationChannel, keyframeId, outgoing, incoming);
           }}
           onBatchStart={startBatchInteraction}
           onBatchEnd={endBatchInteraction}

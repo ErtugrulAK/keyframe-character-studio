@@ -25,6 +25,8 @@ interface InteractiveCubicBezierEditorProps {
     keyframeId: string,
     patch: { bezierIn?: TemporalHandle; bezierOut?: TemporalHandle },
   ) => void;
+  /** #57 (V6): forwarded segment-scope preset application (host-provided). */
+  onApplySegmentPreset?: (keyframeId: string, outgoing: TemporalHandle, incoming: TemporalHandle) => void;
   /** Opens/closes ONE undo entry around a continuous curve or graph drag. */
   onBatchStart?: () => void;
   onBatchEnd?: () => void;
@@ -45,6 +47,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
   inactiveReason = null,
   onChangeKeyframeValue,
   onChangeKeyframeHandles,
+  onApplySegmentPreset,
   onBatchStart,
   onBatchEnd,
 }) => {
@@ -586,6 +589,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                   mode={graphMode}
                   onChangeKeyframeValue={onChangeKeyframeValue}
                   onChangeKeyframeHandles={onChangeKeyframeHandles}
+                  onApplySegmentPreset={onApplySegmentPreset}
                   onInteractionStart={onBatchStart}
                   onInteractionEnd={onBatchEnd}
                 />

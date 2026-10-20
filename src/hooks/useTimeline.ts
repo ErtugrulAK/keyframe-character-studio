@@ -15,6 +15,7 @@ import {
   deleteFrameGroupsMutator,
   updatePropertyKeyframeValueMutator,
   updatePropertyKeyframeTemporalHandlesMutator,
+  applyTemporalHandlesToSegmentMutator,
   updatePropertyKeyframeFrameMutator,
   updatePropertyKeyframeEasingMutator,
   deletePropertyKeyframeMutator,
@@ -262,6 +263,16 @@ export const useTimeline = ({
   ) => {
     setTracks((prev) => updatePropertyKeyframeTemporalHandlesMutator(prev, trackId, channel, keyframeId, patch));
   };
+  /** #57 (V6): segment preset application — one write, one undo entry, or a strict no-op. */
+  const applyTemporalHandlesToSegment = (
+    trackId: string,
+    channel: AnimationChannel,
+    fromKeyframeId: string,
+    outgoing: { x: number; y: number },
+    incoming: { x: number; y: number },
+  ) => {
+    setTracks((prev) => applyTemporalHandlesToSegmentMutator(prev, trackId, channel, fromKeyframeId, outgoing, incoming) ?? prev);
+  };
   const deletePropertyKeyframe = (trackId: string, channel: AnimationChannel, keyframeId: string) => {
     setTracks((prev) => deletePropertyKeyframeMutator(prev, trackId, channel, keyframeId));
   };
@@ -438,7 +449,7 @@ export const useTimeline = ({
     if (!track || !part) return;
     const scope = activeTemplateId || 'Sequence';
     if (resolveChannelAnimationState(track, channel, currentFrame, scope) !== 'off') return;
-    const authored = resolveAuthoredLocalTransform(track.partId, currentFrame, { parts: characterParts, worldOf: getComputedTransform });
+
     const value = channelArmValue(channel, authored, part);
     setTracks((prev) => addPropertyKeyframeMutator(
       migrateTrackLegacyKeyframes(prev, trackId, basePoseOfTrack(track.partId)),
@@ -494,6 +505,7 @@ export const useTimeline = ({
     deleteKeyframeFrameGroup,
     updatePropertyKeyframeValue,
     updatePropertyKeyframeTemporalHandles,
+    applyTemporalHandlesToSegment,
     deletePropertyKeyframe,
     addMaskPathKeyframe,
     updateMaskPathKeyframeValue,

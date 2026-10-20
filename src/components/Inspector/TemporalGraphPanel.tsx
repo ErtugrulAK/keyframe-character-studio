@@ -191,15 +191,21 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
           </text>
           <text className="temporal-graph-axis-label" x={PAD} y={HEIGHT - 8} fontSize={8} fill="#64748b" aria-hidden="true">F{startFrame}</text>
           <text className="temporal-graph-axis-label" x={WIDTH - PAD} y={HEIGHT - 8} fontSize={8} fill="#64748b" textAnchor="end" aria-hidden="true">F{endFrame}</text>
-          {/* One badge per segment, named by the easing the authority applies
-           * from the segment's start key. */}
+          {/* One badge per segment, named by the easing the authority ACTUALLY
+           * applies from the segment's start key — including the temporal-handle
+           * override (G2): applyEasing short-circuits on a COMPLETE handle pair
+           * (prev.bezierOut && next.bezierIn), so a segment whose stored easing
+           * name is overridden by handles must not badge the stale name. */}
           {sorted.slice(0, -1).map((keyframe, index) => {
             const next = sorted[index + 1];
+            const badgeEasing = keyframe.easing === 'hold'
+              ? 'hold' // the authority checks hold BEFORE the handle override
+              : keyframe.bezierOut && next.bezierIn ? 'bezier' : keyframe.easing;
             return (
               <text
                 key={`badge-${keyframe.id}`}
                 className="temporal-graph-segment-badge"
-                data-segment-easing={keyframe.easing}
+                data-segment-easing={badgeEasing}
                 x={toSvg((keyframe.frame + next.frame) / 2, minValue).x}
                 y={HEIGHT - PAD - 5}
                 fontSize={8}
@@ -207,7 +213,7 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
                 textAnchor="middle"
                 aria-hidden="true"
               >
-                {EASING_BADGE[keyframe.easing] ?? keyframe.easing}
+                {EASING_BADGE[badgeEasing] ?? badgeEasing}
               </text>
             );
           })}

@@ -118,3 +118,38 @@ describe('TemporalGraphPanel — D1 Increment 1 presentation', () => {
     expect(badges[1].textContent).toBe('IN/OUT');
   });
 });
+
+describe('TemporalGraphPanel — G2 badge truth under the handle override', () => {
+  const pair: PropertyKeyframe[] = [
+    { id: 'a', frame: 0, value: 0, easing: 'linear', bezierOut: { x: 0.42, y: 0 } },
+    { id: 'b', frame: 10, value: 100, easing: 'linear', bezierIn: { x: 0.58, y: 1 } },
+  ];
+  const halfPair: PropertyKeyframe[] = [
+    { id: 'a', frame: 0, value: 0, easing: 'linear', bezierOut: { x: 0.42, y: 0 } },
+    { id: 'b', frame: 10, value: 100, easing: 'linear' },
+  ];
+  const holdWithPair: PropertyKeyframe[] = [
+    { id: 'a', frame: 0, value: 0, easing: 'hold', bezierOut: { x: 0.42, y: 0 } },
+    { id: 'b', frame: 10, value: 100, easing: 'linear', bezierIn: { x: 0.58, y: 1 } },
+  ];
+
+  const badgeOf = (container: HTMLElement, index = 0) => container.querySelectorAll('.temporal-graph-segment-badge')[index];
+
+  it('badges a complete handle pair as BEZ although the stored name is still linear', () => {
+    const { container } = render(<TemporalGraphPanel keyframes={pair} mode="value" />);
+    expect(badgeOf(container).getAttribute('data-segment-easing')).toBe('bezier');
+    expect(badgeOf(container).textContent).toBe('BEZ');
+  });
+
+  it('an incomplete pair keeps the stored name (pairing is the authority predicate)', () => {
+    const { container } = render(<TemporalGraphPanel keyframes={halfPair} mode="value" />);
+    expect(badgeOf(container).getAttribute('data-segment-easing')).toBe('linear');
+    expect(badgeOf(container).textContent).toBe('LIN');
+  });
+
+  it('hold outranks a complete pair — matching applyEasing check order', () => {
+    const { container } = render(<TemporalGraphPanel keyframes={holdWithPair} mode="value" />);
+    expect(badgeOf(container).getAttribute('data-segment-easing')).toBe('hold');
+    expect(badgeOf(container).textContent).toBe('HOLD');
+  });
+});

@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { TemporalGraphPanel } from '../components/Inspector/TemporalGraphPanel';
 import type { PropertyKeyframe } from '../types/animator';
@@ -116,5 +116,69 @@ describe('TemporalGraphPanel — D1 Increment 1 presentation', () => {
     expect(badges[0].textContent).toBe('HOLD');
     expect(badges[1].getAttribute('data-segment-easing')).toBe('easeInOut');
     expect(badges[1].textContent).toBe('IN/OUT');
+  });
+});
+
+describe('TemporalGraphPanel — E1/V6 segment-scope easing presets', () => {
+  const keyed: PropertyKeyframe[] = [
+    { id: 'a', frame: 0, value: 0, easing: 'linear' },
+    { id: 'b', frame: 10, value: 100, easing: 'linear' },
+  ];
+
+  it('offers every built-in preset per keyframe through the handle row', () => {
+    const onChange = vi.fn();
+    const onPreset = vi.fn();
+    render(<TemporalGraphPanel keyframes={keyed} mode="value" onChangeKeyframeHandles={onChange} onApplySegmentPreset={onPreset} />);
+    const selects = screen.getAllByRole('combobox', { name: /Apply easing preset to segment starting at frame/ });
+    expect(selects).toHaveLength(2);
+    expect(selects[0]).toHaveAccessibleName('Apply easing preset to segment starting at frame 0');
+    for (const label of ['Ease In Out', 'Overshoot', 'Anticipate', 'Elastic']) {
+      expect(within(selects[0]).getByRole('option', { name: label, exact: true })).toBeInTheDocument();
+    }
+  });
+
+  it('one select change = one segment call with BOTH endpoints (one transaction)', () => {
+    const onChange = vi.fn();
+    const onPreset = vi.fn();
+    render(<TemporalGraphPanel keyframes={keyed} mode="value" onChangeKeyframeHandles={onChange} onApplySegmentPreset={onPreset} />);
+    const select = screen.getAllByRole('combobox', { name: /Apply easing preset to segment/ })[0];
+    fireEvent.change(select, { target: { value: 'Ease In Out' } });
+    expect(onPreset).toHaveBeenCalledTimes(1);
+    expect(onPreset).toHaveBeenCalledWith('a', { x: 0.42, y: 0 }, { x: 0.58, y: 1 });
+    expect((select as unknown as HTMLSelectElement).value).toBe(''); // transient, no phantom selection
+  });
+
+  it('the LAST key cannot receive a preset: no outgoing segment, explicitly disabled', () => {
+    const onChange = vi.fn();
+    const onPreset = vi.fn();
+    render(<TemporalGraphPanel keyframes={keyed} mode="value" onChangeKeyframeHandles={onChange} onApplySegmentPreset={onPreset} />);
+    const last = screen.getAllByRole('combobox', { name: /Apply easing preset to segment/ })[1];
+    expect(last).toBeDisabled();
+    expect(last.getAttribute('title')).toMatch(/No outgoing segment/);
+  });
+
+  it('a HOLD key is explicitly disabled rather than silently inert', () => {
+    const onChange = vi.fn();
+    const onPreset = vi.fn();
+    const held: PropertyKeyframe[] = [
+      { id: 'a', frame: 0, value: 0, easing: 'hold' },
+      { id: 'b', frame: 10, value: 100, easing: 'linear' },
+    ];
+    render(<TemporalGraphPanel keyframes={held} mode="value" onChangeKeyframeHandles={onChange} onApplySegmentPreset={onPreset} />);
+    const first = screen.getAllByRole('combobox', { name: /Apply easing preset to segment/ })[0];
+    expect(first).toBeDisabled();
+    expect(first.getAttribute('title')).toMatch(/Hold outranks/);
+  });
+
+  it('without a segment host the affordance is absent, not broken', () => {
+    const onChange = vi.fn();
+    render(<TemporalGraphPanel keyframes={keyed} mode="value" onChangeKeyframeHandles={onChange} />);
+    expect(screen.queryByRole('combobox', { name: /Apply easing preset/ })).not.toBeInTheDocument();
+  });
+
+  it('keeps the derived speed graph free of editing affordances', () => {
+    const onChange = vi.fn();
+    render(<TemporalGraphPanel keyframes={keyed} mode="speed" onChangeKeyframeHandles={onChange} onApplySegmentPreset={vi.fn()} />);
+    expect(screen.queryByRole('combobox', { name: /Apply easing preset/ })).not.toBeInTheDocument();
   });
 });

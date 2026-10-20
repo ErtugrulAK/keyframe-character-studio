@@ -309,6 +309,55 @@ export const updatePropertyKeyframeTemporalHandlesMutator = (
   });
 };
 
+/**
+ * #57 (V6): atomically apply a curve pair to the OUTGOING SEGMENT of one
+ * keyframe — the single write a preset gesture needs.
+ *
+ * The evaluator applies temporal handles only for the complete pair
+ * `prev.bezierOut && next.bezierIn` (defaults.applyEasing), so a segment
+ * preset MUST write both endpoints in ONE document mutation (one write = one
+ * undo entry). Deliberate refusals return `undefined` (strict no-op, caller
+ * surfaces nothing changed): the start key holds (hold outranks handles — a
+ * silent inert write would lie), the key is the segment-less last key of its
+ * scope, or the key/channel is missing. Neighboring segments are never
+ * touched; only the addressed pair fields change.
+ */
+export const applyTemporalHandlesToSegmentMutator = (
+  tracks: Track[],
+  trackId: string,
+  channel: AnimationChannel,
+  fromKeyframeId: string,
+  outgoing: { x: number; y: number },
+  incoming: { x: number; y: number },
+): Track[] | undefined => {
+  let wrote = false;
+  const nextTracks = tracks.map((track) => {
+    if (track.id !== trackId) return track;
+    const isMask = isLayerMaskChannel(channel);
+    const channelMap = (isMask ? (track.maskChannels ?? {}) : (track.channels ?? makeEmptyChannels())) as Record<string, PropertyKeyframe[]>;
+    const keys = channelMap[channel] ?? [];
+    const from = keys.find((key) => key.id === fromKeyframeId);
+    if (!from || from.easing === 'hold') return track;
+    const scope = from.templateId || 'Sequence';
+    const inScope = keys
+      .filter((key) => (key.templateId || 'Sequence') === scope)
+      .sort((a, b) => a.frame - b.frame);
+    const index = inScope.findIndex((key) => key.id === fromKeyframeId);
+    const to = inScope[index + 1];
+    if (!to) return track; // no outgoing segment: refuse, never guess backwards
+    const updated = keys.map((key) => {
+      if (key.id === from.id) return { ...key, bezierOut: { ...outgoing } };
+      if (key.id === to.id) return { ...key, bezierIn: { ...incoming } };
+      return key;
+    });
+    wrote = true;
+    return isMask
+      ? { ...track, maskChannels: { ...track.maskChannels, [channel]: updated } }
+      : { ...track, channels: { ...channelMap, [channel]: updated } as Track['channels'] };
+  });
+  return wrote ? nextTracks : undefined;
+};
+
 export const deletePropertyKeyframeMutator = (
   tracks: Track[],
   trackId: string,

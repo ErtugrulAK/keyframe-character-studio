@@ -80,10 +80,13 @@ describe('endpointSlopesFromHandles — analytic table', () => {
     expect(slopes.entry.value).toBeCloseTo(0.4, 12);
   });
 
-  it('exit cusp (x2=1, y2<1): infinite tangent magnitude', () => {
+  it('exit cusp (x2=1, y2<1): signed +Infinity (y′(1) = 3(1−y2) > 0 over a double-zero-free positive x′)', () => {
+    // Analytic: x′(s) = 3(1−s)²·… + … → live near s=1 with x′(1)=0 and
+    // x″(1) = 6(1+0.3−2·1) < 0 ⇒ x′(s) ≈ −x″(1)(1−s) > 0; y′(1) = 1.8 > 0
+    // ⇒ ratio diverges positive.
     const slopes = endpointSlopesFromHandles(h(0.3, 0.3), h(1, 0.4));
     expect(slopes.exit.kind).toBe('cusp');
-    expect(Math.abs(slopes.exit.value)).toBe(Number.POSITIVE_INFINITY);
+    expect(slopes.exit.value).toBe(Number.POSITIVE_INFINITY);
   });
 
   it('non-finite inputs: both endpoints cusp-NaN', () => {
@@ -299,5 +302,110 @@ describe('V6 — overflow guards, exit clamp, independent FD oracle', () => {
         / (cubic(2 * hSmall, out.x, inHandle.x) - cubic(hSmall, out.x, inHandle.x));
       expect(Math.abs(slopes.entry.value - approx) / Math.max(1, Math.abs(slopes.entry.value))).toBeLessThan(0.02);
     }
+  });
+});
+
+describe('V7 — signed cusp tiers (reflected-parameter reasoning) and scale-range refusals', () => {
+  // Independent oracle: raw Bernstein secant slopes from the endpoint into
+  // the interior. The sign of the secant just inside a diverging endpoint IS
+  // the sign of the cusp — no production coefficient arithmetic involved.
+  const bern = (s: number, a: number, b: number) =>
+    3 * (1 - s) * (1 - s) * s * a + 3 * (1 - s) * s * s * b + s * s * s;
+  const entrySecant = (out: { x: number; y: number }, inH: { x: number; y: number }, t: number) =>
+    (bern(t, out.y, inH.y) - bern(0, out.y, inH.y)) / (bern(t, out.x, inH.x) - bern(0, out.x, inH.x));
+  const exitSecant = (out: { x: number; y: number }, inH: { x: number; y: number }, t: number) =>
+    (bern(1, out.y, inH.y) - bern(1 - t, out.y, inH.y)) / (bern(1, out.x, inH.x) - bern(1 - t, out.x, inH.x));
+
+  it('exit second-order cusp, rising side (x1=x2=1, y2=1, y1=0.5): +Infinity', () => {
+    // X(t) = t³ alone: x′ approaches zero from +side as 3t²; Y(t) ≈ 1.5t² −
+    // 0.5t³: the ratio (1−y)/(1−x) ≈ 1.5/t diverges POSITIVE. The sign is the
+    // numerator's own vanishing order (t¹ ⇒ factor −1 at the exit) against
+    // the denominator's order 2 (factor +1) — a −1·(+1)·sign(d2y)·sign(d3x)
+    // rule, NOT sign(d2y) alone.
+    const slopes = endpointSlopesFromHandles(h(1, 0.5), h(1, 1));
+    expect(slopes.exit.kind).toBe('cusp');
+    expect(slopes.exit.value).toBe(Number.POSITIVE_INFINITY);
+    expect(Math.sign(exitSecant(h(1, 0.5), h(1, 1), 1e-3))).toBe(1);
+  });
+
+  it('exit second-order cusp, falling side (y1=1.5): −Infinity — both signs read from the same rule', () => {
+    const slopes = endpointSlopesFromHandles(h(1, 1.5), h(1, 1));
+    expect(slopes.exit.kind).toBe('cusp');
+    expect(slopes.exit.value).toBe(Number.NEGATIVE_INFINITY);
+    expect(Math.sign(exitSecant(h(1, 1.5), h(1, 1), 1e-3))).toBe(-1);
+  });
+
+  it('symmetric entry second-order cusp: mirror pair (1−E(1−u)) flips the SAME way', () => {
+    // Mirroring the rising exit fixture through out′=(1−x2,1−y2),
+    // in′=(1−x1,1−y1) and E′(u)=1−E(1−u) preserves endpoint slope SIGNS
+    // (two reflections cancel): exit +∞ ↔ entry +∞, exit −∞ ↔ entry −∞.
+    expect(endpointSlopesFromHandles(h(0, 0), h(0, 0.5)).entry)
+      .toEqual({ kind: 'cusp', value: Number.POSITIVE_INFINITY });
+    expect(Math.sign(entrySecant(h(0, 0), h(0, 0.5), 1e-3))).toBe(1);
+    expect(endpointSlopesFromHandles(h(0, 0), h(0, -0.5)).entry)
+      .toEqual({ kind: 'cusp', value: Number.NEGATIVE_INFINITY });
+    expect(Math.sign(entrySecant(h(0, 0), h(0, -0.5), 1e-3))).toBe(-1);
+  });
+
+  it('exit first-order numerator over SECOND-order x (x1=x2=1, y2<1): +Infinity (dir[0]·dir[2] = +1)', () => {
+    const slopes = endpointSlopesFromHandles(h(1, 0.5), h(1, 0.8));
+    expect(slopes.exit.kind).toBe('cusp');
+    expect(slopes.exit.value).toBe(Number.POSITIVE_INFINITY);
+    expect(Math.sign(exitSecant(h(1, 0.5), h(1, 0.8), 1e-4))).toBe(1);
+  });
+
+  it('out-of-domain flip (x1=1.5, x2=1, y2<1): −Infinity — the order-1 exit coefficient enters negated', () => {
+    // The READ path is defined for every finite storage pair (write policy
+    // lives in handlesFromEndpointSlopes only): x′(s) < 0 just inside the
+    // exit here, so the live ratio diverges negative.
+    const slopes = endpointSlopesFromHandles(h(1.5, 1), h(1, 0.5));
+    expect(slopes.exit.kind).toBe('cusp');
+    expect(slopes.exit.value).toBe(Number.NEGATIVE_INFINITY);
+    expect(Math.sign(exitSecant(h(1.5, 1), h(1, 0.5), 1e-4))).toBe(-1);
+  });
+
+  it('out-of-domain flip at entry (x1=0, in.x<0): −Infinity — entry dir is +1,+1,+1 but d2x carries the sign', () => {
+    const slopes = endpointSlopesFromHandles(h(0, 0.3), h(-0.5, 0.3));
+    expect(slopes.entry.kind).toBe('cusp');
+    expect(slopes.entry.value).toBe(Number.NEGATIVE_INFINITY);
+    expect(Math.sign(entrySecant(h(0, 0.3), h(-0.5, 0.3), 1e-4))).toBe(-1);
+  });
+
+  it('collapsed identity and regular expectations survive the sign rule', () => {
+    expect(endpointSlopesFromHandles(h(0, 0), h(0, 0)).entry).toEqual({ kind: 'limit', value: 1 });
+    expect(endpointSlopesFromHandles(h(1, 1), h(1, 1)).exit).toEqual({ kind: 'limit', value: 1 });
+    expect(endpointSlopesFromHandles(h(1e-7, 1e-7), h(0.5, 0.2)).entry)
+      .toEqual({ kind: 'regular', value: 1 });
+    const easeIn = endpointSlopesFromHandles(h(0.42, 0), h(1, 1));
+    expect(easeIn.exit.kind).toBe('limit'); // equal orders: the −1 factors cancel
+    expect(easeIn.exit.value).toBeCloseTo(1 / (1 - 0.42), 12);
+  });
+
+  it('overflowed frame difference (finite inputs): explicit overflow-result, never an ok scale', () => {
+    expect(segmentVelocityScale(0, 1, -1e308, 1e308)).toEqual({ ok: false, reason: 'overflow-result' });
+  });
+
+  it('underflowed displacement (finite inputs, k collapses to zero): overflow-result', () => {
+    const refused = segmentVelocityScale(0, Number.MIN_VALUE, 0, 2); // k = 5e-324/2 → 0
+    expect(refused).toEqual({ ok: false, reason: 'overflow-result' });
+    expect(physicalVelocityToNormalized(2, refused)).toBeNull();
+  });
+
+  it('overflowed endpoint-value difference: overflow-result', () => {
+    expect(segmentVelocityScale(-1e308, 1e308, 0, 2)).toEqual({ ok: false, reason: 'overflow-result' });
+  });
+
+  it('tiny-but-real scales stay ok and bridge exactly', () => {
+    const scale = segmentVelocityScale(0, Number.MIN_VALUE, 0, 1); // k = MIN_VALUE exactly
+    if (!scale.ok) throw new Error(`expected ok, got ${JSON.stringify(scale)}`);
+    expect(scale.k).toBe(Number.MIN_VALUE);
+    expect(physicalVelocityToNormalized(1e-323, scale)).toBe(2);
+  });
+
+  it('representable scale round-trips exactly through the signed bridge', () => {
+    const scale = segmentVelocityScale(64, 0, 0, 8); // k = −8 (descending channel)
+    if (!scale.ok) throw new Error('expected ok scale');
+    expect(normalizedSlopeToPhysicalVelocity(0.5, scale)).toBe(-4);
+    expect(physicalVelocityToNormalized(-4, scale)).toBe(0.5);
   });
 });

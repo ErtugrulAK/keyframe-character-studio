@@ -60,9 +60,15 @@ const finite = (value: number): boolean => Number.isFinite(value);
  * V6 classification proceeds strictly by DERIVATIVE ORDER, never by an
  * epsilon-blended threshold (review findings 4A/4B):
  *
- *  - d1x > 0: REGULAR — the first-order derivative is a live ratio y1/x1
- *    (exact at x1 = 1e-7 as at 0.42).
- *  - d1x === 0 ∧ d1y ≠ 0: CUSP — vertical tangent, signed infinity.
+ *  - live first-order x (d1x ≠ 0): REGULAR — the derivative ratio y1/x1 is
+ *    the live slope (exact at x1 = 1e-7 as at 0.42).
+ *  - x vanishing at order k ≥ 1 with the y-derivative vanishing EARLIER:
+ *    CUSP — vertical tangent, signed infinity. The sign follows the live
+ *    derivative just INSIDE the endpoint: in the reflected parameter
+ *    t = 1 − s the series alternates (X(t) = d1·t − d2·t² + d3·t³), so the
+ *    exit multiplies its k-th-order coefficient by (−1)^k; the entry does
+ *    not. Finite equal-order ratios are untouched — the factors cancel
+ *    between the axes — only the divergent reading needs the order parity.
  *  - both first derivatives exactly zero: descend to the second-order
  *    L'Hôpital pair; live denominator → LIMIT; zero denominator with live
  *    numerator → CUSP; both zero → third order. A cubic's third derivative
@@ -84,18 +90,45 @@ export function endpointSlopesFromHandles(
       exit: { kind: 'cusp', value: Number.NaN },
     };
   }
-  const descent = (d1x: number, d1y: number, d2x: number, d2y: number, d3x: number, d3y: number): SlopeReading => {
-    if (d1x !== 0) {
+  // Per-axis leading vanishing order and its stored coefficient.
+  const lead = (d1: number, d2: number, d3: number) =>
+    d1 !== 0
+      ? { order: 0 as const, value: d1 }
+      : d2 !== 0
+        ? { order: 1 as const, value: d2 }
+        : d3 !== 0
+          ? { order: 2 as const, value: d3 }
+          : null;
+  // dir[k] = sign the k-th-order coefficient contributes to the live
+  // derivative approaching the endpoint from the interior (entry: +1,+1,+1;
+  // exit, reflected parameter t = 1−s: +1,−1,+1).
+  const descent = (
+    d1x: number,
+    d1y: number,
+    d2x: number,
+    d2y: number,
+    d3x: number,
+    d3y: number,
+    dir: readonly [number, number, number],
+  ): SlopeReading => {
+    const xl = lead(d1x, d2x, d3x);
+    const yl = lead(d1y, d2y, d3y);
+    // A cubic joining (0,0) to (1,1) cannot vanish at every derivative order
+    // on one axis; null is only reachable through non-finite input, refused
+    // above — keep an honest undefined reading as the defensive fallback.
+    if (xl === null || yl === null) return { kind: 'cusp', value: Number.NaN };
+    if (xl.order === 0) {
       const value = d1y / d1x;
       return finite(value) ? { kind: 'regular', value } : { kind: 'cusp', value: Math.sign(value) * Number.POSITIVE_INFINITY };
     }
-    if (d1y !== 0) return { kind: 'cusp', value: Math.sign(d1y) * Number.POSITIVE_INFINITY };
-    if (d2x !== 0) return { kind: 'limit', value: d2y / d2x };
-    if (d2y !== 0) return { kind: 'cusp', value: Math.sign(d2y) * Number.POSITIVE_INFINITY };
-    if (d3x !== 0) return { kind: 'limit', value: d3y / d3x };
-    if (d3y !== 0) return { kind: 'cusp', value: Math.sign(d3y) * Number.POSITIVE_INFINITY };
-    // All derivative orders vanish on both axes: no defined tangent.
-    return { kind: 'cusp', value: Number.NaN };
+    // Equal orders: a finite L'Hôpital limit, the direction factors cancel.
+    if (yl.order === xl.order) return { kind: 'limit', value: yl.value / xl.value };
+    // Numerator vanishes later: the endpoint is flat, the limit is 0.
+    if (yl.order > xl.order) return { kind: 'limit', value: 0 };
+    // Divergent: sign = (numerator coefficient × its direction) ÷ (denominator
+    // coefficient × its direction); division by ±1 is multiplication.
+    const sign = dir[yl.order] * dir[xl.order] * Math.sign(yl.value) * Math.sign(xl.value);
+    return { kind: 'cusp', value: sign * Number.POSITIVE_INFINITY };
   };
   // Entry derivatives: d1=(x1,y1); d2/6=(x2−2x1, y2−2y1); d3/6=(1−3x2+3x1, 1−3y2+3y1).
   const entry = descent(
@@ -105,6 +138,7 @@ export function endpointSlopesFromHandles(
     inHandle.y - 2 * out.y,
     1 - 3 * inHandle.x + 3 * out.x,
     1 - 3 * inHandle.y + 3 * out.y,
+    [1, 1, 1],
   );
   // Exit mirrors through the complement (t → 1−t): d1=(1−x2, 1−y2);
   // d2/6=(1+x1−2x2, 1+y1−2y2); d3/6=(1−3x2+3x1, 1−3y2+3y1).
@@ -115,6 +149,7 @@ export function endpointSlopesFromHandles(
     1 + out.y - 2 * inHandle.y,
     1 - 3 * inHandle.x + 3 * out.x,
     1 - 3 * inHandle.y + 3 * out.y,
+    [1, -1, 1],
   );
   return { entry, exit };
 }
@@ -198,8 +233,12 @@ export type VelocityScale =
  * only when the authored curve is monotone in the same direction).
  * Zero duration and zero displacement are the spec's non-identifiability
  * limits (L2/L3): speed information does not exist there, so conversion
- * REFUSES rather than inventing one. Overflow (finite inputs, infinite k)
- * is refused explicitly.
+ * REFUSES rather than inventing one. Numeric-range failures refuse under
+ * the same explicit overflow-result reason as an infinite k: an infinite
+ * Δt or Δv computed from finite inputs, and a k that underflows to zero
+ * (a non-zero displacement divided by enough frames has no representable
+ * nonzero scale — the bridge would silently flatten every velocity to 0
+ * and its inverse to null).
  */
 export function segmentVelocityScale(
   v0: number,
@@ -209,11 +248,12 @@ export function segmentVelocityScale(
 ): VelocityScale {
   if (![v0, v1, frame0, frame1].every(finite)) return { ok: false, reason: 'non-finite-input' };
   const deltaFrames = frame1 - frame0;
-  if (deltaFrames <= 0) return { ok: false, reason: 'zero-duration' };
   const deltaValue = v1 - v0;
+  if (!Number.isFinite(deltaFrames) || !Number.isFinite(deltaValue)) return { ok: false, reason: 'overflow-result' };
+  if (deltaFrames <= 0) return { ok: false, reason: 'zero-duration' };
   if (deltaValue === 0) return { ok: false, reason: 'zero-displacement' };
   const k = deltaValue / deltaFrames;
-  if (!Number.isFinite(k)) return { ok: false, reason: 'overflow-result' };
+  if (!Number.isFinite(k) || k === 0) return { ok: false, reason: 'overflow-result' };
   return { ok: true, k, deltaFrames, deltaValue };
 }
 

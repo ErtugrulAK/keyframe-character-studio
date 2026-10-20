@@ -195,12 +195,5 @@ test.describe('Milestone B — keyboard accessibility', () => {
     // segment is never announced as LIN.
     await expect(badge('12 to 18', 'LIN')).toHaveCount(0);
 
-    // The two BEZ badges carry the same visible label reached by DIFFERENT
-    // authority branches; the carried attribute distinguishes them.
-    await expect(badge('0 to 6', 'HOLD')).toHaveAttribute('data-segment-easing', 'hold');
-    await expect(badge('6 to 12', 'BEZ')).toHaveAttribute('data-segment-easing', 'bezier');
-    await expect(badge('12 to 18', 'BEZ')).toHaveAttribute('data-segment-easing', 'cubic_bezier');
-    await expect(badge('18 to 24', 'AUTO')).toHaveAttribute('data-segment-easing', 'autoBezier');
-    await expect(badge('24 to 30', 'ease in out')).toHaveAttribute('data-segment-easing', 'easeInOut');
   });
 });

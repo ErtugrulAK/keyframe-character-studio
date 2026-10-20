@@ -1,5 +1,15 @@
 # Next Session Handoff
 
+
+## V6 cross-PR adversarial review + integration ladder — 2026-10-21
+
+- Audit report + program: `docs/KCS_V6_CROSS_PR_ADVERSARIAL_AUDIT.md` on branch `docs/v6-audit` (PR #47, head `d5b8f9e`) — 25 findings across 14 open PRs, every Critical/High independently re-verified; 5 program corrections logged after reviewer/self errors were caught.
+- Main unchanged at `b6b3c2c`; tag `v1.1.0-public-controls` → `6351d1a` unchanged.
+- Closed this session (branch → tip): `feat/u1-timeline-keyboard-seek` → `e23d978` (#49), `fix/d2-autosave-failure-honesty` → `47820a8` (#50), `feat/e1-easing-presets` → `c530f60` (#52), `docs/f-g-audit-report` → `1a923f3`, `fix/d1-gif-lazy-error-boundary` → `70b198d` (#53), `feat/f5a-speed-inverse-math` → `3356050` (#58, 34 tests incl. FD oracle; docs now say PROPOSED/OPEN), `docs/f5-speed-graph-inverse` → `a7e3cd1` (#55), `fix/a2-mask-trim-runtime-parity` → `472e1cb` (#54), `test/m2-velocity-adversarial` → `9a1202c` (#57), `fix/g2-segment-badge-handle-truth` → `408d02b` (#60, badge = full authority chain + a11y), `docs/round3-blueprints` → `0b923af` (#61, five-state handle fuzz), `test/v1-visual-harness` → `fc1f0df` (#56, predicate settle; @visual 2/2 local win32).
+- Integration branch `integration/v6-critical-first` (#48, `f5a3a7f`): U1+D2+E1+docs; gates green (build, tsc, oxlint 0 errors, 58-file suite).
+- NEXT ACTIONS (in order, each needs explicit approval per policy): merge #47 → #48 → #53, then remaining stack #55 #54 #57 #58 #60 #61 #56 one at a time; re-run full gates + watch CI after every merge. After the ladder: branch/worktree cleanup audit (many `.worktrees` retired), V6 report merge note, then product-approved F5b (speed-panel slope editing) decision.
+- Known accepted trade-offs to leave alone: E1 apply-to-multiple undo grouping, D2 double-save-lock toast, D1 lazy-chunk dev-404 toast, C6 fuzz state, win32-only visual baselines (documented in `playwright.config.ts`).
+
 ## Repository state
 
 - **SAFE-02** opened as PR #15 (`fix/safe02-autosave-web-locks`, gate+CI green at `af3d7ba`, record `reports/progress_182_safe02_web_locks.md`): the autosave critical section runs inside a Web Lock; the manual save is asynchronous and e2e helpers wait the badge `data-last-saved-at` clock. Merge follows explicit approval.

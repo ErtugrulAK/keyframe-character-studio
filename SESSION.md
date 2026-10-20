@@ -1,50 +1,42 @@
 # Current Session
 
-> **Historical record — superseded.** This document describes a closed programme (the
-> release-candidate work and its task chain) and is kept unchanged as an audit record.
-> Nothing here is a statement about the current repository state. For the current state read
-> `PROJECT_STATE.md`, `NEXT_SESSION.md` and `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`.
+Session: V6 cross-PR adversarial review, remediation and controlled integration
+Date: 2026-10-20/21
+Model line: OMP `pennyroyal` session, plan `v6-critical-first`
 
 ## Repository and branch
 
-Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
-
-Checkout: `feat/lottie-import-core` (Milestone F item 10 first slice) on top of synchronized `main` at `06a5dfcf…` (Milestones A–E, the Milestone F study, the item-11 harness, the item-12 first step and product half, and the CI hotfix merged and green).
+- Stable QA repo: `C:/Users/ertugrul.ak/Desktop/keyframe-character-studio` (main `b6b3c2c`, clean except the user's own `chatgpt_handoff/` and `reports/progress_18x-20x` local artifacts — untouched).
+- Release baseline: `v1.1.0-public-controls` → `6351d1a`.
+- This session worked exclusively in `.worktrees/*` branches against `origin/main`.
 
 ## Completed
 
-- Task 105: export diagnostics remediation UX.
-- Task 107: track-matte source selection affordance.
-- Milestone A (item 3): canvas tangent authoring — merged.
-- Milestone B (item 4): graph and keyboard accessibility — merged at `96e8f9d`.
-- Milestone C (item 5): first export / onboarding flow — merged at `c2dcb22`.
-- Milestone D item 6: state consistency check — merged at `b91e8b9`, follow-up `be76df9`.
-- Milestone D item 9: dependency and warning maintenance — audited (`reports/progress_112_dependency_warning_audit.md`), then the approved Option A implemented and merged at `3923141` (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, the D9-2 checker rule and the local SQLite binding repair.
-- Milestone E study: `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` and `reports/progress_114_ograf_qa_study.md` — merged at `46021ee`.
-- Milestone E item 7 (Option 7-A, offline schema closure): **implemented on `chore/ograf-offline-schema-closure`** — the 8 pinned documents are vendored under `fixtures/ograf/schema/` with `NOTICE.md`, `scripts/ografSchemaClosure.mjs` owns the pins, and `validate-ograf-manifest.mjs` is offline by default with `--online` as the refresh path (`reports/progress_115_ograf_offline_schema_closure.md`).
-- Milestone E item 8 (folder QA automation): **implemented on this branch** — `scripts/generate-ograf-folder-qa.mjs` generates or verifies a clean folder QA copy with byte-level comparison, manifest validation through the offline validator and a host-limited report (`reports/progress_116_ograf_folder_qa.md`).
+V6 review: 4 parallel adversarial reviewers (A math, B UI/engine, C CI/security, D test hygiene) + independent re-verification of every finding + 5 follow-up doc corrections after reviewer/self errors were caught. Full report: `docs/KCS_V6_CROSS_PR_ADVERSARIAL_AUDIT.md` (branch `docs/v6-audit`).
+
+Closed findings (all pushed, all green per branch):
+- #49 U1 keyboard seek: paste-undo atomicity, ruler keyboard parity, e2e determinism → tip `e23d978`
+- #50 D2 autosave honesty: failure truth in 6 states → tip `47820a8`
+- #52 E1 preset clamped round-trip → tip `c530f60`
+- #51/#52 docs: honest merge ancestry → tip `1a923f3`
+- #53 D1 GIF lazy + error boundary → tip `70b198d`
+- #58 F5A speed inverse: authority-forward reads, Newton tripwire, rational table, V6 classification corrections, seeded FD oracle (34 tests) → tip `3356050`
+- #55 F5 spec: parametric definition, domain separation, signed velocities, eligibility table → tip `a7e3cd1`
+- #54 A2 mask/trim runtime parity → tip `472e1cb`
+- #57 M2 velocity adversarial suite (62 tests) → tip `9a1202c`
+- #60 G2 badge FULL authority chain incl. controlPoints/autoBezier tiers + a11y exposure → tip `408d02b` (17 tests)
+- #61 drift-guard five-state handle matrix + PROPOSED-status wording → tip `0b923af`
+- #56 visual settle predicate + honest portability notes → tip `fc1f0df` (2/2 @visual locally)
+- #48 merge commit `f5a3a7f` on `integration/v6-critical-first`: U1+D2+E1+docs — build/tsc/lint(0 errors)/58-file suite green.
 
 ## Current work
 
-Item 10’s first implementation slice (the Lottie import core and its loss report) is implemented on this branch and awaits the user merge decision. Masks/mattes, text/image/precomp, the UI entry point, item 12’s unified import entry and OGraf package import stay plan-only.
+Integration ladder executing. Phase order: merge #48 (user approval required per policy), then stack #53 → #58/#55/#54/#57/#60/#61/#56 with full gates at each step, CI runs on every push.
 
-## Validation
+## Next
 
-- `npm test`: PASS — 120 files / 1,773 tests. `npm run lint`: clean. `npm run build` (`tsc -b && vite build`): PASS — this is the type gate CI uses. The session's earlier "tsc clean" claims cited `npx tsc --noEmit`, which does not cover the same project program; two import-boundary type errors therefore reached `main` and are fixed in `reports/progress_122_ci_hotfix_import_boundary_types.md`.
-- Evaluator profile harness: `npx vitest run --config perf/vitest.perf.config.ts` PASS (report printed); baseline recorded in `reports/progress_118_evaluator_profiling.md`.
-- Import boundary and product half: `src/tests/importValidation.test.ts` PASS (9 cases), `src/tests/importCompatibilityMatrix.test.ts` PASS (5 cases); the serialization suite PASS (96 cases, including the autosave refusal).
-- `npm run validate:ograf`: PASS offline (pin-verified vendored closure); the same command passes with a poisoned proxy, proving no fetch is attempted; `--online` also passes.
-- `npm run qa:release`: PASS — 2 Chromium tests. `node scripts/check-state-consistency.mjs`: PASS.
-- Folder QA: generate PASS; `--verify` on an unchanged copy PASS; `--verify` after a one-byte edit FAILS with `content drift`; `--verify` with a stray file FAILS with `extra file`; invalid manifest FAILS with the inspected copy and report preserved; `--out <repository root>` is refused.
+See `NEXT_SESSION.md`. Gate list: post-merge typecheck+lint+full vitest+build; per-phase CI green; visual/e2e runs use predicate waits only.
 
-## Open decision
+## Constraints
 
-The user merge decision for this stacked Milestone F branch (item 11 harness, item 12 first step and the item 10 mapping design). Item 10’s future implementation and the rest of item 12 stay plan-only until separately approved. Still approval-gated afterwards: the milestone D follow-ups (Option B updates, Option C majors, the `engines` declaration, the npm-12 `allowScripts` pin) and anything in Milestone F.
-
-## Protected state
-
-- Release tags `v1.1.0-rc.1` (target `46d2a3e59e065816d972dcd56951803951b577f6`) and `v1.1.0-public-controls` remain unchanged; the GitHub draft release is neither published nor finalized.
-- `origin/without-mask` remains ARCHIVE and untouched.
-- `.omp/config.yml`, global OMP tooling, model roles, task concurrency and the memory backend remain unchanged.
-- `Desktop\KCS`, `Desktop\ograf-graphics` and the (absent) `kcs-ograf-*` QA roots were not modified; the folder QA tool writes only where `--out` or `--verify` explicitly points, and verification ran in the system temporary directory.
-- The package remains private at `1.1.0-rc.1`; no dependency was updated.
+Language policy, protected contracts, no UI redesign, no schema change, no new dependencies, no merge/push without explicit approval, stable QA services (`:5173`/`:5000`) and `gradual-value-map-qah` branch untouched.

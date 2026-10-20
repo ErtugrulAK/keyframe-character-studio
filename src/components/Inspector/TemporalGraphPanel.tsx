@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import type { PropertyKeyframe, TemporalHandle } from '../../types/animator';
-import { interpolateChannel } from '../../utils/defaults';
+import { effectiveSegmentAuthority, interpolateChannel } from '../../utils/defaults';
 
 interface TemporalHandlePatch {
   bezierIn?: TemporalHandle;
@@ -191,23 +191,36 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
           </text>
           <text className="temporal-graph-axis-label" x={PAD} y={HEIGHT - 8} fontSize={8} fill="#64748b" aria-hidden="true">F{startFrame}</text>
           <text className="temporal-graph-axis-label" x={WIDTH - PAD} y={HEIGHT - 8} fontSize={8} fill="#64748b" textAnchor="end" aria-hidden="true">F{endFrame}</text>
-          {/* One badge per segment, named by the easing the authority applies
-           * from the segment's start key. */}
+          {/* One badge per segment, named by the branch the authority ACTUALLY
+           * takes (V6 full precedence): HOLD > complete handle pair > stored
+           * controlPoints > autoBezier > named. The classification comes from
+           * effectiveSegmentAuthority in defaults.ts — the authority's own
+           * module, not a second evaluator. Screen-reader semantics ride on
+           * the badge itself (role=img + aria-label), so the truth is not
+           * carried by an aria-hidden decoration alone. */}
           {sorted.slice(0, -1).map((keyframe, index) => {
             const next = sorted[index + 1];
+            const authority = effectiveSegmentAuthority(keyframe, next);
+            const badgeEasing = authority === 'handles'
+              ? 'bezier'
+              : authority === 'controlPoints'
+                ? 'cubic_bezier'
+                : keyframe.easing;
+            const badgeText = EASING_BADGE[badgeEasing] ?? badgeEasing;
             return (
               <text
                 key={`badge-${keyframe.id}`}
                 className="temporal-graph-segment-badge"
-                data-segment-easing={keyframe.easing}
+                data-segment-easing={badgeEasing}
                 x={toSvg((keyframe.frame + next.frame) / 2, minValue).x}
                 y={HEIGHT - PAD - 5}
                 fontSize={8}
                 fill="#64748b"
                 textAnchor="middle"
-                aria-hidden="true"
+                role="img"
+                aria-label={`Segment frame ${keyframe.frame} to ${next.frame}: ${badgeText === 'IN/OUT' ? 'ease in out' : badgeText}`}
               >
-                {EASING_BADGE[keyframe.easing] ?? keyframe.easing}
+                {badgeText}
               </text>
             );
           })}

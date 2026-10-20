@@ -25,7 +25,7 @@ const rand = () => {
 };
 const pick = <T,>(items: readonly T[]): T => items[Math.floor(rand() * items.length)] as T;
 
-const EASINGS = ['linear', 'easeIn', 'easeOut', 'easeInOut', 'hold', 'autoBezier', 'cubic_bezier', 'bounce', 'elastic'] as const;
+const EASINGS = ['linear', 'easeIn', 'easeOut', 'easeInOut', 'hold', 'autoBezier', 'cubic_bezier', 'bounce', 'elastic', 'anticipate', 'overshoot'] as const;
 
 function fuzzKeys(count: number): PropertyKeyframe[] {
   const keys: PropertyKeyframe[] = [];
@@ -44,6 +44,20 @@ function fuzzKeys(count: number): PropertyKeyframe[] {
       key.bezierControlPoints = [0.1, 0.2, 0.8, 0.9];
     }
     keys.push(key);
+    // Temporal-handle pairing (O4): ~30% of SEGMENTS (not keys) carry a
+    // complete prev.bezierOut + next.bezierIn pair — the override branch both
+    // engines must agree on, previously un-fuzzed.
+    if (keys.length >= 2 && rand() < 0.3) {
+      const startKey = keys[keys.length - 2];
+      (startKey as { bezierOut?: { x: number; y: number } }).bezierOut = {
+        x: Math.round(rand() * 1000) / 1000,
+        y: Math.round(rand() * 1000) / 1000,
+      };
+      key.bezierIn = {
+        x: Math.round(rand() * 1000) / 1000,
+        y: Math.round(rand() * 1000) / 1000,
+      };
+    }
   }
   return keys;
 }

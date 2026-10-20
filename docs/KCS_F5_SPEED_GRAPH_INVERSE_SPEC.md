@@ -33,6 +33,25 @@ Endpoint slopes (limits; used below):
 $E'(0)=\lim \frac{y'(s)}{x'(s)}\big|_{s\to0}=\frac{3y_1}{3x_1}=\frac{y_1}{x_1}$ and
 $E'(1)=\frac{3(1-y_2)}{3(1-x_2)}=\frac{1-y_2}{1-x_2}$.
 
+**Degenerate endpoints (V7 sign rule, PR #58).** When the x-derivative first
+vanishes at order $k_x\ge1$ at an endpoint, the reading descends by derivative
+order. In the reflected parameter $t=1-s$ (exit) the Taylor series alternates —
+$X(t)=\tilde d_1 t-\tilde d_2 t^2+\tilde d_3 t^3$ — so the $k$-th-order
+coefficient enters the live derivative with factor $(-1)^k$ at the exit and
+$+1$ at the entry:
+
+- equal orders $k_y=k_x$: finite L'Hôpital limit, the factors cancel between
+  the axes (easeIn exit $\frac{1+y_1-2}{1+x_1-2}=\frac{1}{1-x_1}$ as in §4.2);
+- $k_y<k_x$: CUSP, vertical tangent, signed infinity with
+  $\operatorname{sign}=(-1)^{k_y+k_x}\operatorname{sign}(\tilde d^{y}_{k_y})\operatorname{sign}(\tilde d^{x}_{k_x})$;
+  e.g. handles $(1,0.5)/(1,1)$ have $x'(s)=3(1-s)^2$ and
+  $y'(s)=1.5(1-s)+O((1-s)^2)$, so $E'(1)\to+\infty$ — the raw second-order
+  coefficient $1+y_1-2y_2=-0.5$ alone reads $-\infty$, which was the shipped
+  defect;
+- $k_y>k_x$: flat endpoint (slope $0$, reported as `limit`);
+- all orders zero on both axes: the identity corners $(0,0)/(0,0)$ and
+  $(1,1)/(1,1)$, slope $1$ at both ends.
+
 Degenerate cases from the authority, not from this spec:
 - `hold`: `applyEasing` returns 0 for the whole span → $v\equiv v_0$, $V\equiv0$, step at the boundary.
 - duplicate/zero-duration: `interpolateChannel` returns `prev.value` — no curve exists.
@@ -100,7 +119,8 @@ $$y_1=g_0\,x_1,\qquad y_2=1-g_1\,(1-x_2)$$
 4. *Write-conditioning policy*: the gesture refuses $x_i$ within
    $\tau=10^{-6}$ of the singular endpoints (`out-x-not-representable`); the
    READ side descends by derivative order and reads near-singular handles
-   exactly (§1 degenerate classes, PR #58).
+   exactly, including the divergent sign for every finite storage pair inside
+   or outside the cone (§1 degenerate classes, PR #58).
 
 Segment coupling at a shared key is natural, not ambiguous: $h_{out}$ of key $k$
 owns the entry of the segment that STARTS at $k$; $h_{in}$ of key $k$ owns the exit
@@ -115,6 +135,17 @@ $V$ (matching `channelVelocityAt`), converts at the authority boundary, and neve
 stores speed. Overflow and non-identifiability are explicit refusals in the
 public API (`overflow-result`, `zero-displacement`, `zero-duration`), never
 silent infinities.
+
+V7 expanded what `overflow-result` refuses, in `segmentVelocityScale` — all with
+finite inputs, all still refusals rather than repaired numbers: a frame
+difference that overflows ($t_1-t_0=\pm\infty$, e.g. frames $\mp10^{308}$ with a
+nonzero displacement would otherwise return `ok` with $k=0$,
+$\Delta t=\infty$), a displacement difference that overflows, and a $k$ that
+underflows to exactly $0$ — a tiny displacement divided by enough frames has no
+representable nonzero scale, and an ok-$k{=}0$ scale flattens every forward
+conversion to $0$ while nulling every inverse. A real subnormal scale is not a
+failure: $k=5\cdot10^{-324}$ stays `ok` and bridges exactly where the operands
+are representable.
 
 ## 4. Worked numerical examples
 
@@ -147,6 +178,7 @@ Evaluator precedence (defaults.applyEasing, mirrored by the runtime):
 | Partial pair (one side only) | target state only after the gesture completes it | atomic pair write IS the completion path (#57) |
 | Duplicate/zero-duration frames | no — no curve exists (Limit 2) | refused at scale (`zero-duration`) |
 | Zero displacement $v_1=v_0$ | no — $V\equiv0$ for all handles (Limit 2) | refused at scale (`zero-displacement`) |
+| Finite inputs, out-of-range $\Delta t$/$\Delta v$ or underflowed $k$ | no — no representable scale (V7) | refused at scale (`overflow-result`) |
 | Singular x handles ($x_i\in\{0,1\}$ or near) | read: exact by derivative-order descent; write: refused within $\tau$ | see §3 domain 4 |
 
 ## 5. Test vectors (RED/GREEN plan for a future PR)
@@ -165,7 +197,8 @@ Evaluator precedence (defaults.applyEasing, mirrored by the runtime):
   `src/utils/speedInverse.ts` exposes `endpointSlopesFromHandles`,
   `handlesFromEndpointSlopes`, `segmentVelocityScale`,
   `physicalVelocityToNormalized`, `normalizedSlopeToPhysicalVelocity`;
-  V6-corrected classification and explicit refusals. No UI caller until F5b.
+  V6-corrected classification, V7-signed divergent readings and
+  V7-expanded numeric-range refusals (§1, §3). No UI caller until F5b.
 - F5b (UI, gated on F5a + product approval): slope handles on the speed panel via
   existing `onChangeKeyframeHandles`; disabled-state rules above; keyboard parity.
 - Explicitly out of any first PR: interior reshaping (needs a residual indicator and

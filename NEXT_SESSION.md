@@ -1,14 +1,15 @@
 # Next Session Handoff
 
 
-## V6 cross-PR adversarial review + integration ladder — 2026-10-21
+## V6/V7 truthful reconciliation — 2026-10-21 (live PR snapshot 2026-10-20T22:12:38Z)
 
-- Audit report + program: `docs/KCS_V6_CROSS_PR_ADVERSARIAL_AUDIT.md` on branch `docs/v6-audit` (PR #47, head `d5b8f9e`) — 25 findings across 14 open PRs, every Critical/High independently re-verified; 5 program corrections logged after reviewer/self errors were caught.
-- Main unchanged at `b6b3c2c`; tag `v1.1.0-public-controls` → `6351d1a` unchanged.
-- Closed this session (branch → tip): `feat/u1-timeline-keyboard-seek` → `e23d978` (#49), `fix/d2-autosave-failure-honesty` → `47820a8` (#50), `feat/e1-easing-presets` → `c530f60` (#52), `docs/f-g-audit-report` → `1a923f3`, `fix/d1-gif-lazy-error-boundary` → `70b198d` (#53), `feat/f5a-speed-inverse-math` → `3356050` (#58, 34 tests incl. FD oracle; docs now say PROPOSED/OPEN), `docs/f5-speed-graph-inverse` → `a7e3cd1` (#55), `fix/a2-mask-trim-runtime-parity` → `472e1cb` (#54), `test/m2-velocity-adversarial` → `9a1202c` (#57), `fix/g2-segment-badge-handle-truth` → `408d02b` (#60, badge = full authority chain + a11y), `docs/round3-blueprints` → `0b923af` (#61, five-state handle fuzz), `test/v1-visual-harness` → `fc1f0df` (#56, predicate settle; @visual 2/2 local win32).
-- Integration branch `integration/v6-critical-first` (#48, `f5a3a7f`): U1+D2+E1+docs; gates green (build, tsc, oxlint 0 errors, 58-file suite).
-- NEXT ACTIONS (in order, each needs explicit approval per policy): merge #47 → #48 → #53, then remaining stack #55 #54 #57 #58 #60 #61 #56 one at a time; re-run full gates + watch CI after every merge. After the ladder: branch/worktree cleanup audit (many `.worktrees` retired), V6 report merge note, then product-approved F5b (speed-panel slope editing) decision.
-- Known accepted trade-offs to leave alone: E1 apply-to-multiple undo grouping, D2 double-save-lock toast, D1 lazy-chunk dev-404 toast, C6 fuzz state, win32-only visual baselines (documented in `playwright.config.ts`).
+- Errata for the previous version of this section, retracted as runtime claims after object-level verification: `docs/KCS_V6_CROSS_PR_ADVERSARIAL_AUDIT.md` does not exist on any fetched ref; branches `docs/v6-audit` and `integration/v6-critical-first` are absent on `origin`; the objects `e23d978`, `47820a8`, `c530f60`, `70b198d`, `f5a3a7f`, `d5b8f9e` do not exist in the repository; `reports/progress_203*` does not exist (the newest record is `reports/progress_202_extreme_engineering_v5.md`); the remote branch `docs/f-g-audit-report` (`1a923f3`) carries an older October-19 master-program ledger, not the claimed audit. The four-reviewer program and the merge ladder described there are not reproducible from any git object. Prior session reports are history, not runtime proof — and none of this proves the sprint's development absent; the real map follows.
+- The real V6 sprint outcome, queried live at the snapshot timestamp above; open heads move under concurrent authorized work, so re-query later instead of treating this list as final state:
+  - `main` is at `b6b3c2cbcfc8727f38129d207526e3167c591526`.
+  - Release tags unchanged (`v1.1.0-public-controls`, `v1.1.0-rc.1`, `v1.1.0-rc.2`).
+  - Merged: #47 velocity math `a062642`, #48 focus-token single source `548562d`, #49 graph presentation `b3dc2b6`, #50 public-controls contract `43e974d`, #51 round-2 blueprints `af6f64d`.
+  - Open: #52/#53/#54 test stabilizers (`feb70f7` / `af5c5c1` / `4af5a16`), #55 F5 spec `68c4727dd45d089ce58c0edf8d17166aae3846d7`, #56 visual harness `fc1f0df`, #57 easing presets on the value-graph handle rows `545d04df750ff7af35d4241b3421848edcfe231a` (segment-preset implementation present; may advance under its authorized worker), #58 F5a closed-form math `45ef1309a42e59f20b6d53ee57765982e2a1979f` (changelog mirror repaired by the supervisor after worker B), #59 adversarial velocity sweep `9a1202c`, #60 G2 segment-badge authority truth plus the V7-60 e2e contract fix `a8b598eb87a33287e12ac5d73260180805d6beb7`, #61 round-3 blueprints `0b923af`, #62 this documents reconciliation.
+- There is no integration ladder and no integration branch: every open PR carries its own CI and its own explicit merge-decision gate, and no release readiness is claimed.
 
 ## Repository state
 

@@ -50,9 +50,28 @@ describe('endpointSlopesFromHandles — analytic table', () => {
     expect(slopes.entry.value).toBe(Number.POSITIVE_INFINITY);
   });
 
-  it('entry double-degenerate (0,0 / 0,0): cusp', () => {
+  it('V6 correction — fully collapsed (0,0 / 0,0) is the identity: slope 1, not a cusp', () => {
     const slopes = endpointSlopesFromHandles(h(0, 0), h(0, 0));
+    expect(slopes.entry.kind).toBe('limit');
+    expect(slopes.entry.value).toBe(1);
+  });
+
+  it('V6 correction — symmetric exit collapse (1,1 / 1,1) also reads 1', () => {
+    const slopes = endpointSlopesFromHandles(h(1, 1), h(1, 1));
+    expect(slopes.exit.kind).toBe('limit');
+    expect(slopes.exit.value).toBe(1);
+  });
+
+  it('V6 correction — near-singular but live (1e-7, 1e-7 / .5, .2) keeps its REAL first-order slope 1', () => {
+    const slopes = endpointSlopesFromHandles(h(1e-7, 1e-7), h(0.5, 0.2));
+    expect(slopes.entry.kind).toBe('regular');
+    expect(slopes.entry.value).toBeCloseTo(1, 12);
+  });
+
+  it('parabolic cusp (0,0 / 0, .3): second-order numerator live, denominator dead', () => {
+    const slopes = endpointSlopesFromHandles(h(0, 0), h(0, 0.3));
     expect(slopes.entry.kind).toBe('cusp');
+    expect(slopes.entry.value).toBe(Number.POSITIVE_INFINITY);
   });
 
   it('entry limit (0,0 / 0.5,0.2): second-order ratio y2/x2', () => {
@@ -242,6 +261,43 @@ describe('F5a seeded property sweep', () => {
       const slopes = endpointSlopesFromHandles(result.bezierOut, result.bezierIn);
       expect(Math.abs(slopes.entry.value - entrySlope)).toBeLessThan(1e-12);
       expect(Math.abs(slopes.exit.value - exitSlope)).toBeLessThan(1e-12);
+    }
+  });
+});
+
+describe('V6 — overflow guards, exit clamp, independent FD oracle', () => {
+  it('finite inputs, infinite k: overflow is an explicit refusal', () => {
+    expect(segmentVelocityScale(1e308, -1e308, 0, 2)).toEqual({ ok: false, reason: 'overflow-result' });
+  });
+
+  it('bridge refuses non-finite results from tiny/huge operands', () => {
+    const tiny = segmentVelocityScale(0, 1e-300, 0, 1);
+    expect(physicalVelocityToNormalized(1e300, tiny)).toBeNull(); // 1e600 → refused
+    const huge = segmentVelocityScale(0, 1e300, 0, 1);
+    expect(normalizedSlopeToPhysicalVelocity(1e10, huge)).toBeNull(); // 1e310 → refused
+  });
+
+  it('exit clamp is reported with truthful metadata', () => {
+    const result = handlesFromEndpointSlopes({ outX: 0.4, inX: 0.9, entrySlope: 0, exitSlope: -20 });
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.bezierIn.y).toBe(SLOPE_ENVELOPE_MAX);
+    expect(result.clamped).toEqual(['exit']);
+    expect(result.lossy).toBe(true);
+  });
+
+  it('regular slopes match an independent parametric FD oracle (no shared closed form)', () => {
+    const cubic = (s: number, a: number, b: number) => 3 * (1 - s) * (1 - s) * s * a + 3 * (1 - s) * s * s * b + s * s * s;
+    let seed = 90210;
+    const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 0xffffffff; };
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const out = { x: 0.15 + rand() * 0.7, y: rand() * 1.6 - 0.3 };
+      const inHandle = { x: 0.15 + rand() * 0.7, y: rand() * 1.6 - 0.3 };
+      const slopes = endpointSlopesFromHandles(out, inHandle);
+      expect(slopes.entry.kind).toBe('regular');
+      const hSmall = 1e-4;
+      const approx = (cubic(2 * hSmall, out.y, inHandle.y) - cubic(hSmall, out.y, inHandle.y))
+        / (cubic(2 * hSmall, out.x, inHandle.x) - cubic(hSmall, out.x, inHandle.x));
+      expect(Math.abs(slopes.entry.value - approx) / Math.max(1, Math.abs(slopes.entry.value))).toBeLessThan(0.02);
     }
   });
 });

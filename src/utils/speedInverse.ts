@@ -12,35 +12,27 @@
  * segment with P0=(0,0), P3=(1,1), P1=(outX,outY), P2=(inX,inY):
  *
  *   x(s) = 3(1-s)²s·outX + 3(1-s)s²·inX + s³,   y(s) likewise on the y pair
- *   E(u) = y(x⁻¹(u)),   endpoint slopes E'(0) = outY/outX, E'(1) = (1-inY)/(1-inX)
+ *   u = x(s),   E(u) = y(s) = y(x⁻¹(u))
+ *   E'(0) = outY/outX,   E'(1) = (1-inY)/(1-inX)      (first-order, when live)
  *
  * (derivatives x'(0)=3·outX, x'(1)=3(1-inX) and the y analogues; the factors
  * of 3 cancel). Physical velocity is V = k·E'(u) with k = (v1-v0)/Δt —
  * `segmentVelocityScale` below is the ONLY bridge between the dimensionless
  * eased-progress slope and value-units/frame; the two must never be conflated.
  *
- * Degenerate endpoint classes (spec §2.4, §3):
- *  - regular:   x1 > τ (entry) / x2 < 1-τ (exit) — slope is the ratio above.
- *  - limit:     x and y handles both collapse onto the endpoint (x1=y1=0 or
- *               x2=y2=1): the 0/0 resolves by a second L'Hôpital pass to
- *               (inY-2·outY)/(inX-2·outX) at entry, (1+outY-2·inY)/(1+outX-2·inX) at exit.
- *  - cusp:      x-handle at the endpoint but y-handle not (x1=0, y1≠0):
- *               vertical tangent, |E'| = ∞ — never writable from a slope gesture.
- *
- * Inverse (the F5a contract): with x fixed by the value graph, the unique
- * preimage of target slopes (g0, g1) is
- *
- *   outY = g0·outX,    inY = 1 - g1·(1-inX)
- *
- * valid only while both x-handles keep positive distance τ from the singular
- * endpoints; y results are clamped to the storage envelope [-α, 1+α], α=0.5,
- * and any clamp is REPORTED (never silent). Presets may live outside the
- * envelope (spec erratum) — they write through the value graph, not here.
+ * Degenerate endpoint classes (spec §2.4, §3; V6-corrected):
+ *  - regular:   first-order x derivative > 0 — slope is the live ratio, exact
+ *               at near-zero magnitudes (conditioning is documented, not feared).
+ *  - limit:     derivative descent by L'Hôpital when lower orders vanish
+ *               exactly (second order, then third; fully-collapsed corners
+ *               resolve to slope 1, matching the identity curve).
+ *  - cusp:      the x-derivative vanishes at the leading live order while a
+ *               y-derivative does not — vertical tangent, signed infinity.
  */
 
 import type { TemporalHandle } from '../types/animator';
 
-/** Minimum x-handle distance from 0/1 that can carry a finite slope. */
+/** Minimum x-handle distance from 0/1 that a GESTURE may author (write policy). */
 export const X_SINGULARITY_TAU = 1e-6;
 
 /** Storage envelope for y handles produced by a speed gesture (spec α=0.5). */
@@ -49,7 +41,7 @@ export const SLOPE_ENVELOPE_MAX = 1.5;
 
 export type SlopeKind = 'regular' | 'limit' | 'cusp';
 
-/** One endpoint reading; `cusp` carries a signed Infinity. */
+/** One endpoint reading; `cusp` carries a signed Infinity (or NaN when undefined). */
 export interface SlopeReading {
   kind: SlopeKind;
   value: number;
@@ -64,8 +56,23 @@ const finite = (value: number): boolean => Number.isFinite(value);
 
 /**
  * Forward: the two endpoint slopes of one segment's stored handles.
- * Never throws; unreadable inputs report `cusp` with NaN, singular geometries
- * classify per the module header.
+ *
+ * V6 classification proceeds strictly by DERIVATIVE ORDER, never by an
+ * epsilon-blended threshold (review findings 4A/4B):
+ *
+ *  - d1x > 0: REGULAR — the first-order derivative is a live ratio y1/x1
+ *    (exact at x1 = 1e-7 as at 0.42).
+ *  - d1x === 0 ∧ d1y ≠ 0: CUSP — vertical tangent, signed infinity.
+ *  - both first derivatives exactly zero: descend to the second-order
+ *    L'Hôpital pair; live denominator → LIMIT; zero denominator with live
+ *    numerator → CUSP; both zero → third order. A cubic's third derivative
+ *    cannot vanish together with the lower two unless the curve is the
+ *    identity, which yields slope 1 at both fully-collapsed corners
+ *    (0,0 / 0,0) and (1,1 / 1,1).
+ *
+ * Epsilon thresholds are a WRITE-POLICY concern (handlesFromEndpointSlopes
+ * refuses to author near-singular x — see its docs), never a READ shortcut:
+ * a (1e-7, 1e-7) entry reads its real slope 1, not a surrogate limit.
  */
 export function endpointSlopesFromHandles(
   out: TemporalHandle,
@@ -77,28 +84,38 @@ export function endpointSlopesFromHandles(
       exit: { kind: 'cusp', value: Number.NaN },
     };
   }
-  let entry: SlopeReading;
-  if (out.x > X_SINGULARITY_TAU) {
-    entry = { kind: 'regular', value: out.y / out.x };
-  } else if (Math.abs(out.y) <= X_SINGULARITY_TAU) {
-    const denominator = inHandle.x - 2 * out.x;
-    entry = Math.abs(denominator) <= X_SINGULARITY_TAU
-      ? { kind: 'cusp', value: Number.POSITIVE_INFINITY }
-      : { kind: 'limit', value: (inHandle.y - 2 * out.y) / denominator };
-  } else {
-    entry = { kind: 'cusp', value: Math.sign(out.y) * Number.POSITIVE_INFINITY };
-  }
-  let exit: SlopeReading;
-  if (inHandle.x < 1 - X_SINGULARITY_TAU) {
-    exit = { kind: 'regular', value: (1 - inHandle.y) / (1 - inHandle.x) };
-  } else if (Math.abs(inHandle.y - 1) <= X_SINGULARITY_TAU) {
-    const denominator = 1 + out.x - 2 * inHandle.x;
-    exit = Math.abs(denominator) <= X_SINGULARITY_TAU
-      ? { kind: 'cusp', value: Number.POSITIVE_INFINITY }
-      : { kind: 'limit', value: (1 + out.y - 2 * inHandle.y) / denominator };
-  } else {
-    exit = { kind: 'cusp', value: -Math.sign(inHandle.y - 1) * Number.POSITIVE_INFINITY };
-  }
+  const descent = (d1x: number, d1y: number, d2x: number, d2y: number, d3x: number, d3y: number): SlopeReading => {
+    if (d1x !== 0) {
+      const value = d1y / d1x;
+      return finite(value) ? { kind: 'regular', value } : { kind: 'cusp', value: Math.sign(value) * Number.POSITIVE_INFINITY };
+    }
+    if (d1y !== 0) return { kind: 'cusp', value: Math.sign(d1y) * Number.POSITIVE_INFINITY };
+    if (d2x !== 0) return { kind: 'limit', value: d2y / d2x };
+    if (d2y !== 0) return { kind: 'cusp', value: Math.sign(d2y) * Number.POSITIVE_INFINITY };
+    if (d3x !== 0) return { kind: 'limit', value: d3y / d3x };
+    if (d3y !== 0) return { kind: 'cusp', value: Math.sign(d3y) * Number.POSITIVE_INFINITY };
+    // All derivative orders vanish on both axes: no defined tangent.
+    return { kind: 'cusp', value: Number.NaN };
+  };
+  // Entry derivatives: d1=(x1,y1); d2/6=(x2−2x1, y2−2y1); d3/6=(1−3x2+3x1, 1−3y2+3y1).
+  const entry = descent(
+    out.x,
+    out.y,
+    inHandle.x - 2 * out.x,
+    inHandle.y - 2 * out.y,
+    1 - 3 * inHandle.x + 3 * out.x,
+    1 - 3 * inHandle.y + 3 * out.y,
+  );
+  // Exit mirrors through the complement (t → 1−t): d1=(1−x2, 1−y2);
+  // d2/6=(1+x1−2x2, 1+y1−2y2); d3/6=(1−3x2+3x1, 1−3y2+3y1).
+  const exit = descent(
+    1 - inHandle.x,
+    1 - inHandle.y,
+    1 + out.x - 2 * inHandle.x,
+    1 + out.y - 2 * inHandle.y,
+    1 - 3 * inHandle.x + 3 * out.x,
+    1 - 3 * inHandle.y + 3 * out.y,
+  );
   return { entry, exit };
 }
 
@@ -114,15 +131,28 @@ export type HandleFromSlopesResult =
       bezierIn: TemporalHandle;
       /** Endpoints whose y needed envelope clamping — the caller MUST surface this. */
       clamped: Array<'entry' | 'exit'>;
-      /** True when a requested slope was mathematically unwritable and clamped. */
+      /** True when a requested slope was unwritable inside the envelope and clamped. */
       lossy: boolean;
     }
   | { ok: false; reason: HandleFromSlopesFailure };
 
 /**
  * Inverse: closed-form handles for target endpoint slopes (g0, g1), x fixed.
- * Refuses singular x-handles (a finite slope cannot live there) instead of
- * fudging x; clamps y into the storage envelope and reports every clamp.
+ *
+ * The [tau, 1−tau] x-window is a WRITE-CONDITIONING POLICY, not the storage
+ * domain: the evaluator accepts any finite x and endpointSlopesFromHandles
+ * READS near-singular handles exactly. Authoring through a gesture refuses
+ * near-singular x instead of writing numerically fragile curves. The
+ * [−0.5, 1.5] y-window is the GESTURE envelope (it covers every curve the
+ * named easings can produce), NOT a storage limit — presets such as Elastic
+ * (y = −0.55 / 1.55) deliberately live outside it and write through the
+ * value graph, never through this function.
+ *
+ * CALLER PREFLIGHT (this pure utility cannot see the channel): the write is
+ * only meaningful for a segment whose start key is not HOLD and whose
+ * effective curve is (or is about to become) a complete temporal pair. Over
+ * HOLD, bezierControlPoints-only, or named non-cubic easing the authored
+ * handles stay inert until a pair completes — the caller owns that gating.
  */
 export function handlesFromEndpointSlopes(request: {
   outX: number;
@@ -158,14 +188,18 @@ export function handlesFromEndpointSlopes(request: {
 
 export type VelocityScale =
   | { ok: true; k: number; deltaFrames: number; deltaValue: number }
-  | { ok: false; reason: 'non-finite-input' | 'zero-duration' | 'zero-displacement' };
+  | { ok: false; reason: 'non-finite-input' | 'zero-duration' | 'zero-displacement' | 'overflow-result' };
 
 /**
  * The ONLY sanctioned bridge between dimensionless slope g and physical
- * velocity V (value-units/frame): V = k·g, k = (v1-v0)/Δt.
+ * velocity V (value-units/frame): V = k·g, k = (v1−v0)/Δt. k is SIGNED —
+ * a descending channel has negative V for positive g (the speed display
+ * shows signed velocity; the eased-progress slope g stays non-negative
+ * only when the authored curve is monotone in the same direction).
  * Zero duration and zero displacement are the spec's non-identifiability
  * limits (L2/L3): speed information does not exist there, so conversion
- * REFUSES rather than inventing one.
+ * REFUSES rather than inventing one. Overflow (finite inputs, infinite k)
+ * is refused explicitly.
  */
 export function segmentVelocityScale(
   v0: number,
@@ -178,17 +212,21 @@ export function segmentVelocityScale(
   if (deltaFrames <= 0) return { ok: false, reason: 'zero-duration' };
   const deltaValue = v1 - v0;
   if (deltaValue === 0) return { ok: false, reason: 'zero-displacement' };
-  return { ok: true, k: deltaValue / deltaFrames, deltaFrames, deltaValue };
+  const k = deltaValue / deltaFrames;
+  if (!Number.isFinite(k)) return { ok: false, reason: 'overflow-result' };
+  return { ok: true, k, deltaFrames, deltaValue };
 }
 
-/** Physical (value-units/frame) → dimensionless. Refuses on the invalid scale. */
+/** Physical (value-units/frame) → dimensionless. Null on invalid scale, input, or non-finite result. */
 export function physicalVelocityToNormalized(velocity: number, scale: VelocityScale): number | null {
   if (!scale.ok || !Number.isFinite(velocity)) return null;
-  return velocity / scale.k;
+  const g = velocity / scale.k;
+  return Number.isFinite(g) ? g : null;
 }
 
-/** Dimensionless → physical (value-units/frame). Refuses on the invalid scale. */
+/** Dimensionless → physical (value-units/frame). Null on invalid scale, input, or non-finite result. */
 export function normalizedSlopeToPhysicalVelocity(slope: number, scale: VelocityScale): number | null {
   if (!scale.ok || !Number.isFinite(slope)) return null;
-  return slope * scale.k;
+  const v = slope * scale.k;
+  return Number.isFinite(v) ? v : null;
 }

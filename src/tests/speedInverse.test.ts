@@ -1,0 +1,247 @@
+/**
+ * F5a unit coverage — closed-form endpoint-slope ↔ handle math.
+ * Analytic fixtures first, then seeded property sweeps; T1 parity is measured
+ * through the SHIPPED helper (channelVelocityAt), never a second evaluator.
+ */
+
+import { describe, expect, it } from 'vitest';
+import {
+  SLOPE_ENVELOPE_MAX,
+  SLOPE_ENVELOPE_MIN,
+  endpointSlopesFromHandles,
+  handlesFromEndpointSlopes,
+  normalizedSlopeToPhysicalVelocity,
+  physicalVelocityToNormalized,
+  segmentVelocityScale,
+} from '../utils/speedInverse';
+import { channelVelocityAt } from '../utils/velocityMath';
+import type { PropertyKeyframe } from '../types/animator';
+
+const h = (x: number, y: number) => ({ x, y });
+
+describe('endpointSlopesFromHandles — analytic table', () => {
+  it('linear (1/3, 1/3, 2/3, 2/3): slope 1 at both ends', () => {
+    const slopes = endpointSlopesFromHandles(h(1 / 3, 1 / 3), h(2 / 3, 2 / 3));
+    expect(slopes.entry).toEqual({ kind: 'regular', value: 1 });
+    expect(slopes.exit).toEqual({ kind: 'regular', value: 1 });
+  });
+
+  it('easeInOut (0.42, 0, 0.58, 1): 0 at both ends', () => {
+    const slopes = endpointSlopesFromHandles(h(0.42, 0), h(0.58, 1));
+    expect(slopes.entry.value).toBeCloseTo(0, 12);
+    expect(slopes.exit.value).toBeCloseTo(0, 12);
+  });
+
+  it('easeIn preset (0.42, 0, 1, 1): regular 0 entry, L\'Hôpital limit exit 1/(1-0.42)', () => {
+    const slopes = endpointSlopesFromHandles(h(0.42, 0), h(1, 1));
+    expect(slopes.entry.kind).toBe('regular');
+    expect(slopes.exit.kind).toBe('limit');
+    expect(slopes.exit.value).toBeCloseTo((1 - 0) / (1 - 0.42), 12);
+  });
+
+  it('anticipate preset: negative entry slope is a regular reading', () => {
+    const slopes = endpointSlopesFromHandles(h(0.6, -0.28), h(0.735, 0.045));
+    expect(slopes.entry).toEqual({ kind: 'regular', value: -0.28 / 0.6 });
+  });
+
+  it('entry cusp (x1=0, y1>0): +Infinity, classified not thrown', () => {
+    const slopes = endpointSlopesFromHandles(h(0, 0.3), h(0.5, 0.5));
+    expect(slopes.entry.kind).toBe('cusp');
+    expect(slopes.entry.value).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  it('entry double-degenerate (0,0 / 0,0): cusp', () => {
+    const slopes = endpointSlopesFromHandles(h(0, 0), h(0, 0));
+    expect(slopes.entry.kind).toBe('cusp');
+  });
+
+  it('entry limit (0,0 / 0.5,0.2): second-order ratio y2/x2', () => {
+    const slopes = endpointSlopesFromHandles(h(0, 0), h(0.5, 0.2));
+    expect(slopes.entry.kind).toBe('limit');
+    expect(slopes.entry.value).toBeCloseTo(0.4, 12);
+  });
+
+  it('exit cusp (x2=1, y2<1): infinite tangent magnitude', () => {
+    const slopes = endpointSlopesFromHandles(h(0.3, 0.3), h(1, 0.4));
+    expect(slopes.exit.kind).toBe('cusp');
+    expect(Math.abs(slopes.exit.value)).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  it('non-finite inputs: both endpoints cusp-NaN', () => {
+    const slopes = endpointSlopesFromHandles(h(Number.NaN, 0), h(0.5, Number.POSITIVE_INFINITY));
+    expect(slopes.entry.kind).toBe('cusp');
+    expect(Number.isNaN(slopes.entry.value)).toBe(true);
+  });
+});
+
+describe('handlesFromEndpointSlopes — inverse, envelope, refusals', () => {
+  it('exact preimage: (0.42, 0.58) + (0.2, 1.7) → (0.42,0.084)/(0.58,0.286)', () => {
+    const result = handlesFromEndpointSlopes({ outX: 0.42, inX: 0.58, entrySlope: 0.2, exitSlope: 1.7 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.bezierOut.x).toBe(0.42);
+    expect(result.bezierOut.y).toBeCloseTo(0.084, 12);
+    expect(result.bezierIn.x).toBe(0.58);
+    expect(result.bezierIn.y).toBeCloseTo(1 - 1.7 * (1 - 0.58), 12);
+    expect(result.clamped).toEqual([]);
+    expect(result.lossy).toBe(false);
+  });
+
+
+  it('round-trip through the forward reading is exact to 1e-12', () => {
+    const result = handlesFromEndpointSlopes({ outX: 0.33, inX: 0.67, entrySlope: 1, exitSlope: 1 });
+    if (!result.ok) throw new Error('expected ok');
+    const slopes = endpointSlopesFromHandles(result.bezierOut, result.bezierIn);
+    expect(slopes.entry.value).toBeCloseTo(1, 12);
+    expect(slopes.exit.value).toBeCloseTo(1, 12);
+  });
+
+  it('envelope clamp is reported, never silent: g0=10 at x1=0.42', () => {
+    const result = handlesFromEndpointSlopes({ outX: 0.42, inX: 0.58, entrySlope: 10, exitSlope: 0 });
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.bezierOut.y).toBe(SLOPE_ENVELOPE_MAX);
+    expect(result.clamped).toEqual(['entry']);
+    expect(result.lossy).toBe(true);
+  });
+
+  it('negative slope clamps at the lower envelope for large anticipation', () => {
+    const result = handlesFromEndpointSlopes({ outX: 0.1, inX: 0.9, entrySlope: -20, exitSlope: 0 });
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.bezierOut.y).toBe(SLOPE_ENVELOPE_MIN);
+    expect(result.clamped).toContain('entry');
+  });
+
+  it('singular x handles refuse instead of fudging x', () => {
+    expect(handlesFromEndpointSlopes({ outX: 0, inX: 0.5, entrySlope: 1, exitSlope: 1 }))
+      .toEqual({ ok: false, reason: 'out-x-not-representable' });
+    expect(handlesFromEndpointSlopes({ outX: 0.5, inX: 1, entrySlope: 1, exitSlope: 1 }))
+      .toEqual({ ok: false, reason: 'in-x-not-representable' });
+  });
+
+  it('non-finite inputs refuse', () => {
+    expect(handlesFromEndpointSlopes({ outX: 0.5, inX: Number.NaN, entrySlope: 1, exitSlope: 1 }))
+      .toEqual({ ok: false, reason: 'non-finite-input' });
+  });
+});
+
+describe('segmentVelocityScale + unit bridge', () => {
+  it('k scales with frame duration: same g, double Δt halves V', () => {
+    const a = segmentVelocityScale(0, 100, 0, 10);
+    const b = segmentVelocityScale(0, 100, 0, 20);
+    if (!a.ok || !b.ok) throw new Error('expected ok scales');
+    expect(normalizedSlopeToPhysicalVelocity(2, a)).toBeCloseTo(20, 12);
+    expect(normalizedSlopeToPhysicalVelocity(2, b)).toBeCloseTo(10, 12);
+  });
+
+  it('zero displacement and zero duration refuse (non-identifiability)', () => {
+    expect(segmentVelocityScale(5, 5, 0, 10)).toEqual({ ok: false, reason: 'zero-displacement' });
+    expect(segmentVelocityScale(0, 10, 4, 4)).toEqual({ ok: false, reason: 'zero-duration' });
+  });
+
+  it('signed channels convert through the signed scale', () => {
+    const scale = segmentVelocityScale(100, 0, 0, 10); // k = -10
+    if (!scale.ok) throw new Error('expected ok');
+    expect(normalizedSlopeToPhysicalVelocity(1, scale)).toBeCloseTo(-10, 12);
+    expect(physicalVelocityToNormalized(-5, scale)).toBeCloseTo(0.5, 12);
+  });
+
+  it('bridge refuses on invalid scale or non-finite velocity', () => {
+    const dead = segmentVelocityScale(5, 5, 0, 10);
+    expect(physicalVelocityToNormalized(3, dead)).toBeNull();
+    const live = segmentVelocityScale(0, 10, 0, 10);
+    expect(physicalVelocityToNormalized(Number.NaN, live)).toBeNull();
+  });
+});
+
+describe('T1 parity — forward helper agrees with endpoint slopes', () => {
+  // The shipped helper is a central/one-sided difference with window
+  // ε ≤ 0.25 frames; discretisation error is O(k·E″·ε/Δt), so the parity
+  // tolerance below is ε/Δt-scaled, not arbitrary.
+  const key = (id: string, frame: number, value: number, out: { x: number; y: number }, inHandle: { x: number; y: number }): PropertyKeyframe =>
+    ({ id, frame, value, easing: 'cubic_bezier', bezierOut: out, bezierIn: inHandle });
+
+  const cases: Array<[string, { x: number; y: number }, { x: number; y: number }]> = [
+    ['linear', h(1 / 3, 1 / 3), h(2 / 3, 2 / 3)],
+    ['easeInOut', h(0.42, 0), h(0.58, 1)],
+    ['overshoot', h(0.175, 0.885), h(0.32, 1.275)],
+    ['anticipate', h(0.6, -0.28), h(0.735, 0.045)],
+  ];
+
+  it.each(cases)('%s: helper velocity just inside the entry matches k·E′(0) within the FD bound', (_name, out, inHandle) => {
+    const frames = 100;
+    const channel = [key('a', 0, 0, out, inHandle), key('b', frames, 100, out, inHandle)];
+    const slopes = endpointSlopesFromHandles(out, inHandle);
+    expect(slopes.entry.kind).toBe('regular');
+    const expected = (100 / frames) * slopes.entry.value; // k = 1
+    const probe = 0.3; // interior with the whole FD window on-segment (ε = 0.25)
+    const measured = channelVelocityAt(channel, probe).velocity;
+    const bound = 0.5 * (0.25 / frames) * 8; // |E″| ≤ ~8 for envelope-legit handles
+    expect(Math.abs(measured - expected)).toBeLessThanOrEqual(Math.max(0.06, Math.abs(expected) * 0.06 + bound));
+  });
+
+  it('easeInOut entry (slope 0): helper reads a small positive FD residue, not noise-level garbage', () => {
+    const channel = [key('a', 0, 0, h(0.42, 0), h(0.58, 1)), key('b', 100, 100, h(0.42, 0), h(0.58, 1))];
+    const measured = channelVelocityAt(channel, 0).velocity; // on-key forward probe
+    expect(measured).toBeGreaterThanOrEqual(0);
+    expect(measured).toBeLessThan(0.2); // k=1; E'(0)=0, FD residue one order of ε/Δt down
+  });
+});
+
+describe('F5a seeded property sweep', () => {
+  // Deterministic LCG — no Math.random, no seeds leaking across runs.
+  const lcg = (seed: number) => () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 0xffffffff;
+  };
+
+  it('200 random admissible (x, g) pairs: inverse writes stay in the envelope and read back at the clamped slope', () => {
+    const rand = lcg(20261020);
+    for (let attempt = 0; attempt < 200; attempt++) {
+      const outX = 0.05 + rand() * 0.9;
+      const inX = 0.05 + rand() * 0.9;
+      const entrySlope = -6 + rand() * 14;
+      const exitSlope = -6 + rand() * 14;
+      const result = handlesFromEndpointSlopes({ outX, inX, entrySlope, exitSlope });
+      if (!result.ok) throw new Error(`unexpected refusal: ${JSON.stringify(result)}`);
+      expect(result.bezierOut.y).toBeGreaterThanOrEqual(SLOPE_ENVELOPE_MIN);
+      expect(result.bezierOut.y).toBeLessThanOrEqual(SLOPE_ENVELOPE_MAX);
+      expect(result.bezierIn.y).toBeGreaterThanOrEqual(SLOPE_ENVELOPE_MIN);
+      expect(result.bezierIn.y).toBeLessThanOrEqual(SLOPE_ENVELOPE_MAX);
+      const slopes = endpointSlopesFromHandles(result.bezierOut, result.bezierIn);
+      const clampedEntry = Math.min(SLOPE_ENVELOPE_MAX, Math.max(SLOPE_ENVELOPE_MIN, entrySlope * outX));
+      const clampedExit = Math.min(SLOPE_ENVELOPE_MAX, Math.max(SLOPE_ENVELOPE_MIN, 1 - exitSlope * (1 - inX)));
+      expect(slopes.entry.value).toBeCloseTo(clampedEntry / outX, 9);
+      expect(slopes.exit.value).toBeCloseTo((1 - clampedExit) / (1 - inX), 9);
+      // A clamp must be reported exactly when the target was outside the envelope.
+      const expectEntryClamp = entrySlope * outX < SLOPE_ENVELOPE_MIN || entrySlope * outX > SLOPE_ENVELOPE_MAX;
+      expect(result.clamped.includes('entry')).toBe(expectEntryClamp);
+    }
+  });
+
+  it('near-singular x handles (1e-7) refuse rather than report astronomic slopes', () => {
+    const result = handlesFromEndpointSlopes({ outX: 1e-7, inX: 0.5, entrySlope: 3, exitSlope: 3 });
+    expect(result).toEqual({ ok: false, reason: 'out-x-not-representable' });
+  });
+
+  it('editor/runtime parity: an inverse-written segment keeps its endpoint slopes under the authority forward reading (T2 subset)', () => {
+    // Exact-subset round trip: slope → handle → forward slope. The forward
+    // reading IS the authority expression (the helper above is proven against
+    // the FD helper in T1), so a hit inside 1e-12 is the closed-form claim.
+    const rand = lcg(31337);
+    for (let attempt = 0; attempt < 25; attempt++) {
+      const outX = 0.1 + rand() * 0.8;
+      const inX = 0.1 + rand() * 0.8;
+      const entrySlope = rand() * 3;
+      const exitSlope = rand() * 3;
+      const yEntry = entrySlope * outX;
+      const yExit = 1 - exitSlope * (1 - inX);
+      if (yEntry < SLOPE_ENVELOPE_MIN || yEntry > SLOPE_ENVELOPE_MAX) continue;
+      if (yExit < SLOPE_ENVELOPE_MIN || yExit > SLOPE_ENVELOPE_MAX) continue;
+      const result = handlesFromEndpointSlopes({ outX, inX, entrySlope, exitSlope });
+      if (!result.ok || result.lossy) throw new Error('in-envelope targets must not be lossy');
+      const slopes = endpointSlopesFromHandles(result.bezierOut, result.bezierIn);
+      expect(Math.abs(slopes.entry.value - entrySlope)).toBeLessThan(1e-12);
+      expect(Math.abs(slopes.exit.value - exitSlope)).toBeLessThan(1e-12);
+    }
+  });
+});

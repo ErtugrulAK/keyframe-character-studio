@@ -1,0 +1,35 @@
+KCS V7 Upload Manifest
+Date: 2026-10-21 local
+Documentation branch: docs/v7-verified-director
+Documentation worktree: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\v7-director
+
+UPLOAD THIS CURRENT SINGLE FILE:
+C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\v7-director\chatgpt_handoff\latest\CHATGPT_UPLOAD_ONEFILE_V7.md
+SHA256: 16D5A4CB93E095DE34B7ADA934DD172B4B6991B55A5E7736F4E33816E1D81E7A
+
+DETAILED REPORT:
+C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\v7-director\reports\progress_204_autonomous_director_v7.md
+SHA256: 0A2DD5E879C9EDB4C59BF78F6E407C898FC41CBC0DFD6DE86925D36B6ADF404D
+
+AUTHORITATIVE WORKING LEDGER:
+C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\v7-director\docs\KCS_V7_VERIFIED_LEDGER.md
+SHA256: D74BE31A9E8985F7B63295D46852A5461E06F66FBF6CDD16693A253CE608C754
+
+SOURCE AUTHORITY:
+Canonical main and live origin/main: b6b3c2cbcfc8727f38129d207526e3167c591526 (unchanged)
+Certified source candidate: b6c2d78d3f96e10fa9df2d21d0d13cde2595d586
+Source branch: test/v7-combined-verified
+Source worktree: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\v7-candidate
+Exact twelve-PR input manifest: docs\KCS_V7_CANDIDATE_MANIFEST.json in that source worktree
+Exact-head CI: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/39509846405
+
+RESULT:
+Verified source candidate only. Source PRs52-63 remain OPEN; canonical main is unchanged. No release-readiness assertion.
+199 files / 2967 unit tests; 466 Chromium tests (workers1/retries0); actual npm visual2/2 and release2/2; consistency68/68; project type/lint/build/OGraf gates pass.
+Resource-policy exception: eighteen failed implicit cloud auto-thinking attempts in nine saved early sessions; zero reported tokens, no successful cloud auxiliary output. Explicit per-run thinking high contained it. No global OMP configuration change.
+
+SAFETY:
+The canonical dirty V5 ONEFILE and manifest were NOT overwritten. These are versioned alternatives on the isolated documentation branch.
+Report204 is explicitly requested; missing203 was not manufactured.
+No PR merge/close, release, tag, version bump, deployment, storage migration or old-worktree cleanup.
+The documentation commit is recorded by Git history; these files do not claim an impossible self-embedded commit hash.

@@ -20,6 +20,7 @@
     "test:e2e": "playwright test",
     "qa:release": "node scripts/run-release-gate.mjs",
     "qa:v6": "node scripts/run-v6-qa.mjs",
+    "qa:visual": "node scripts/run-visual-qa.mjs",
     "validate:ograf": "node scripts/validate-ograf-manifest.mjs"
   },
   "dependencies": {

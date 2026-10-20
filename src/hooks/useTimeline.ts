@@ -449,7 +449,7 @@ export const useTimeline = ({
     if (!track || !part) return;
     const scope = activeTemplateId || 'Sequence';
     if (resolveChannelAnimationState(track, channel, currentFrame, scope) !== 'off') return;
-
+    const authored = resolveAuthoredLocalTransform(track.partId, currentFrame, { parts: characterParts, worldOf: getComputedTransform });
     const value = channelArmValue(channel, authored, part);
     setTracks((prev) => addPropertyKeyframeMutator(
       migrateTrackLegacyKeyframes(prev, trackId, basePoseOfTrack(track.partId)),

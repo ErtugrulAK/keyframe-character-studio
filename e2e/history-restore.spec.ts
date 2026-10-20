@@ -152,9 +152,19 @@ test('an explicit import stays one undoable transaction (the contrast case)', as
   }, seedScene());
 
   // The report dialog, when shown, replaces the scene only on confirm.
+  // Readiness must cover BOTH legal outcomes without a fixed observation
+  // window: under full-suite contention the dialog can mount after any
+  // short isVisible probe, and a missed dialog leaves the scene unconfirmed
+  // (that is the load-only red at this test). Poll either condition and
+  // confirm the moment the dialog appears.
   const confirm = page.getByRole('button', { name: /import and replace|replace project|confirm/i }).first();
-  if (await confirm.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await confirm.click();
+  for (let attempt = 0; attempt < 60; attempt++) {
+    if (await confirm.isVisible().catch(() => false)) {
+      await confirm.click();
+      break;
+    }
+    if ((await paintedParts(page)) === 3) break; // no diagnostics: scene applied directly
+    await page.waitForTimeout(200);
   }
   await expect.poll(() => paintedParts(page), { timeout: 8000 }).toBe(3);
 

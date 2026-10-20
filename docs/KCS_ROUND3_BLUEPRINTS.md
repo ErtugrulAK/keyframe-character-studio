@@ -1,7 +1,11 @@
 # KCS — Round-3 Blueprints: Graph Editing, Markers, Command Palette, Visual Coverage
 
 Status: design + audited findings only. No product semantics were changed by
-this document. Companion to the round-1/round-2 blueprint docs; F5 maths lives
+this document. EVERY implementation named below by PR number is an OPEN
+proposal on its branch — none of it is main behavior until merged; editing
+gestures, palette shortcuts and marker persistence additionally require
+explicit product approval independent of code review. Companion to the
+round-1/round-2 blueprint docs; F5 maths lives
 in `KCS_F5_SPEED_GRAPH_INVERSE_SPEC.md` (PR #55) and its implemented slice
 `src/utils/speedInverse.ts` (PR #58).
 
@@ -133,6 +137,9 @@ anything with transitions-in-frame. Budget: ≤ 6 regions total, ≤ 24 KB/basel
   security audit — it is a targeted review of the touched pipeline.
 - O4 (editor/runtime parity): the A1 drift guard fuzzed 9 easings + duplicate
   frames + exact-key probes — but ZERO temporal-handle cases. Extended (this
-  PR): seeded handle-pair fuzz on ~30% of segments + `anticipate`/`overshoot`
-  added to the easing pool. Parity holds; the guard is now a real tripwire for
-  the override branch every graph feature (#49/#57/#58/#60) writes through.
+  PR): a seeded five-state handle matrix (complete pair, outgoing-only inert,
+  incoming-only inert, singular x=0 pair, none) + `anticipate`/`overshoot` in
+  the easing pool. Precision on the claim: this makes the guard a PAIRED-BRANCH
+  DRIFT tripwire — two engines agreeing proves non-divergence, not mathematical
+  correctness (that is #58's independent-oracle domain). Non-finite handles are
+  out of fuzz scope: the import boundary rejects them upstream.

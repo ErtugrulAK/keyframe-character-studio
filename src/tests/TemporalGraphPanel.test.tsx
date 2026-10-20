@@ -25,8 +25,12 @@ describe('TemporalGraphPanel', () => {
     expect(points[0].getAttribute('aria-label')).toContain('value 0.00');
     expect(points[1].getAttribute('aria-label')).toContain('frame 10');
     expect(points[1].getAttribute('tabindex')).toBe('0');
-    // The decorative grid lines and curve are hidden from the accessibility tree.
-    expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(3);
+    // The decorative axes, curve and labels are hidden from the accessibility
+    // tree; the interactive points are not.
+    for (const node of container.querySelectorAll('line, path, svg text')) {
+      expect(node.getAttribute('aria-hidden')).toBe('true');
+    }
+    expect(screen.getAllByRole('button').every((node) => node.getAttribute('aria-hidden') === null)).toBe(true);
   });
 
   it('points the group at the visible helper text so the keyboard contract is announced', () => {
@@ -75,5 +79,42 @@ describe('TemporalGraphPanel', () => {
     expect(onChange).toHaveBeenCalledWith('a', {
       bezierOut: { x: 0.5, y: 0 },
     });
+  });
+});
+
+describe('TemporalGraphPanel — D1 Increment 1 presentation', () => {
+  const descending: PropertyKeyframe[] = [
+    { id: 'a', frame: 0, value: 100, easing: 'hold' },
+    { id: 'b', frame: 5, value: 40, easing: 'easeInOut' },
+    { id: 'c', frame: 10, value: 0, easing: 'linear' },
+  ];
+  const axis = (mode: 'value' | 'speed') =>
+    screen.getByRole('group', { name: mode === 'value' ? 'Value Graph' : 'Speed Graph' }) as SVGSVGElement;
+
+  it('keeps the editable value domain frozen around the historical 0..1 baseline', () => {
+    render(<TemporalGraphPanel keyframes={descending} mode="value" />);
+    const svg = axis('value');
+    expect(Number(svg.getAttribute('data-axis-min'))).toBeLessThanOrEqual(0);
+    expect(Number(svg.getAttribute('data-axis-max'))).toBeGreaterThanOrEqual(1);
+    expect(svg.getAttribute('data-axis-unit')).toBe('value-units');
+  });
+
+  it('gives the derived speed graph its own domain that shows negative slopes', () => {
+    render(<TemporalGraphPanel keyframes={descending} mode="speed" />);
+    const svg = axis('speed');
+    // A decreasing channel must read below zero — the historical shared domain
+    // pinned every speed curve into 0..1 and hid the sign entirely.
+    expect(Number(svg.getAttribute('data-axis-min'))).toBeLessThan(0);
+    expect(svg.getAttribute('data-axis-unit')).toBe('value-units/frame');
+  });
+
+  it('badges every segment with the easing the authority applies from its start key', () => {
+    const { container } = render(<TemporalGraphPanel keyframes={descending} mode="value" />);
+    const badges = container.querySelectorAll('.temporal-graph-segment-badge');
+    expect(badges).toHaveLength(2);
+    expect(badges[0].getAttribute('data-segment-easing')).toBe('hold');
+    expect(badges[0].textContent).toBe('HOLD');
+    expect(badges[1].getAttribute('data-segment-easing')).toBe('easeInOut');
+    expect(badges[1].textContent).toBe('IN/OUT');
   });
 });

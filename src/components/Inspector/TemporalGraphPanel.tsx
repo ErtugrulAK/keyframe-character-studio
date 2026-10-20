@@ -27,6 +27,27 @@ const HEIGHT = 190;
 const PAD = 24;
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 
+/** Compact number formatting for axis labels. */
+const fmt = (value: number): string => (
+  Math.abs(value) >= 100 ? value.toFixed(0) : Math.abs(value) >= 1 ? value.toFixed(1) : value.toFixed(2)
+);
+
+/** Segment-easing display labels for the on-curve badges (D1 Increment 1). */
+const EASING_BADGE: Record<string, string> = {
+  linear: 'LIN',
+  hold: 'HOLD',
+  easeIn: 'IN',
+  easeOut: 'OUT',
+  easeInOut: 'IN/OUT',
+  cubic_bezier: 'BEZ',
+  bezier: 'BEZ',
+  autoBezier: 'AUTO',
+  bounce: 'BOUNCE',
+  elastic: 'ELASTIC',
+  anticipate: 'ANTICIPATE',
+  overshoot: 'OVERSHOOT',
+};
+
 export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
   keyframes,
   mode,
@@ -60,8 +81,16 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
   const graphValues = mode === 'value'
     ? [...sampled.map((point) => point.value), ...sorted.map((keyframe) => keyframe.value)]
     : sampled.map((point) => point.value);
-  const minValue = Math.min(...graphValues, 0);
-  const maxValue = Math.max(...graphValues, 1);
+  // Presentation contract (D1 Increment 1): each curve owns its vertical
+  // extent. The editable value graph keeps its historical domain (0..1 always
+  // in frame, so the drag mapping is bit-for-bit unchanged); the derived speed
+  // graph shows its true extent — negative slopes included — padded 10% for
+  // label headroom.
+  const rawMin = Math.min(...graphValues);
+  const rawMax = Math.max(...graphValues);
+  const speedPad = Math.max(1e-6, (rawMax - rawMin) * 0.1);
+  const minValue = mode === 'value' ? Math.min(rawMin, 0) : rawMin - speedPad;
+  const maxValue = mode === 'value' ? Math.max(rawMax, 1) : rawMax + speedPad;
   const valueRange = Math.max(1e-6, maxValue - minValue);
   // The ref freezes the graph domain for the active drag; state updates accompany drag changes.
   // oxlint-disable-next-line react/refs
@@ -137,6 +166,9 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
           width={WIDTH}
           height={HEIGHT}
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+          data-axis-min={minValue}
+          data-axis-max={maxValue}
+          data-axis-unit={mode === 'value' ? 'value-units' : 'value-units/frame'}
           role="group"
           aria-labelledby={headingId}
           aria-describedby={helperId}
@@ -149,6 +181,36 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
         >
           <line x1={PAD} y1={HEIGHT - PAD} x2={WIDTH - PAD} y2={HEIGHT - PAD} stroke="#334155" aria-hidden="true" />
           <line x1={PAD} y1={PAD} x2={PAD} y2={HEIGHT - PAD} stroke="#334155" aria-hidden="true" />
+          {/* D1 Increment 1: readable axes. Decorative for AT (the helper text
+           * states the interaction contract); the numbers mirror the domain
+           * the curve was drawn with. */}
+          <text className="temporal-graph-axis-label" x={4} y={16} fontSize={9} fill="#94a3b8" aria-hidden="true">{fmt(maxValue)}</text>
+          <text className="temporal-graph-axis-label" x={4} y={HEIGHT - PAD + 4} fontSize={9} fill="#94a3b8" aria-hidden="true">{fmt(minValue)}</text>
+          <text className="temporal-graph-axis-label" x={WIDTH - PAD} y={16} fontSize={9} fill="#64748b" textAnchor="end" aria-hidden="true">
+            {mode === 'value' ? 'value units' : 'value units / frame'}
+          </text>
+          <text className="temporal-graph-axis-label" x={PAD} y={HEIGHT - 8} fontSize={8} fill="#64748b" aria-hidden="true">F{startFrame}</text>
+          <text className="temporal-graph-axis-label" x={WIDTH - PAD} y={HEIGHT - 8} fontSize={8} fill="#64748b" textAnchor="end" aria-hidden="true">F{endFrame}</text>
+          {/* One badge per segment, named by the easing the authority applies
+           * from the segment's start key. */}
+          {sorted.slice(0, -1).map((keyframe, index) => {
+            const next = sorted[index + 1];
+            return (
+              <text
+                key={`badge-${keyframe.id}`}
+                className="temporal-graph-segment-badge"
+                data-segment-easing={keyframe.easing}
+                x={toSvg((keyframe.frame + next.frame) / 2, minValue).x}
+                y={HEIGHT - PAD - 5}
+                fontSize={8}
+                fill="#64748b"
+                textAnchor="middle"
+                aria-hidden="true"
+              >
+                {EASING_BADGE[keyframe.easing] ?? keyframe.easing}
+              </text>
+            );
+          })}
           <path d={pathD} fill={mode === 'speed' ? 'rgba(148,163,184,.12)' : 'none'} stroke={mode === 'value' ? '#22d3ee' : '#94a3b8'} strokeWidth={2} strokeDasharray={mode === 'speed' ? '6 5' : undefined} aria-hidden="true" />
           {mode === 'value' && sorted.map((keyframe) => {
             const point = toSvg(keyframe.frame, keyframe.value);

@@ -505,6 +505,13 @@ export const SequencerTimeline: React.FC = () => {
     setCurrentFrame(getFrameFromMouse(e.clientX));
   };
 
+  // Keyboard seek uses the same bounds as the pointer scrub: rounded frame,
+  // clamped to [0, totalFrames].
+  const handleRulerKeySeek = useCallback(
+    (frame: number) => setCurrentFrame(Math.max(0, Math.min(totalFrames, Math.round(frame)))),
+    [totalFrames, setCurrentFrame]
+  );
+
   // K2 — duplicate-mode drop frame: RAW, no clamp. Clamping would turn a
   // drop past the timeline edge into a legal-looking frame; D1 demands a
   // refusal with one warning instead of a silent relocation.
@@ -1294,7 +1301,9 @@ export const SequencerTimeline: React.FC = () => {
             frameNumbers={frameNumbers}
             frameWidth={FRAME_WIDTH}
             totalFrames={totalFrames}
+            currentFrame={currentFrame}
             onPointerDown={handleRulerPointerDown}
+            onSeekFrame={handleRulerKeySeek}
           />
 
           {/* Playhead */}

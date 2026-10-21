@@ -45,7 +45,7 @@ $+1$ at the entry:
 - $k_y<k_x$: CUSP, vertical tangent, signed infinity with
   $\operatorname{sign}=(-1)^{k_y+k_x}\operatorname{sign}(\tilde d^{y}_{k_y})\operatorname{sign}(\tilde d^{x}_{k_x})$;
   e.g. handles $(1,0.5)/(1,1)$ have $x'(s)=3(1-s)^2$ and
-  $y'(s)=1.5(1-s)+O((1-s)^2)$, so $E'(1)\to+\infty$ — the raw second-order
+  $y'(s)=3q-1.5q^2$ with $q=1-s$, so $E'(1)=\lim(3q-1.5q^2)/(3q^2)\to+\infty$ — the raw second-order
   coefficient $1+y_1-2y_2=-0.5$ alone reads $-\infty$, which was the shipped
   defect;
 - $k_y>k_x$: flat endpoint (slope $0$, reported as `limit`);
@@ -105,9 +105,17 @@ slopes are exactly what anticipation writes), the unique preimages are:
 $$y_1=g_0\,x_1,\qquad y_2=1-g_1\,(1-x_2)$$
 
 **Four distinct domains (V6 separation — never conflate them):**
-1. *Storage / evaluator acceptance*: any finite $x_i,y_i$; monotone-in-time
-   behaviour requires $x_i\in[0,1]$ (cone, §2.4) — outside it the Newton solver
-   is unreliable, which is a runtime property, not a validation rule.
+1. *Storage / evaluator acceptance*: the evaluator consumes the stored pair
+   as authored data (`applyEasing` → `solveCubicBezier`, no guard in
+   `defaults.ts`); monotone-in-time behaviour requires $x_i\in[0,1]$ (cone,
+   §2.4) — outside it the Newton solver is unreliable, a runtime property,
+   not a validation rule. This domain is broader than "any finite": the
+   current import / autosave-restore boundary (`validateImportedDocument`,
+   `src/utils/importValidation.ts`) performs no typed or finite check on
+   `bezierIn`/`bezierOut`/`bezierControlPoints` at all, so malformed and
+   non-finite handles CAN reach stored project fields; handle finiteness is
+   enforced only downstream, at the OGraf export gate
+   (`src/ograf/validation.ts`) and the emitted runtime's own throw.
 2. *Curve Studio UI clamp*: the modal clamps authored handles to its own on-screen
    window ($y\in[-1,2]$ visible band) — a UI affordance bound only.
 3. *F5 gesture envelope*: $y_i\in[-\alpha,1+\alpha]$, $\alpha=0.5$ — the range a
@@ -118,9 +126,12 @@ $$y_1=g_0\,x_1,\qquad y_2=1-g_1\,(1-x_2)$$
    (V6 wording correction — one preset with two y-values, not "two presets").
 4. *Write-conditioning policy*: the gesture refuses $x_i$ within
    $\tau=10^{-6}$ of the singular endpoints (`out-x-not-representable`); the
-   READ side descends by derivative order and reads near-singular handles
-   exactly, including the divergent sign for every finite storage pair inside
-   or outside the cone (§1 degenerate classes, PR #58).
+   READ side classifies endpoint slopes by derivative order, subject to IEEE
+   rounding and representability (§1 degenerate classes, PR #58). Non-finite
+   input, coefficient-ratio overflow, and a nonzero ratio rounded entirely to
+   zero use the existing `cusp-NaN` "reading unavailable" sentinel. A true
+   divergent cusp still reports signed Infinity; an exact-zero numerator
+   still reports its legitimate zero. This is not import enforcement.
 
 Segment coupling at a shared key is natural, not ambiguous: $h_{out}$ of key $k$
 owns the entry of the segment that STARTS at $k$; $h_{in}$ of key $k$ owns the exit
@@ -133,8 +144,13 @@ $V=g\cdot k$ [value-units/frame]. On a descending channel ($k<0$) a non-negative
 slope $g$ yields negative physical velocity $V$; the speed view renders SIGNED
 $V$ (matching `channelVelocityAt`), converts at the authority boundary, and never
 stores speed. Overflow and non-identifiability are explicit refusals in the
-public API (`overflow-result`, `zero-displacement`, `zero-duration`), never
-silent infinities.
+F5a utility's public API (`overflow-result`, `zero-displacement`,
+`zero-duration`) — a discipline over that pure module's OWN outputs, not
+global production validation: signed $\pm\infty$ at a true geometric cusp is
+an intended reading (§1), numeric non-representability is the distinct
+`cusp-NaN` sentinel, and a refused scale / null bridge bounds only the
+bridge's own result. Stored fields and the import boundary enforce none of
+this (§3 domain 1).
 
 V7 expanded what `overflow-result` refuses, in `segmentVelocityScale` — all with
 finite inputs, all still refusals rather than repaired numbers: a frame
@@ -146,6 +162,14 @@ representable nonzero scale, and an ok-$k{=}0$ scale flattens every forward
 conversion to $0$ while nulling every inverse. A real subnormal scale is not a
 failure: $k=5\cdot10^{-324}$ stays `ok` and bridges exactly where the operands
 are representable.
+
+V7.1 also distinguishes inverse metadata from numerical exactness: `clamped`
+names only envelope-clamped endpoints. `lossy` additionally reports nonzero
+slopes collapsed to zero and subnormal entry products whose forward API
+read-back differs from the requested number. An exactly round-tripping
+subnormal product remains valid. Ordinary normal-range rounding, including
+partial exit cancellation that still leaves a nonzero slope, is not universally
+flagged; neither `lossy: false` nor finite input promises a universal error bound.
 
 ## 4. Worked numerical examples
 
@@ -198,7 +222,9 @@ Evaluator precedence (defaults.applyEasing, mirrored by the runtime):
   `handlesFromEndpointSlopes`, `segmentVelocityScale`,
   `physicalVelocityToNormalized`, `normalizedSlopeToPhysicalVelocity`;
   V6-corrected classification, V7-signed divergent readings and
-  V7-expanded numeric-range refusals (§1, §3). No UI caller until F5b.
+  V7-expanded scale refusals and V7.1 endpoint-range/loss-metadata corrections
+  (§1, §3). These are open-PR pure-utility behavior, not a released build,
+  `main` behavior or import policy. There is no UI caller; F5b is NOT approved.
 - F5b (UI, gated on F5a + product approval): slope handles on the speed panel via
   existing `onChangeKeyframeHandles`; disabled-state rules above; keyboard parity.
 - Explicitly out of any first PR: interior reshaping (needs a residual indicator and

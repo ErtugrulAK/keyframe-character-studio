@@ -409,3 +409,202 @@ describe('V7 — signed cusp tiers (reflected-parameter reasoning) and scale-ran
     expect(physicalVelocityToNormalized(-4, scale)).toBe(0.5);
   });
 });
+
+describe('V7.1 — R5 range-unavailable forward readings and truthful inverse lossy', () => {
+  // A real finite coefficient ratio that overflows IEEE double is neither a
+  // vertical tangent (no signed ∞) nor a finite limit — it reads back as the
+  // existing unavailable sentinel { kind: 'cusp', value: NaN }. True cusps
+  // (denominator vanishing EARLIER than the numerator) keep signed Infinity.
+
+  it('entry equal-order(1) overflow, supervisor repro (0,0)|(MIN,MAX): cusp-NaN, not limit-∞', () => {
+    // Analytic: both axes live at order 1; L'Hôpital ratio = MAX/MIN ≈ 3.6e631 —
+    // a finite real outside the IEEE range, NOT a geometric cusp. Exit: order-0
+    // live, (1−MAX)/(1−MIN) = −MAX exactly (finite).
+    const slopes = endpointSlopesFromHandles(h(0, 0), h(Number.MIN_VALUE, Number.MAX_VALUE));
+    expect(slopes.entry).toEqual({ kind: 'cusp', value: Number.NaN });
+    expect(slopes.exit).toEqual({ kind: 'regular', value: -Number.MAX_VALUE });
+  });
+
+  it('sign of an overflowing equal-order ratio is dropped, not faked as signed ∞', () => {
+    const slopes = endpointSlopesFromHandles(h(0, 0), h(Number.MIN_VALUE, -Number.MAX_VALUE));
+    expect(slopes.entry.kind).toBe('cusp');
+    expect(Number.isNaN(slopes.entry.value)).toBe(true);
+    expect(slopes.exit).toEqual({ kind: 'regular', value: Number.MAX_VALUE });
+  });
+
+  it('live first-order ratio overflow is range-unavailable, not a cusp ∞ (both signs)', () => {
+    // x′(0) = 3·MIN ≠ 0: the tangent is NOT vertical; the slope 1/MIN ≈ 2.0e323
+    // is finite but unrepresentable, so no sign can be honestly attached.
+    const up = endpointSlopesFromHandles(h(Number.MIN_VALUE, 1), h(0.5, 0.5));
+    expect(up.entry.kind).toBe('cusp');
+    expect(Number.isNaN(up.entry.value)).toBe(true);
+    const down = endpointSlopesFromHandles(h(Number.MIN_VALUE, -1), h(0.5, 0.5));
+    expect(down.entry.kind).toBe('cusp');
+    expect(Number.isNaN(down.entry.value)).toBe(true);
+  });
+
+  it('exit equal-order(1) overflow (0.5,−MAX)|(1,1): both endpoints range-unavailable', () => {
+    // Entry order-0 live: −MAX/0.5 = −2^1024 overflows. Exit equal order 1:
+    // (outY−1)/(outX−1) = −MAX/−0.5 = +2^1024 overflows. Neither is a true cusp.
+    const slopes = endpointSlopesFromHandles(h(0.5, -Number.MAX_VALUE), h(1, 1));
+    expect(slopes.entry.kind).toBe('cusp');
+    expect(Number.isNaN(slopes.entry.value)).toBe(true);
+    expect(slopes.exit.kind).toBe('cusp');
+    expect(Number.isNaN(slopes.exit.value)).toBe(true);
+  });
+
+  it('boundary octave: 2^1000/2^-23 stays a finite limit; 2^1000/2^-24 is range-unavailable', () => {
+    // Pure power-of-two arithmetic is exact: the finite side must keep its
+    // truthful {limit, 2^1023} reading; one octave further overflows.
+    expect(endpointSlopesFromHandles(h(0, 0), h(2 ** -23, 2 ** 1000)).entry)
+      .toEqual({ kind: 'limit', value: 2 ** 1023 });
+    expect(endpointSlopesFromHandles(h(0, 0), h(2 ** -24, 2 ** 1000)).entry.kind).toBe('cusp');
+    expect(Number.isNaN(endpointSlopesFromHandles(h(0, 0), h(2 ** -24, 2 ** 1000)).entry.value)).toBe(true);
+  });
+
+  it('true divergent cusp keeps signed ∞ even with an astronomic numerator', () => {
+    // x leads at order 2 (d2x = 0), y at order 1 (2^1000): the ratio genuinely
+    // diverges like 1/t — a vertical tangent, so the ∞ must survive the fix.
+    expect(endpointSlopesFromHandles(h(0, 0), h(0, 2 ** 1000)).entry)
+      .toEqual({ kind: 'cusp', value: Number.POSITIVE_INFINITY });
+  });
+
+  it('entry underflow: ±MIN_VALUE stores as ±0 for a real request — lossy true, clamped untouched', () => {
+    const pos = handlesFromEndpointSlopes({ outX: 0.42, inX: 0.58, entrySlope: Number.MIN_VALUE, exitSlope: Number.MIN_VALUE });
+    if (!pos.ok) throw new Error('expected ok');
+    expect(pos.bezierOut.y).toBe(0);
+    expect(pos.bezierIn.y).toBe(1);
+    expect(pos.clamped).toEqual([]); // not an envelope event
+    expect(pos.lossy).toBe(true);    // nonzero request reads back exactly zero: total loss
+    const neg = handlesFromEndpointSlopes({ outX: 0.42, inX: 0.58, entrySlope: -Number.MIN_VALUE, exitSlope: -Number.MIN_VALUE });
+    if (!neg.ok) throw new Error('expected ok');
+    expect(Object.is(neg.bezierOut.y, -0)).toBe(true);
+    expect(neg.lossy).toBe(true);
+  });
+
+  it('exit cancellation boundary at the exact half-ULP of 1, both signs', () => {
+    // (1−inX) = 0.42. 1e-16·0.42 = 4.2e-17 < 2^-54 (half-ULP below 1) ⇒ 1−p
+    // rounds to exactly 1 and the stored curve reads slope 0: material loss.
+    // 2e-16·0.42 = 8.4e-17 > half-ULP ⇒ rounds to pred(1); the surviving
+    // read-back is ≈2.6e-16, cancellation amplifying rounding to ~30% of the
+    // request — ordinary floating-point noise on a representable reading.
+    // The flag is structural (collapse / subnormal mismatch), never a
+    // universal error-bound guarantee, so this row must stay lossy=false.
+    const below = handlesFromEndpointSlopes({ outX: 0.42, inX: 0.58, entrySlope: 0, exitSlope: 1e-16 });
+    if (!below.ok) throw new Error('expected ok');
+    expect(below.bezierIn.y).toBe(1);
+    expect(below.clamped).toEqual([]);
+    expect(below.lossy).toBe(true);
+    const negBelow = handlesFromEndpointSlopes({ outX: 0.42, inX: 0.58, entrySlope: 0, exitSlope: -1e-16 });
+    if (!negBelow.ok) throw new Error('expected ok');
+    expect(negBelow.bezierIn.y).toBe(1); // 1+4.2e-17 also rounds to exactly 1
+    expect(negBelow.lossy).toBe(true);
+    const above = handlesFromEndpointSlopes({ outX: 0.42, inX: 0.58, entrySlope: 0, exitSlope: 2e-16 });
+    if (!above.ok) throw new Error('expected ok');
+    expect(above.bezierIn.y).toBe(1 - 2 ** -53);
+    expect(above.lossy).toBe(false);
+    const negAbove = handlesFromEndpointSlopes({ outX: 0.42, inX: 0.58, entrySlope: 0, exitSlope: -2e-16 });
+    if (!negAbove.ok) throw new Error('expected ok');
+    // Half-ULP asymmetry at 1, negative side: the grid ABOVE 1 is 2^-52 wide
+    // (half-step 2^-53), so +8.4e-17 of cancellation still rounds to exactly
+    // 1 where the positive twin above survives as pred(1). Signed behavior
+    // of the shipped collapse flag, pinned (V7.1 rework item 4).
+    expect(negAbove.bezierIn.y).toBe(1);
+    expect(negAbove.lossy).toBe(true);
+  });
+
+  it('tiny 1e-20 (supervisor repro): collapsed exit is lossy though the entry round-trips exact', () => {
+    const both = handlesFromEndpointSlopes({ outX: 0.42, inX: 0.58, entrySlope: 1e-20, exitSlope: 1e-20 });
+    if (!both.ok) throw new Error('expected ok');
+    expect(both.clamped).toEqual([]);
+    expect(both.bezierIn.y).toBe(1);
+    expect(both.lossy).toBe(true);
+    const entryOnly = handlesFromEndpointSlopes({ outX: 0.42, inX: 0.58, entrySlope: 1e-20, exitSlope: 0 });
+    if (!entryOnly.ok) throw new Error('expected ok');
+    expect(entryOnly.lossy).toBe(false);
+    expect(endpointSlopesFromHandles(entryOnly.bezierOut, entryOnly.bezierIn).entry.value).toBe(1e-20);
+  });
+
+  it('forward total-underflow of a finite nonzero ratio is range-unavailable, not a fabricated zero (both branches)', () => {
+    // Supervisor repro (0,0)|(MAX,MIN): both axes live at order 1, the true
+    // L'Hôpital ratio MIN/MAX ≈ 2.8e-632 is a NONZERO real below the IEEE
+    // subnormal floor, so fl() is +0. `{limit, 0}` would assert a flat
+    // endpoint — a lie about the geometry; report unavailable, same as for
+    // overflow. Exit is untouched: order-0 live with (1−MIN)/(1−MAX) =
+    // −5.56e-309, a nonzero subnormal — an honest regular reading.
+    const slopes = endpointSlopesFromHandles(h(0, 0), h(Number.MAX_VALUE, Number.MIN_VALUE));
+    expect(slopes.entry).toEqual({ kind: 'cusp', value: Number.NaN });
+    expect(slopes.exit.kind).toBe('regular');
+    expect(slopes.exit.value).not.toBe(0);
+    // First-order twin: x′(0)=MAX live, y′(0)=MIN live; the slope MIN/MAX
+    // underflows to +0 over a live tangent. A regular 0 would fabricate a
+    // flat entry — range-unavailable, never a true cusp-∞ either.
+    const first = endpointSlopesFromHandles(h(Number.MAX_VALUE, Number.MIN_VALUE), h(0.5, 0.5));
+    expect(first.entry).toEqual({ kind: 'cusp', value: Number.NaN });
+    expect(first.exit).toEqual({ kind: 'regular', value: 1 });
+  });
+
+  it('only TOTAL loss to zero refuses: a subnormal-nonzero ratio and an exact-zero numerator stay truthful', () => {
+    // (0,0)|(0.5, MIN): equal-order ratio MIN/0.5 = 2·MIN is representable on
+    // the subnormal ladder — an honest tiny finite limit, NOT a refusal.
+    expect(endpointSlopesFromHandles(h(0, 0), h(0.5, Number.MIN_VALUE)).entry)
+      .toEqual({ kind: 'limit', value: 2 * Number.MIN_VALUE });
+    // d1y exactly 0 over live d1x: the flat endpoint's regular 0 is TRUE zero.
+    expect(endpointSlopesFromHandles(h(0.42, 0), h(0.58, 1)).entry)
+      .toEqual({ kind: 'regular', value: 0 });
+  });
+
+  it('supervisor counterexample 3·MIN at outX 0.5: subnormal quantization read back as 4·MIN is lossy, both signs', () => {
+    // fl(3·MIN × 0.5) ties-to-even → stores 2·MIN; the forward API then reads
+    // 2·MIN/0.5 = 4·MIN — a 33.3% error against a representable request.
+    // Real information loss on the subnormal ladder: the EXISTING lossy flag
+    // must say true (V7.1 rework: not only ±0 total collapse is material).
+    const pos = handlesFromEndpointSlopes({ outX: 0.5, inX: 0.58, entrySlope: 3 * Number.MIN_VALUE, exitSlope: 0 });
+    if (!pos.ok) throw new Error('expected ok');
+    expect(pos.bezierOut.y).toBe(2 * Number.MIN_VALUE);
+    expect(endpointSlopesFromHandles(pos.bezierOut, pos.bezierIn).entry.value).toBe(4 * Number.MIN_VALUE);
+    expect(pos.lossy).toBe(true);
+    expect(pos.clamped).toEqual([]); // structural loss, not an envelope event
+    const neg = handlesFromEndpointSlopes({ outX: 0.5, inX: 0.58, entrySlope: -3 * Number.MIN_VALUE, exitSlope: 0 });
+    if (!neg.ok) throw new Error('expected ok');
+    expect(Object.is(neg.bezierOut.y, -2 * Number.MIN_VALUE)).toBe(true);
+    expect(endpointSlopesFromHandles(neg.bezierOut, neg.bezierIn).entry.value).toBe(-4 * Number.MIN_VALUE);
+    expect(neg.lossy).toBe(true);
+  });
+  it('subnormal entry rows: the forward read-back decides, no tolerance anywhere', () => {
+    // Decimal path: 3e-320 (≈6072·MIN) stores exactly 2550·MIN and reads back
+    // as 2.9995e-320 ≠ request → flagged. This corrects the earlier wrong
+    // "255·MIN" note and its sample 2e-3 bound; every figure below is the
+    // exact IEEE value, derived, not sampled.
+    const r = handlesFromEndpointSlopes({ outX: 0.42, inX: 0.58, entrySlope: 3e-320, exitSlope: 0 });
+    if (!r.ok) throw new Error('expected ok');
+    expect(r.bezierOut.y).toBe(2550 * Number.MIN_VALUE);
+    expect(endpointSlopesFromHandles(r.bezierOut, r.bezierIn).entry.value).toBe(2.9995e-320);
+    expect(r.lossy).toBe(true);
+    expect(r.clamped).toEqual([]);
+    // Power-of-two ladder: 10200·MIN × 0.25 = 2550·MIN EXACT on the subnormal
+    // grid and the read-back divides back exactly → no flag despite a
+    // subnormal product. Quantization per se is not the trigger; a read-back
+    // mismatch is.
+    const lad = handlesFromEndpointSlopes({ outX: 0.25, inX: 0.58, entrySlope: 10200 * Number.MIN_VALUE, exitSlope: 0 });
+    if (!lad.ok) throw new Error('expected ok');
+    expect(lad.bezierOut.y).toBe(2550 * Number.MIN_VALUE);
+    expect(endpointSlopesFromHandles(lad.bezierOut, lad.bezierIn).entry.value).toBe(10200 * Number.MIN_VALUE);
+    expect(lad.lossy).toBe(false);
+    // Quantized yet self-consistent: 2·MIN × 0.42 stores MIN but reads back
+    // the request exactly — nothing observable was lost, lossy stays false.
+    const keep = handlesFromEndpointSlopes({ outX: 0.42, inX: 0.58, entrySlope: 2 * Number.MIN_VALUE, exitSlope: 0 });
+    if (!keep.ok) throw new Error('expected ok');
+    expect(keep.bezierOut.y).toBe(Number.MIN_VALUE);
+    expect(keep.lossy).toBe(false);
+    // Normal-range 1-ULP round-trip drift is ordinary IEEE rounding, NOT a
+    // flagged event: 0.1 × 0.77 stores 0.07700000000000001 and reads back
+    // 0.10000000000000002 — the gate is subnormality AND mismatch, never
+    // mismatch alone, and never a percent tolerance.
+    const norm = handlesFromEndpointSlopes({ outX: 0.77, inX: 0.58, entrySlope: 0.1, exitSlope: 0 });
+    if (!norm.ok) throw new Error('expected ok');
+    expect(norm.bezierOut.y).toBe(0.07700000000000001);
+    expect(endpointSlopesFromHandles(norm.bezierOut, norm.bezierIn).entry.value).toBe(0.10000000000000002);
+    expect(norm.lossy).toBe(false);
+  });
+});

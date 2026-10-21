@@ -49,8 +49,10 @@ function fuzzKeys(count: number): PropertyKeyframe[] {
     // pair, OUTGOING-only (inert), INCOMING-only (inert), singular complete
     // pair (x=0 both ends → both Newton solvers take the break branch), and
     // plain (pairing suppressed; cp/named tiers already ride the easing pool).
-    // Non-finite handles are NOT fuzzed: the import boundary rejects them
-    // upstream, and this guard's contract is authored-data parity.
+    // Non-finite handles are NOT fuzzed, and no upstream boundary rejects
+    // them: import/restore performs no typed/finite handle checks today, so
+    // enforcement is a pending-approval policy audit (doc §O4). This
+    // guard's contract is parity on the authored FINITE shapes only.
     if (keys.length >= 2) {
       const state = pick(['pair', 'pair', 'outOnly', 'inOnly', 'singular', 'none', 'none'] as const);
       const startKey = keys[keys.length - 2];

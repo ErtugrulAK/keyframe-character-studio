@@ -5,8 +5,8 @@
  * speed-graph editing is NOT losslessly representable in the authored model,
  * but a 2-DOF-per-segment endpoint-slope subset is, in closed form. This
  * module is the math only — no UI, no SceneData writes, no second evaluator.
- * Everything that cannot be represented returns an explicit safe outcome;
- * nothing is ever silently approximated.
+ * Range-unavailable endpoint readings use the existing NaN sentinel. Inverse
+ * loss flags cover the documented structural losses, not all IEEE rounding.
  *
  * Forward model (the authority, `applyEasing`/`solveCubicBezier`): for one
  * segment with P0=(0,0), P3=(1,1), P1=(outX,outY), P2=(inX,inY):
@@ -28,6 +28,9 @@
  *               resolve to slope 1, matching the identity curve).
  *  - cusp:      the x-derivative vanishes at the leading live order while a
  *               y-derivative does not — vertical tangent, signed infinity.
+ *               A live finite ratio that overflows or rounds entirely to zero
+ *               is NOT a cusp; it uses cusp-NaN, the shared "reading unavailable"
+ *               sentinel (also used for non-finite input).
  */
 
 import type { TemporalHandle } from '../types/animator';
@@ -41,7 +44,13 @@ export const SLOPE_ENVELOPE_MAX = 1.5;
 
 export type SlopeKind = 'regular' | 'limit' | 'cusp';
 
-/** One endpoint reading; `cusp` carries a signed Infinity (or NaN when undefined). */
+/**
+ * One endpoint reading; `cusp` carries a signed Infinity for a true vertical
+ * tangent, or NaN when no reportable reading exists: non-finite input, or a
+ * real coefficient ratio that is finite yet outside the IEEE double range —
+ * overflowing it, or underflowing a nonzero ratio all the way to zero.
+ * NaN never asserts a vertical tangent — callers must not render it as one.
+ */
 export interface SlopeReading {
   kind: SlopeKind;
   value: number;
@@ -61,7 +70,9 @@ const finite = (value: number): boolean => Number.isFinite(value);
  * epsilon-blended threshold (review findings 4A/4B):
  *
  *  - live first-order x (d1x ≠ 0): REGULAR — the derivative ratio y1/x1 is
- *    the live slope (exact at x1 = 1e-7 as at 0.42).
+ *    the live slope (exact at x1 = 1e-7 as at 0.42); if that division leaves
+ *    the double range — overflow, or total underflow of a live nonzero y1 to
+ *    zero — the reading is unavailable (cusp-NaN), never a fabricated 0.
  *  - x vanishing at order k ≥ 1 with the y-derivative vanishing EARLIER:
  *    CUSP — vertical tangent, signed infinity. The sign follows the live
  *    derivative just INSIDE the endpoint: in the reflected parameter
@@ -70,7 +81,10 @@ const finite = (value: number): boolean => Number.isFinite(value);
  *    not. Finite equal-order ratios are untouched — the factors cancel
  *    between the axes — only the divergent reading needs the order parity.
  *  - both first derivatives exactly zero: descend to the second-order
- *    L'Hôpital pair; live denominator → LIMIT; zero denominator with live
+ *    L'Hôpital pair; live denominator → LIMIT; an equal-order ratio whose
+ *    division leaves the double range — overflow, or underflow of the
+ *    nonzero ratio to zero — is range-unavailable (cusp-NaN), never a
+ *    finite LIMIT or a fabricated zero; zero denominator with live
  *    numerator → CUSP; both zero → third order. A cubic's third derivative
  *    cannot vanish together with the lower two unless the curve is the
  *    identity, which yields slope 1 at both fully-collapsed corners
@@ -119,10 +133,29 @@ export function endpointSlopesFromHandles(
     if (xl === null || yl === null) return { kind: 'cusp', value: Number.NaN };
     if (xl.order === 0) {
       const value = d1y / d1x;
-      return finite(value) ? { kind: 'regular', value } : { kind: 'cusp', value: Math.sign(value) * Number.POSITIVE_INFINITY };
+      // A zero quotient is honest only when the numerator is exactly zero
+      // (a truly flat endpoint). A live nonzero d1y whose quotient rounded
+      // to zero total-underflowed below the subnormal ladder: the slope is
+      // a nonzero real outside the IEEE range — unavailable, like overflow.
+      // (Handles authored by handlesFromEndpointSlopes never hit this on the
+      // tiny side: its x-window keeps a stored subnormal y readable — below.)
+      if (finite(value) && (d1y === 0 || value !== 0)) return { kind: 'regular', value };
+      // The real slope is finite (x leads nonzero, both coefficients finite)
+      // but the ratio leaves the double range. A signed ∞ would assert a
+      // vertical tangent that the order analysis denies — report unavailable.
+      return { kind: 'cusp', value: Number.NaN };
     }
-    // Equal orders: a finite L'Hôpital limit, the direction factors cancel.
-    if (yl.order === xl.order) return { kind: 'limit', value: yl.value / xl.value };
+    if (yl.order === xl.order) {
+      // Equal orders: direction factors cancel; the L'Hôpital limit is the
+      // coefficient ratio — a real number. Both leads are nonzero, so a
+      // ±0 quotient is pure range loss (underflow), exactly like a
+      // non-finite quotient is range loss (overflow): the limit exists as
+      // a nonzero real but is unreportable. Unavailable sentinel either
+      // way — never an Infinity, never a zero, wearing kind 'limit'.
+      const value = yl.value / xl.value;
+      if (!finite(value) || value === 0) return { kind: 'cusp', value: Number.NaN };
+      return { kind: 'limit', value };
+    }
     // Numerator vanishes later: the endpoint is flat, the limit is 0.
     if (yl.order > xl.order) return { kind: 'limit', value: 0 };
     // Divergent: sign = (numerator coefficient × its direction) ÷ (denominator
@@ -166,7 +199,11 @@ export type HandleFromSlopesResult =
       bezierIn: TemporalHandle;
       /** Endpoints whose y needed envelope clamping — the caller MUST surface this. */
       clamped: Array<'entry' | 'exit'>;
-      /** True when a requested slope was unwritable inside the envelope and clamped. */
+      /** True when a requested slope was unwritable: envelope-clamped, a
+       *  nonzero slope collapsed to an exactly-zero read-back (entry-product
+       *  underflow, or exit cancellation against the 1-anchor), or a subnormal
+       *  entry product the forward API reads back as a different number than
+       *  requested. Ordinary normal-range rounding is NOT flagged. */
       lossy: boolean;
     }
   | { ok: false; reason: HandleFromSlopesFailure };
@@ -175,11 +212,11 @@ export type HandleFromSlopesResult =
  * Inverse: closed-form handles for target endpoint slopes (g0, g1), x fixed.
  *
  * The [tau, 1−tau] x-window is a WRITE-CONDITIONING POLICY, not the storage
- * domain: the evaluator accepts any finite x and endpointSlopesFromHandles
- * READS near-singular handles exactly. Authoring through a gesture refuses
- * near-singular x instead of writing numerically fragile curves. The
- * [−0.5, 1.5] y-window is the GESTURE envelope (it covers every curve the
- * named easings can produce), NOT a storage limit — presets such as Elastic
+ * domain: stored handles do not obey this gesture policy. The forward reader
+ * classifies their endpoint slopes subject to IEEE representability. Authoring
+ * through a gesture refuses near-singular x instead of writing fragile curves.
+ * The [−0.5, 1.5] y-window is the chosen GESTURE envelope, NOT a storage limit
+ * or a bound on every named easing — presets such as Elastic
  * (y = −0.55 / 1.55) deliberately live outside it and write through the
  * value graph, never through this function.
  *
@@ -212,12 +249,34 @@ export function handlesFromEndpointSlopes(request: {
   const rawInY = 1 - exitSlope * (1 - inX);
   const inY = Math.min(SLOPE_ENVELOPE_MAX, Math.max(SLOPE_ENVELOPE_MIN, rawInY));
   if (inY !== rawInY) clamped.push('exit');
+  // Truthful lossiness (V7.1): beyond envelope clamping, a nonzero requested
+  // slope that the stored pair reads back as EXACTLY zero has lost all of its
+  // information — the entry product underflowed to ±0, or the exit product
+  // cancelled against the 1-anchor into exactly 1. And a nonzero entry request
+  // whose product lands on the subnormal ladder but reads back through the
+  // forward division outY/outX as a DIFFERENT number (supervisor repro:
+  // 3·MIN at outX 0.5 stores 2·MIN and reads 4·MIN) lost real significand
+  // bits — also material, also decidable with zero tolerance on the IEEE
+  // domain (subnormal ⇔ 0 < |·| < 2^-1022). Exit-side subnormal products
+  // always cancel the whole 1-anchor reading (any |p| < 2^-1023 gives
+  // fl(1−p) = 1), so exitCollapsed already covers that side. Ordinary
+  // normal-range round-trip drift (1-ULP at 0.7, ~30% at pred(1) exit
+  // cancellation) is plain IEEE rounding, not structural nonrepresentability
+  // — flagged by none of these conditions, and the flag asserts no universal
+  // error bound. `clamped` keeps its envelope-only meaning in every case.
+  const entryCollapsed = entrySlope !== 0 && outY === 0;
+  const exitCollapsed = exitSlope !== 0 && inY === 1;
+  const entryPartialSubnormal =
+    entrySlope !== 0 &&
+    outY !== 0 &&
+    Math.abs(outY) < 2 ** -1022 &&
+    outY / outX !== entrySlope;
   return {
     ok: true,
     bezierOut: { x: outX, y: outY },
     bezierIn: { x: inX, y: inY },
     clamped,
-    lossy: clamped.length > 0,
+    lossy: clamped.length > 0 || entryCollapsed || exitCollapsed || entryPartialSubnormal,
   };
 }
 

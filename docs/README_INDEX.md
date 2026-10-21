@@ -100,6 +100,7 @@ Most recent checkpoint (a historical record, kept unchanged): `docs/checkpoints/
 - `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` — Milestone E study and implementation plan.
 - `docs/KCS_SPRINT_BLUEPRINTS_AND_AUDITS.md` — production profiling baseline, keyboard/chrome/design audits, Graph Editor V2 and migration pipeline blueprints, UX backlog, release-readiness facts.
 - `docs/KCS_FEATURE_BLUEPRINTS_ROUND_2.md` — round-2 feature blueprints (canvas tangent editing, matte picker, Lottie mapping v1, SVG mask gate, speed-graph editability spec) with owners, non-goals and acceptance gates.
+- `docs/KCS_F5_SPEED_GRAPH_INVERSE_SPEC.md` — F5 mathematical specification: what an editable speed graph can mean under the cubic-authority model; feasibility matrix, closed-form 2-DOF subset, prohibited gestures, test vectors.
 
 ## Checkpoints
 

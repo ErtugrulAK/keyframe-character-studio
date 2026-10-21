@@ -211,14 +211,17 @@ export const mapLottieSegmentTiming = (
 
   // Lottie stores the incoming control point of a segment on the keyframe the
   // segment *starts* from, so it becomes bezierIn on the keyframe that ends it.
+  // The target's easing owns its outgoing segment. Preserve a target HOLD while
+  // retaining the incoming half for the preceding segment; other target states
+  // keep their established promotion to the named cubic fallback.
   accepted.forEach((keyframe, index) => {
     if (keyframe.hold === true || keyframe.roving === true || keyframe.expression !== undefined) return;
     const target = timing[index + 1];
     if (!target) return;
     const inHandle = keyframe.in ? resolveHandle(keyframe.in, context.dimension) : undefined;
     if (inHandle) {
-      target.easing = 'bezier';
       target.bezierIn = inHandle;
+      if (target.easing !== 'hold') target.easing = 'bezier';
       return;
     }
     // An outgoing handle that was read makes the segment evaluate on the

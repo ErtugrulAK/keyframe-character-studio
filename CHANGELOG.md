@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Lottie import no longer lets a HOLD lose to the previous segment's easing handle. When the segment before a `h: 1` keyframe carries a readable incoming handle, that handle still travels to the keyframe as `bezierIn`, but the keyframe's easing — which governs the segment that *starts* there — stays `hold`, because KCS evaluates a segment's mode from the segment-start keyframe: an imported HOLD now steps at the start value until the next keyframe instead of easing on the default cubic. The documented lone-half promotion for non-HOLD targets is untouched, and the scalar channels and the mask paths share the one mapper, so both consumers get the same timing.
 - The unit-test collector is scoped to KCS code: `vitest.config.ts` excludes `.worktrees/**` and `.research/**`, so the repository's standard folders for temporary worktrees and external reference clones are never collected as project tests.
 - Final micro-polish before the PR #11 integration, measured in a real browser:
   - The authoring strip groups the arrange commands the way the eye reads them — **Align** (the four edges), **Center** (the centre family), **Distribute** (one gap command per axis) and **Rotate/Flip** — four compact separator bands. The both-axes **Center** now carries a four-arrow centred-target glyph, visibly distinct from the one-axis centre icons. Commands, order and behaviour are untouched.

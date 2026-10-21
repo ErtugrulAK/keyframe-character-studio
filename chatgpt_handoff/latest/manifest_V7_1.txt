@@ -1,0 +1,37 @@
+KCS V7.1 Upload Manifest
+Date: 2026-10-21
+Documentation branch: docs/v71-targeted-remediation
+Documentation worktree: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\v71-director
+
+UPLOAD THIS CURRENT SINGLE FILE:
+C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\v71-director\chatgpt_handoff\latest\CHATGPT_UPLOAD_ONEFILE_V7_1.md
+SHA256: 17448AF1B0585CA4B60E0BB55EF51EC31E4CF2CF0EB21F7D71E91D57126378E8
+
+DETAILED REPORT:
+C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\v71-director\reports\progress_205_targeted_remediation_v7_1.md
+SHA256: 7C1436BE3E325589C369E83DD06DDC235A9B90E767A43E0F0B120876D7E47C5C
+
+APPROVAL-ONLY TEMPORAL POLICY MATRIX:
+C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\v71-director\docs\KCS_V71_TEMPORAL_INPUT_POLICY.md
+SHA256: 9B808C3FEE97ED9DEA8E6B9444C804224CC9AEC2BA8DA372513719910A51D1B2
+
+SOURCE AUTHORITY:
+Canonical main and live origin/main: b6b3c2cbcfc8727f38129d207526e3167c591526 (unchanged)
+Candidate: 7b25ddcfa29eda1f73acf31ca77830153a335f86
+Branch: test/v71-targeted-verified
+Worktree: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\v71-candidate
+Exact source input manifest: docs\KCS_V71_CANDIDATE_MANIFEST.json
+Exact-head CI: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/39566988919
+
+RESULT:
+A-D scoped deliverables delivered; import/restore policy AUDIT ONLY, not implemented.
+Aggregate integration validation FAIL: first-pass full Chromium 465/466, one existing PR54 reopen-readiness race. Isolated pass is not full-suite PASS.
+Full unit 199 files / 2983 tests PASS; TypeScript/lint/build/OGraf/consistency PASS; actual release2/2 and visual2/2 PASS. Default PR CI has no browser coverage.
+All PRs52-65 remain OPEN;65 stacked on63. No merge/release readiness assertion.
+
+SAFETY:
+Canonical protected21 dirty paths and hashes unchanged at08:35:29UTC; original45worktrees preserved,48total.
+UI5173 PID18344 and API5000 PID4288 unchanged;4312off;ownedQAservices stopped.
+All12 saved V7.1 journals observed pennyroyal-eng131/pennyroyal with explicit high and0auxiliary model_usage entries. No global configuration change.
+Canonical dirty V5 ONEFILE/manifest and historical V7 artifacts NOT overwritten. No schema/storage migration, merge, PR closure, release, tag, version bump, rebase/force-push/reset/stash or old-tree deletion.
+Documentation publication commit is identified by Git history/branch checks; no impossible self-embedded hash and no duplicate documentation PR.

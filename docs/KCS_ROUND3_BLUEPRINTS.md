@@ -141,5 +141,15 @@ anything with transitions-in-frame. Budget: ≤ 6 regions total, ≤ 24 KB/basel
   incoming-only inert, singular x=0 pair, none) + `anticipate`/`overshoot` in
   the easing pool. Precision on the claim: this makes the guard a PAIRED-BRANCH
   DRIFT tripwire — two engines agreeing proves non-divergence, not mathematical
-  correctness (that is #58's independent-oracle domain). Non-finite handles are
-  out of fuzz scope: the import boundary rejects them upstream.
+  correctness (that is #58's independent-oracle domain), not an import
+  guarantee. The fuzz authors only the five FINITE handle shapes above and
+  proves nothing about malformed or non-finite handles; nor is there an
+  upstream backstop: the scene import / autosave-restore boundary
+  (`validateImportedDocument`) performs NO typed or finite check on
+  `bezierIn`/`bezierOut`/`bezierControlPoints`, so non-finite handles are out
+  of fuzz scope, NOT rejected upstream. Paired drift ≠ mathematical
+  correctness ≠ import validation. Whether import/restore should enforce a
+  handle boundary (reject, normalize, or accept-and-skip) is a policy audit
+  PROPOSED AND PENDING APPROVAL — no production enforcement is claimed here.
+  Handle finiteness is enforced today only downstream: the OGraf export gate
+  (`src/ograf/validation.ts`) rejects it and the emitted runtime throws.

@@ -4,7 +4,7 @@ import { LOTTIE_IMPORT_LIMITS } from '../interop/lottie/diagnostics';
 import { validateImportedDocument } from '../utils/importValidation';
 import { validateSceneForOGraf } from '../ograf/validation';
 import { buildBezierPathD } from '../utils/bezierPath';
-import { interpolateChannel, solveCubicBezier } from '../utils/defaults';
+import { interpolateChannel, interpolatePathChannel, solveCubicBezier } from '../utils/defaults';
 
 /**
  * Contract tests for the Lottie import core (Milestone F, item 10, first slice).
@@ -781,6 +781,88 @@ describe('Lottie import — incomplete easing pairs (V7-F)', () => {
     expect(interpolateChannel(keyframes, 5, 0)).toBeCloseTo(120 * eased, 10);
     // And clearly not the 0.42/0/0.58/1 fallback a half pair would evaluate on.
     expect(interpolateChannel(keyframes, 5, 0)).not.toBeCloseTo(120 * solveCubicBezier(0.42, 0, 0.58, 1, 0.25), 6);
+  });
+});
+
+describe('Lottie import — HOLD authority over a preceding incoming handle (V7.1)', () => {
+  /** A solid whose rotation property (one channel) is written in the form under test. */
+  const importRotation = (rotation: unknown) =>
+    importLottieDocument(JSON.stringify(baseDocument([solidLayer({
+      ks: { o: { k: 100 }, r: rotation, s: { k: 100 }, p: { k: 10 } },
+    })])));
+
+  it('keeps the HOLD segment authoritative when the previous segment carries only an incoming handle', () => {
+    const result = importRotation({
+      a: 1,
+      k: [{ t: 0, s: [0], i: { x: 0.75, y: 0.9 } }, { t: 12, s: [50], h: 1 }, { t: 24, s: [100] }],
+    });
+    const keyframes = result.scene?.tracks[0]?.channels.rotation ?? [];
+
+    expect(keyframes).toHaveLength(3);
+    // Established lone-incoming semantics: the incoming-only segment stays linear
+    // and is reported once at the missing outgoing handle.
+    expect(keyframes[0]).toMatchObject({ frame: 0, value: 0, easing: 'linear' });
+    expect(keyframes[0]?.bezierOut).toBeUndefined();
+    const reported = result.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNREADABLE_EASING');
+    expect(reported).toHaveLength(1);
+    expect(reported[0].path).toBe('layers[0].ks.r[0].o');
+    expect(reported[0].message).toMatch(/linear/);
+
+    // The HOLD keyframe owns the segment that starts at it, so `h: 1` keeps the
+    // easing no matter what the previous segment's incoming half wants; the
+    // previous segment's legitimate bezierIn still travels to this keyframe.
+    expect(keyframes[1]).toMatchObject({ frame: 12, value: 50, easing: 'hold', bezierIn: { x: 0.75, y: 0.9 } });
+    expect(keyframes[1]?.bezierOut).toBeUndefined();
+    expect(keyframes[2]?.easing).toBe('linear');
+
+    // The real invariant is what the evaluator returns: the segment starting at
+    // the HOLD keyframe steps at 50 until frame 24, and the incoming-only
+    // segment before it runs the established linear half.
+    expect(interpolateChannel(keyframes, 6, 0)).toBe(25);
+    expect(interpolateChannel(keyframes, 13, 0)).toBe(50);
+    expect(interpolateChannel(keyframes, 18, 0)).toBe(50);
+    expect(interpolateChannel(keyframes, 23, 0)).toBe(50);
+    expect(interpolateChannel(keyframes, 24, 0)).toBe(100);
+
+    expect(validateSceneForOGraf(result.scene as never).diagnostics.filter((entry) => entry.severity === 'ERROR')).toEqual([]);
+  });
+
+  it('still promotes a linear target segment whose previous incoming half is readable', () => {
+    const result = importRotation({
+      a: 1,
+      k: [{ t: 0, s: [0], i: { x: 0.75, y: 0.9 } }, { t: 12, s: [50] }, { t: 24, s: [100] }],
+    });
+    const keyframes = result.scene?.tracks[0]?.channels.rotation ?? [];
+
+    // The HOLD correction is keyed on the target's own segment state only: a
+    // linear target keeps the established V7-F promotion and its evaluated
+    // default cubic, untouched by this fix.
+    expect(keyframes[1]).toMatchObject({ frame: 12, value: 50, easing: 'bezier', bezierIn: { x: 0.75, y: 0.9 } });
+    expect(interpolateChannel(keyframes, 18, 0)).toBeCloseTo(
+      50 + 50 * solveCubicBezier(0.42, 0, 0.58, 1, 0.5),
+      10,
+    );
+  });
+
+  it('keeps a mask-path HOLD segment authoritative when the previous segment carries only an incoming handle', () => {
+    const animated = {
+      k: [
+        { t: 0, s: [maskPathShape([[0, 0], [10, 0], [10, 10]])], i: { x: 0.75, y: 0.9 } },
+        { t: 12, s: [maskPathShape([[0, 0], [20, 0], [20, 20]])], h: 1 },
+        { t: 24, s: [maskPathShape([[0, 0], [30, 0], [30, 30]])] },
+      ],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      maskedLayer([maskEntry({ pt: animated })]),
+    ])));
+    const channel = result.scene?.tracks[0]?.maskPathChannels?.['mask-0:path'] ?? [];
+
+    expect(channel).toHaveLength(3);
+    expect(channel[1]).toMatchObject({ frame: 12, easing: 'hold', bezierIn: { x: 0.75, y: 0.9 } });
+
+    // The evaluated mask path steps on the HOLD start shape until frame 24.
+    const evaluated = interpolatePathChannel(channel, 18, channel[0]?.value);
+    expect(evaluated.points.map((point) => [point.x, point.y])).toEqual([[0, 0], [20, 0], [20, 20]]);
   });
 });
 

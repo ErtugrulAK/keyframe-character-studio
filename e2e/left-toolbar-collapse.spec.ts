@@ -69,7 +69,65 @@ function canvasBox(page: Page) {
   });
 }
 
+/**
+ * Wait until the docked edge has genuinely COMPLETED its travel.
+ *
+ * `useDockedPanelEdge` commits the target class first and only then lets the
+ * frame ease write its first interpolated width on the next animation frame.
+ * A scalar target check can therefore resolve TRUE on the pre-motion target
+ * flash and the driver's next roundtrip measures the reversed, mid-flight
+ * geometry — the V71 full-suite failure (stage 908 where 548 was expected).
+ * Real completion is observable: the ease hands the inline edge-width
+ * override back to the stylesheet, the dock resolves to its target, and the
+ * whole geometry signature (dock, drawer, stage box, container polish
+ * transitions) then survives consecutive animation frames unchanged. The
+ * pending-start flash cannot survive the ease's first write, a mid-flight
+ * value changes every frame, and a reduced-motion snap is settled from its
+ * first frame — all three are distinguished without sleeps or retries.
+ */
+type EdgeTarget = { dockWidth: number; expanded: boolean };
+async function waitForDockedEdgeSettled(page: Page, want: EdgeTarget): Promise<void> {
+  await page.waitForFunction((target) => new Promise<boolean>((resolve) => {
+    const at100 = (value: number) => Math.round(value * 100) / 100;
+    let previous = '';
+    let stable = 0;
+    const tick = (): void => {
+      const dock = document.querySelector<HTMLElement>('.left-toolbar-container');
+      const drawer = document.querySelector('.left-drawer-panel');
+      const stage = document.querySelector('.stage-canvas-container');
+      if (!dock || !drawer || !stage) { requestAnimationFrame(tick); return; }
+      const style = getComputedStyle(dock);
+      const targetReached = target.expanded
+        ? dock.style.width === ''
+          && Math.round(dock.getBoundingClientRect().width) === target.dockWidth
+          && getComputedStyle(drawer).opacity === '1'
+        : dock.style.width === ''
+          && dock.getBoundingClientRect().width === 0
+          && style.visibility === 'hidden';
+      const key = targetReached
+        ? [
+            dock.style.width,
+            at100(dock.getBoundingClientRect().width),
+            at100(drawer.getBoundingClientRect().width),
+            at100(stage.getBoundingClientRect().width),
+            at100(stage.getBoundingClientRect().left),
+            style.opacity,
+            style.transform,
+          ].join('|')
+        : 'pending';
+      stable = targetReached && key === previous ? stable + 1 : 0;
+      previous = key;
+      if (stable >= 3) resolve(true);
+      else requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }), want, { timeout: 15000 });
+}
+
 test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reachable rail', async ({ page }) => {
+  // The normal-motion contract is asserted against the host-independent
+  // animation intent, not whatever the machine's OS setting happens to be.
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   await seed(page);
   const expanded = await canvasBox(page);
   // Expanded baseline
@@ -116,14 +174,14 @@ test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reach
 
   // Collapse the contextual drawer; the in-flow rail expands the canvas footprint.
   await page.getByRole('button', { name: 'Hide Left Toolbar' }).click();
-  await page.waitForFunction(() => {
-    const dock = document.querySelector('.left-toolbar-container');
-    return !!dock && dock.getBoundingClientRect().width === 0
-      && getComputedStyle(dock).visibility === 'hidden';
-  });
+  await waitForDockedEdgeSettled(page, { dockWidth: 0, expanded: false });
   const collapsed = await canvasBox(page);
   expect(collapsed.width).toBeGreaterThan(expanded.width + 200);
   expect(collapsed.left).toBeLessThan(expanded.left - 200);
+  // The footprint the dock relinquished is exactly what the stage regained —
+  // an arithmetic expectation independent of the >200 reachability bound.
+  expect(collapsed.width).toBeCloseTo(expanded.width + expandedLayout.dockWidth, 0);
+  expect(collapsed.left).toBeCloseTo(expanded.left - expandedLayout.dockWidth, 0);
   const collapsedLayout = await page.evaluate(() => {
     const dock = document.querySelector('.left-toolbar-container')!;
     const drawer = document.querySelector('.left-drawer-panel')!;
@@ -145,23 +203,38 @@ test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reach
   expect(collapsedLayout.leftHandleRight).toBe(collapsedLayout.leftHandleWidth);
   expect(collapsedLayout.drawerHidden).toBe(true);
   expect(collapsedLayout.dockHidden).toBe(true);
+  await expect(page.getByRole('button', { name: 'Show Left Toolbar' })).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByRole('button', { name: 'Show Left Toolbar' })).toHaveAttribute('aria-controls', 'left-toolbar-panel');
+  await expect(page.locator('.left-toolbar-container')).toHaveAttribute('inert', '');
   expect(await page.getByRole('button', { name: 'Media Assets' }).count()).toBe(0);
   expect(await page.locator('.stage-canvas-container').isVisible()).toBe(true);
 
   // Reopening restores the drawer without geometry drift.
   await page.getByRole('button', { name: 'Show Left Toolbar' }).click();
-  await page.waitForFunction((expandedWidth) => {
-    const dock = document.querySelector('.left-toolbar-container');
-    const drawer = document.querySelector('.left-drawer-panel');
-    return !!dock && !!drawer
-      && Math.round(dock.getBoundingClientRect().width) === expandedWidth
-      && getComputedStyle(drawer).opacity === '1';
-  }, expandedLayout.dockWidth);
+  await waitForDockedEdgeSettled(page, { dockWidth: expandedLayout.dockWidth, expanded: true });
   const reExpanded = await canvasBox(page);
   const reopenedDrawerWidth = await page.locator('.left-drawer-panel').evaluate((element) => Math.round(element.getBoundingClientRect().width));
   expect(reExpanded.width).toBeCloseTo(expanded.width, 0);
   expect(reExpanded.left).toBeCloseTo(expanded.left, 0);
   expect(reopenedDrawerWidth).toBe(expandedLayout.drawerWidth);
+
+  // The reopened dock is again its own arithmetic, measured independently of
+  // the baseline snapshot, and the handle/dock a11y state has flipped back.
+  const reopenedLayout = await page.evaluate(() => {
+    const dock = document.querySelector('.left-toolbar-container')!;
+    const rail = document.querySelector('.left-sidebar-nav')!;
+    const drawer = document.querySelector('.left-drawer-panel')!;
+    return {
+      dockWidth: Math.round(dock.getBoundingClientRect().width),
+      railWidth: Math.round(rail.getBoundingClientRect().width),
+      drawerWidth: Math.round(drawer.getBoundingClientRect().width),
+    };
+  });
+  expect(reopenedLayout.dockWidth).toBe(reopenedLayout.railWidth + reopenedLayout.drawerWidth);
+  expect(reopenedLayout.railWidth).toBe(expandedLayout.railWidth);
+  await expect(page.getByRole('button', { name: 'Hide Left Toolbar' })).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('button', { name: 'Hide Left Toolbar' })).toHaveAttribute('aria-controls', 'left-toolbar-panel');
+  await expect(page.locator('.left-toolbar-container')).not.toHaveAttribute('inert');
 
   // Right Toolbar width remains unchanged across the toggle.
   const rightWidth1 = await page.locator('.motion-design-right-sidebar').evaluate((element) => Math.round(element.getBoundingClientRect().width));
@@ -170,14 +243,85 @@ test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reach
   // The Right Toolbar has no collapse control; its width is independently
   // managed and must not introduce horizontal overflow with the rail collapsed.
   await page.waitForFunction(() => document.documentElement.scrollWidth <= window.innerWidth);
-  await page.getByRole('button', { name: 'Hide Left Toolbar' }).click();
+  // The same toggle the keyboard must drive: Enter activates the focused handle.
+  await page.getByRole('button', { name: 'Hide Left Toolbar' }).press('Enter');
+  await waitForDockedEdgeSettled(page, { dockWidth: 0, expanded: false });
   await expect(page.getByRole('button', { name: 'Show Left Toolbar' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Show Left Toolbar' })).toBeFocused();
 
   // Supported compact QA viewport keeps the control reachable.
   await page.setViewportSize({ width: 1366, height: 768 });
   await expect(page.getByRole('button', { name: 'Show Left Toolbar' })).toBeVisible();
-  await page.getByRole('button', { name: 'Show Left Toolbar' }).click();
+  // Space is the global play/pause shortcut (useKeyboardShortcuts owns it and
+  // preventDefaults), so it deliberately does NOT activate the handle here.
+  // The keyboard reopen rides the RETAINED focus with a bare key press, then
+  // waits for the genuinely completed ease before any final assertion.
+  await expect(page.getByRole('button', { name: 'Show Left Toolbar' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await waitForDockedEdgeSettled(page, { dockWidth: expandedLayout.dockWidth, expanded: true });
+  await expect(page.getByRole('button', { name: 'Hide Left Toolbar' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Hide Left Toolbar' })).toHaveAttribute('aria-expanded', 'true');
+  const finalLayout = await page.evaluate(() => {
+    const dock = document.querySelector('.left-toolbar-container')!;
+    const rail = document.querySelector('.left-sidebar-nav')!;
+    const drawer = document.querySelector('.left-drawer-panel')!;
+    return {
+      dockWidth: Math.round(dock.getBoundingClientRect().width),
+      railWidth: Math.round(rail.getBoundingClientRect().width),
+      drawerWidth: Math.round(drawer.getBoundingClientRect().width),
+    };
+  });
+  expect(finalLayout.dockWidth).toBe(finalLayout.railWidth + finalLayout.drawerWidth);
+
   await expect(page.locator('.stage-canvas-container')).toBeVisible();
   const afterResize = await canvasBox(page);
   expect(afterResize.width).toBeGreaterThan(200);
+});
+
+/**
+ * Reduced-motion boundary: the hook's documented snap path. With no frame
+ * ease scheduled there is no pending-start window at all — the very next
+ * observation after the toggle must already be the resting target, and it
+ * must still be that after the settled-edge gate ran.
+ */
+test('prefers-reduced-motion — the docked edge snaps to its resting target', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await seed(page);
+  const expanded = await canvasBox(page);
+  const baselineDockWidth = await page.locator('.left-toolbar-container')
+    .evaluate((element) => Math.round(element.getBoundingClientRect().width));
+
+  await page.getByRole('button', { name: 'Hide Left Toolbar' }).click();
+  const snapped = await page.evaluate(() => {
+    const dock = document.querySelector<HTMLElement>('.left-toolbar-container')!;
+    const stage = document.querySelector('.stage-canvas-container')!;
+    return {
+      dockWidth: dock.getBoundingClientRect().width,
+      dockInlineWidth: dock.style.width,
+      visibility: getComputedStyle(dock).visibility,
+      stageWidth: Math.round(stage.getBoundingClientRect().width),
+    };
+  });
+  expect(snapped.dockWidth).toBe(0);
+  expect(snapped.dockInlineWidth).toBe('');
+  expect(snapped.visibility).toBe('hidden');
+  expect(snapped.stageWidth).toBeGreaterThan(expanded.width + 200);
+  await waitForDockedEdgeSettled(page, { dockWidth: 0, expanded: false });
+
+  await page.getByRole('button', { name: 'Show Left Toolbar' }).click();
+  const reopened = await page.evaluate(() => {
+    const dock = document.querySelector<HTMLElement>('.left-toolbar-container')!;
+    const stage = document.querySelector('.stage-canvas-container')!;
+    return {
+      dockWidth: Math.round(dock.getBoundingClientRect().width),
+      dockInlineWidth: dock.style.width,
+      stageWidth: Math.round(stage.getBoundingClientRect().width),
+      stageLeft: Math.round(stage.getBoundingClientRect().left),
+    };
+  });
+  expect(reopened.dockInlineWidth).toBe('');
+  expect(reopened.dockWidth).toBe(baselineDockWidth);
+  expect(reopened.stageWidth).toBeCloseTo(expanded.width, 0);
+  expect(reopened.stageLeft).toBeCloseTo(expanded.left, 0);
+  await waitForDockedEdgeSettled(page, { dockWidth: baselineDockWidth, expanded: true });
 });

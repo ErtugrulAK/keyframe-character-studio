@@ -1,0 +1,39 @@
+KCS V7.2 Upload Manifest
+Date: 2026-10-21
+Documentation branch: docs/v72-browser-synchronization
+Documentation worktree: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\v72-director
+
+UPLOAD THIS CURRENT SINGLE FILE:
+C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\v72-director\chatgpt_handoff\latest\CHATGPT_UPLOAD_ONEFILE_V7_2.md
+SHA256: 39BCC1B92B61CA0596E50E12CD673E92A7C4643646AD1DDC903195BA01C16DF3
+
+DETAILED REPORT:
+C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\v72-director\reports\progress_206_browser_synchronization_v7_2.md
+SHA256: 4B74A3C1A806809B98CBABA7031C0FC5362FEAE588E192BDA8128818D231EBCD
+
+SOURCE AUTHORITY:
+Canonical main / origin/main / live remote main: b6b3c2cbcfc8727f38129d207526e3167c591526 (unchanged)
+PR54 head: 752148785db92ba2cabddca1538f5bf58dd8a22d
+PR54 CI: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/39587165397
+Final candidate: e01eff014822b54ed0004ddb418eb60f882c0225
+Parent: 7b25ddcfa29eda1f73acf31ca77830153a335f86 (historical FAIL465/466, not relabeled)
+Candidate branch: test/v72-browser-synchronization
+Candidate worktree: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio\.worktrees\v72-candidate
+Exact input manifest: docs\KCS_V72_CANDIDATE_MANIFEST.json
+Exact-head candidate CI: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/39589982982
+
+RESULT:
+Targeted V7.2 remediation PASS; PR54 independent review READY.
+New-head completed full Chromium467/467, workers1/retries0; full Vitest199files/2983tests; projectTS/noEmit/lint/build/OGraf/consistency68 PASS; actual visual2/2win32 and release2/2smoke PASS; exact-head CI SUCCESS.
+Separate documentation publication smoke: node scripts/check-state-consistency.mjs PASS80checks on v72-director.
+Initial full Chromium invocation was manually cancelled before its accidental300s wrapper deadline, with partial output through40/467. INCOMPLETE, not PASS. One durable restart on identical content/settings completed467/467; both attempts disclosed in current report/ONEFILE/session. Not a first-attempt full-pass claim.
+Default CI does NOT run browsers; visual2windowsbaselines/release2smoke are NOT full release certification.
+All PR52-65 OPEN;65 requires63;64 historicaldocs excluded from product composition. No merge/release authorization.
+
+SAFETY:
+Audit 2026-10-21T11:18:08.053Z: canonical status is exactly the initial 21-path dirty/untracked list and every SHA256 matches. Local main, origin/main and live remote main remain b6b3c2cbcfc8727f38129d207526e3167c591526. All 48 original worktrees remain; only v72-director and v72-candidate were added (50 total). UI5173 PID18344 and API5000 PID4288 are unchanged; 4312 is off, and owned 5014/5015/5188/5189/5230/5232/5233 listeners are absent. Three pre-existing SQLite files are byte-identical; the newly created candidate SQLite was removed after owned servers stopped and absence is independently verified. No main edit, merge, PR closure, release, tag, version bump, storage/import policy change, rebase, force-push, reset, stash, broad cleanup, old worktree deletion or global configuration write occurred.
+Initial q3 existing-DB opening deviation disclosed; pre-existing DB hashes unchanged, not a never-opened claim.
+Five saved V7.2 journals observed pennyroyal-eng131/pennyroyal explicit high,0auxiliarymodel_usage,max2concurrent; no globalconfigurationwrite.
+Canonical dirty V5 unversioned upload artifacts and earlier versioned files NOT overwritten.
+Malformed temporal import/restore policy remains approval-only and NOT implemented.
+Documentation publication commit/CI are identified by Git branch history/checks and final delivery, not self-embedded commit hashes.

@@ -98,10 +98,13 @@ KCS stores per-keyframe `bezierIn`/`bezierOut` handles (`TemporalHandle {x, y}`)
 | `r` (roving) | — | Unsupported, preserved on the segment; reported per keyframe range |
 | no `i`/`o` and no `h` | `easing: 'linear'` | The default |
 
-Two clarifications the implementation must keep:
+Four clarifications the implementation must keep:
 
 1. **Never invent easing.** An unsupported expression-driven or roving segment becomes `linear` **and** a report entry; it is not silently approximated with a curve.
 2. **Handles are copied, not reinterpreted.** If the KCS evaluator's handle convention differs from Lottie's (normalised in [0,1]² vs offsets), that difference is resolved once, in one documented conversion, with a fixture that pins it — not per call site.
+3. **A lone readable half is reported with the easing it actually gets.** KCS evaluates a segment only from the complete handle pair, so a continuing segment with one usable half and no usable counterpart keeps its mapped timing exactly as the halves describe them and gains a `LOTTIE_UNREADABLE_EASING` entry at the missing or unreadable handle's path (`.o`/`.i`): linear when the usable half is the incoming one (nothing made the segment `bezier`), the default cubic fallback when the outgoing half was read (the segment's easing name is `bezier`, so KCS resolves the curve it cannot complete). Both halves absent is ordinary linear and earns no warning, HOLD/terminal/roving/expression segments keep only their established diagnostics, and an entry never claims an easing the evaluator would not produce.
+
+4. **A HOLD target keeps its easing against an incoming half.** KCS reads a segment's mode from the keyframe the segment *starts* at, so the incoming half landing on a `h: 1` keyframe travels only as `bezierIn` data and never renames that keyframe's `hold` easing: the segment that starts at the HOLD keyframe keeps stepping at the start value until the next keyframe, even when the previous segment carried a readable incoming handle. Every other target state keeps the promotion above untouched.
 
 ## 7. First-cut limits (reported, not silently reduced)
 

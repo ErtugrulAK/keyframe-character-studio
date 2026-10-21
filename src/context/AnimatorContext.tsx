@@ -211,6 +211,8 @@ export interface AnimatorContextType {
   disableChannelAnimation: (trackId: string, channel: AnimationChannel) => void;
   updatePropertyKeyframeValue: (trackId: string, channel: AnimationChannel, keyframeId: string, value: number) => void;
   updatePropertyKeyframeTemporalHandles: (trackId: string, channel: AnimationChannel, keyframeId: string, patch: { bezierIn?: { x: number; y: number }; bezierOut?: { x: number; y: number } }) => void;
+  /** #57 (V6): segment-scope preset application — one write/undo or a refusal. */
+  applyTemporalHandlesToSegment: (trackId: string, channel: AnimationChannel, fromKeyframeId: string, outgoing: { x: number; y: number }, incoming: { x: number; y: number }) => void;
   updatePropertyKeyframeFrame: (trackId: string, channel: AnimationChannel, keyframeId: string, frame: number) => void;
   deletePropertyKeyframe: (trackId: string, channel: AnimationChannel, keyframeId: string) => void;
   addMaskPathKeyframe: (trackId: string, maskId: string, frame: number, path: BezierPath, easing?: EasingType) => void;
@@ -428,6 +430,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     deleteKeyframeFrameGroup,
     updatePropertyKeyframeValue,
     updatePropertyKeyframeTemporalHandles,
+    applyTemporalHandlesToSegment,
     deletePropertyKeyframe,
     addMaskPathKeyframe,
     updateMaskPathKeyframeValue,
@@ -862,6 +865,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         disableChannelAnimation,
         updatePropertyKeyframeValue,
         updatePropertyKeyframeTemporalHandles,
+        applyTemporalHandlesToSegment,
         deletePropertyKeyframe,
         addMaskPathKeyframe,
         updateMaskPathKeyframeValue,

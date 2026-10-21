@@ -4,6 +4,7 @@ import { LOTTIE_IMPORT_LIMITS } from '../interop/lottie/diagnostics';
 import { validateImportedDocument } from '../utils/importValidation';
 import { validateSceneForOGraf } from '../ograf/validation';
 import { buildBezierPathD } from '../utils/bezierPath';
+import { interpolateChannel, interpolatePathChannel, solveCubicBezier } from '../utils/defaults';
 
 /**
  * Contract tests for the Lottie import core (Milestone F, item 10, first slice).
@@ -660,6 +661,208 @@ describe('Lottie import — numeric property forms (F-03)', () => {
     const validated = validateImportedDocument(JSON.stringify(result.scene));
     expect(validated.ok).toBe(true);
     expect(validateSceneForOGraf(result.scene as never).diagnostics.filter((entry) => entry.severity === 'ERROR')).toEqual([]);
+  });
+});
+
+describe('Lottie import — incomplete easing pairs (V7-F)', () => {
+  /** A solid whose rotation property (one channel) is written in the form under test. */
+  const importRotation = (rotation: unknown) =>
+    importLottieDocument(JSON.stringify(baseDocument([solidLayer({
+      ks: { o: { k: 100 }, r: rotation, s: { k: 100 }, p: { k: 10 } },
+    })])));
+
+  it('reports an outgoing-only segment and names the cubic easing that actually drives it', () => {
+    const result = importRotation({
+      a: 1,
+      k: [{ t: 0, s: [0], o: { x: 0.25, y: 0.1 } }, { t: 24, s: [100] }],
+    });
+    const keyframes = result.scene?.tracks[0]?.channels.rotation ?? [];
+
+    // The scene keeps the lone handle exactly as before the report fix.
+    expect(keyframes[0]).toMatchObject({ frame: 0, value: 0, easing: 'bezier', bezierOut: { x: 0.25, y: 0.1 } });
+    expect(keyframes[1]?.bezierIn).toBeUndefined();
+
+    // The evaluator needs the complete pair, so the segment runs on the default
+    // cubic; the report must say that instead of staying silent.
+    const reported = result.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNREADABLE_EASING');
+    expect(reported).toHaveLength(1);
+    expect(reported[0]).toMatchObject({ severity: 'warning', path: 'layers[0].ks.r[0].i' });
+    expect(reported[0].message).toMatch(/default cubic/);
+    expect(reported[0].message).not.toMatch(/linear/);
+    expect(reported[0].action.length).toBeGreaterThan(0);
+  });
+
+  it('reports an incoming-only segment as the linear import it actually gets', () => {
+    const result = importRotation({
+      a: 1,
+      k: [{ t: 0, s: [0], i: { x: 0.75, y: 0.9 } }, { t: 24, s: [100] }],
+    });
+    const keyframes = result.scene?.tracks[0]?.channels.rotation ?? [];
+
+    expect(keyframes[0]?.easing).toBe('linear');
+    expect(keyframes[0]?.bezierOut).toBeUndefined();
+    expect(keyframes[1]).toMatchObject({ frame: 24, value: 100, easing: 'bezier', bezierIn: { x: 0.75, y: 0.9 } });
+
+    const reported = result.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNREADABLE_EASING');
+    expect(reported).toHaveLength(1);
+    expect(reported[0].path).toBe('layers[0].ks.r[0].o');
+    expect(reported[0].message).toMatch(/linear/);
+    expect(reported[0].action.length).toBeGreaterThan(0);
+  });
+
+  it('reports the unreadable incoming half of a readable pair once, naming the default cubic', () => {
+    const result = importRotation({
+      a: 1,
+      k: [{ t: 0, s: [0], o: { x: 0.25, y: 0.1 }, i: { x: 'slow', y: [0.9] } }, { t: 24, s: [100] }],
+    });
+    const keyframes = result.scene?.tracks[0]?.channels.rotation ?? [];
+
+    expect(keyframes[0]?.bezierOut).toEqual({ x: 0.25, y: 0.1 });
+    // One entry for the segment: the unreadable handle is reported, and the
+    // half pair does not earn a second copy of the same warning.
+    const reported = result.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNREADABLE_EASING');
+    expect(reported).toHaveLength(1);
+    expect(reported[0].path).toBe('layers[0].ks.r[0].i');
+    expect(reported[0].message).toMatch(/default cubic/);
+  });
+
+  it('keeps an unreadable outgoing handle reported as linear when no readable half can make it bezier', () => {
+    const result = importRotation({
+      a: 1,
+      k: [{ t: 0, s: [0], o: { x: 'fast', y: [0.1] }, i: { x: 0.75, y: 0.9 } }, { t: 24, s: [100] }],
+    });
+    const reported = result.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNREADABLE_EASING');
+
+    // Same truthful linear claim as before: without the outgoing handle the
+    // segment never reaches the bezier fallback.
+    expect(reported).toHaveLength(1);
+    expect(reported[0].path).toBe('layers[0].ks.r[0].o');
+    expect(reported[0].message).toMatch(/linear/);
+    expect(reported[0].message).not.toMatch(/cubic/);
+  });
+
+  it('adds no easing warning for hold, terminal, roving or expression segments', () => {
+    const hold = importRotation({ a: 1, k: [{ t: 0, s: [0], h: 1, o: { x: 0.2, y: 0.2 } }, { t: 12, s: [50] }] });
+    const terminal = importRotation({
+      a: 1,
+      k: [{ t: 0, s: [0], o: { x: 0.25, y: 0.1 }, i: { x: 0.75, y: 0.9 } }, { t: 24, s: [100], o: { x: 0.5, y: 0.5 } }],
+    });
+    const roving = importRotation({ a: 1, k: [{ t: 0, s: [0], r: 1, i: { x: 0.75, y: 0.9 } }, { t: 24, s: [100] }] });
+    const expression = importRotation({ a: 1, k: [{ t: 0, s: [0], x: 'time', i: { x: 0.75, y: 0.9 } }, { t: 24, s: [100] }] });
+
+    expect(codes(hold.diagnostics)).not.toContain('LOTTIE_UNREADABLE_EASING');
+    expect(codes(terminal.diagnostics)).not.toContain('LOTTIE_UNREADABLE_EASING');
+    expect(codes(roving.diagnostics)).toContain('LOTTIE_ROVING_KEYFRAME');
+    expect(codes(roving.diagnostics)).not.toContain('LOTTIE_UNREADABLE_EASING');
+    expect(codes(expression.diagnostics)).toContain('LOTTIE_UNSUPPORTED_EXPRESSION');
+    expect(codes(expression.diagnostics)).not.toContain('LOTTIE_UNREADABLE_EASING');
+  });
+
+  it('adds no easing warning when a continuing segment carries no handles at all', () => {
+    const result = importRotation({ a: 1, k: [{ t: 0, s: [0] }, { t: 24, s: [100] }] });
+
+    expect(result.scene?.tracks[0]?.channels.rotation?.[0]?.easing).toBe('linear');
+    expect(codes(result.diagnostics)).not.toContain('LOTTIE_UNREADABLE_EASING');
+  });
+
+  it('evaluates a complete asymmetric pair on the source curve, not a fallback', () => {
+    const result = importRotation({
+      a: 1,
+      k: [{ t: 0, s: [0], o: { x: 0.2, y: 0.9 }, i: { x: 0.8, y: 0.1 } }, { t: 20, s: [120] }],
+    });
+    const keyframes = result.scene?.tracks[0]?.channels.rotation ?? [];
+
+    expect(keyframes).toHaveLength(2);
+    expect(codes(result.diagnostics)).not.toContain('LOTTIE_UNREADABLE_EASING');
+
+    // Analytic expectation: 0 → 120 across frames 0–20, eased on the document's
+    // own control points at frame 5 (progress 0.25).
+    const eased = solveCubicBezier(0.2, 0.9, 0.8, 0.1, 0.25);
+    expect(interpolateChannel(keyframes, 5, 0)).toBeCloseTo(120 * eased, 10);
+    // And clearly not the 0.42/0/0.58/1 fallback a half pair would evaluate on.
+    expect(interpolateChannel(keyframes, 5, 0)).not.toBeCloseTo(120 * solveCubicBezier(0.42, 0, 0.58, 1, 0.25), 6);
+  });
+});
+
+describe('Lottie import — HOLD authority over a preceding incoming handle (V7.1)', () => {
+  /** A solid whose rotation property (one channel) is written in the form under test. */
+  const importRotation = (rotation: unknown) =>
+    importLottieDocument(JSON.stringify(baseDocument([solidLayer({
+      ks: { o: { k: 100 }, r: rotation, s: { k: 100 }, p: { k: 10 } },
+    })])));
+
+  it('keeps the HOLD segment authoritative when the previous segment carries only an incoming handle', () => {
+    const result = importRotation({
+      a: 1,
+      k: [{ t: 0, s: [0], i: { x: 0.75, y: 0.9 } }, { t: 12, s: [50], h: 1 }, { t: 24, s: [100] }],
+    });
+    const keyframes = result.scene?.tracks[0]?.channels.rotation ?? [];
+
+    expect(keyframes).toHaveLength(3);
+    // Established lone-incoming semantics: the incoming-only segment stays linear
+    // and is reported once at the missing outgoing handle.
+    expect(keyframes[0]).toMatchObject({ frame: 0, value: 0, easing: 'linear' });
+    expect(keyframes[0]?.bezierOut).toBeUndefined();
+    const reported = result.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNREADABLE_EASING');
+    expect(reported).toHaveLength(1);
+    expect(reported[0].path).toBe('layers[0].ks.r[0].o');
+    expect(reported[0].message).toMatch(/linear/);
+
+    // The HOLD keyframe owns the segment that starts at it, so `h: 1` keeps the
+    // easing no matter what the previous segment's incoming half wants; the
+    // previous segment's legitimate bezierIn still travels to this keyframe.
+    expect(keyframes[1]).toMatchObject({ frame: 12, value: 50, easing: 'hold', bezierIn: { x: 0.75, y: 0.9 } });
+    expect(keyframes[1]?.bezierOut).toBeUndefined();
+    expect(keyframes[2]?.easing).toBe('linear');
+
+    // The real invariant is what the evaluator returns: the segment starting at
+    // the HOLD keyframe steps at 50 until frame 24, and the incoming-only
+    // segment before it runs the established linear half.
+    expect(interpolateChannel(keyframes, 6, 0)).toBe(25);
+    expect(interpolateChannel(keyframes, 13, 0)).toBe(50);
+    expect(interpolateChannel(keyframes, 18, 0)).toBe(50);
+    expect(interpolateChannel(keyframes, 23, 0)).toBe(50);
+    expect(interpolateChannel(keyframes, 24, 0)).toBe(100);
+
+    expect(validateSceneForOGraf(result.scene as never).diagnostics.filter((entry) => entry.severity === 'ERROR')).toEqual([]);
+  });
+
+  it('still promotes a linear target segment whose previous incoming half is readable', () => {
+    const result = importRotation({
+      a: 1,
+      k: [{ t: 0, s: [0], i: { x: 0.75, y: 0.9 } }, { t: 12, s: [50] }, { t: 24, s: [100] }],
+    });
+    const keyframes = result.scene?.tracks[0]?.channels.rotation ?? [];
+
+    // The HOLD correction is keyed on the target's own segment state only: a
+    // linear target keeps the established V7-F promotion and its evaluated
+    // default cubic, untouched by this fix.
+    expect(keyframes[1]).toMatchObject({ frame: 12, value: 50, easing: 'bezier', bezierIn: { x: 0.75, y: 0.9 } });
+    expect(interpolateChannel(keyframes, 18, 0)).toBeCloseTo(
+      50 + 50 * solveCubicBezier(0.42, 0, 0.58, 1, 0.5),
+      10,
+    );
+  });
+
+  it('keeps a mask-path HOLD segment authoritative when the previous segment carries only an incoming handle', () => {
+    const animated = {
+      k: [
+        { t: 0, s: [maskPathShape([[0, 0], [10, 0], [10, 10]])], i: { x: 0.75, y: 0.9 } },
+        { t: 12, s: [maskPathShape([[0, 0], [20, 0], [20, 20]])], h: 1 },
+        { t: 24, s: [maskPathShape([[0, 0], [30, 0], [30, 30]])] },
+      ],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      maskedLayer([maskEntry({ pt: animated })]),
+    ])));
+    const channel = result.scene?.tracks[0]?.maskPathChannels?.['mask-0:path'] ?? [];
+
+    expect(channel).toHaveLength(3);
+    expect(channel[1]).toMatchObject({ frame: 12, easing: 'hold', bezierIn: { x: 0.75, y: 0.9 } });
+
+    // The evaluated mask path steps on the HOLD start shape until frame 24.
+    const evaluated = interpolatePathChannel(channel, 18, channel[0]?.value);
+    expect(evaluated.points.map((point) => [point.x, point.y])).toEqual([[0, 0], [20, 0], [20, 20]]);
   });
 });
 

@@ -25,7 +25,7 @@ const rand = () => {
 };
 const pick = <T,>(items: readonly T[]): T => items[Math.floor(rand() * items.length)] as T;
 
-const EASINGS = ['linear', 'easeIn', 'easeOut', 'easeInOut', 'hold', 'autoBezier', 'cubic_bezier', 'bounce', 'elastic'] as const;
+const EASINGS = ['linear', 'easeIn', 'easeOut', 'easeInOut', 'hold', 'autoBezier', 'cubic_bezier', 'bounce', 'elastic', 'anticipate', 'overshoot'] as const;
 
 function fuzzKeys(count: number): PropertyKeyframe[] {
   const keys: PropertyKeyframe[] = [];
@@ -44,6 +44,29 @@ function fuzzKeys(count: number): PropertyKeyframe[] {
       key.bezierControlPoints = [0.1, 0.2, 0.8, 0.9];
     }
     keys.push(key);
+    // V6 fuzz matrix (O4): ~50% of SEGMENTS run a handle state — the guard
+    // previously knew only the complete-pair happy path. States: complete
+    // pair, OUTGOING-only (inert), INCOMING-only (inert), singular complete
+    // pair (x=0 both ends → both Newton solvers take the break branch), and
+    // plain (pairing suppressed; cp/named tiers already ride the easing pool).
+    // Non-finite handles are NOT fuzzed, and no upstream boundary rejects
+    // them: import/restore performs no typed/finite handle checks today, so
+    // enforcement is a pending-approval policy audit (doc §O4). This
+    // guard's contract is parity on the authored FINITE shapes only.
+    if (keys.length >= 2) {
+      const state = pick(['pair', 'pair', 'outOnly', 'inOnly', 'singular', 'none', 'none'] as const);
+      const startKey = keys[keys.length - 2];
+      const rounded = (value: number) => Math.round(value * 1000) / 1000;
+      if (state === 'pair' || state === 'singular') {
+        const zero = state === 'singular';
+        startKey.bezierOut = { x: zero ? 0 : rounded(rand()), y: zero ? 0 : rounded(rand()) };
+        key.bezierIn = { x: zero ? 0 : rounded(rand()), y: zero ? 0.2 : rounded(rand()) };
+      } else if (state === 'outOnly') {
+        startKey.bezierOut = { x: rounded(rand()), y: rounded(rand()) };
+      } else if (state === 'inOnly') {
+        key.bezierIn = { x: rounded(rand()), y: rounded(rand()) };
+      }
+    }
   }
   return keys;
 }

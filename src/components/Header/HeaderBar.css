@@ -265,6 +265,36 @@
   font-size: var(--font-size-mono);
   font-weight: 600;
   letter-spacing: 0.3px;
+  /* The status text changes every second ("Saved 12s ago") and between
+     states; a fixed box with even-width digits keeps every header control
+     where it is. 15ch fits the longest label ("Unsaved changes"). */
+  display: inline-block;
+  width: 15ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+}
+
+/* Unsaved / saving: not an error, not yet a success — a quiet neutral state. */
+.autosave-status-badge--unsaved,
+.autosave-status-badge--saving {
+  background: rgba(148, 163, 184, 0.08);
+  border-color: var(--kcs-border-default, rgba(148, 163, 184, 0.35));
+  color: var(--kcs-text-secondary, #cbd5e1);
+}
+
+.autosave-status-badge--unsaved .text-green,
+.autosave-status-badge--saving .text-green {
+  color: inherit;
+}
+
+.pulse-pending-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  box-sizing: border-box;
 }
 
 /* Restore provenance chip: informational, so it borrows the autosave badge's

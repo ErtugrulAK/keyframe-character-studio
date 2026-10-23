@@ -42,6 +42,7 @@ import { classifyImport } from '../../utils/importDispatch';
 import { readOGrafPackage, type OGrafPackageReadResult } from '../../ograf/packageImport';
 import { importLottieDocument, type LottieImportResult } from '../../interop/lottie/mapDocument';
 import type { SceneData } from '../../types/composition';
+import { describeSaveStatus } from '../../utils/saveStatus';
 import './HeaderBar.css';
 
 type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
@@ -101,6 +102,8 @@ export const HeaderBar: React.FC = () => {
     autosaveConflict,
     manualSaveRejectedAt,
     autosaveError,
+    hasUnsavedChanges,
+    isSaving,
     triggerManualSave,
     getPersistenceSafety,
     forceSaveNow,
@@ -222,23 +225,24 @@ export const HeaderBar: React.FC = () => {
    * report the reader produced. Selecting a package changes nothing on its own.
    */
   const [pendingPackageImport, setPendingPackageImport] = useState<{ fileName: string; result: OGrafPackageReadResult } | null>(null);
-  const [timeAgoStr, setTimeAgoStr] = useState<string>('Not saved yet');
-
+  // The badge clock: "Saved 12s ago" counts from the last SUCCESSFUL save.
+  const [clockNow, setClockNow] = useState<number>(() => Date.now());
   useEffect(() => {
-    const updateLabel = () => {
-      if (!lastSavedAt) {
-        setTimeAgoStr('Not saved yet');
-        return;
-      }
-      const seconds = Math.floor((Date.now() - lastSavedAt.getTime()) / 1000);
-      if (seconds < 5) setTimeAgoStr('Just saved');
-      else if (seconds < 60) setTimeAgoStr(`${seconds}s ago`);
-      else setTimeAgoStr(`${Math.floor(seconds / 60)}m ago`);
-    };
-    updateLabel();
-    const interval = setInterval(updateLabel, 5000);
+    if (!lastSavedAt) return undefined;
+    // The label is re-read against the save time that just changed.
+    // oxlint-disable-next-line react/set-state-in-effect
+    setClockNow(Date.now());
+    const interval = setInterval(() => setClockNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, [lastSavedAt]);
+  const saveStatus = describeSaveStatus({
+    conflict: autosaveConflict,
+    error: autosaveError?.kind ?? null,
+    saving: isSaving,
+    unsaved: hasUnsavedChanges,
+    lastSavedAt: lastSavedAt?.getTime() ?? null,
+    now: clockNow,
+  });
 
   /**
    * SAFE-01: a conflict pause must be noticed, not discovered. One toast per
@@ -569,18 +573,15 @@ export const HeaderBar: React.FC = () => {
         <div className="header-actions">
           {/* Auto-Save */}
           <div
-            className={`autosave-status-badge${autosaveConflict ? ' autosave-status-badge--paused' : autosaveError ? ' autosave-status-badge--error' : ''}`}
+            className={`autosave-status-badge autosave-status-badge--${saveStatus.state}${autosaveConflict ? ' autosave-status-badge--paused' : autosaveError ? ' autosave-status-badge--error' : ''}`}
             onClick={triggerManualSave}
             data-last-saved-at={lastSavedAt ? String(lastSavedAt.getTime()) : ''}
-            title={autosaveConflict
-              ? 'Autosave paused: another tab changed the shared project. Reload to adopt it, or export this tab\u2019s work — nothing here will be overwritten.'
-              : autosaveError
-                ? `Auto-save failed: browser storage ${autosaveError.kind === 'quota' ? 'is full' : 'is unavailable'}. Your changes are kept in memory — export the project to keep them. Autosave retries every 10 seconds; clicking saves now.`
-                : 'Auto-saved every 10 seconds. Click to save manually.'}
+            data-save-state={saveStatus.state}
+            title={saveStatus.detail}
           >
-            <div className={autosaveConflict ? 'pulse-amber-dot' : autosaveError ? 'pulse-red-dot' : 'pulse-green-dot'} />
+            <div className={autosaveConflict ? 'pulse-amber-dot' : autosaveError ? 'pulse-red-dot' : saveStatus.state === 'unsaved' || saveStatus.state === 'saving' ? 'pulse-pending-dot' : 'pulse-green-dot'} />
             {autosaveConflict || autosaveError ? <AlertTriangle size={13} /> : <CheckCircle2 size={13} className="text-green" />}
-            <span className="autosave-text">{autosaveConflict || autosaveError ? 'Not saved' : timeAgoStr}</span>
+            <span className="autosave-text">{saveStatus.label}</span>
           </div>
 
           {/*

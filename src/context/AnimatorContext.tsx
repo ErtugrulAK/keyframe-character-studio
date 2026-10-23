@@ -128,6 +128,10 @@ export interface AnimatorContextType {
   manualSaveRejectedAt: number | null;
   /** D2: last persistence failure behind the badge; null while saves land. */
   autosaveError: AutosavePersistenceError | null;
+  /** Unsaved changes exist (cleared only by a successful save). */
+  hasUnsavedChanges: boolean;
+  /** A save is in flight. */
+  isSaving: boolean;
   triggerManualSave: () => void;
   /** A1: point-in-time reload-safety verdict for destructive navigation guards. */
   getPersistenceSafety: () => PersistenceSafety;
@@ -933,6 +937,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     autosaveConflict,
     manualSaveRejectedAt,
     autosaveError,
+    hasUnsavedChanges,
+    isSaving,
     triggerManualSave,
     getPersistenceSafety,
     forceSaveNow,
@@ -1083,6 +1089,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         autosaveConflict,
         manualSaveRejectedAt,
         autosaveError,
+        hasUnsavedChanges,
+        isSaving,
         triggerManualSave,
         getPersistenceSafety,
         forceSaveNow,

@@ -415,6 +415,16 @@ interface UseSerializationOptions {
  */
 const MANUAL_SAVE_LOCK_WAIT_MS = 1_000;
 
+/**
+ * Autosave writes unsaved changes at most this long after the FIRST change
+ * that is not yet saved. Further edits never push the deadline back, so
+ * continuous editing cannot postpone the save indefinitely; a failed or
+ * deferred attempt is retried this long after it.
+ */
+export const AUTOSAVE_DELAY_MS = 10_000;
+/** How often the autosave deadline is checked (cheap: refs only). */
+const AUTOSAVE_CHECK_INTERVAL_MS = 1_000;
+
 /** D2: the last persistence failure, exposed so the badge can speak instead
  *  of showing a stale success. Cleared by the first write that lands. */
 export type AutosavePersistenceError = { kind: 'quota' | 'unavailable'; at: number };
@@ -472,6 +482,14 @@ export interface UseSerializationApi {
    */
   manualSaveRejectedAt: number | null;
   autosaveError: AutosavePersistenceError | null;
+  /**
+   * True while the document on screen differs from the last document this tab
+   * saved (or settled to at boot / import / reset). Cleared only by a write
+   * that actually succeeded, or when the document returns to that state.
+   */
+  hasUnsavedChanges: boolean;
+  /** True while a save is in flight (waiting for or holding the write lock). */
+  isSaving: boolean;
   triggerManualSave: () => void;
   /**
    * Point-in-time persistence verdict for destructive navigation decisions
@@ -556,6 +574,16 @@ export const useSerialization = ({
   const [manualSaveRejectedAt, setManualSaveRejectedAt] = useState<number | null>(null);
   const [autosaveError, setAutosaveError] = useState<AutosavePersistenceError | null>(null);
   const manualPendingRef = useRef<boolean>(false);
+  /** When the first not-yet-saved change happened (null = nothing unsaved). */
+  const unsavedSinceRef = useRef<number | null>(null);
+  /** When the next autosave attempt is due. */
+  const nextAttemptAtRef = useRef<number>(0);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const clearUnsaved = useCallback(() => {
+    unsavedSinceRef.current = null;
+    setHasUnsavedChanges(false);
+  }, []);
   const manualAbortRef = useRef<AbortController | null>(null);
   const unmountedRef = useRef<boolean>(false);
 
@@ -643,7 +671,7 @@ export const useSerialization = ({
     }
   }, [setTotalFrames, setProjectResolution, setTracks, setCharacterParts, setFps, setCoordinateSystem, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState, requestHistoryBaseline]);
 
-  // 2. Auto-Save: SceneData format every 10 seconds (SAFE-01 write discipline).
+  // 2. Auto-Save: SceneData format, at most AUTOSAVE_DELAY_MS after the first unsaved change (SAFE-01 write discipline).
   const buildSceneJson = useCallback((): string => {
     const scene = toSceneData(characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId);
     scene.name = sceneTitle || 'Untitled';
@@ -662,7 +690,32 @@ export const useSerialization = ({
     if (settledSaveRef.current !== null || !restoreDecidedRef.current) return;
     if (restoreAppliedRef.current && !restoredFromLocalStorage) return;
     settledSaveRef.current = buildSceneJson();
-  }, [restoredFromLocalStorage, buildSceneJson, settleEpoch]);
+    clearUnsaved();
+  }, [restoredFromLocalStorage, buildSceneJson, settleEpoch, clearUnsaved]);
+
+  /**
+   * The first change after a save (or after the boot document settled) starts
+   * the autosave deadline. Later changes leave it alone, so the document is
+   * serialized here once per save cycle, not on every edit of a drag.
+   */
+  useEffect(() => {
+    if (settledSaveRef.current === null || unsavedSinceRef.current !== null) return;
+    // A document that cannot be serialized right now is treated as changed: the
+    // save attempt reports it, and a render effect must never throw.
+    let same = false;
+    try {
+      same = buildSceneJson() === settledSaveRef.current;
+    } catch {
+      same = false;
+    }
+    if (same) return;
+    const now = Date.now();
+    unsavedSinceRef.current = now;
+    nextAttemptAtRef.current = now + AUTOSAVE_DELAY_MS;
+    // The document changed: the header must say so (an external, committed edit).
+    // oxlint-disable-next-line react/set-state-in-effect
+    setHasUnsavedChanges(true);
+  }, [buildSceneJson]);
 
   /**
    * SAFE-01 read-compare-write as one callable so SAFE-02 can run the whole
@@ -697,6 +750,7 @@ export const useSerialization = ({
       settledSaveRef.current = nextJson;
       setLastSavedAt(new Date());
       setAutosaveError(null);
+      clearUnsaved();
       return true;
     } catch (e) {
       // Honest failure: neither lastSavedAt nor the write tokens advance, and
@@ -705,7 +759,7 @@ export const useSerialization = ({
       console.error('[AutoSave] Failed to save project to LocalStorage', e);
       return false;
     }
-  }, [buildSceneJson]);
+  }, [buildSceneJson, clearUnsaved]);
 
   type LockRunOutcome<T> = { ran: boolean; value?: T };
 
@@ -730,22 +784,39 @@ export const useSerialization = ({
     // The settle effect has not captured the boot document yet (same-commit
     // window): nothing is dirty yet either, so no write is owed.
     if (settledSaveRef.current === null) return;
-    // An idle session earned no write (K1/K2/K3). Cheap pre-check outside the
-    // grant; the authoritative comparison re-runs inside it.
-    if (buildSceneJson() === settledSaveRef.current) return;
-    // A busy lock skips the tick: no token advances, so the next interval
-    // re-observes reality (SAFE-02; never a queue behind another writer).
-    // The boundary is a browser API: a rejection (not just a busy skip) must be
-    // equally silent — the tick advances no token either way.
-    void runWithAutosaveLock(() => casWrite(false), 'try').catch(() => undefined);
-  }, [buildSceneJson, casWrite, runWithAutosaveLock]);
+    // The document went back to what is saved (an undo): nothing is owed.
+    // Cheap pre-check outside the grant; the authoritative comparison re-runs
+    // inside it.
+    if (buildSceneJson() === settledSaveRef.current) {
+      clearUnsaved();
+      return;
+    }
+    // Whatever the outcome, the next attempt is one delay away: a success
+    // clears the unsaved state; a failure, a busy lock (SAFE-02: never a queue
+    // behind another writer) or a rejected lock call keeps it and retries.
+    nextAttemptAtRef.current = Date.now() + AUTOSAVE_DELAY_MS;
+    setIsSaving(true);
+    void runWithAutosaveLock(() => casWrite(false), 'try')
+      .catch(() => undefined)
+      .finally(() => {
+        if (!unmountedRef.current) setIsSaving(false);
+      });
+  }, [buildSceneJson, casWrite, clearUnsaved, runWithAutosaveLock]);
 
+  // One stable clock (it is never re-created by edits, which used to restart a
+  // 10 s interval on every change and postpone the save while the user kept
+  // editing). It only reads refs; the save runs when the deadline is due.
+  const performSaveRef = useRef(performSave);
+  useEffect(() => {
+    performSaveRef.current = performSave;
+  }, [performSave]);
   useEffect(() => {
     const timer = setInterval(() => {
-      performSave();
-    }, 10000);
+      if (unsavedSinceRef.current === null || Date.now() < nextAttemptAtRef.current) return;
+      performSaveRef.current();
+    }, AUTOSAVE_CHECK_INTERVAL_MS);
     return () => clearInterval(timer);
-  }, [performSave]);
+  }, []);
 
   const triggerManualSave = useCallback((): void => {
     // Explicit intent: writes an unchanged document too, but never across a
@@ -758,6 +829,7 @@ export const useSerialization = ({
     const controller = new AbortController();
     manualPendingRef.current = true;
     manualAbortRef.current = controller;
+    setIsSaving(true);
     void (async () => {
       let timedOut = false;
       const timer = setTimeout(() => {
@@ -768,6 +840,7 @@ export const useSerialization = ({
       clearTimeout(timer);
       if (manualAbortRef.current === controller) manualPendingRef.current = false;
       if (unmountedRef.current) return;
+      setIsSaving(false);
       if (timedOut && outcome === null) setManualSaveRejectedAt(Date.now());
     })();
   }, [casWrite, runWithAutosaveLock]);
@@ -803,10 +876,11 @@ export const useSerialization = ({
       storageKnownRef.current = adoptedKnown;
     }
     settledSaveRef.current = null;
+    clearUnsaved();
     restoreAppliedRef.current = false;
     autosavePausedRef.current = false;
     setAutosaveConflict(false);
-  }, []);
+  }, [clearUnsaved]);
 
   // 3. Export: SceneData format (canonical, version 1)
   const exportProject = useCallback((): string => {
@@ -1005,6 +1079,8 @@ export const useSerialization = ({
     autosaveConflict,
     manualSaveRejectedAt,
     autosaveError,
+    hasUnsavedChanges,
+    isSaving,
     triggerManualSave,
     getPersistenceSafety,
     forceSaveNow,

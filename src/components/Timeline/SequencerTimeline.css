@@ -108,12 +108,20 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 .sidebar-handle.timeline-edge-toggle {
   position: absolute;
   top: 0;
-  right: 12px;
+  /* C7 — its upper half reaches above the timeline's top edge; it sits at the
+     STAGE's right end, never over the Inspector's last row (a dropdown there
+     was covered). It rides the Inspector's edge while the dock slides
+     (`--kcs-dock-right-overlap`, see useDockedPanelEdge). */
+  right: calc(12px + var(--kcs-dock-right-overlap, 0px));
   transform: translateY(-50%);
   width: 46px;
   height: 20px;
   border-radius: calc(var(--kcs-radius-control) - 2px);
   z-index: 120;
+}
+
+.app-container:not(.inspector-hidden) .sidebar-handle.timeline-edge-toggle {
+  right: calc(12px + var(--kcs-dock-right-overlap, min(var(--right-inspector-width), max(250px, 34vw))));
 }
 
 .sidebar-handle.timeline-edge-toggle:hover {

@@ -221,6 +221,37 @@ test('C7 — stage-edge chrome rides the sliding dock edge instead of jumping', 
   }
 });
 
+test('C7 — the timeline collapse handle never sits over the Inspector, at rest or while it slides', async ({ page }) => {
+  await open(page);
+  const geometry = () => page.evaluate(() => {
+    const handle = document.querySelector('[data-testid="timeline-collapse-toggle"]')!.getBoundingClientRect();
+    const panel = document.querySelector('.motion-design-right-sidebar')!.getBoundingClientRect();
+    const timeline = document.querySelector('[data-testid="sequencer-timeline"]')!.getBoundingClientRect();
+    return { handleLeft: handle.left, handleRight: handle.right, handleCentreY: handle.top + handle.height / 2, panelLeft: panel.left, panelWidth: panel.width, timelineTop: timeline.top, viewport: window.innerWidth };
+  });
+  const atRest = await geometry();
+  // Still the timeline's top-edge handle (R3-01) …
+  expect(Math.abs(atRest.handleCentreY - atRest.timelineTop)).toBeLessThanOrEqual(2);
+  // … 12 px left of the open Inspector, not over its last row.
+  expect(atRest.panelWidth).toBeGreaterThan(0);
+  expect(atRest.panelLeft - atRest.handleRight).toBeGreaterThanOrEqual(11);
+  expect(atRest.panelLeft - atRest.handleRight).toBeLessThanOrEqual(13);
+  for (const action of ['Hide', 'Show'] as const) {
+    await page.getByRole('button', { name: `${action} Inspector` }).click();
+    const rights: number[] = [];
+    for (let index = 0; index < 24; index += 1) {
+      const now = await geometry();
+      rights.push(now.handleRight);
+      // The panel's visible edge (it slides out past the viewport when hiding).
+      const edge = Math.min(now.panelLeft, now.viewport);
+      expect(edge - now.handleRight).toBeGreaterThanOrEqual(11);
+      expect(edge - now.handleRight).toBeLessThanOrEqual(13);
+      await page.clock.runFor(FRAME_MS);
+    }
+    for (let index = 1; index < rights.length; index += 1) expect(Math.abs(rights[index] - rights[index - 1])).toBeLessThan(200);
+  }
+});
+
 test('C7 — a timeline height drag never re-rasterises the stage at another scale', async ({ page }) => {
   await open(page);
   const sample = () => page.locator('.stage-svg').evaluate((svg) => {

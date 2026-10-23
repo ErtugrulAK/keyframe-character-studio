@@ -69,7 +69,7 @@ export interface DockBoundaryReport {
 }
 
 /**
- * The handle's centre is the dock boundary; no text-bearing leaf is covered.
+ * The handle's centre is the dock boundary; no text-bearing leaf or control is covered.
  */
 async function dockBoundaryReport(page: Page): Promise<DockBoundaryReport> {
   return page.evaluate(() => {
@@ -84,8 +84,11 @@ async function dockBoundaryReport(page: Page): Promise<DockBoundaryReport> {
       if (!root) return [];
       const out: { cls: string; text: string; x: number; y: number; right: number; bottom: number }[] = [];
       for (const node of Array.from(root.querySelectorAll('*'))) {
-        if (node.children.length > 0) continue;
-        const text = (node.textContent ?? '').trim();
+        // C7 — a control (a disclosure chevron, an icon button, a field) is
+        // content too, even when it paints no text of its own.
+        const control = node.matches('button, [role="button"], input, select, textarea');
+        if (node.children.length > 0 && !control) continue;
+        const text = (node.textContent ?? '').trim() || (control ? node.getAttribute('aria-label') ?? node.tagName : '');
         if (!text) continue;
         const rect = node.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) continue;

@@ -241,6 +241,9 @@
 }
 
 .root-node {
+  /* C7 — the dock's edge handle is centred on the panel boundary (it reaches
+     10px into the panel): the list's first disclosure starts clear of it. */
+  padding-left: 12px;
   background: #151821;
   font-weight: 700;
   color: var(--text-secondary);

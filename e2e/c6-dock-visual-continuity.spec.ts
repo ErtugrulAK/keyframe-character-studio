@@ -221,34 +221,71 @@ test('C7 — stage-edge chrome rides the sliding dock edge instead of jumping', 
   }
 });
 
-test('C7 — the timeline collapse handle never sits over the Inspector, at rest or while it slides', async ({ page }) => {
+test('C7b — the timeline collapse handle stays put and off both docks while they slide', async ({ page }) => {
   await open(page);
   const geometry = () => page.evaluate(() => {
-    const handle = document.querySelector('[data-testid="timeline-collapse-toggle"]')!.getBoundingClientRect();
-    const panel = document.querySelector('.motion-design-right-sidebar')!.getBoundingClientRect();
-    const timeline = document.querySelector('[data-testid="sequencer-timeline"]')!.getBoundingClientRect();
-    return { handleLeft: handle.left, handleRight: handle.right, handleCentreY: handle.top + handle.height / 2, panelLeft: panel.left, panelWidth: panel.width, timelineTop: timeline.top, viewport: window.innerWidth };
+    const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+    const handle = box('[data-testid="timeline-collapse-toggle"]');
+    const right = box('.motion-design-right-sidebar');
+    const left = box('.left-toolbar-container');
+    const pill = box('.resizer-handle-pill');
+    const timeline = box('[data-testid="sequencer-timeline"]');
+    return { x: handle.left, y: handle.top, handleLeft: handle.left, handleRight: handle.right, handleCentreY: handle.top + handle.height / 2, rightLeft: Math.min(right.left, window.innerWidth), leftRight: Math.max(left.right, 0), pillRight: pill.right, timelineTop: timeline.top };
   });
   const atRest = await geometry();
-  // Still the timeline's top-edge handle (R3-01) …
+  // Still the timeline's top-edge handle (R3-01), beside the resize pill, not on it.
   expect(Math.abs(atRest.handleCentreY - atRest.timelineTop)).toBeLessThanOrEqual(2);
-  // … 12 px left of the open Inspector, not over its last row.
-  expect(atRest.panelWidth).toBeGreaterThan(0);
-  expect(atRest.panelLeft - atRest.handleRight).toBeGreaterThanOrEqual(11);
-  expect(atRest.panelLeft - atRest.handleRight).toBeLessThanOrEqual(13);
-  for (const action of ['Hide', 'Show'] as const) {
-    await page.getByRole('button', { name: `${action} Inspector` }).click();
-    const rights: number[] = [];
+  expect(atRest.handleLeft).toBeGreaterThanOrEqual(atRest.pillRight + 4);
+  for (const [action, label] of [['Hide', 'Inspector'], ['Show', 'Inspector'], ['Hide', 'Left Toolbar'], ['Show', 'Left Toolbar']] as const) {
+    await page.getByRole('button', { name: `${action} ${label}` }).click();
     for (let index = 0; index < 24; index += 1) {
       const now = await geometry();
-      rights.push(now.handleRight);
-      // The panel's visible edge (it slides out past the viewport when hiding).
-      const edge = Math.min(now.panelLeft, now.viewport);
-      expect(edge - now.handleRight).toBeGreaterThanOrEqual(11);
-      expect(edge - now.handleRight).toBeLessThanOrEqual(13);
+      // It never moves …
+      expect(now.x).toBe(atRest.x);
+      expect(now.y).toBe(atRest.y);
+      // … and never sits over either dock, on any frame.
+      expect(now.handleRight).toBeLessThanOrEqual(now.rightLeft);
+      expect(now.handleLeft).toBeGreaterThanOrEqual(now.leftRight);
       await page.clock.runFor(FRAME_MS);
     }
-    for (let index = 1; index < rights.length; index += 1) expect(Math.abs(rights[index] - rights[index - 1])).toBeLessThan(200);
+  }
+});
+
+test('C7b — dock and timeline changes never resize or re-frame the stage drawing surface', async ({ page }) => {
+  await open(page);
+  // Zoomed out, so the artboard edges, the axes and the backdrop are all in view.
+  for (let step = 0; step < 12; step += 1) await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Zoom out' }).click();
+  await page.clock.runFor(200);
+  const surface = () => page.locator('.stage-svg').evaluate((svg) => {
+    const element = svg as SVGSVGElement;
+    const origin = new DOMPoint(300, 240).matrixTransform(element.getScreenCTM()!);
+    return { width: element.getBoundingClientRect().width, height: element.getBoundingClientRect().height, viewBox: element.getAttribute('viewBox'), x: origin.x, y: origin.y };
+  });
+  const before = await surface();
+  // A whole-pixel surface: never a fractional size for the rasteriser.
+  expect(Number.isInteger(before.width)).toBe(true);
+  expect(Number.isInteger(before.height)).toBe(true);
+  const actions = [
+    () => page.getByRole('button', { name: 'Hide Inspector' }).click(),
+    () => page.getByRole('button', { name: 'Show Inspector' }).click(),
+    () => page.getByRole('button', { name: 'Hide Left Toolbar' }).click(),
+    () => page.getByRole('button', { name: 'Show Left Toolbar' }).click(),
+    () => page.getByRole('button', { name: 'Collapse timeline' }).click(),
+    () => page.getByRole('button', { name: 'Expand timeline' }).click(),
+  ];
+  for (const action of actions) {
+    await action();
+    for (let index = 0; index < 24; index += 1) {
+      const now = await surface();
+      // Same size and same viewBox on every frame: nothing is redrawn, so
+      // thin lines (axes, grid) cannot hop between pixel rows.
+      expect(now.width).toBe(before.width);
+      expect(now.height).toBe(before.height);
+      expect(now.viewBox).toBe(before.viewBox);
+      expect(Math.abs(now.x - before.x)).toBeLessThan(0.01);
+      expect(Math.abs(now.y - before.y)).toBeLessThan(0.01);
+      await page.clock.runFor(FRAME_MS);
+    }
   }
 });
 

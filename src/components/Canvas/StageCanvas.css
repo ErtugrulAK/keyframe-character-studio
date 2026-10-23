@@ -471,3 +471,13 @@
     font-size: 9px;
   }
 }
+
+/* C7b — the edit drawing surface has the window's whole-pixel size (inline
+   width/height), out of the flow, at the container's corner; the
+   camera translation places it and the container clips it. */
+.stage-svg.is-edit-surface {
+  position: absolute;
+  left: 0;
+  top: 0;
+  flex: none;
+}

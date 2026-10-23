@@ -82,6 +82,23 @@ const snapToDevicePixel = (point: CoordinatePoint): CoordinatePoint => {
   return { x: Math.round(point.x * ratio) / ratio, y: Math.round(point.y * ratio) / ratio };
 };
 
+/** Half of a length, rounded to whole device pixels. */
+const deviceHalf = (length: number): number => {
+  const ratio = typeof window !== 'undefined' && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
+  return Math.round((length / 2) * ratio) / ratio;
+};
+
+/**
+ * C7b — the edit SVG's own size: the window's, in whole pixels. It does not
+ * follow the stage box, so opening or closing a dock or the timeline never
+ * resizes (and so never re-rasterises) the drawing surface; the stage
+ * container clips it.
+ */
+const readEditSurface = (): { width: number; height: number } => ({
+  width: Math.max(1, Math.ceil(typeof window !== 'undefined' ? window.innerWidth : 1)),
+  height: Math.max(1, Math.ceil(typeof window !== 'undefined' ? window.innerHeight : 1)),
+});
+
 /**
  * The four corner handles of the transform gizmo, keyed by the scale mode they
  * report. Edge and single-axis modes intentionally have no corner identity.
@@ -245,6 +262,15 @@ export const StageCanvas: React.FC = () => {
    */
   const [cameraView, setCameraView] = useState<StageCameraView | null>(null);
   const [stageBox, setStageBox] = useState<StageBox | null>(null);
+  const [editSurface, setEditSurface] = useState(readEditSurface);
+  useEffect(() => {
+    const onResize = () => setEditSurface((current) => {
+      const next = readEditSurface();
+      return next.width === current.width && next.height === current.height ? current : next;
+    });
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   const cameraViewRef = useRef<StageCameraView | null>(null);
   const stageBoxRef = useRef<StageBox | null>(null);
   const windowSizeRef = useRef<{ width: number; height: number } | null>(null);
@@ -1396,19 +1422,31 @@ export const StageCanvas: React.FC = () => {
    * visibly shimmered. World-to-screen is unchanged:
    *   screen = view.center + (world − CAMERA_CENTER) × baseScale × zoom.
    */
+  /*
+   * C7b — the SVG itself has a fixed, whole-pixel size (the window's, see
+   * `readEditSurface`) instead of the stage box's. A dock or timeline change
+   * then leaves its size AND its viewBox untouched; at most the translation
+   * changes (when the stage's left/top edge moves), which the compositor
+   * applies without redrawing. Sizing it to the stage box re-rasterised the
+   * whole drawing on every frame of a timeline ease and once per dock toggle,
+   * at a fractional size: thin lines (the X axis, the grid) jumped between
+   * two pixel rows for a frame — the "coordinate plane flickers" report.
+   */
   const cameraScale = cameraView ? cameraView.baseScale * zoomLevel : 0;
+  const surfaceHalfX = deviceHalf(editSurface.width);
+  const surfaceHalfY = deviceHalf(editSurface.height);
   const editViewBox = appMode !== 'broadcast' && cameraView && stageBox && cameraScale > 0
     ? {
-      x: EDITOR_CAMERA_CENTER.x - Math.round(stageBox.width / 2) / cameraScale,
-      y: EDITOR_CAMERA_CENTER.y - Math.round(stageBox.height / 2) / cameraScale,
-      width: stageBox.width / cameraScale,
-      height: stageBox.height / cameraScale,
+      x: EDITOR_CAMERA_CENTER.x - surfaceHalfX / cameraScale,
+      y: EDITOR_CAMERA_CENTER.y - surfaceHalfY / cameraScale,
+      width: editSurface.width / cameraScale,
+      height: editSurface.height / cameraScale,
     }
     : null;
   const cameraTransform = editViewBox && cameraView && stageBox
     ? {
-      translateX: cameraView.center.x - stageBox.left - Math.round(stageBox.width / 2),
-      translateY: cameraView.center.y - stageBox.top - Math.round(stageBox.height / 2),
+      translateX: cameraView.center.x - stageBox.left - surfaceHalfX,
+      translateY: cameraView.center.y - stageBox.top - surfaceHalfY,
       scale: 1,
     }
     : null;
@@ -1575,9 +1613,9 @@ export const StageCanvas: React.FC = () => {
       )}
 
       <svg
-        className="stage-svg"
-        width="100%"
-        height="100%"
+        className={`stage-svg${editViewBox ? ' is-edit-surface' : ''}`}
+        width={editViewBox ? editSurface.width : '100%'}
+        height={editViewBox ? editSurface.height : '100%'}
         viewBox={appMode === 'broadcast'
           ? `0 0 ${projectResolution.width} ${projectResolution.height}`
           : editViewBox
@@ -1592,6 +1630,7 @@ export const StageCanvas: React.FC = () => {
             ? `translate(${cameraTransform.translateX}px, ${cameraTransform.translateY}px)`
             : 'translate(0px, 0px)',
           transformOrigin: '0 0',
+          ...(editViewBox ? { width: `${editSurface.width}px`, height: `${editSurface.height}px` } : {}),
           cursor: isDrawToolArmed ? 'crosshair' : undefined,
         }}
       >

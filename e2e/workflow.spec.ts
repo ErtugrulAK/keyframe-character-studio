@@ -23,16 +23,16 @@ async function createShapeByDrag(page: Page, name: string, offsetX = 0, offsetY 
   await page.mouse.up();
 }
 
-/** A point on the stage SVG at an offset from the stage centre, measured live. */
+/** A point on the visible stage at an offset from its centre, measured live. */
 async function stagePoint(page: Page, offsetX: number, offsetY: number): Promise<{ x: number; y: number }> {
-  const box = await page.locator('.stage-svg').boundingBox();
+  const box = await page.locator('.stage-canvas-container').boundingBox() /* C7b: the visible stage; the drawing surface is window-sized */;
   if (!box) throw new Error('Stage bounds unavailable');
   return { x: box.width / 2 + offsetX, y: box.height / 2 + offsetY };
 }
 
-/** A click on the stage SVG at an offset from the stage centre, measured live. */
+/** A click on the visible stage at an offset from its centre, measured live. */
 async function clickStagePoint(page: Page, offsetX: number, offsetY: number): Promise<void> {
-  await page.locator('.stage-svg').click({ position: await stagePoint(page, offsetX, offsetY) });
+  await page.locator('.stage-canvas-container').click({ position: await stagePoint(page, offsetX, offsetY) });
 }
 
   test('Create a new project, add parts, edit, and play', async ({ page }) => {
@@ -124,7 +124,7 @@ async function clickStagePoint(page: Page, offsetX: number, offsetY: number): Pr
     await clickStagePoint(page, -80, 20);
     await clickStagePoint(page, 80, 0);
     await clickStagePoint(page, 0, 50);
-    await page.locator('.stage-svg').dblclick({ position: await stagePoint(page, 0, 50) });
+    await page.locator('.stage-canvas-container').dblclick({ position: await stagePoint(page, 0, 50) });
 
     // The finished shape appears in the timeline outliner
     await expect(page.locator('.ue-outliner').getByText('Freeform Shape').first()).toBeVisible();
@@ -143,7 +143,7 @@ async function clickStagePoint(page: Page, offsetX: number, offsetY: number): Pr
     await clickStagePoint(page, -80, 20);
     await clickStagePoint(page, 80, 0);
     await clickStagePoint(page, 0, 50);
-    await page.locator('.stage-svg').dblclick({ position: await stagePoint(page, 0, 50) });
+    await page.locator('.stage-canvas-container').dblclick({ position: await stagePoint(page, 0, 50) });
     await expect(page.locator('.ue-outliner').getByText('Freeform Shape').first()).toBeVisible();
 
     // Surround it with the container rectangle, so the freeform stays INSIDE

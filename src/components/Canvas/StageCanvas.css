@@ -234,7 +234,8 @@
 .mask-edit-banner {
   position: absolute;
   top: 8px;
-  left: 8px;
+  /* C7 — rides the edge of a sliding left dock (see useDockedPanelEdge). */
+  left: calc(8px + var(--kcs-dock-left-overlap, 0px));
   z-index: 5;
   display: flex;
   flex-wrap: nowrap;
@@ -374,7 +375,7 @@
 @container kcs-stage (max-width: 560px) {
   .mask-edit-banner {
     top: 4px;
-    left: 4px;
+    left: calc(4px + var(--kcs-dock-left-overlap, 0px));
     gap: 6px;
     max-width: calc(100% - 8px);
   }
@@ -413,7 +414,8 @@
 .canvas-coordinate-readout {
   position: absolute;
   top: 14px;
-  right: 18px;
+  /* C7 — rides the edge of a sliding right dock (see useDockedPanelEdge). */
+  right: calc(18px + var(--kcs-dock-right-overlap, 0px));
   z-index: 10;
   display: inline-flex;
   align-items: center;

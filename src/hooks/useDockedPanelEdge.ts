@@ -35,6 +35,15 @@ const HANDLE_HALF_WIDTH = 10;
 const handleInset = (width: number, shown: number): number => shown * Math.max(0, width - HANDLE_HALF_WIDTH);
 
 /**
+ * C7 — how much of the stage the travelling panel covers right now, as a CSS
+ * variable on the editor shell. Chrome pinned to a stage edge (the coordinate
+ * readout, the edit-target strip) offsets by it, so it rides the sliding panel
+ * edge instead of jumping when the stage box changes once at the start (hide)
+ * or the end (show) of the slide.
+ */
+const overlapVariable = (side: DockSide): string => `--kcs-dock-${side}-overlap`;
+
+/**
  * Drives a docked panel's show/hide so the authored world never moves AND the
  * stage box changes only once per toggle.
  *
@@ -75,6 +84,7 @@ export const useDockedPanelEdge = (initiallyVisible: boolean, side: DockSide): D
     shownRef.current = shown;
     const panel = panelRef.current;
     if (panel) panel.style.transform = slideTransform(side, shown);
+    panel?.closest<HTMLElement>('.app-container')?.style.setProperty(overlapVariable(side), `${shown * travelWidthRef.current}px`);
     // C6 — the handle's stylesheet position is already the TARGET state's (the
     // class flips when the slide starts); this offset keeps it on the moving
     // edge until the slide settles, instead of a separate CSS transition that
@@ -90,8 +100,10 @@ export const useDockedPanelEdge = (initiallyVisible: boolean, side: DockSide): D
     shownRef.current = shown;
     const panel = panelRef.current;
     if (panel) panel.style.transform = '';
+    // At rest the panel is in the row again: it covers none of the stage.
+    panel?.closest<HTMLElement>('.app-container')?.style.removeProperty(overlapVariable(side));
     if (handleRef.current) handleRef.current.style.transform = '';
-  }, []);
+  }, [side]);
 
   const toggle = useCallback(() => {
     const panel = panelRef.current;

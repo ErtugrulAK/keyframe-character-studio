@@ -194,3 +194,61 @@ test('reduced motion: the dock snaps, with no slide frames', async ({ page }) =>
   expect(shown.visible).toBe(true);
   expect(shown.inlineTransform).toBe('');
 });
+
+test('C7 — stage-edge chrome rides the sliding dock edge instead of jumping', async ({ page }) => {
+  await open(page);
+  const readout = page.locator('.canvas-coordinate-readout');
+  await expect(readout).toBeVisible();
+  const readoutRight = () => readout.evaluate((node) => node.getBoundingClientRect().right);
+  const panelLeft = () => page.locator(PANEL.right).evaluate((node) => node.getBoundingClientRect().left);
+  for (const action of ['Hide', 'Show'] as const) {
+    await page.getByRole('button', { name: `${action} Inspector` }).click();
+    const gaps: number[] = [];
+    const rights: number[] = [];
+    for (let index = 0; index < 24; index += 1) {
+      const panel = await panelLeft();
+      const right = await readoutRight();
+      rights.push(right);
+      // While the panel covers part of the stage, the readout keeps its 18 px
+      // margin to the panel's moving edge (at rest: to the stage edge).
+      if (panel < 1440) gaps.push(panel - right);
+      await page.clock.runFor(FRAME_MS);
+    }
+    for (const gap of gaps) expect(gap).toBeGreaterThanOrEqual(17);
+    for (const gap of gaps) expect(gap).toBeLessThanOrEqual(19);
+    // No jump: consecutive frames move it by at most one slide step.
+    for (let index = 1; index < rights.length; index += 1) expect(Math.abs(rights[index] - rights[index - 1])).toBeLessThan(200);
+  }
+});
+
+test('C7 — a timeline height drag never re-rasterises the stage at another scale', async ({ page }) => {
+  await open(page);
+  const sample = () => page.locator('.stage-svg').evaluate((svg) => {
+    const element = svg as SVGSVGElement;
+    const m = element.getScreenCTM()!;
+    const origin = new DOMPoint(300, 240).matrixTransform(m);
+    // The scale the browser rasterises the SVG at: its box over its viewBox ("meet").
+    const box = element.viewBox.baseVal;
+    const raster = Math.min(element.clientWidth / box.width, element.clientHeight / box.height);
+    return { raster, x: origin.x, y: origin.y, transform: element.style.transform };
+  });
+  const before = await sample();
+  // The camera is in the viewBox: the CSS transform is a pure translation.
+  expect(before.transform).not.toMatch(/scale/);
+  // The fitted origin sits on whole pixels.
+  expect(Math.abs(before.y - Math.round(before.y))).toBeLessThan(0.01);
+  const bar = (await page.locator('.timeline-resizer-bar').boundingBox())!;
+  await page.mouse.move(bar.x + bar.width / 2, bar.y + bar.height / 2);
+  await page.mouse.down();
+  for (let step = 1; step <= 9; step += 1) {
+    await page.mouse.move(bar.x + bar.width / 2, bar.y + bar.height / 2 - step * 13);
+    await page.clock.runFor(FRAME_MS);
+    const now = await sample();
+    expect(now.transform).not.toMatch(/scale/);
+    // Before C7 the fixed 600×480 viewBox made this change on every frame (a CSS scale undid it).
+    expect(Math.abs(now.raster - before.raster)).toBeLessThan(1e-6);
+    expect(Math.abs(now.x - before.x)).toBeLessThan(0.01);
+    expect(Math.abs(now.y - before.y)).toBeLessThan(0.01);
+  }
+  await page.mouse.up();
+});

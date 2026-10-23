@@ -44,7 +44,7 @@ import {
   type StageCropHandle,
   type StageCropRect,
 } from '../../utils/stageCrop';
-import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
+import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter, type CoordinatePoint } from '../../utils/projectCoordinates';
 import { REFIT_UNTOUCHED_CAMERA_COMMAND, REMEASURE_STAGE_BOX_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT } from '../../utils/workspaceLayout';
 import { normalizeFreeformPoints } from '../../utils/freeform';
@@ -70,6 +70,17 @@ import { EditTargetStrip } from './overlays/EditTargetStrip';
 import { resolveEditTarget } from '../../utils/editTarget';
 import { Sparkles } from 'lucide-react';
 import './StageCanvas.css';
+
+/**
+ * C7 — a fitted camera centre on WHOLE device pixels. The centre of a stage
+ * with an odd size is a half pixel: the origin's axes then sat exactly on a
+ * pixel boundary and the smallest float difference between two frames flipped
+ * which pixel they were antialiased into (a flicker on every stage resize).
+ */
+const snapToDevicePixel = (point: CoordinatePoint): CoordinatePoint => {
+  const ratio = typeof window !== 'undefined' && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
+  return { x: Math.round(point.x * ratio) / ratio, y: Math.round(point.y * ratio) / ratio };
+};
 
 /**
  * The four corner handles of the transform gizmo, keyed by the scale mode they
@@ -271,16 +282,17 @@ export const StageCanvas: React.FC = () => {
       && previous.width === box.width && previous.height === box.height) return;
     stageBoxRef.current = box;
     setStageBox(box);
-    const center = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    const stageCenter = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
     const baseScale = getStageFitScale(box, EDITOR_CAMERA_VIEWBOX);
     setCameraView((view) => {
-      if (!view) return { center, baseScale };
+      if (!view) return { center: snapToDevicePixel(stageCenter), baseScale };
       if (!reanchor || !previous) return view;
+      // A re-anchor carries the camera by exactly the stage centre's own move.
       const previousCenter = { x: previous.left + previous.width / 2, y: previous.top + previous.height / 2 };
       return {
         center: {
-          x: view.center.x + (center.x - previousCenter.x),
-          y: view.center.y + (center.y - previousCenter.y),
+          x: view.center.x + (stageCenter.x - previousCenter.x),
+          y: view.center.y + (stageCenter.y - previousCenter.y),
         },
         baseScale,
       };
@@ -322,7 +334,7 @@ export const StageCanvas: React.FC = () => {
     setZoomLevel(restored.zoom);
     // oxlint-disable-next-line react/set-state-in-effect
     setCameraView({
-      center: { x: box.left + box.width / 2 + restored.pan.x, y: box.top + box.height / 2 + restored.pan.y },
+      center: snapToDevicePixel({ x: box.left + box.width / 2 + restored.pan.x, y: box.top + box.height / 2 + restored.pan.y }),
       baseScale: getStageFitScale(box, EDITOR_CAMERA_VIEWBOX),
     });
     // C2: the opening camera, until the user moves it (see REFIT_UNTOUCHED_CAMERA_COMMAND).
@@ -1178,7 +1190,7 @@ export const StageCanvas: React.FC = () => {
         const box = stageBoxRef.current;
         if (!box) return;
         setCameraView((view) => (view
-          ? { ...view, center: { x: box.left + box.width / 2, y: box.top + box.height / 2 } }
+          ? { ...view, center: snapToDevicePixel({ x: box.left + box.width / 2, y: box.top + box.height / 2 }) }
           : view));
         return;
       }
@@ -1188,7 +1200,7 @@ export const StageCanvas: React.FC = () => {
         const box = readStageBox();
         if (!view || !opening || !box || zoomRef.current !== 1) return;
         if (Math.hypot(view.center.x - opening.x, view.center.y - opening.y) > 0.5) return;
-        const center = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+        const center = snapToDevicePixel({ x: box.left + box.width / 2, y: box.top + box.height / 2 });
         stageBoxRef.current = box;
         openingCameraCenterRef.current = center;
         flushSync(() => {
@@ -1370,9 +1382,36 @@ export const StageCanvas: React.FC = () => {
   // cursor: the canvas reads as a creation surface until Escape or the next
   // tool exits it, and the cursor returns with the state change itself.
   const isDrawToolArmed = (activeTool === 'shape_create' && Boolean(pendingShapeType)) || activeTool === 'freeform_draw';
-  const cameraTransform = appMode === 'broadcast' || !cameraView || !stageBox
-    ? null
-    : getStageCameraTransform({ view: cameraView, stage: stageBox, zoom: zoomLevel, viewBox: EDITOR_CAMERA_VIEWBOX });
+  /*
+   * C7 — the edit camera lives in the viewBox, not in a CSS scale.
+   *
+   * The viewBox spans the stage box at the camera's final scale
+   * (baseScale × zoom), so the browser rasterises the world directly at the
+   * size it is shown; the CSS transform is a pure translation whose fractional
+   * part does not depend on the stage size (the viewBox origin is anchored at
+   * the stage's whole-pixel centre). Before, the fixed 600×480 viewBox's fit
+   * scale changed with every stage resize and a CSS scale undid it: the same
+   * picture re-rasterised at a different scale and sub-pixel offset on every
+   * frame of a timeline height drag or a dock settle — thin lines and edges
+   * visibly shimmered. World-to-screen is unchanged:
+   *   screen = view.center + (world − CAMERA_CENTER) × baseScale × zoom.
+   */
+  const cameraScale = cameraView ? cameraView.baseScale * zoomLevel : 0;
+  const editViewBox = appMode !== 'broadcast' && cameraView && stageBox && cameraScale > 0
+    ? {
+      x: EDITOR_CAMERA_CENTER.x - Math.round(stageBox.width / 2) / cameraScale,
+      y: EDITOR_CAMERA_CENTER.y - Math.round(stageBox.height / 2) / cameraScale,
+      width: stageBox.width / cameraScale,
+      height: stageBox.height / cameraScale,
+    }
+    : null;
+  const cameraTransform = editViewBox && cameraView && stageBox
+    ? {
+      translateX: cameraView.center.x - stageBox.left - Math.round(stageBox.width / 2),
+      translateY: cameraView.center.y - stageBox.top - Math.round(stageBox.height / 2),
+      scale: 1,
+    }
+    : null;
   /**
    * C2-D — the stage's dotted backdrop is anchored to the CAMERA, not to the
    * container's corner. Opening or closing a panel moves the container's edge
@@ -1541,16 +1580,18 @@ export const StageCanvas: React.FC = () => {
         height="100%"
         viewBox={appMode === 'broadcast'
           ? `0 0 ${projectResolution.width} ${projectResolution.height}`
-          : `0 0 ${EDITOR_CAMERA_VIEWBOX.width} ${EDITOR_CAMERA_VIEWBOX.height}`}
+          : editViewBox
+            ? `${editViewBox.x} ${editViewBox.y} ${editViewBox.width} ${editViewBox.height}`
+            : `0 0 ${EDITOR_CAMERA_VIEWBOX.width} ${EDITOR_CAMERA_VIEWBOX.height}`}
         preserveAspectRatio="xMidYMid meet"
 
         style={{
           // Identity while broadcast shows the fitted artboard and while the
           // edit camera has not been anchored yet (the mount view).
           transform: cameraTransform
-            ? `translate(${cameraTransform.translateX}px, ${cameraTransform.translateY}px) scale(${cameraTransform.scale})`
-            : 'translate(0px, 0px) scale(1)',
-          transformOrigin: 'center center',
+            ? `translate(${cameraTransform.translateX}px, ${cameraTransform.translateY}px)`
+            : 'translate(0px, 0px)',
+          transformOrigin: '0 0',
           cursor: isDrawToolArmed ? 'crosshair' : undefined,
         }}
       >

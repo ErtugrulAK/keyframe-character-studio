@@ -14,6 +14,8 @@ export interface DockedPanelEdge {
   edgeStyle: CSSProperties | undefined;
   /** Attach to the docked panel element — the box that slides. */
   panelRef: React.RefObject<HTMLElement | null>;
+  /** C6 — attach to the panel's edge handle: it rides the sliding edge frame by frame. */
+  handleRef: React.RefObject<HTMLElement | null>;
   toggle: () => void;
   /** Sets the visibility at once, without the slide (layout decisions, not user toggles). */
   snap: (visible: boolean) => void;
@@ -27,6 +29,10 @@ const prefersReducedMotion = (): boolean => (
 const slideTransform = (side: DockSide, shown: number): string => (
   `translateX(${(side === 'left' ? -1 : 1) * (1 - shown) * 100}%)`
 );
+
+/** The edge handle's resting inset from its side: centred on an open edge, flush when closed. */
+const HANDLE_HALF_WIDTH = 10;
+const handleInset = (width: number, shown: number): number => shown * Math.max(0, width - HANDLE_HALF_WIDTH);
 
 /**
  * Drives a docked panel's show/hide so the authored world never moves AND the
@@ -51,6 +57,10 @@ export const useDockedPanelEdge = (initiallyVisible: boolean, side: DockSide): D
   /** The width the panel keeps while it slides out (its class width is 0 by then); null = its own width. */
   const [travel, setTravel] = useState<{ width: number | null } | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
+  const handleRef = useRef<HTMLElement | null>(null);
+  /** The panel width of the slide in flight, and the state it slides to. */
+  const travelWidthRef = useRef<number>(0);
+  const travelTargetRef = useRef<boolean>(initiallyVisible);
   const easeRef = useRef<FrameEase | null>(null);
   /** How much of the panel is on screen right now (0..1), while it travels. */
   const shownRef = useRef<number>(initiallyVisible ? 1 : 0);
@@ -65,11 +75,22 @@ export const useDockedPanelEdge = (initiallyVisible: boolean, side: DockSide): D
     shownRef.current = shown;
     const panel = panelRef.current;
     if (panel) panel.style.transform = slideTransform(side, shown);
+    // C6 — the handle's stylesheet position is already the TARGET state's (the
+    // class flips when the slide starts); this offset keeps it on the moving
+    // edge until the slide settles, instead of a separate CSS transition that
+    // lagged behind the panel and nudged it after the panel had stopped.
+    const handle = handleRef.current;
+    if (handle) {
+      const width = travelWidthRef.current;
+      const offset = handleInset(width, shown) - handleInset(width, travelTargetRef.current ? 1 : 0);
+      handle.style.transform = `translateX(${(side === 'left' ? 1 : -1) * offset}px)`;
+    }
   }, [side]);
   const clearShown = useCallback((shown: number) => {
     shownRef.current = shown;
     const panel = panelRef.current;
     if (panel) panel.style.transform = '';
+    if (handleRef.current) handleRef.current.style.transform = '';
   }, []);
 
   const toggle = useCallback(() => {
@@ -97,6 +118,8 @@ export const useDockedPanelEdge = (initiallyVisible: boolean, side: DockSide): D
     ease.cancel();
     // The width it slides with: a panel going away keeps the width it has now.
     const width = next ? null : panel.getBoundingClientRect().width;
+    travelTargetRef.current = next;
+    if (width !== null) travelWidthRef.current = width;
     // Lift it out of the row and flip the target class in ONE commit; for a
     // panel going away this is the one stage-box change (folded into the camera).
     commitWorkspaceLayout(() => {
@@ -107,6 +130,7 @@ export const useDockedPanelEdge = (initiallyVisible: boolean, side: DockSide): D
     // inline, so the travel is observable as "not yet at rest" until it settles.
     if (width === null) {
       const openWidth = panel.getBoundingClientRect().width;
+      travelWidthRef.current = openWidth;
       flushSync(() => setTravel({ width: openWidth }));
     }
     writeShown(from);
@@ -144,5 +168,5 @@ export const useDockedPanelEdge = (initiallyVisible: boolean, side: DockSide): D
     zIndex: 6,
   };
 
-  return { visible, edgeStyle, panelRef, toggle, snap };
+  return { visible, edgeStyle, panelRef, handleRef, toggle, snap };
 };

@@ -535,9 +535,13 @@
      edge is eased frame by frame in JS and committed with the camera through
      `commitWorkspaceLayout` (see `useDockedPanelEdge`), which overrides
      width/min-width/flex-basis inline only while it travels. What remains here is
-     the non-geometric polish. */
-  transition: transform 240ms ease, opacity 240ms ease, visibility 240ms ease,
-    border-color 240ms ease, box-shadow 240ms ease !important;
+     the non-geometric polish.
+     C6 — and no transform/opacity/visibility transition either: the JS slide is
+     the ONE animation. These declarations (with `!important`, which beat the
+     slide's inline `transition: none`) faded the dock while it slid and, when
+     the slide settled, ran a second fade/nudge in which the 56px rail flashed
+     back at the edge. */
+  transition: none;
 }
 
 .left-sidebar-nav {
@@ -772,9 +776,10 @@
   top: var(--kcs-panel-handle-top);
   left: calc(var(--left-rail-width) + var(--left-drawer-width) - 10px);
   right: auto;
-  /* The handle rides the collapsing edge instead of teleporting to it. */
-  transition: background-color 160ms ease, color 160ms ease, outline-color 160ms ease,
-    left 240ms ease;
+  /* C6 — the handle rides the sliding edge through the dock's own frame ease
+     (`useDockedPanelEdge` offsets it per frame), not a separate `left`
+     transition that lagged behind the panel. */
+  transition: background-color 160ms ease, color 160ms ease, outline-color 160ms ease;
 }
 
 .app-container.left-toolbar-hidden .left-toolbar-toggle {

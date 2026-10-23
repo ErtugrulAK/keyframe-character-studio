@@ -115,6 +115,7 @@ const MainAppContent: React.FC = () => {
         {appMode === 'edit' && (
           <button
             type="button"
+            ref={leftToolbar.handleRef as React.RefObject<HTMLButtonElement>}
             className="sidebar-handle left-toolbar-toggle"
             aria-label={leftToolbar.visible ? 'Hide Left Toolbar' : 'Show Left Toolbar'}
             aria-expanded={leftToolbar.visible}
@@ -127,6 +128,7 @@ const MainAppContent: React.FC = () => {
         {appMode === 'edit' && (
           <button
             type="button"
+            ref={inspector.handleRef as React.RefObject<HTMLButtonElement>}
             className="sidebar-handle inspector-dock-toggle"
             aria-label={inspector.visible ? 'Hide Inspector' : 'Show Inspector'}
             aria-expanded={inspector.visible}

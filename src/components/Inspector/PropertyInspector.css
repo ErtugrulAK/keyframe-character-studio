@@ -2099,11 +2099,12 @@
   background: var(--kcs-panel);
   border-left-color: var(--kcs-border-quiet);
   box-shadow: -8px 0 20px rgba(0, 0, 0, .18);
-  /* The last word on this element's transition. The geometry (width, min-width,
-     flex-basis) is deliberately absent: the dock edge is eased and committed
-     frame by frame with the camera (see `useDockedPanelEdge`), so the browser
-     must never animate the box the camera is a projection of. */
-  transition: transform 240ms ease, opacity 240ms ease, visibility 240ms ease;
+  /* The last word on this element's transition: NONE. The dock's show/hide is
+     one JS slide (see `useDockedPanelEdge`), eased frame by frame and committed
+     with the camera. A stylesheet transition here ran a SECOND animation when
+     the slide settled and its inline styles were removed (C6: the panel faded
+     and nudged 12px after it had already arrived or left). */
+  transition: none;
 }
 
 .motion-design-right-sidebar.is-hidden {
@@ -2240,9 +2241,10 @@
 }
 /* Preserve the Inspector dock-follow motion over the shared handle defaults. */
 .sidebar-handle.inspector-dock-toggle {
-  /* The handle rides the collapsing edge: same 240ms/ease as the panel width,
-     no overshoot curve, so it never detaches from the edge. */
-  transition: right 240ms ease, background-color 160ms ease, color 160ms ease;
+  /* C6 — the handle rides the sliding edge through the dock's own frame ease
+     (`useDockedPanelEdge` offsets it per frame); a CSS `right` transition ran
+     on its own clock and settled after the panel had stopped. */
+  transition: background-color 160ms ease, color 160ms ease;
 }
 
 /* WP-04 — the effective Track Matte reading above the matte settings. */

@@ -135,6 +135,31 @@ export const addPropertyKeyframeMutator = (
 };
 
 /**
+ * WP-01: author a property VALUE at the playhead of a channel that is already
+ * animated in `templateId` — the convention every Inspector scalar follows.
+ * An exact (frame, sequence) key changes its value only, so its easing,
+ * temporal handles and sequence survive; otherwise one key is inserted with the
+ * sequence's easing (its first key's), as `updateCurrentPropertyChannel` does.
+ * Keys of other sequences are never touched.
+ */
+export const authorPropertyValueAtFrameMutator = (
+  tracks: Track[],
+  trackId: string,
+  channel: AnimationChannel,
+  frame: number,
+  value: number,
+  templateId: string,
+): Track[] => {
+  const track = tracks.find((candidate) => candidate.id === trackId);
+  if (!track) return tracks;
+  const channelMap = (isLayerMaskChannel(channel) ? track.maskChannels : track.channels) as Record<string, PropertyKeyframe[]> | undefined;
+  const scoped = (channelMap?.[channel] ?? []).filter((keyframe) => (keyframe.templateId || 'Sequence') === templateId);
+  const exact = scoped.find((keyframe) => keyframe.frame === frame);
+  if (exact) return updatePropertyKeyframeValueMutator(tracks, trackId, channel, exact.id, value);
+  return addPropertyKeyframeMutator(tracks, trackId, channel, frame, value, scoped[0]?.easing ?? 'easeInOut', templateId);
+};
+
+/**
  * Author ONE transform keyframe group: the canonical x/y/rotation/scaleX/
  * scaleY/opacity and Trim Path channels at (frame, template).
  *
@@ -224,6 +249,25 @@ export const addMaskPathKeyframeMutator = (
     maskPathChannels: { ...track.maskPathChannels, [channel]: updated },
   };
 });
+
+/**
+ * WP-03: removes every key of one mask path channel IN ONE SEQUENCE (the path
+ * stopwatch's confirmed disarm). Other sequences' keys survive untouched.
+ */
+export const clearMaskPathAnimationMutator = (
+  tracks: Track[],
+  trackId: string,
+  channel: LayerMaskPathChannel,
+  templateId: string,
+): Track[] => tracks.map((track) => track.id === trackId
+  ? {
+    ...track,
+    maskPathChannels: {
+      ...track.maskPathChannels,
+      [channel]: (track.maskPathChannels?.[channel] ?? []).filter((keyframe) => (keyframe.templateId || 'Sequence') !== templateId),
+    },
+  }
+  : track);
 
 export const updateMaskPathKeyframeValueMutator = (
   tracks: Track[],

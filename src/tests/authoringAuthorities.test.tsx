@@ -135,10 +135,40 @@ describe('shared authoring authorities', () => {
     const edited: LayerMask = { ...mask, feather: 40 };
     authoring.part.handleDisplayedPartPropChange('masks', [edited]);
 
-    expect(animatorCtx.updatePropertyKeyframeValue).toHaveBeenCalledWith('t1', layerMaskChannel('m1', 'feather'), 'k1', 40);
+    // WP-01: the exact-frame key is updated in place through the track mutator,
+    // so its id, frame, easing and sequence survive.
+    const trackCalls = animatorCtx.setTracks.mock.calls;
+    const [writtenTrack] = (trackCalls[trackCalls.length - 1][0] as (tracks: Track[]) => Track[])([track]);
+    expect(writtenTrack.maskChannels?.[layerMaskChannel('m1', 'feather')]).toEqual([
+      { id: 'k1', frame: 0, value: 40, easing: 'linear' },
+    ]);
     const [written] = appliedParts([part]);
     expect(written.masks?.[0].feather).toBe(2);
     expect(written.masks?.[0].path).toEqual(mask.path);
+  });
+
+  it('writes an edited mask scalar to the base mask when the layer has no track (WP-01)', () => {
+    const mask: LayerMask = {
+      id: 'm1',
+      name: 'Mask',
+      mode: 'add',
+      feather: 2,
+      path: { version: 1, coordinateSpace: 'local', closed: true, points: [] },
+    };
+    const part = shape('a', { masks: [mask] });
+    animatorCtx.characterParts = [part];
+    animatorCtx.tracks = [];
+    animatorCtx.selectedPartId = 'a';
+    const authoring = renderAuthoring().result.current;
+
+    // The Inspector shows evaluated defaults (opacity 1, expansion 0) the base
+    // mask does not store; only the edited feather may reach the base mask.
+    authoring.part.handleDisplayedPartPropChange('masks', [{ ...mask, feather: 9, opacity: 1, expansion: 0 }]);
+
+    expect(animatorCtx.setTracks).not.toHaveBeenCalled();
+    const [written] = appliedParts([part]);
+    expect(written.masks).toEqual([{ ...mask, feather: 9 }]);
+    expect(written.masks?.[0]).not.toHaveProperty('opacity');
   });
 
   it('creates a Boolean group from two eligible operands through one batch', () => {

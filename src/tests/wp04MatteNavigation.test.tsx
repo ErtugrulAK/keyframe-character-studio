@@ -49,6 +49,8 @@ const seed = (h: ReturnType<typeof renderInspector>) => {
     }));
   });
   act(() => { h.ctx().setSelectedPartId(landscape); h.ctx().setSelectedPartIds([landscape]); });
+  // C7 — the Track Matte card lives on the Inspector's Masks tab (Radix activates on mouse-down).
+  fireEvent.mouseDown(screen.getByRole('tab', { name: /^Masks/ }));
   return { landscape, circle, lower };
 };
 

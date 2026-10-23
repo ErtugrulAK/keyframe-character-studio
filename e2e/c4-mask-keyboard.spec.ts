@@ -9,6 +9,7 @@
  * trap); typing in a text field never triggers the canvas keys.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const emptyChannels = () => ({ x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [], maskOffsetX: [], maskOffsetY: [], maskScale: [], maskRotation: [], trimPathStart: [], trimPathEnd: [], trimPathOffset: [] });
@@ -31,6 +32,7 @@ async function seed(page: Page): Promise<void> {
   await page.reload();
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
   await page.locator('.ue-track-row', { hasText: 'Landscape' }).first().click();
+  await openDetailsTab(page, 'Masks');
   await page.getByRole('button', { name: 'Expand LAYER MASKS' }).click();
 }
 

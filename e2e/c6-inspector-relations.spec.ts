@@ -9,6 +9,7 @@
  *   when a layer has one. Looking at it never changes data.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const E = () => ({ x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [] });
@@ -64,6 +65,8 @@ test('header and Parent row: plain kind, long names contained, group vs parent s
   expect(fit.nameRight).toBeLessThanOrEqual(fit.actionsLeft);
   expect(fit.actionsRight).toBeLessThanOrEqual(fit.rowRight + 0.5);
 
+  // C7 — the Parent row lives on the Inspector's Layer tab.
+  await openDetailsTab(page, 'Layer');
   const relation = page.getByTestId('layer-parent-relation');
   await expect(relation).toContainText('In group “Characters”');
   await expect(page.locator('.layer-parent-field')).toHaveAttribute('data-relation', 'group');
@@ -100,6 +103,8 @@ test('Track Matte leads; the legacy clip matte is quiet when unused and explicit
   const trackCard = () => page.locator('.inspector-section-card', { has: page.locator('.inspector-section-title', { hasText: /^TRACK MATTE$/ }) });
 
   await select(page, 'photo');
+  // C7 — both mattes live on the Inspector's Masks tab.
+  await openDetailsTab(page, 'Masks');
   await expect(trackCard().locator('.inspector-section-badge')).toHaveText('On');
   await expect(legacyCard()).toHaveClass(/is-quiet/);
   await expect(legacyCard().locator('.inspector-section-badge')).toHaveText('Advanced');

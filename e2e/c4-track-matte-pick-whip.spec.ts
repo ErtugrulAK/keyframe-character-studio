@@ -7,6 +7,7 @@
  * loop write nothing. Enter on the handle goes to the source list.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const EMPTY = () => ({ x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [], maskOffsetX: [], maskOffsetY: [], maskScale: [], maskRotation: [], trimPathStart: [], trimPathEnd: [], trimPathOffset: [] });
@@ -30,6 +31,7 @@ async function open(page: Page): Promise<void> {
   await page.reload();
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
   await page.locator('[role="tree"] [data-layer-id="target"]').click();
+  await openDetailsTab(page, 'Masks');
   await page.getByRole('button', { name: 'Expand TRACK MATTE' }).click();
 }
 

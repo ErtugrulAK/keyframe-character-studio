@@ -5,6 +5,7 @@
  * the target; shared-source visibility conflict; delete → missing → Undo.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -59,6 +60,8 @@ const matteGeometry = (page: Page) => page.evaluate(() => document.querySelector
 test('WP-04 — select a hidden matte source, move it, return to the target; conflict; delete and undo', async ({ page }) => {
   await seed(page);
   await page.locator('.ue-track-row', { hasText: 'Landscape' }).first().click();
+  // C7 — the Track Matte card lives on the Inspector's Masks tab.
+  await openDetailsTab(page, 'Masks');
   const summary = page.getByTestId('track-matte-summary');
   await expect(summary).toContainText('Matte source: Circle');
   // The source is hidden by Landscape: it is not painted in the composition.

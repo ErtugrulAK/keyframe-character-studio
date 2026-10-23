@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const SCENE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -29,6 +30,7 @@ async function seed(page: Page): Promise<void> {
 
 async function selectPart(page: Page, name: string): Promise<void> {
   await page.locator('.actor-node', { hasText: name }).click();
+  await openDetailsTab(page, 'Layer');
   await expect(page.getByText('ANIMATION DATA')).toBeVisible();
   const disclosure = page.getByRole('button', { name: /(?:Expand|Collapse) ANIMATION DATA/ });
   await expect(disclosure).toBeVisible();

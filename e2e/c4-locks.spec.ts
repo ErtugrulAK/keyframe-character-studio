@@ -12,6 +12,7 @@
  * Mask lock: only that mask's path and path transform are protected.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const EMPTY = () => ({ x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [], maskOffsetX: [], maskOffsetY: [], maskScale: [], maskRotation: [], trimPathStart: [], trimPathEnd: [], trimPathOffset: [] });
@@ -197,6 +198,7 @@ test('a mask lock protects only that mask path and its transform', async ({ page
   await open(page, [{ id: 'img', name: 'Photo', type: 'custom_image', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, fillColor: '#fff', strokeColor: '#000', width: 600, height: 400, imageUrl: IMAGE,
     masks: [{ id: 'm1', name: 'Window', mode: 'add', enabled: true, path }] }]);
   await row(page, 'Photo').click();
+  await openDetailsTab(page, 'Masks');
   await page.getByRole('button', { name: 'Expand LAYER MASKS' }).click();
   const lock = page.getByRole('checkbox', { name: /Lock path/ });
   await lock.check();
@@ -211,10 +213,12 @@ test('a mask lock protects only that mask path and its transform', async ({ page
   await mode.selectOption('subtract');
   await expect(mode).toHaveValue('subtract');
   // And the layer itself is not locked.
+  await openDetailsTab(page, 'Properties');
   await page.locator('.details-body').getByRole('button', { name: 'Expand TRANSFORM' }).click();
   await expect(page.getByLabel('Position X').first()).toBeEnabled();
   const saved = await savedScene(page);
   expect(saved.layers.find((layer: { id: string }) => layer.id === 'img').masks[0]).toMatchObject({ locked: true, mode: 'subtract', path: { closed: true } });
+  await openDetailsTab(page, 'Masks');
   await lock.uncheck();
   await expect(editOnCanvas).toBeEnabled();
 });

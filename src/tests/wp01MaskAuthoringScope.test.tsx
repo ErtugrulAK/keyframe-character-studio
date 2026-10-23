@@ -246,6 +246,8 @@ const seedTwoSequenceMask = (h: ReturnType<typeof renderInspector>) => {
       : track));
   });
   act(() => { h.ctx().setSelectedPartId(partId); });
+  // C7 — masks and mattes live on the Inspector's Masks tab (Radix activates on mouse-down).
+  fireEvent.mouseDown(screen.getByRole('tab', { name: /^Masks/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Expand LAYER MASKS' }));
   return { partId, introId, featherChannel, opacityChannel };
 };
@@ -312,6 +314,8 @@ describe('WP-01 Inspector integration', () => {
       h.ctx().setCharacterParts((prev: CharacterPart[]) => prev.map((part) => part.id === partId ? { ...part, masks: [mask({ id: 'mask-2', name: 'Imported' })] } : part));
     });
     act(() => { h.ctx().setSelectedPartId(partId); });
+    // C7 — masks and mattes live on the Inspector's Masks tab (Radix activates on mouse-down).
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /^Masks/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Expand LAYER MASKS' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Add mask' }));

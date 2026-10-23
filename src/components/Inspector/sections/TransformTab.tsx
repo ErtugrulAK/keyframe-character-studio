@@ -8,6 +8,7 @@ import { TransformScaleCard } from './transform/TransformScaleCard';
 import { TransformOpacityCard } from './transform/TransformOpacityCard';
 import { TransformControlPoints } from './transform/TransformControlPoints';
 import { StyleCard } from './style/StyleCard';
+import { AnimationDataCard } from './AnimationDataCard';
 
 interface TransformTabProps {
   selectedPart: CharacterPart;
@@ -101,46 +102,16 @@ export const TransformTab: React.FC<TransformTabProps> = ({
       )}
 
 
-      {/* Canonical animation-data actions remain useful for named sequences.
-          The legacy procedural IN/OUT editor is intentionally de-emphasized
-          without removing its data model or runtime support. */}
+      {/* Canonical animation-data actions (C7: the Inspector's Layer tab shows
+          the same card; it passes no copy action here). */}
       {onCopyAnimation && (
-        <StyleCard title="ANIMATION DATA" collapsible defaultOpen={false} retainKey="animation-data">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-            <button
-              type="button"
-              className="btn-secondary"
-              title="Copy animation from this element"
-              aria-label="Copy Animation"
-              data-lock-exempt
-              onClick={onCopyAnimation}
-            >
-              Copy Animation
-            </button>
-            <button
-              type="button"
-              className="btn-secondary"
-              title="Paste animation onto selected element"
-              aria-label="Paste Animation"
-              disabled={!clipboardSourceId || clipboardSourceId === selectedPart.id}
-              onClick={onPasteAnimation}
-            >
-              Paste Animation
-            </button>
-            {onClearAnimation && (
-              <button
-                type="button"
-                className="btn-secondary"
-                style={{ color: '#f87171' }}
-                title="Clear animation (IN/OUT presets, durations and keyframes)"
-                aria-label="Clear Animation"
-                onClick={onClearAnimation}
-              >
-                Clear Animation
-              </button>
-            )}
-          </div>
-        </StyleCard>
+        <AnimationDataCard
+          partId={selectedPart.id}
+          onCopyAnimation={onCopyAnimation}
+          onPasteAnimation={onPasteAnimation}
+          onClearAnimation={onClearAnimation}
+          clipboardSourceId={clipboardSourceId}
+        />
       )}
     </>
   );

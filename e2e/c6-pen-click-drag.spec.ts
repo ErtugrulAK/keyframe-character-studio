@@ -7,6 +7,7 @@
  * same rules.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const emptyChannels = () => ({
@@ -142,6 +143,7 @@ test('shape Pen: the visible Finish control and a double-click finish; Esc disca
 test('mask Pen: click = corner, drag = one smooth point; the committed mask keeps the tangent', async ({ page }) => {
   await seed(page);
   await page.locator('.tree-node[data-layer-id="base"]').click();
+  await openDetailsTab(page, 'Masks');
   await page.getByRole('button', { name: 'Expand LAYER MASKS' }).click();
   await page.getByRole('button', { name: 'Draw pen mask' }).click();
   const c = await stageCentre(page);

@@ -11,6 +11,7 @@
  *   matte source, new shape), and the strip never takes a stage press.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const emptyChannels = () => ({
@@ -176,6 +177,7 @@ test('the strip and the Inspector name the same target; the strip never takes a 
   expect(hit).toEqual({ pointerEvents: 'none', insideStrip: false });
 
   // Mask path editing: the strip, the Inspector and the canvas outline agree.
+  await openDetailsTab(page, 'Masks');
   await page.getByRole('button', { name: 'Expand LAYER MASKS' }).click();
   await page.getByRole('button', { name: 'Edit on Canvas' }).click();
   await expect(page.getByTestId('mask-path-overlay')).toBeVisible();
@@ -209,6 +211,7 @@ test('matte source: the strip says whose matte it is and goes back to that layer
     layer('circle', 'Circle', 0, 0, { type: 'custom_circle', zIndex: 2 }),
   ]);
   await row(page, 'photo').click();
+  await openDetailsTab(page, 'Masks');
   await page.getByRole('button', { name: 'Select Source' }).click();
   const strip = page.locator('.edit-target-strip');
   await expect(strip).toHaveAttribute('data-edit-target', 'matte-source');

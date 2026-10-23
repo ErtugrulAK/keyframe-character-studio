@@ -12,6 +12,7 @@
  * - OGraf export is blocked with the reason (not flattened, not dropped).
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const E = () => ({ x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [] });
@@ -139,12 +140,15 @@ test('colour correction: whole layer, effect-only mask, alpha kept, undo, v3 sav
 
   // ── A switched-off mask: the correction is NOT applied, and the panel says why ──
   await page.locator('[role="tree"] [data-layer-id="photo"]').click();
+  // C7 — the mask's switch is on the Masks tab; the correction's status on Properties.
+  await openDetailsTab(page, 'Masks');
   const masksToggle = page.getByRole('button', { name: 'Expand LAYER MASKS' });
   if (await masksToggle.count()) await masksToggle.click();
   const maskSwitch = page.getByRole('button', { name: `Enable ${effectMask.name}` });
   await expect(maskSwitch).toHaveAttribute('aria-pressed', 'true');
   await maskSwitch.click();
   await expect(maskSwitch).toHaveAttribute('aria-pressed', 'false');
+  await openDetailsTab(page, 'Properties');
   await expect(page.getByTestId('color-correction-status')).toContainText('is off');
   await deselect(page);
   pixels = await sample(page);

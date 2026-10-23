@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import zlib from 'zlib';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 /**
  * M21 — IMAGE MATTE full-browser pixel matrix (permanent regression suite).
@@ -449,6 +450,7 @@ test.describe('M21 image matte — real browser pixel matrix', () => {
     await page.mouse.click(pt!.x, pt!.y);
     await page.waitForTimeout(600);
     // The legacy matte relationship is owned by the LEGACY CLIP MATTE card (WP-04 rename).
+    await openDetailsTab(page, 'Masks');
     const matteDisclosure = page.getByRole('button', { name: /(?:Expand|Collapse) LEGACY CLIP MATTE/ });
     await expect(matteDisclosure).toBeVisible();
     if (await matteDisclosure.getAttribute('aria-expanded') === 'false') {

@@ -24,6 +24,7 @@
     "validate:ograf": "node scripts/validate-ograf-manifest.mjs"
   },
   "dependencies": {
+    "@radix-ui/react-tabs": "1.1.22",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

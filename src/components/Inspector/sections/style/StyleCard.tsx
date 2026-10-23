@@ -37,8 +37,18 @@ export const StyleCard: React.FC<StyleCardProps> = ({
   const visible = !collapsible || isOpen;
 
   return (
-    <section className={`panel-card inspector-section-card ${collapsible ? 'is-collapsible' : ''}${tone === 'quiet' ? ' is-quiet' : ''}`}>
-      <div className="inspector-section-header">
+    <section
+      className={`panel-card inspector-section-card ${collapsible ? 'is-collapsible' : ''}${tone === 'quiet' ? ' is-quiet' : ''}`}
+      data-open={collapsible ? String(isOpen) : undefined}
+    >
+      {/* C7 — a closed card is one header row; the whole row toggles it (the
+          disclosure button stays the keyboard and screen-reader control). */}
+      <div
+        className="inspector-section-header"
+        onClick={collapsible ? (event) => {
+          if (!(event.target as Element).closest('button')) setIsOpen((open) => !open);
+        } : undefined}
+      >
         <span className="inspector-section-title">{title}</span>
         {badge && <span className="inspector-section-badge">{badge}</span>}
         {collapsible && (

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const SCENE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -22,6 +23,7 @@ test('M24 — combination preset data remains compatible in the approved Transfo
   await page.reload();
   await page.locator('.actor-node', { hasText: 'Combination Legacy' }).click();
 
+  await openDetailsTab(page, 'Layer');
   const animationData = page.getByRole('button', { name: /(?:Expand|Collapse) ANIMATION DATA/ });
   await expect(animationData).toBeVisible();
   if (await animationData.getAttribute('aria-expanded') === 'false') {

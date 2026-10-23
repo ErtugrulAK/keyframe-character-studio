@@ -55,6 +55,8 @@ const seed = (h: ReturnType<typeof renderEditor>, masks: LayerMask[] = [mask()])
     h.ctx().setCharacterParts((prev: CharacterPart[]) => prev.map((part) => part.id === partId ? { ...part, width: 200, height: 100, masks } : part));
   });
   act(() => { h.ctx().setSelectedPartId(partId); h.ctx().setSelectedPartIds([partId]); });
+  // C7 — masks and mattes live on the Inspector's Masks tab (Radix activates on mouse-down).
+  fireEvent.mouseDown(screen.getByRole('tab', { name: /^Masks/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Expand LAYER MASKS' }));
   return partId;
 };

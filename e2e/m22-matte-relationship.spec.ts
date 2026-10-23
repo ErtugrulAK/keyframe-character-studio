@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 /**
  * M22 STEP 8C — REAL USER E2E: outliner matte relationship visibility (8A)
@@ -53,6 +54,7 @@ async function selectPart(page: Page, name: string): Promise<void> {
 
 /** Open the Inspector's legacy clip matte card (renamed from MASK / TRACK MATTE in WP-04). */
 async function openMatteSection(page: Page): Promise<void> {
+  await openDetailsTab(page, 'Masks');
   const disclosure = page.getByRole('button', { name: /(?:Expand|Collapse) LEGACY CLIP MATTE/ });
   await expect(disclosure).toBeVisible();
   if (await disclosure.getAttribute('aria-expanded') === 'false') {

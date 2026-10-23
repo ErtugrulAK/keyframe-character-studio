@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const SCENE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const PRESET_KEY = 'keyframe_custom_motion_presets';
@@ -31,6 +32,7 @@ test('M25/V2 — saved preset metadata and stable scene references survive the c
   await page.reload();
   await page.locator('.actor-node', { hasText: 'Preset Reference' }).click();
 
+  await openDetailsTab(page, 'Layer');
   const animationData = page.getByRole('button', { name: /(?:Expand|Collapse) ANIMATION DATA/ });
   await expect(animationData).toBeVisible();
   if (await animationData.getAttribute('aria-expanded') === 'false') {

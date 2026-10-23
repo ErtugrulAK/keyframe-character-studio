@@ -7,6 +7,7 @@
  * place as well.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const EMPTY = () => ({ x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [], maskOffsetX: [], maskOffsetY: [], maskScale: [], maskRotation: [], trimPathStart: [], trimPathEnd: [], trimPathOffset: [] });
@@ -76,6 +77,7 @@ test('nesting a moving layer into a rotating parent: asked first, Cancel writes 
   const before = await savedScene(page);
 
   await page.locator('[role="tree"] [data-layer-id="ball"]').click();
+  await openDetailsTab(page, 'Layer');
   const parent = page.getByRole('combobox', { name: 'Parent' });
   await parent.selectOption('wheel');
   const dialog = page.getByRole('dialog');

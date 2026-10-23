@@ -7,6 +7,7 @@
  * the canvas draws its implied closing edge.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const emptyChannels = () => ({
@@ -40,6 +41,7 @@ async function seed(page: Page, trackExtra: Record<string, unknown> = {}): Promi
   await page.reload();
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
   await page.locator('.ue-track-row', { hasText: 'Landscape' }).first().click();
+  await openDetailsTab(page, 'Masks');
   await page.getByRole('button', { name: 'Expand LAYER MASKS' }).click();
   await page.getByRole('button', { name: 'Edit on Canvas' }).click();
 }
@@ -111,6 +113,7 @@ test('Closed path switch: an open mask keeps its points and still masks; the can
 
   await page.reload();
   await page.locator('.ue-track-row', { hasText: 'Landscape' }).first().click();
+  await openDetailsTab(page, 'Masks');
   await page.getByRole('button', { name: 'Expand LAYER MASKS' }).click();
   await expect(page.getByTestId('bezier-path-editor').getByRole('switch', { name: 'Closed path' })).toHaveAttribute('aria-checked', 'false');
 });

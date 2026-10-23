@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import zlib from 'zlib';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 /**
  * M13 Step 2E — Track matte REAL-BROWSER validation (Chromium).
@@ -1317,6 +1318,7 @@ test.describe('M17 gradient matte — real browser pixel assertions', () => {
     await seed(page, [sourcePart, targetPart]);
 
     await page.getByRole('treeitem', { name: /^Target/ }).click();
+    await openDetailsTab(page, 'Masks');
     await page.getByRole('button', { name: 'Expand LEGACY CLIP MATTE' }).click();
     const angle = page.locator('input[aria-label="Gradient angle"]');
     await angle.focus();

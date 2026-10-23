@@ -6,6 +6,7 @@
  * one-undo atomicity and persistence after reload.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const FRAME_WIDTH = 18;
@@ -87,6 +88,7 @@ const stopwatchX = (page: Page) => page.locator('button.ue-channel-stopwatch[dat
 const stopwatchY = (page: Page) => page.locator('button.ue-channel-stopwatch[data-property-channel="y"]');
 
 async function openAnimationDataCard(page: Page): Promise<void> {
+  await openDetailsTab(page, 'Layer');
   const card = page.getByRole('button', { name: /(?:Expand|Collapse) ANIMATION DATA/ });
   await expect(card).toBeVisible();
   if (await card.getAttribute('aria-expanded') === 'false') await card.click();

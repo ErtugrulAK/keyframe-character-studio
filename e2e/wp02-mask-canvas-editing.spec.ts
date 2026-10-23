@@ -5,6 +5,7 @@
  * a drag (no history, redo kept) before it leaves the mode.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -58,6 +59,7 @@ async function seed(page: Page, layers: Record<string, unknown>[], tracks: Recor
 
 async function enterMaskEditing(page: Page, layerName: string): Promise<void> {
   await page.locator('.ue-track-row', { hasText: layerName }).first().click();
+  await openDetailsTab(page, 'Masks');
   await page.getByRole('button', { name: 'Expand LAYER MASKS' }).click();
   await page.getByRole('button', { name: 'Edit on Canvas' }).click();
   await expect(page.getByTestId('mask-path-overlay')).toBeVisible();

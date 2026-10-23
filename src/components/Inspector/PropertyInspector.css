@@ -2967,3 +2967,119 @@
   font-weight: 700;
   text-transform: uppercase;
 }
+
+/* C7 — Details tabs (Radix Tabs): a compact segmented strip under the layer
+   header. The strip stays put while the body scrolls; the active tab carries
+   the accent underline, a count shows what the Masks tab holds. */
+.details-tabs {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.details-tab-list {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 0 10px;
+  background: var(--kcs-bg-inspector, #0d141b);
+  border-bottom: 1px solid var(--kcs-border-subtle);
+}
+
+.details-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  min-width: 0;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--kcs-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--kcs-motion-fast, 120ms) ease, border-color var(--kcs-motion-fast, 120ms) ease;
+}
+
+.details-tab:hover {
+  color: var(--kcs-text-primary);
+}
+
+.details-tab[data-state="active"] {
+  color: var(--kcs-text-primary);
+  border-bottom-color: var(--kcs-accent);
+}
+
+.details-tab:focus {
+  outline: none;
+}
+
+.details-tab:focus-visible {
+  outline: 2px solid var(--kcs-focus);
+  outline-offset: -2px;
+  border-radius: calc(var(--kcs-radius-control) - 2px);
+}
+
+.details-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--kcs-radius-pill, 999px);
+  background: var(--kcs-bg-active-muted, rgba(45, 212, 191, .14));
+  color: var(--kcs-text-secondary);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.details-tab-panel:focus {
+  outline: none;
+}
+
+.details-tab-panel:focus-visible {
+  outline: 1px solid var(--kcs-focus);
+  outline-offset: 2px;
+}
+
+/* Inside the Layer tab's HIERARCHY card the field needs no frame of its own. */
+.inspector-section-content > .layer-parent-field {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+/* C7 — a closed card is one header row: no divider, no empty band under it. */
+.inspector-section-card.is-collapsible[data-open="false"] {
+  padding-bottom: 8px;
+}
+
+.inspector-section-card.is-collapsible[data-open="false"] > .inspector-section-header {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom-color: transparent;
+}
+
+.inspector-section-card.is-collapsible > .inspector-section-header {
+  cursor: pointer;
+}
+
+/* C7 — Inspector dropdowns share the 28px height and 11px text of its fields
+   (the app-wide select rule is 32px/12px and !important, so this scoped rule
+   has to be as well). */
+.motion-design-right-sidebar select {
+  height: 28px !important;
+  font-size: 11px !important;
+  padding-right: 26px !important;
+  background-position: right 8px center !important;
+}
+
+.details-tab-list[data-pointer="true"] .details-tab:focus-visible {
+  outline: none;
+}

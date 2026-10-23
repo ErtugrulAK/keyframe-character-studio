@@ -6,6 +6,7 @@
  * names its dependent layers first.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -197,6 +198,7 @@ test('the drop indicator says before / after / nest; a cycle is refused with the
 
   // The Inspector's Parent field is the keyboard alternative, and explains a refusal.
   await row(page, 'star').click();
+  await openDetailsTab(page, 'Layer');
   const parent = page.getByRole('combobox', { name: 'Parent' });
   await expect(parent.locator('option')).toHaveText(['None', 'Square', 'Triangle']);
   // The animated Star is re-based into Square (asked first when keys are added).

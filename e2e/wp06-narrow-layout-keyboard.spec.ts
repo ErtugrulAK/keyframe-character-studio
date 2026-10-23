@@ -7,6 +7,7 @@
  * Escape leaves; the Track Matte source is reachable from the keyboard.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -99,6 +100,7 @@ for (const viewport of [{ width: 1024, height: 720 }, { width: 768, height: 720 
     expect(details!.height).toBeGreaterThanOrEqual(120);
 
     // Mask editing from the keyboard: Edit on Canvas, Exit reachable, Escape leaves.
+    await openDetailsTab(page, 'Masks');
     await page.getByRole('button', { name: 'Expand LAYER MASKS' }).click();
     await page.getByRole('button', { name: 'Edit on Canvas' }).focus();
     await page.keyboard.press('Enter');
@@ -115,6 +117,7 @@ for (const viewport of [{ width: 1024, height: 720 }, { width: 768, height: 720 
 test('WP-06 — arrow keys nudge the mask path (one undo per held key); Track Matte source from the keyboard', async ({ page }) => {
   await seed(page, { width: 1440, height: 900 });
   await page.locator('.ue-track-row', { hasText: 'Landscape' }).first().click();
+  await openDetailsTab(page, 'Masks');
   await page.getByRole('button', { name: 'Expand LAYER MASKS' }).click();
   await page.getByRole('button', { name: 'Edit on Canvas' }).click();
   await expect(page.getByTestId('mask-path-overlay')).toBeVisible();

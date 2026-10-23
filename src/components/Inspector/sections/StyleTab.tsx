@@ -60,6 +60,12 @@ interface StyleTabProps {
     drawingEffectMask: MaskDrawShape | null;
     readOnlyReason: string | null;
   };
+  /**
+   * C7 — which Inspector tab this renders: 'properties' (paint, text, Trim
+   * Path, geometry, effects) or 'masks' (layer masks, Track Matte, legacy clip
+   * matte). Omitted: everything, in that order.
+   */
+  section?: 'properties' | 'masks';
   pathEditing?: {
     tracks: Track[];
     readOnlyReason: string | null;
@@ -100,13 +106,17 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   onColorInteractionEnd,
   pathEditing,
   colorCorrection,
+  section,
 }) => {
+  const showProperties = section !== 'masks';
+  const showMasks = section !== 'properties';
   const isTextBearing =
     selectedPart.type === 'custom_card' ||
     selectedPart.type === 'custom_text' ||
     selectedPart.type === 'custom_banner';
 
-  return (
+  // C7 — the Properties tab: paint, text, Trim Path, geometry, effects.
+  const properties = (
     <>
       {isTrimPathEligible(selectedPart.type) && (
         <TrimPathSection
@@ -174,32 +184,42 @@ export const StyleTab: React.FC<StyleTabProps> = ({
           onChangePath={pathEditing ? (path) => pathEditing.onChangePath(selectedPart.id, path) : undefined}
         />
       )}
-      <StyleMatteSection
-        selectedPart={selectedPart}
-        characterParts={characterParts}
-        onPartPropChange={handlePartPropChange}
-        onInteractionStart={onColorInteractionStart}
-        onInteractionEnd={onColorInteractionEnd}
-        onChangeMaskPath={onChangeMaskPath}
-        reservedMaskIds={reservedMaskIds}
-        maskEditTargetId={maskEditTargetId}
-        onEditMaskOnCanvas={onEditMaskOnCanvas}
-        onExitMaskEditing={onExitMaskEditing}
-        maskDrawShape={maskDrawShape}
-        onStartMaskDraw={onStartMaskDraw}
-        onTransformMaskPath={onTransformMaskPath}
-        matteReturnTargetId={matteReturnTargetId}
-        onSelectMatteSource={onSelectMatteSource}
-        onBackToMatteTarget={onBackToMatteTarget}
-        onMaskPathOrder={onMaskPathOrder}
-        onPickRefused={onPickRefused}
-        onSelectMatteTarget={onSelectMatteTarget}
-        maskPathChannels={maskPathChannels}
-        maskVertexIndex={maskVertexIndex}
-        onSelectMaskVertex={onSelectMaskVertex}
-      />
       <StyleClonerSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
       <StyleParticleSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
+    </>
+  );
+  // C7 — the Masks tab: layer masks, Track Matte, legacy clip matte.
+  const masks = (
+    <StyleMatteSection
+      selectedPart={selectedPart}
+      characterParts={characterParts}
+      onPartPropChange={handlePartPropChange}
+      onInteractionStart={onColorInteractionStart}
+      onInteractionEnd={onColorInteractionEnd}
+      onChangeMaskPath={onChangeMaskPath}
+      reservedMaskIds={reservedMaskIds}
+      maskEditTargetId={maskEditTargetId}
+      onEditMaskOnCanvas={onEditMaskOnCanvas}
+      onExitMaskEditing={onExitMaskEditing}
+      maskDrawShape={maskDrawShape}
+      onStartMaskDraw={onStartMaskDraw}
+      onTransformMaskPath={onTransformMaskPath}
+      matteReturnTargetId={matteReturnTargetId}
+      onSelectMatteSource={onSelectMatteSource}
+      onBackToMatteTarget={onBackToMatteTarget}
+      onMaskPathOrder={onMaskPathOrder}
+      onPickRefused={onPickRefused}
+      onSelectMatteTarget={onSelectMatteTarget}
+      maskPathChannels={maskPathChannels}
+      maskVertexIndex={maskVertexIndex}
+      onSelectMaskVertex={onSelectMaskVertex}
+    />
+  );
+
+  return (
+    <>
+      {showProperties && properties}
+      {showMasks && masks}
     </>
   );
 };

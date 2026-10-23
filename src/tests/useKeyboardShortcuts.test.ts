@@ -291,6 +291,32 @@ describe('shortcut commands added in round four, part four', () => {
     pressWith(' ');
     expect(broadcast.setIsPlaying).not.toHaveBeenCalled();
   });
+
+  it('C4: Broadcast takes no editing key — only the shortcut reference opens', () => {
+    const api = renderShortcuts({ appMode: 'broadcast' });
+
+    pressWith('Delete');
+    pressWith('Backspace');
+    pressWith('z', { ctrlKey: true });
+    pressWith('y', { ctrlKey: true });
+    pressWith('c', { ctrlKey: true });
+    pressWith('v', { ctrlKey: true });
+    pressWith('d', { ctrlKey: true });
+    pressWith('a', { ctrlKey: true });
+    pressWith('g', { ctrlKey: true });
+    pressWith('r');
+    pressWith('t');
+    pressWith('p');
+    pressWith('Escape');
+
+    for (const spy of [api.deletePart, api.deleteSelectedKeyframes, api.undo, api.redo, api.copySelectedPart, api.pasteCopiedPart,
+      api.duplicateSelectedPart, api.selectAllLayers, api.groupSelection, api.armShapeCreation, api.addCustomPart, api.setActiveTool,
+      api.clearKeyframeSelection]) {
+      expect(spy).not.toHaveBeenCalled();
+    }
+    pressWith('?', { shiftKey: true });
+    expect(api.openShortcutReference).toHaveBeenCalledOnce();
+  });
 });
 
 describe('the Escape chain', () => {

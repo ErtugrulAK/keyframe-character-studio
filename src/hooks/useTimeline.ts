@@ -24,11 +24,14 @@ import {
   updateMaskPathKeyframeValueMutator,
   updateMaskPathKeyframeFrameMutator,
   deleteMaskPathKeyframeMutator,
+  clearMaskPathAnimationMutator,
   applyTransitionChannelsMutator,
   applyTransitionToTrackCanonicalMutator,
   clearChannelAnimationMutator
 } from '../utils/trackMutations';
-import { deleteParts } from '../utils/partDeletion';
+import { planPartDeletion } from '../utils/partDeletion';
+import { evaluateLayerMasks } from '../utils/evaluateLayerMasks';
+import { lockedLayersRefusal } from '../utils/layerLocks';
 
 interface UseTimelineOptions {
   setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>;
@@ -77,12 +80,32 @@ export const useTimeline = ({
 }: UseTimelineOptions) => {
   const [timelineZoom, setTimelineZoom] = useState<number>(18); // px per frame
   const [showGrid, setShowGrid] = useState<boolean>(true);
+  // Canvas presentation state only: never serialized with the scene.
+  const [showCoordinateOverlay, setShowCoordinateOverlay] = useState<boolean>(true);
 
   // Delete the requested part or the complete canonical selection in one state transaction.
   const deletePart = useCallback((partId: string) => {
     const requestedIds = selectedPartIds.includes(partId) ? selectedPartIds : [partId];
-    const deletion = deleteParts(characterParts, tracks, requestedIds);
+    const deletion = planPartDeletion(characterParts, tracks, requestedIds);
+    if (!deletion.ok) {
+      showToast(deletion.reason, 'error');
+      return;
+    }
     if (deletion.deletedIds.length === 0) return;
+    // C4 — a locked layer is neither deleted nor rewritten (a released child
+    // gets a new pose): the whole delete is refused, nothing half-applied.
+    const lockRefusal = lockedLayersRefusal(characterParts, tracks, [...deletion.deletedIds, ...deletion.releasedChildIds]);
+    if (lockRefusal) {
+      showToast(lockRefusal, 'error');
+      return;
+    }
+    if (deletion.releasedChildIds.length > 0) {
+      const count = deletion.releasedChildIds.length;
+      showToast(
+        `${count} child layer${count === 1 ? '' : 's'} kept ${count === 1 ? 'its' : 'their'} place${deletion.bakeNotes ? '; the parent’s motion was baked into their keyframes' : ''}.`,
+        'info',
+      );
+    }
     const deletedIdSet = new Set(deletion.deletedIds);
     setCharacterParts(deletion.parts);
     setTracks(deletion.tracks);
@@ -114,6 +137,7 @@ export const useTimeline = ({
     setSelectedPartIds,
     setSelectedKeyframeId,
     setTracks,
+    showToast,
     tracks,
   ]);
 
@@ -197,6 +221,24 @@ export const useTimeline = ({
   const toggleTrackEditVisibility = (trackId: string) => {
     setTracks((prev) => prev.map((t) => (t.id === trackId ? { ...t, editVisible: t.editVisible === false ? true : false } : t)));
   };
+
+  /**
+   * C4 — the one lock writer for several layers at once (the lock shortcut, the
+   * Inspector's Unlock, Unlock All). The lock is a switch: one undo step, and it
+   * never touches the layer's content.
+   */
+  const setLayersLocked = useCallback((partIds: readonly string[], locked: boolean) => {
+    const wanted = new Set(partIds);
+    setTracks((prev) => {
+      let changed = false;
+      const next = prev.map((t) => {
+        if (!wanted.has(t.partId) || Boolean(t.locked) === locked) return t;
+        changed = true;
+        return { ...t, locked };
+      });
+      return changed ? next : prev;
+    });
+  }, [setTracks]);
 
   const toggleTrackLock = (trackId: string) => {
     setTracks((prev) => prev.map((t) => (t.id === trackId ? { ...t, locked: !t.locked } : t)));
@@ -341,13 +383,28 @@ export const useTimeline = ({
     setTracks((prev) => deleteMaskPathKeyframeMutator(prev, trackId, channel, keyframeId));
   };
 
-  /** Author geometry using the same between-key convention as scalar Inspector channels. */
+  /**
+   * Author geometry using the same between-key convention as scalar Inspector
+   * channels (WP-01): the path is animated only when it holds keys in the
+   * ACTIVE sequence — another sequence's keys never turn a base edit into a key.
+   * An exact-frame key changes its value only (easing and temporal handles
+   * survive); between keys one key is inserted with the sequence's easing. A
+   * missing owner or a deleted mask is a no-op.
+   */
   const authorMaskPath = (partId: string, maskId: string, path: BezierPath) => {
+    const owner = characterParts.find((candidate) => candidate.id === partId);
+    if (!owner?.masks?.some((mask) => mask.id === maskId)) return;
+    const scope = activeTemplateId || 'Sequence';
     const track = tracks.find((candidate) => candidate.partId === partId);
     const channel = layerMaskPathChannel(maskId);
-    const keyframes = track?.maskPathChannels?.[channel] ?? [];
+    const keyframes = (track?.maskPathChannels?.[channel] ?? []).filter((keyframe) => (keyframe.templateId || 'Sequence') === scope);
     if (keyframes.length > 0 && track) {
-      addMaskPathKeyframe(track.id, maskId, currentFrame, path);
+      const exact = keyframes.find((keyframe) => keyframe.frame === currentFrame);
+      if (exact) {
+        updateMaskPathKeyframeValue(track.id, channel, exact.id, path);
+      } else {
+        addMaskPathKeyframe(track.id, maskId, currentFrame, path, keyframes[0].easing ?? 'easeInOut');
+      }
       return;
     }
     setCharacterParts((prev) => prev.map((part) => part.id === partId
@@ -394,6 +451,11 @@ export const useTimeline = ({
   const renamePartAndTrack = useCallback((partId: string, newName: string) => {
     const trimmed = newName.trim();
     if (!trimmed) return;
+    const lockRefusal = lockedLayersRefusal(characterParts, tracks, [partId]);
+    if (lockRefusal) {
+      showToast(lockRefusal, 'error');
+      return;
+    }
     setCharacterParts((prev) =>
       prev.map((p) => (p.id === partId ? { ...p, name: trimmed } : p))
     );
@@ -401,10 +463,18 @@ export const useTimeline = ({
       prev.map((t) => (t.partId === partId ? { ...t, name: trimmed } : t))
     );
     showToast(`Renamed layer to "${trimmed}"`, 'success');
-  }, [setCharacterParts, setTracks, showToast]);
+  }, [characterParts, setCharacterParts, setTracks, showToast, tracks]);
 
   const reorderParts = useCallback((dragIndex: number, hoverIndex: number) => {
     if (dragIndex === hoverIndex) return;
+    // C4 — a locked layer keeps its place in the stack (other layers may still
+    // move past it; that only renumbers it).
+    const moved = characterParts[dragIndex];
+    const lockRefusal = moved ? lockedLayersRefusal(characterParts, tracks, [moved.id]) : null;
+    if (lockRefusal) {
+      showToast(lockRefusal, 'error');
+      return;
+    }
 
     setCharacterParts((prevParts) => {
       if (dragIndex < 0 || hoverIndex < 0 || dragIndex >= prevParts.length || hoverIndex >= prevParts.length) {
@@ -434,7 +504,7 @@ export const useTimeline = ({
 
       return reindexedParts;
     });
-  }, [setCharacterParts, setTracks]);
+  }, [characterParts, setCharacterParts, setTracks, showToast, tracks]);
 
 
   /**
@@ -449,6 +519,15 @@ export const useTimeline = ({
     if (!track || !part) return;
     const scope = activeTemplateId || 'Sequence';
     if (resolveChannelAnimationState(track, channel, currentFrame, scope) !== 'off') return;
+    // WP-03 — a mask PATH arms like a scalar: its first key is the path the
+    // timeline shows at the playhead in this sequence (the existing writer).
+    if (channel.endsWith(':path')) {
+      const maskId = channel.slice(0, -':path'.length);
+      const displayed = evaluateLayerMasks(part, track, currentFrame, scope)?.find((mask) => mask.id === maskId);
+      if (!displayed) return;
+      setTracks((prev) => addMaskPathKeyframeMutator(prev, trackId, channel as LayerMaskPathChannel, currentFrame, displayed.path, 'easeInOut', scope));
+      return;
+    }
     const authored = resolveAuthoredLocalTransform(track.partId, currentFrame, { parts: characterParts, worldOf: getComputedTransform });
     const value = channelArmValue(channel, authored, part);
     setTracks((prev) => addPropertyKeyframeMutator(
@@ -473,6 +552,20 @@ export const useTimeline = ({
     const track = tracks.find((candidate) => candidate.id === trackId);
     if (!track) return;
     const scope = activeTemplateId || 'Sequence';
+    // WP-03 — the path disarm mirrors the scalar one: the active sequence's
+    // path keys go, and the path shown at the playhead stays as the base path.
+    if (channel.endsWith(':path')) {
+      const maskId = channel.slice(0, -':path'.length);
+      const part = characterParts.find((candidate) => candidate.id === track.partId);
+      const inScope = (track.maskPathChannels?.[channel as LayerMaskPathChannel] ?? []).filter((k) => (k.templateId || 'Sequence') === scope);
+      const displayed = part ? evaluateLayerMasks(part, track, currentFrame, scope)?.find((mask) => mask.id === maskId) : undefined;
+      if (!part || !displayed || inScope.length === 0) return;
+      setTracks((prev) => clearMaskPathAnimationMutator(prev, trackId, channel as LayerMaskPathChannel, scope));
+      setCharacterParts((prev) => prev.map((candidate) => (candidate.id === part.id
+        ? { ...candidate, masks: candidate.masks?.map((mask) => (mask.id === maskId ? { ...mask, path: displayed.path } : mask)) }
+        : candidate)));
+      return;
+    }
     const store = (channel.includes(':') ? track.maskChannels : track.channels) as Record<string, PropertyKeyframe[]> | undefined;
     const inScopeKeys = (store?.[channel] ?? []).filter((k) => (k.templateId || 'Sequence') === scope);
     if (inScopeKeys.length === 0) return;
@@ -491,6 +584,8 @@ export const useTimeline = ({
     setTimelineZoom,
     showGrid,
     setShowGrid,
+    showCoordinateOverlay,
+    setShowCoordinateOverlay,
     deletePart,
     addKeyframeToTrack,
     deleteKeyframe,
@@ -512,6 +607,7 @@ export const useTimeline = ({
     updateMaskPathKeyframeFrame,
     deleteMaskPathKeyframe,
     authorMaskPath,
+    setLayersLocked,
     deleteSelectedKeyframes,
     updatePropertyKeyframeFrame,
     updatePropertyKeyframeEasing,

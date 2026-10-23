@@ -25,7 +25,7 @@ const press = (key: string, init: Partial<KeyboardLike> = {}): KeyboardLike => (
 
 describe('shortcut keymap', () => {
   it('gives no gesture to two commands in the same scope', () => {
-    const scopes: ShortcutScope[] = ['global', 'canvas', 'timeline'];
+    const scopes: ShortcutScope[] = ['global', 'canvas', 'timeline', 'layers', 'drawing', 'mask-edit'];
     const conflicts: string[] = [];
     for (const scope of scopes) {
       const owner = new Map<string, string>();
@@ -41,7 +41,23 @@ describe('shortcut keymap', () => {
     // in DIFFERENT scopes: the marquee owns it while a drag is in flight.
     expect(conflicts).toEqual([]);
     const escapeOwners = SHORTCUT_COMMANDS.filter((command) => command.gestures.includes('escape')).map((command) => command.id);
-    expect([...escapeOwners].sort()).toEqual(['cancel-gesture', 'marquee-cancel']);
+    expect([...escapeOwners].sort()).toEqual(['cancel-gesture', 'draw-discard', 'marquee-cancel']);
+  });
+
+  it('C2: a local scope overrides a global gesture only where that is the documented ownership', () => {
+    // While a drawing draft is open it owns Escape and Undo/Redo (draft history);
+    // nothing else shadows a global binding.
+    const globals = new Map<string, string>();
+    SHORTCUT_COMMANDS.filter((command) => command.scope === 'global' || command.scope === 'canvas')
+      .forEach((command) => command.gestures.forEach((gesture) => globals.set(gesture, command.id)));
+    const overrides = SHORTCUT_COMMANDS
+      .filter((command) => !['global', 'canvas', 'timeline'].includes(command.scope))
+      .flatMap((command) => command.gestures.filter((gesture) => globals.has(gesture)).map((gesture) => `${command.scope}: ${gesture} (${command.id} over ${globals.get(gesture)})`));
+    expect(overrides.sort()).toEqual([
+      'drawing: escape (draw-discard over cancel-gesture)',
+      'drawing: mod+shift+z (draw-undo-point over redo)',
+      'drawing: mod+z (draw-undo-point over undo)',
+    ]);
   });
 
   it('keeps every gesture inside the declared grammar', () => {

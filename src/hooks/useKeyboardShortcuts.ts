@@ -51,9 +51,23 @@ export interface EditorShortcutCommands {
   clearKeyframeSelection?: () => boolean;
   /** Leaves the stage crop mode (dropping the region first); true when it did. */
   cancelStageCrop?: () => boolean;
+  /** Cancels a canvas mask gesture, else leaves mask editing; true when it did. */
+  cancelMaskEditing?: () => boolean;
+  /**
+   * True while a mask is edited on the canvas (WP-02): Delete and Select All
+   * then never fall through to the LAYER — the owner cannot be deleted or
+   * deselected by a key aimed at its mask.
+   */
+  isMaskEditing?: boolean;
+  /** Deletes the selected mask vertex while a mask is edited; true when Delete is consumed. */
+  deleteMaskSelection?: () => boolean;
   setIsPlaying?: React.Dispatch<React.SetStateAction<boolean>>;
   appMode?: AppMode;
   openShortcutReference?: () => void;
+  /** C4 — locks the selected layers, or unlocks them when all are locked. */
+  toggleSelectionLock?: () => void;
+  /** C4 — unlocks every layer. */
+  unlockAllLayers?: () => void;
 }
 
 /**
@@ -76,7 +90,8 @@ export interface EditorShortcutCommands {
  *     UI documents them, the focused control runs them.
  *
  * `Escape` is one chain with a fixed priority: cancel the armed gesture (or hand
- * it to the drawing tool that owns it), leave the Boolean operand edit, step out
+ * it to the drawing tool that owns it), cancel a canvas mask gesture or leave
+ * mask editing, leave the Boolean operand edit, step out
  * of a grouped child onto its container, then clear the timeline keyframe
  * selection. It never clears the layer selection — several non-modal surfaces own
  * Escape while they are open (see the note in `utils/shortcuts`).
@@ -104,9 +119,14 @@ export const useKeyboardShortcuts = ({
   exitGroupDrillIn,
   clearKeyframeSelection,
   cancelStageCrop,
+  cancelMaskEditing,
+  isMaskEditing = false,
+  deleteMaskSelection,
   setIsPlaying,
   appMode,
   openShortcutReference,
+  toggleSelectionLock,
+  unlockAllLayers,
 }: EditorShortcutCommands) => {
   // Detected once per session: the platform cannot change under a running app.
   const platformRef = useRef<ShortcutPlatform>(detectShortcutPlatform());
@@ -141,6 +161,10 @@ export const useKeyboardShortcuts = ({
           addCustomPart?.('custom_text', 'Text');
           return;
         case 'select-all':
+          if (isMaskEditing) {
+            event.preventDefault();
+            return;
+          }
           selectAllLayers?.();
           return;
         case 'group-layers':
@@ -188,6 +212,12 @@ export const useKeyboardShortcuts = ({
             if (deleteSelectedKeyframes()) event.preventDefault();
             return;
           }
+          // A mask edited on the canvas owns Delete: it removes the selected
+          // point (or nothing) and never falls through to the owner layer.
+          if (deleteMaskSelection?.() || isMaskEditing) {
+            event.preventDefault();
+            return;
+          }
           if (deleteSelectedKeyframes()) {
             event.preventDefault();
             return;
@@ -207,6 +237,12 @@ export const useKeyboardShortcuts = ({
           // The crop mode is the next thing Escape may leave: it drops the
           // region the pointer described, or the mode itself.
           if (cancelStageCrop?.()) {
+            event.preventDefault();
+            return;
+          }
+          // Canvas mask editing: a gesture in flight is cancelled first, then
+          // the mode is left — one level per Escape (WP-02).
+          if (cancelMaskEditing?.()) {
             event.preventDefault();
             return;
           }
@@ -239,6 +275,16 @@ export const useKeyboardShortcuts = ({
           event.preventDefault();
           window.dispatchEvent(new CustomEvent('canvas-viewport-command', { detail: { type: 'zoom-out' } }));
           return;
+        case 'lock-layers':
+          if (!toggleSelectionLock) return;
+          event.preventDefault();
+          toggleSelectionLock();
+          return;
+        case 'unlock-all-layers':
+          if (!unlockAllLayers) return;
+          event.preventDefault();
+          unlockAllLayers();
+          return;
         case 'shortcut-reference':
           if (openShortcutReference) {
             event.preventDefault();
@@ -263,6 +309,10 @@ export const useKeyboardShortcuts = ({
 
       const command = resolveShortcutCommand(event, platformRef.current);
       if (!command) return;
+      // C4 — Broadcast shows no editor: its keys must not edit, select, create
+      // or undo anything in the scene behind it. Only the shortcut reference
+      // (read-only help) is still offered there.
+      if (appMode === 'broadcast' && command.id !== 'shortcut-reference') return;
       dispatch(command.id, event);
     };
 
@@ -290,8 +340,13 @@ export const useKeyboardShortcuts = ({
     exitGroupDrillIn,
     clearKeyframeSelection,
     cancelStageCrop,
+    cancelMaskEditing,
+    isMaskEditing,
+    deleteMaskSelection,
     setIsPlaying,
     appMode,
     openShortcutReference,
+    toggleSelectionLock,
+    unlockAllLayers,
   ]);
 };

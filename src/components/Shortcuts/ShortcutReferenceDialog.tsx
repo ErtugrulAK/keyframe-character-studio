@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
-import { Command, Layers, MousePointer2, Move, PenTool, Scan, Search, Timer, X, type LucideIcon } from 'lucide-react';
+import { Command, Layers, ListTree, MousePointer2, Move, PenTool, Scan, Search, Timer, X, type LucideIcon } from 'lucide-react';
 import { useDialogFocusRestoration, useDialogFocusTrap } from '../../hooks/useDialogFocusRestoration';
 import {
   detectShortcutPlatform,
@@ -10,6 +10,7 @@ import {
   SHORTCUT_CATEGORY_ORDER,
   SHORTCUT_COMMANDS,
   type ShortcutCategory,
+  type ShortcutScope,
 } from '../../utils/shortcuts';
 import './ShortcutReferenceDialog.css';
 
@@ -23,10 +24,20 @@ const CATEGORY_ICONS: Record<ShortcutCategory, LucideIcon> = {
   selection: MousePointer2,
   create: PenTool,
   transform: Move,
+  layers: ListTree,
   grouping: Layers,
   timeline: Timer,
   view: Scan,
   general: Command,
+};
+
+/** Where a non-global binding is live, in the words the row shows. */
+const SCOPE_LABELS: Partial<Record<ShortcutScope, string>> = {
+  canvas: 'stage',
+  timeline: 'timeline focus',
+  layers: 'layer list focus',
+  drawing: 'while drawing',
+  'mask-edit': 'mask editing',
 };
 
 /**
@@ -131,7 +142,7 @@ export const ShortcutReferenceDialog: React.FC<ShortcutReferenceDialogProps> = (
                     <div key={command.id} className="shortcut-reference-row" title={command.detail ? `${command.label} — ${command.detail}` : command.label}>
                       <dt>
                         <span className="shortcut-reference-name">{command.label}</span>
-                        {command.scope === 'timeline' && <span className="shortcut-reference-scope">timeline focus</span>}
+                        {SCOPE_LABELS[command.scope] && <span className="shortcut-reference-scope">{SCOPE_LABELS[command.scope]}</span>}
                         {command.detail && <span className="shortcut-reference-detail">{command.detail}</span>}
                       </dt>
                       <dd>

@@ -40,6 +40,8 @@ export const ToastPortal: React.FC<ToastPortalProps> = ({ toasts, removeToast })
         return (
           <div
             key={t.id}
+            // C2 — refusals (errors) are announced at once, the rest politely.
+            role={t.type === 'error' ? 'alert' : 'status'}
             style={{
               pointerEvents: 'auto',
               minWidth: 280,

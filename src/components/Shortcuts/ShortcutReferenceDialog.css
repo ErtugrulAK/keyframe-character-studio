@@ -149,8 +149,11 @@
   font-size: var(--font-size-body);
 }
 
-/* Category bands are a hairline and a heading — not cards. */
+/* Category bands are a hairline and a heading — not cards. A band keeps its
+   full height (C3): as a shrinkable flex item in the scrolling body, every
+   band was squeezed and clipped mid-row instead of the body scrolling. */
 .shortcut-reference-group {
+  flex: 0 0 auto;
   overflow: hidden;
 }
 

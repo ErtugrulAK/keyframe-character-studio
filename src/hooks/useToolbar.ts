@@ -8,6 +8,8 @@ interface UseToolbarOptions {
   characterParts: CharacterPart[];
   setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>;
   setSelectedPartId: (id: string | null) => void;
+  /** The canonical selection set; a new part replaces it (optional for older callers). */
+  setSelectedPartIds?: (ids: string[]) => void;
 }
 
 export const useToolbar = ({
@@ -16,6 +18,7 @@ export const useToolbar = ({
   characterParts,
   setCharacterParts,
   setSelectedPartId,
+  setSelectedPartIds,
 }: UseToolbarOptions) => {
   const [activeTool, setActiveToolState] = useState<ToolType>('select');
   const [pendingShapeType, setPendingShapeType] = useState<BodyPartType | null>(null);
@@ -47,6 +50,9 @@ export const useToolbar = ({
     setTracks([newTrack, ...tracks]);
     setCharacterParts((prev) => [newPart, ...prev]);
     setSelectedPartId(newPart.id);
+    // C2: the new part becomes THE selection — a layer selected before the
+    // shape was drawn must not stay selected beside it.
+    setSelectedPartIds?.([newPart.id]);
   };
 
   return {

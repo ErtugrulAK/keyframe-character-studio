@@ -8,6 +8,11 @@ import { isBlockingModalOpen } from '../utils/modalBoundary';
 import { isEditableElement } from '../utils/keyboardFocus';
 import { detectShortcutPlatform, formatShortcutHint, type ShortcutCommandId } from '../utils/shortcuts';
 import { selectAllLayers } from '../utils/layerSelection';
+import { lockedLayerIds } from '../utils/layerLocks';
+import { useLayerParenting } from '../hooks/useLayerParenting';
+import { requestOutlinerCommand } from '../utils/outlinerCommands';
+import { relationshipParentId } from '../utils/partBinding';
+import { deletionCommandLabel, describeDeletionScope } from '../utils/partDeletion';
 
 /**
  * The one right-click menu of the editor, shared by the stage and the outliner.
@@ -22,6 +27,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
   const {
     appMode,
     characterParts,
+    tracks,
     selectedPartId,
     selectedPartIds,
     setSelectedPartId,
@@ -35,9 +41,12 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     reorderParts,
     booleanOperandEditingGroupId,
     setBooleanOperandEditingGroupId,
+    setLayersLocked,
+    toggleTrackEditVisibility,
   } = useAnimator();
   const { selectedBooleanGroup, dissolveBooleanGroup } = useBooleanAuthoring();
   const { selectedGroup, canGroup, groupSelection, ungroupSelection } = useLayerGrouping();
+  const { nestIntoLayerAbove, unparentLayer } = useLayerParenting();
   const [menu, setMenu] = useState<ContextMenuRequest | null>(null);
 
   const closeContextMenu = useCallback(() => setMenu(null), []);
@@ -54,8 +63,8 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
 
   /** Select All writes through the ordinary selection setters — no separate authority. */
   const selectAll = useCallback(
-    () => selectAllLayers(characterParts, { setSelectedPartIds, setSelectedPartId }),
-    [characterParts, setSelectedPartId, setSelectedPartIds],
+    () => selectAllLayers(characterParts, { setSelectedPartIds, setSelectedPartId }, lockedLayerIds(tracks)),
+    [characterParts, setSelectedPartId, setSelectedPartIds, tracks],
   );
 
   /** Delete mirrors the Inspector's own trash action, including Boolean groups. */
@@ -111,7 +120,9 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
       run: pasteCopiedPart,
     });
     if (hasPrimary) clipboardGroup.push({ id: 'duplicate', label: 'Duplicate', shortcut: hint('duplicate'), run: duplicateSelectedPart });
-    if (hasPrimary) clipboardGroup.push({ id: 'delete', label: 'Delete', shortcut: hint('delete-selection'), run: deleteSelection });
+    // C5 — the label names the delete's scope: a group takes its layers, a plain
+    // parent keeps its children.
+    if (hasPrimary) clipboardGroup.push({ id: 'delete', label: selectedBooleanGroup ? 'Delete' : deletionCommandLabel(describeDeletionScope(characterParts, selectedPartIds.includes(selectedPartId as string) ? selectedPartIds : [selectedPartId as string])), shortcut: hint('delete-selection'), run: deleteSelection });
 
     const arrangement: ContextMenuGroup = [
       { id: 'bring-forward', label: 'Bring Forward', disabled: !single || index <= 0, run: () => reorderParts(index, index - 1) },
@@ -123,12 +134,32 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     // Grouping is offered only when it would actually run: an existing group is
     // ungrouped, a valid multi-selection is grouped. Both run the same shared
     // layer-grouping authority the toolbar and the Inspector use.
+    // C2-E — naming and hierarchy for one layer, through the layer tree and the
+    // one parenting authority (refusals explain themselves in a toast).
+    const primaryPart = hasPrimary ? characterParts[index] : undefined;
+    const hasParent = Boolean(primaryPart && characterParts.some((part) => part.id === relationshipParentId(primaryPart)));
+    const layerActions: ContextMenuGroup = single && primaryPart ? [
+      { id: 'rename', label: 'Rename', shortcut: 'F2', run: () => requestOutlinerCommand({ type: 'rename', partId: primaryPart.id }) },
+      { id: 'nest-above', label: 'Nest into Layer Above', shortcut: hint('layer-nest'), run: () => { nestIntoLayerAbove(primaryPart.id); } },
+      { id: 'unparent', label: 'Unparent', shortcut: hint('layer-unparent'), disabled: !hasParent, run: () => { unparentLayer(primaryPart.id); } },
+    ] : [];
+    // C5 — the layer row's own switches (stage visibility, lock), reachable by
+    // keyboard through this menu (Shift+F10) as well as by pointer on the row.
+    const primaryTrack = primaryPart ? tracks.find((candidate) => candidate.partId === primaryPart.id) : undefined;
+    if (single && primaryPart && primaryTrack) {
+      layerActions.push(
+        { id: 'toggle-visibility', label: primaryTrack.editVisible === false ? 'Show on Stage' : 'Hide on Stage', run: () => toggleTrackEditVisibility(primaryTrack.id) },
+        { id: 'toggle-lock', label: primaryTrack.locked ? 'Unlock' : 'Lock', shortcut: hint('lock-layers'), run: () => setLayersLocked([primaryPart.id], !primaryTrack.locked) },
+      );
+    }
+
     const groupActions: ContextMenuGroup = [];
     if (selectedGroup) groupActions.push({ id: 'ungroup', label: 'Ungroup', run: ungroupSelection });
     else if (canGroup) groupActions.push({ id: 'group', label: 'Group Layers', run: groupSelection });
 
     return [
       clipboardGroup,
+      ...(layerActions.length > 0 ? [layerActions] : []),
       ...(groupActions.length > 0 ? [groupActions] : []),
       [{ id: 'select-all', label: 'Select All', shortcut: hint('select-all'), run: selectAll }],
       arrangement,
@@ -142,13 +173,19 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     duplicateSelectedPart,
     groupSelection,
     hint,
+    nestIntoLayerAbove,
     pasteCopiedPart,
     reorderParts,
     selectAll,
+    selectedBooleanGroup,
     selectedGroup,
     selectedPartId,
     selectedPartIds,
+    setLayersLocked,
+    toggleTrackEditVisibility,
+    tracks,
     ungroupSelection,
+    unparentLayer,
   ]);
 
   const openContextMenu = useCallback((request: ContextMenuRequest) => {

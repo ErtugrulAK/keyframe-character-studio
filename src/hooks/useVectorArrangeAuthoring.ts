@@ -1,6 +1,7 @@
 import { useAnimator } from '../context/useAnimator';
-import type { CharacterPart, Transform } from '../types/animator';
+import type { CharacterPart, Track, Transform } from '../types/animator';
 import type { ToastOptions } from './useToast';
+import { lockedLayersRefusal } from '../utils/layerLocks';
 import {
   collectArrangeTargets,
   planAlign,
@@ -53,6 +54,8 @@ export interface VectorArrangeDependencies {
   selectedPartIds: string[];
   characterParts: CharacterPart[];
   getComputedTransform: (partId: string, frame: number) => Transform;
+  /** Read for the layer locks: a command that would move a locked layer is refused whole. */
+  tracks: Track[];
   /** The ONE transform write path: world-space patch in, container-local out. */
   updateCurrentTransform: (newTransform: Partial<Transform>, partIdOverride?: string) => void;
   startBatchInteraction: () => void;
@@ -66,6 +69,7 @@ export const createVectorArrangeActions = ({
   selectedPartId,
   selectedPartIds,
   characterParts,
+  tracks,
   getComputedTransform,
   updateCurrentTransform,
   startBatchInteraction,
@@ -93,6 +97,12 @@ export const createVectorArrangeActions = ({
     // A command that would not move anything writes nothing at all: no empty
     // history entry and no keyframe on a property that did not change.
     if (entries.length === 0) return;
+    // C4 — every target is written or none: a locked one refuses the command.
+    const lockRefusal = lockedLayersRefusal(characterParts, tracks, entries.map(([id]) => id));
+    if (lockRefusal) {
+      showToast?.(lockRefusal, 'error');
+      return;
+    }
 
     startBatchInteraction();
     entries.forEach(([id, patch]) => updateCurrentTransform(patch, id));

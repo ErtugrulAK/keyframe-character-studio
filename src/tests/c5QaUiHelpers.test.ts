@@ -32,10 +32,25 @@ describe('C5 timeline lane layout (the marquee hit-tests data, not mounted diamo
   it('a collapsed track is one layer row; an expanded one lists the property tree rows in order', () => {
     expect(resolveLaneRows(track('a'), allExpanded)).toEqual([{ kind: 'track' }]);
     const rows = resolveLaneRows(track('a', { expanded: true }), allExpanded);
-    expect(rows.map((row) => (row.kind === 'channel' ? row.channel : row.kind === 'header' ? `[${row.group}]` : 'TRACK'))).toEqual([
-      'TRACK', '[position]', 'x', 'y', 'rotation', '[scale]', 'opacity', '[trim]', 'trimPathStart', 'trimPathEnd', 'trimPathOffset',
+    const names = (list: ReturnType<typeof resolveLaneRows>) => list.map((row) => (row.kind === 'channel' ? row.channel : row.kind === 'header' ? `[${row.group}]` : 'TRACK'));
+    // C7 — Position, Scale, Rotation, Opacity (After Effects order); Scale
+    // starts closed; no Trim Paths group on a layer that does not use it.
+    expect(names(rows)).toEqual(['TRACK', '[position]', 'x', 'y', '[scale]', 'rotation', 'opacity']);
+    expect(laneGroupHeight(track('a', { expanded: true }), allExpanded)).toBe(TRACK_ROW_HEIGHT + 6 * CHANNEL_ROW_HEIGHT);
+    const everyGroupOpen = () => true;
+    expect(names(resolveLaneRows(track('a', { expanded: true }), everyGroupOpen))).toEqual(['TRACK', '[position]', 'x', 'y', '[scale]', 'scaleX', 'scaleY', 'rotation', 'opacity']);
+    // Trim Paths appears when the layer uses it, then one group per mask.
+    const context = { trimPath: true, masks: [{ id: 'm1', name: 'Window' }] };
+    expect(names(resolveLaneRows(track('a', { expanded: true }), everyGroupOpen, context))).toEqual([
+      'TRACK', '[position]', 'x', 'y', '[scale]', 'scaleX', 'scaleY', 'rotation', 'opacity',
+      '[trim]', 'trimPathStart', 'trimPathEnd', 'trimPathOffset',
+      '[mask:m1]', 'm1:path', 'm1:feather', 'm1:opacity', 'm1:expansion',
     ]);
-    expect(laneGroupHeight(track('a', { expanded: true }), allExpanded)).toBe(TRACK_ROW_HEIGHT + 10 * CHANNEL_ROW_HEIGHT);
+    // Defaults: Trim Paths open, mask groups closed (header only).
+    expect(laneGroupHeight(track('a', { expanded: true }), allExpanded, context)).toBe(TRACK_ROW_HEIGHT + 11 * CHANNEL_ROW_HEIGHT);
+    // Trim keys left on a layer that switched Trim Paths off stay reachable.
+    const trimKeyed = track('a', { expanded: true, channels: { ...makeEmptyChannels(), trimPathEnd: [key('te', 4, 0.5)] } });
+    expect(names(resolveLaneRows(trimKeyed, allExpanded))).toContain('[trim]');
   });
 
   it('a collapsed sub-group contributes no rows, so its keys are not selectable', () => {
@@ -43,12 +58,12 @@ describe('C5 timeline lane layout (the marquee hit-tests data, not mounted diamo
     const channels = { ...makeEmptyChannels(), x: [key('kx', 10)], rotation: [key('kr', 20)] };
     const keys = laneKeyframes(track('a', { expanded: true, channels }), undefined, null, collapsedPosition);
     // The layer row shows one diamond per frame group (its first channel's key),
-    // then the rotation row (position header, NO x/y rows, rotation) holds kr;
-    // kx's own x row is collapsed away.
+    // then the rotation row (position header, NO x/y rows, scale header —
+    // closed by default — then rotation) holds kr; kx's own x row is collapsed away.
     expect(keys.map((keyframe) => [keyframe.id, keyframe.centerY])).toEqual([
       ['kx', TRACK_ROW_HEIGHT / 2],
       ['kr', TRACK_ROW_HEIGHT / 2],
-      ['kr', TRACK_ROW_HEIGHT + CHANNEL_ROW_HEIGHT + CHANNEL_ROW_HEIGHT / 2],
+      ['kr', TRACK_ROW_HEIGHT + 2 * CHANNEL_ROW_HEIGHT + CHANNEL_ROW_HEIGHT / 2],
     ]);
   });
 

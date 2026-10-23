@@ -55,11 +55,12 @@ test.describe('F — mask/matte workflow', () => {
     await page.reload();
     await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 
-    // 1. The outliner lists the layer and its (collapsed) Mask group.
+    // 1. The outliner lists the layer and its (collapsed) mask group, named by the mask.
     await page.locator('.ue-track-row', { hasText: 'Alpha' }).first().click();
     await page.locator('.ue-expand-btn').first().click();
-    const maskHeader = page.locator('.ue-subgroup-header', { hasText: 'Mask' });
+    const maskHeader = page.locator('.ue-subgroup-header[data-property-group$="_mask:m1"]');
     await expect(maskHeader).toBeVisible();
+    await expect(maskHeader).toHaveText('M1');
     await page.screenshot({ path: 'test-results/f-01-mask-group-collapsed.png' });
 
     // 2. Expanded: the mask property rows, and a keyed scalar already lit

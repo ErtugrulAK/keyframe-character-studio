@@ -4,7 +4,7 @@ import type { KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, KEYFRAME_DRAG_THRESHOLD_PX, KEYFRAME_GLYPH_GAP_PX, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/channelKeyframeGroups';
 import { hasChannelDataForTemplate, resolveConnectorSegments } from '../../utils/timelineMetrics';
-import { resolveLaneRows } from './timelineLaneLayout';
+import { resolveLaneRows, type LaneContext } from './timelineLaneLayout';
 
 interface TrackLaneProps {
   track: Track;
@@ -22,6 +22,8 @@ interface TrackLaneProps {
   totalFrames: number;
   activeTemplateId: string | null;
   isGroupExpanded: (key: string, defaultVal?: boolean) => boolean;
+  /** C7 — the layer's property groups (masks, Trim Paths), the same context the property tree reads. */
+  laneContext?: LaneContext;
   /** Replace the selection with this one key (null clears it). */
   onSelectKeyframe: (id: string | null) => void;
   /** Add/remove one key, leaving the rest of the selection alone. */
@@ -133,6 +135,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
   totalFrames,
   activeTemplateId,
   isGroupExpanded,
+  laneContext,
   onSelectKeyframe,
   onToggleKeyframe,
   onSelectPart,
@@ -259,6 +262,19 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
   const handleDeleteGroup = (e: React.MouseEvent, frame: number) => {
     e.preventDefault();
     onDeleteKeyframeGroup(track.id, frame);
+  };
+  /** C7 — the frames a closed property group holds keys on (its header lane's summary ticks). */
+  const groupSummaryFrames = (channels: AnimationChannel[]): number[] => {
+    const frames = new Set<number>();
+    for (const ch of channels) {
+      const source = ch.endsWith(':path')
+        ? track.maskPathChannels?.[ch as LayerMaskPathChannel]
+        : ch.includes(':')
+          ? track.maskChannels?.[ch as LayerMaskChannel]
+          : resolvedChannels[ch as TrackChannel];
+      for (const keyframe of source ?? []) if ((keyframe.templateId || 'Sequence') === activeTmpl) frames.add(keyframe.frame);
+    }
+    return [...frames].sort((a, b) => a - b);
   };
   const renderChannelLane = (ch: AnimationChannel) => {
     const isPathChannel = ch.endsWith(':path');
@@ -469,10 +485,20 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
               `resolveLaneRows` — the layout the timeline marquee hit-tests (C5),
               so the property tree, the lanes and the marquee stay row-for-row
               aligned. */}
-          {resolveLaneRows(track, isGroupExpanded).map((row) => {
+          {resolveLaneRows(track, isGroupExpanded, laneContext).map((row) => {
             if (row.kind === 'track') return null;
             if (row.kind === 'header') {
-              return <div key={`header-${row.group}`} className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />;
+              // C7 — a closed group still shows WHEN its members are keyed:
+              // small summary ticks (not selectable; open the group to edit them).
+              const closed = !isGroupExpanded(`${track.id}_${row.group}`, row.defaultExpanded);
+              const summaryFrames = closed ? groupSummaryFrames(row.channels) : [];
+              return (
+                <div key={`header-${row.group}`} className="ue-channel-header-lane" data-property-group={row.group} style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }}>
+                  {summaryFrames.map((frame) => (
+                    <span key={frame} className="ue-group-summary-key" data-summary-frame={frame} style={{ left: frame * frameWidth }} aria-hidden="true" />
+                  ))}
+                </div>
+              );
             }
             return renderChannelLane(row.channel);
           })}

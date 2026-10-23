@@ -148,8 +148,9 @@ describe('timeline property-row ownership (finding G)', () => {
     expect(labels.filter((label) => label?.includes('properties of'))).toEqual([
       'Position properties of Rect A',
       'Scale properties of Rect A',
-      'Trim Path properties of Rect A',
     ]);
+    // C7 — a rectangle without Trim Paths lists no Trim Paths group.
+    expect(labels.some((label) => label?.startsWith('Trim'))).toBe(false);
 
     // R4-06 — the first header under the layer is Position: there is no
     // `Transform` wrapper row to collapse, and the group itself still names its

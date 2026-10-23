@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Lock, Plus, Tv, Unlock } from 'lucide-react';
 import type { AnimationChannel, CharacterPart, LayerMaskChannel, LayerMaskPathChannel, Track, TrackChannel } from '../../types/animator';
-import { layerMaskChannel, layerMaskPathChannel } from '../../types/animator';
+import { laneContextOf, resolveLaneRows } from './timelineLaneLayout';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { resolveAdjacentKeyframeFrame, resolveChannelAnimationState, resolveChannelKeyframeFrames, resolveLayerKeyframeFrames } from '../../utils/timelineMetrics';
 import { resolveAuthoredBasePose } from '../../utils/channelKeyframeGroups';
@@ -56,6 +56,14 @@ const TREE_LABEL: Partial<Record<TrackChannel, string>> = {
   trimPathStart: 'Start',
   trimPathEnd: 'End',
   trimPathOffset: 'Offset',
+};
+
+/** C7 — a mask property row reads like other motion tools: Path, Feather, Opacity, Expansion. */
+const MASK_PROPERTY_LABEL: Record<string, string> = {
+  path: 'Path',
+  feather: 'Feather',
+  opacity: 'Opacity',
+  expansion: 'Expansion',
 };
 
 /** Every disclosure row shows the same chevron, at the same size. */
@@ -117,19 +125,9 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
   // `resolveTrackChannels`). Navigation reads exactly what the rows draw.
   const basePose = resolveAuthoredBasePose(parts, track.partId);
   const isTrackExpanded = track.expanded === true;
-  const isPositionExpanded = isGroupExpanded(`${track.id}_position`, true);
-  const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
-  const isTrimPathExpanded = isGroupExpanded(`${track.id}_trim`, true);
-  const isMaskExpanded = isGroupExpanded(`${track.id}_mask`, false);
-  // K3 — the mask group lists every animatable property of every mask the
-  // layer actually owns; no masks means no group, not an empty header.
-  const partMasks = parts.find((p) => p.id === track.partId)?.masks ?? [];
-  const maskRows: AnimationChannel[] = partMasks.flatMap((mask) => [
-    layerMaskChannel(mask.id, 'opacity'),
-    layerMaskChannel(mask.id, 'feather'),
-    layerMaskChannel(mask.id, 'expansion'),
-    layerMaskPathChannel(mask.id),
-  ]);
+  // K3 / C7 — the layer's masks name their property groups.
+  const owningPart = parts.find((p) => p.id === track.partId);
+  const partMasks = owningPart?.masks ?? [];
 
   /**
    * R3-07 — the layer's own keyframe endpoints. Both endpoints are resolved from
@@ -190,7 +188,7 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
             because the channel colour already lives on the lane keyframes and
             the connector the row belongs to. */}
         <span className="ue-channel-label" title={`${meta.label}${chKfs.length ? ` — ${chKfs.length} keyframe${chKfs.length === 1 ? '' : 's'}` : ''}`}>
-          {TREE_LABEL[ch as TrackChannel] ?? meta.label}
+          {TREE_LABEL[ch as TrackChannel] ?? (ch.includes(':') ? MASK_PROPERTY_LABEL[ch.slice(ch.lastIndexOf(':') + 1)] ?? meta.label : meta.label)}
         </span>
         <div className="ue-channel-controls">
           {/* [◀][+][▶] scoped to THIS property — the layer row's own trio, one
@@ -430,29 +428,20 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
             the tree row for row, so a property row and its lane are always the
             same band.
           */}
-          {renderGroupHeader(`${track.id}_position`, 'Position', isPositionExpanded, true)}
-          {isPositionExpanded && ['x', 'y'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-deep'))}
-
-          {/* Rotation is one channel: it is a leaf of the tree, not a group. */}
-          {renderChannelRow('rotation', 'ue-channel-indent', true)}
-
-          {renderGroupHeader(`${track.id}_scale`, 'Scale', isScaleExpanded, false)}
-          {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-deep'))}
-
-          {renderChannelRow('opacity', 'ue-channel-indent')}
-
-          {/* Trim Path is a peer of the transform channels, not one of their children. */}
-          {renderGroupHeader(`${track.id}_trim`, 'Trim Path', isTrimPathExpanded, true)}
-          {isTrimPathExpanded && ['trimPathStart', 'trimPathEnd', 'trimPathOffset'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-deep'))}
-
-          {/* K3 — the layer's masks, in the tree and in the band, in exactly
-              this order: below Trim Path, one lane per property per mask. */}
-          {maskRows.length > 0 && (
-            <>
-              {renderGroupHeader(`${track.id}_mask`, 'Mask', isMaskExpanded, false)}
-              {isMaskExpanded && maskRows.map((chKey) => renderChannelRow(chKey, 'ue-channel-indent-deep'))}
-            </>
-          )}
+          {/* C7 — the rows come from `resolveLaneRows`, the same model the
+              lanes, the marquee and the row heights use (so tree row N and
+              lane N are always the same property). Order, as in other motion
+              tools: Position, Scale, Rotation, Opacity; Trim Paths only when
+              the layer uses it; then one group per mask (Path, Feather,
+              Opacity, Expansion). */}
+          {resolveLaneRows(track, isGroupExpanded, laneContextOf(owningPart)).map((row) => {
+            if (row.kind === 'track') return null;
+            if (row.kind === 'header') {
+              const key = `${track.id}_${row.group}`;
+              return <React.Fragment key={key}>{renderGroupHeader(key, row.label, isGroupExpanded(key, row.defaultExpanded), row.defaultExpanded)}</React.Fragment>;
+            }
+            return renderChannelRow(row.channel, row.depth === 2 ? 'ue-channel-indent-deep' : 'ue-channel-indent', true);
+          })}
         </div>
       )}
     </div>

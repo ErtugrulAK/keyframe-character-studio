@@ -39,7 +39,7 @@ import { InlineRename } from '../Shared/InlineRename';
 import { useRowWindow, type RowViewport } from '../../hooks/useRowWindow';
 import { useRetainedScrollTop, useRetainedUiState } from '../../hooks/useRetainedUiState';
 import { rowOffsets, type RowWindowSegment } from '../../utils/rowWindow';
-import { edgeScrollStep, laneGroupHeight, laneKeyframePositions, laneKeyframes } from './timelineLaneLayout';
+import { edgeScrollStep, laneContextOf, laneGroupHeight, laneKeyframePositions, laneKeyframes, type LaneContext } from './timelineLaneLayout';
 import './SequencerTimeline.css';
 
 /**
@@ -372,7 +372,7 @@ export const SequencerTimeline: React.FC = () => {
       rowOffsets(tracks.length, trackHeightAt),
       lanesOrigin,
       FRAME_WIDTH,
-      (track) => laneKeyframes(track, basePoseByPart.get(track.partId), activeTemplateId, isGroupExpanded),
+      (track) => laneKeyframes(track, basePoseByPart.get(track.partId), activeTemplateId, isGroupExpanded, laneContextByPart.get(track.partId)),
     );
 
     marqueeGestureRef.current = {
@@ -1103,6 +1103,11 @@ export const SequencerTimeline: React.FC = () => {
     () => new Map(tracks.map((track) => [track.partId, resolveAuthoredBasePose(characterParts, track.partId)])),
     [characterParts, tracks],
   );
+  /** C7 — which property groups each layer has (masks, Trim Paths): one source for tree, lanes and marquee. */
+  const laneContextByPart = useMemo(
+    () => new Map<string, LaneContext>(characterParts.map((part) => [part.id, laneContextOf(part)])),
+    [characterParts],
+  );
 
   /*
    * C4 — a long layer list mounts only the tracks near its viewport, in BOTH
@@ -1118,11 +1123,11 @@ export const SequencerTimeline: React.FC = () => {
   const trackHeightAt = useCallback(
     (index: number) => {
       const track = tracks[index];
-      return track ? (trackHeightsRef.current.get(track.id) || laneGroupHeight(track, isGroupExpanded)) : TRACK_ROW_HEIGHT;
+      return track ? (trackHeightsRef.current.get(track.id) || laneGroupHeight(track, isGroupExpanded, laneContextByPart.get(track.partId))) : TRACK_ROW_HEIGHT;
     },
     // `trackHeightsVersion` is the cache key of the measured heights.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-    [tracks, trackHeightsVersion, isGroupExpanded],
+    [tracks, trackHeightsVersion, isGroupExpanded, laneContextByPart],
   );
   const [focusedTrackPartId, setFocusedTrackPartId] = useState<string | null>(null);
   const pinnedTracks = useMemo(() => {
@@ -1513,6 +1518,7 @@ export const SequencerTimeline: React.FC = () => {
                 totalFrames={totalFrames}
                 activeTemplateId={activeTemplateId}
                 isGroupExpanded={isGroupExpanded}
+                laneContext={laneContextByPart.get(track.partId)}
                 onSelectKeyframe={rowActions.onSelectKeyframe}
                 onToggleKeyframe={rowActions.onToggleKeyframe}
                 onSelectPart={rowActions.onSelectPart}

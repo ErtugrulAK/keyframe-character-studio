@@ -826,7 +826,28 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
    off (neutral), animated (accent outline, no key at the playhead),
    keyed (accent filled — the property is animated AND holds a key here). */
 .ue-channel-stopwatch {
+  /* C7 — the same 20px box as its [◀][+][▶] neighbours. As a bare .btn-icon it
+     was 34×34 inside a 24px row: hover/press filled a square that overflowed
+     the row and stayed big after a click. */
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border-radius: 3px;
   opacity: 0.45;
+}
+
+.ue-channel-stopwatch:hover:not(:disabled) {
+  opacity: 1;
+  background: var(--kcs-hover, rgba(148, 163, 184, 0.12));
+}
+
+.ue-channel-stopwatch:focus {
+  outline: none;
+}
+
+.ue-channel-stopwatch:focus-visible {
+  outline: 2px solid var(--kcs-focus, var(--accent-cyan));
+  outline-offset: -2px;
 }
 
 .ue-channel-stopwatch[data-animation-state="animated"],
@@ -1471,4 +1492,22 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 .timeline-grid-container[data-duplicate-target="blocked"] {
   cursor: not-allowed;
   box-shadow: inset 0 0 0 2px var(--kcs-danger, #f87171);
+}
+
+/* C7 — a closed property group summarises its members' keys on its header lane. */
+.ue-channel-header-lane {
+  position: relative;
+}
+
+.ue-group-summary-key {
+  position: absolute;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  margin-top: -3px;
+  transform: rotate(45deg);
+  background: var(--kcs-text-muted, #8193a5);
+  opacity: 0.75;
+  pointer-events: none;
 }

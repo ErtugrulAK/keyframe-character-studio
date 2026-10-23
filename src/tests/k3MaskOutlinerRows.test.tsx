@@ -4,8 +4,8 @@
  * Per-mask animation channels (`maskId:opacity|feather|expansion|path`) have
  * always lived on the track and rendered lanes; the outliner tree, however,
  * never showed them, so they could not be armed, navigated, or disarmed from
- * the property strip. K3 adds the collapsible Mask group (rows per mask
- * property, after Trim Path) and moves the mask lanes to sit AFTER the trim
+ * the property strip. K3 adds the collapsible mask rows (C7: one group per
+ * mask, named by the mask, after Trim Paths) and moves the mask lanes to sit AFTER the trim
  * lanes so the tree and the band stay row-for-row aligned (R4-06). The
  * stopwatch semantics are exactly K1's (D2): arm records the current value,
  * disarm confirms and collapses to the evaluated static.
@@ -85,7 +85,7 @@ const seedMaskedLayer = (h: Harness): string => {
   return trackId;
 };
 
-const maskRowKeys = ['m1:opacity', 'm1:feather', 'm1:expansion', 'm1:path', 'm2:opacity', 'm2:feather', 'm2:expansion', 'm2:path'];
+const maskRowKeys = (id: string) => [`${id}:path`, `${id}:feather`, `${id}:opacity`, `${id}:expansion`];
 
 describe('K3 — Mask group in the outliner', () => {
   beforeEach(() => {
@@ -95,43 +95,47 @@ describe('K3 — Mask group in the outliner', () => {
   });
   afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
-  it('appears after Trim Path when the layer owns masks, and never without them', () => {
+  // C7 — one group per mask, named by the mask, after the layer properties
+  // (and after Trim Paths when the layer uses it), in the layer's mask order.
+  it('lists one group per mask, after the layer properties, and none without masks', () => {
     const h = renderHarness();
     seedMaskedLayer(h);
 
-    const headers = h.headers();
-    const trimIndex = headers.findIndex((text) => text.includes('Trim Path'));
-    const maskIndex = headers.findIndex((text) => text.includes('Mask'));
-    expect(maskIndex).toBeGreaterThan(-1);
-    expect(trimIndex).toBeGreaterThan(-1);
-    expect(maskIndex).toBeGreaterThan(trimIndex);
+    expect(h.headers()).toEqual(['Position', 'Scale', 'M1', 'M2']);
 
-    // A maskless layer shows no Mask group at all.
+    const partId = h.ctx().tracks[0].partId;
+    act(() => {
+      h.ctx().setCharacterParts((prev: CharacterPart[]) => prev.map((p) => (p.id === partId ? { ...p, trimPathEnabled: true } : p)));
+    });
+    expect(h.headers()).toEqual(['Position', 'Scale', 'Trim Paths', 'M1', 'M2']);
+
+    // A maskless layer shows no mask group at all.
     const plain = renderHarness();
     seedMaskedLayer(plain);
     act(() => {
       plain.ctx().setCharacterParts((prev: CharacterPart[]) => prev.map((p) => ({ ...p, masks: [] })));
     });
     expect(plain.rows().filter((key) => key.includes(':'))).toHaveLength(0);
-    expect(plain.headers().some((text) => text.includes('Mask'))).toBe(false);
+    expect(plain.headers()).toEqual(['Position', 'Scale']);
   });
 
-  it('is collapsed by default and lists every mask property row once expanded', () => {
+  it('each mask group is collapsed by default and lists Path, Feather, Opacity, Expansion once opened', () => {
     const h = renderHarness();
     seedMaskedLayer(h);
 
     expect(h.rows().filter((key) => key.includes(':'))).toHaveLength(0);
-    act(() => { fireEvent.click(h.groupHeader('Mask')); });
-    for (const key of maskRowKeys) {
-      expect(h.rows()).toContain(key);
-    }
-    expect(h.rows().filter((key) => key.includes(':'))).toHaveLength(8);
+    act(() => { fireEvent.click(h.groupHeader('M1')); });
+    expect(h.rows().filter((key) => key.includes(':'))).toEqual(maskRowKeys('m1'));
+    act(() => { fireEvent.click(h.groupHeader('M2')); });
+    expect(h.rows().filter((key) => key.includes(':'))).toEqual([...maskRowKeys('m1'), ...maskRowKeys('m2')]);
+    const labels = [...h.container.querySelectorAll('.ue-channel-row[data-property-channel^="m1:"]')].map((node) => node.textContent?.trim());
+    expect(labels).toEqual(['Path', 'Feather', 'Opacity', 'Expansion']);
   });
 
   it('arms a mask scalar through the stopwatch, recording its current value', () => {
     const h = renderHarness();
     seedMaskedLayer(h);
-    act(() => { fireEvent.click(h.groupHeader('Mask')); });
+    act(() => { fireEvent.click(h.groupHeader('M1')); });
 
     const stopwatch = h.stopwatch('m1:feather');
     expect(stopwatch.getAttribute('data-animation-state')).toBe('off');
@@ -146,7 +150,7 @@ describe('K3 — Mask group in the outliner', () => {
   it('disarming a mask channel confirms once and clears the keys (D2 parity)', () => {
     const h = renderHarness();
     seedMaskedLayer(h);
-    act(() => { fireEvent.click(h.groupHeader('Mask')); });
+    act(() => { fireEvent.click(h.groupHeader('M2')); });
     act(() => { fireEvent.click(h.stopwatch('m2:opacity')); });
     expect(h.maskKeys()).toContain('m2:opacity');
 
@@ -159,12 +163,13 @@ describe('K3 — Mask group in the outliner', () => {
     expect(h.stopwatch('m2:opacity').getAttribute('data-animation-state')).toBe('off');
   });
 
-  it('the lane band mirrors the tree: mask lanes sit after the trim lanes', () => {
+  it('the lane band mirrors the tree row for row: mask lanes sit after the trim lanes', () => {
     const h = renderHarness();
     const trackId = seedMaskedLayer(h);
-    // Give both families a key so their lanes render.
+    // Give both families a key so their lanes render; Trim keys list Trim Paths.
     act(() => { h.ctx().addPropertyKeyframe(trackId, 'trimPathEnd', 5, 0.5, 'linear'); });
     act(() => { h.ctx().addPropertyKeyframe(trackId, 'm1:feather' as AnimationChannel, 5, 0.5, 'linear'); });
+    act(() => { fireEvent.click(h.groupHeader('M1')); });
 
     const laneChannels = [...h.container.querySelectorAll('[data-lane-channel]')]
       .map((node) => node.getAttribute('data-lane-channel') ?? '');
@@ -172,5 +177,7 @@ describe('K3 — Mask group in the outliner', () => {
     const maskIndex = laneChannels.indexOf('m1:feather');
     expect(trimIndex).toBeGreaterThan(-1);
     expect(maskIndex).toBeGreaterThan(trimIndex);
+    // Tree row N and lane N are the same property.
+    expect(laneChannels).toEqual(h.rows());
   });
 });

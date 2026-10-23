@@ -8,9 +8,10 @@ import type { CharacterPart, PropertyKeyframe, Track, TrackChannel } from '../ty
 /**
  * Manual QA Round 3.
  *
- * R3-05/R3-06 — the property tree reads Layer > Transform > { Position > {X, Y},
- * Rotation, Scale > {X, Y}, Opacity } and Layer > Trim Path > {Start, End,
- * Offset}, and no property row carries a bare numeric counter.
+ * R3-05/R3-06 — the property tree reads Layer > { Position > {X, Y}, Scale >
+ * {X, Y}, Rotation, Opacity } and Layer > Trim Paths > {Start, End, Offset}
+ * (C7: After Effects order; Trim Paths only when used or keyed), and no
+ * property row carries a bare numeric counter.
  *
  * R3-07 — the layer row navigates its own keyframes: [◀][+][▶] with the same +
  * action in the middle, both arrows disabled when the layer has nothing on that
@@ -87,7 +88,8 @@ describe('R3-05/R3-06 — the timeline property tree', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Position properties of Body' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Trim Path properties of Body' })).toBeTruthy();
+    // C7 — the Trim Paths group is listed because this layer holds Trim keys.
+    expect(screen.getByRole('button', { name: 'Trim Paths properties of Body' })).toBeTruthy();
     // R4-06 — `Transform` is the internal model name, not a level the user reads
     // through: no wrapper row, and no row that only restates the layer.
     expect(screen.queryByRole('button', { name: 'Transform property group of Body' })).toBeNull();
@@ -99,10 +101,10 @@ describe('R3-05/R3-06 — the timeline property tree', () => {
       'Position',
       'X',
       'Y',
-      'Rotation',
       'Scale',
+      'Rotation',
       'Opacity',
-      'Trim Path',
+      'Trim Paths',
       'Start',
       'End',
       'Offset',

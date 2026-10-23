@@ -122,6 +122,14 @@ const DIAGNOSTIC_REMEDIATIONS: Record<OGrafDiagnosticCode, OGrafDiagnosticRemedi
     title: 'Invalid package path',
     action: 'Rename the reported package file so it stays inside the package root and stays unique.',
   },
+  OGRAF_UNSUPPORTED_COLOR_CORRECTION: {
+    title: 'Colour correction not supported by OGraf yet',
+    action: 'Remove the colour correction from the reported layer (or export a GIF, which renders it), then export again.',
+  },
+  OGRAF_UNSUPPORTED_EFFECT_MASK: {
+    title: 'Effect-only mask not supported by OGraf yet',
+    action: 'Turn the reported effect-only mask into a normal mask or remove it, then export again; a GIF renders it as it is.',
+  },
 };
 
 const WRITE_FAILURE_REMEDIATIONS: Record<OGrafPackageWriteFailureCode, OGrafDiagnosticRemediationTemplate> = {

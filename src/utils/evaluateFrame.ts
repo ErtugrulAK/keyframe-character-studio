@@ -148,6 +148,7 @@ function extractContent(
     matte: layer.matte,
     masks: masks ?? layer.masks,
     trackMatte: layer.trackMatte,
+    effects: layer.effects,
     textValue: layer.textValue,
     fontSize: layer.fontSize,
     fontFamily: layer.fontFamily,

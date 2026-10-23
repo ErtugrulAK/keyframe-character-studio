@@ -27,7 +27,11 @@ export type OGrafDiagnosticCode =
   | 'OGRAF_FONT_UNVERIFIED'
   | 'OGRAF_INVALID_PROJECT'
   | 'OGRAF_INVALID_PUBLIC_FIELD'
-  | 'OGRAF_INVALID_MAIN';
+  | 'OGRAF_INVALID_MAIN'
+  /** WP-08 — colour correction is drawn by the editor and GIF, not yet by the OGraf runtime. */
+  | 'OGRAF_UNSUPPORTED_COLOR_CORRECTION'
+  /** WP-08 — an effect-only mask would cut the layer in the OGraf runtime (it reads every mask as alpha). */
+  | 'OGRAF_UNSUPPORTED_EFFECT_MASK';
 
 export interface OGrafExportDiagnostic {
   code: OGrafDiagnosticCode;

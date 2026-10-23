@@ -289,7 +289,8 @@ export interface AnimatorContextType {
   applyMaskPathOrder: (ownerPartId: string, maskId: string, command: PathOrderCommand, selectedIndex: number | null) => { applied: boolean; selectedIndex: number | null };
   /** WP-03 — the transient mask-drawing session, if any. */
   maskDrawSession: MaskDrawSession | null;
-  startMaskDraw: (ownerPartId: string, shape: MaskDrawShape) => string | null;
+  /** `purpose: 'effect'` draws an effect-only mask that scopes the layer's colour correction (WP-08). */
+  startMaskDraw: (ownerPartId: string, shape: MaskDrawShape, purpose?: 'alpha' | 'effect') => string | null;
   cancelMaskDraw: () => void;
   /** Commits a drawn path as one new mask and edits it; returns its id. */
   commitMaskDraw: (path: BezierPath) => string | null;

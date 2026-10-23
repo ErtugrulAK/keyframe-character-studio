@@ -64,7 +64,8 @@ describe('KCS import boundary — values the renderers and the evaluator read', 
   const layer = (overrides: Record<string, unknown> = {}) => ({ id: 'L1', zIndex: 0, type: 'custom_box', ...overrides });
 
   it('refuses a scene version this build does not know', () => {
-    const result = validateImportedDocument(scene({ version: 3 }));
+    // WP-08: 3 is known (scenes that use effects); the next one is not.
+    const result = validateImportedDocument(scene({ version: 4 }));
 
     expect(result.ok).toBe(false);
     expect(result.diagnostics[0]?.code).toBe('KCS_IMPORT_UNSUPPORTED_VERSION');

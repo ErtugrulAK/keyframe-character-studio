@@ -326,6 +326,16 @@ export const DetailsPanel: React.FC = () => {
                 }}
                 onColorInteractionStart={startBatchInteraction}
                 onColorInteractionEnd={endBatchInteraction}
+                colorCorrection={{
+                  evaluatedMasks,
+                  onChangeEffects: (effects) => handleDisplayedPartPropChange('effects', effects),
+                  onDrawEffectMask: (shape) => {
+                    const refusal = startMaskDraw(selectedPart.id, shape, 'effect');
+                    if (refusal) showToast(refusal, 'error');
+                  },
+                  drawingEffectMask: maskDrawSession?.ownerPartId === selectedPart.id && maskDrawSession.purpose === 'effect' ? maskDrawSession.shape : null,
+                  readOnlyReason: isLocked ? 'This layer is locked.' : null,
+                }}
                 pathEditing={{
                   tracks,
                   readOnlyReason: isLocked ? 'This layer is locked.' : null,

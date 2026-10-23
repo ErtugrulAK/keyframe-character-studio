@@ -7,6 +7,16 @@ import { renderTextOrClonerPart } from './parts/TextAndClonerRenderers';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
 import { affineSvgTransform, worldAffineOf } from '../../../utils/containerMath';
 
+/** WP-08 — how one layer's colour correction is drawn (defs built by StagePartLayers). */
+export interface ColorCorrectionRender {
+  filterId: string;
+  /** Mask scope: coverage w and its inverse (1 - w), both world-space luminance masks. */
+  coverageMaskId?: string;
+  inverseMaskId?: string;
+  /** Layer scope: the amount mixes the two copies directly. */
+  amount: number;
+}
+
 interface PartRendererProps {
   part: CharacterPart;
   isGhost?: boolean;
@@ -36,6 +46,8 @@ interface PartRendererProps {
   outputOrigin?: CoordinatePoint;
   /** C4 — a locked layer takes no canvas pointer: clicks reach the layer beneath. */
   isLocked?: boolean;
+  /** WP-08 — the layer's colour correction, when it changes pixels. */
+  colorCorrection?: ColorCorrectionRender;
 }
 
 export const PartRenderer: React.FC<PartRendererProps> = ({
@@ -54,6 +66,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   layerMaskIds,
   outputOrigin = EDITOR_CAMERA_CENTER,
   isLocked = false,
+  colorCorrection,
 }) => {
   const el = evaluatedLayer;
   if (!el.visible) return null;
@@ -124,18 +137,18 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
     onDoubleClick: (e: React.MouseEvent) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onDrillIn(part.id); } },
   };
 
-  const transformedContent = (
+  const renderTransformed = (copy: boolean) => (
     <g
       // The world map through the DERIVED affine: an anisotropic container
       // nesting that is not a TRS (a rotated child of a stretched group) renders
       // exactly what the group frame shows. Every TRS layer keeps the historical
       // `translate(...) rotate(...) scale(...)` spelling, character for character.
       transform={affineSvgTransform(worldAffineOf(el.transform), el.transform, outputOrigin)}
-      style={{ opacity: finalOpacity, cursor: isGhost ? 'default' : 'pointer', filter: filterId ? `url(#${filterId})` : undefined, pointerEvents: isLocked ? 'none' : undefined }}
-      {...layerPointerHandlers}
+      style={{ opacity: finalOpacity, cursor: isGhost ? 'default' : 'pointer', filter: filterId ? `url(#${filterId})` : undefined, pointerEvents: isLocked || copy ? 'none' : undefined }}
+      {...(copy ? {} : layerPointerHandlers)}
     >
       <defs>
-        {!isGhost && el.content.shadowColor && (
+        {!copy && !isGhost && el.content.shadowColor && (
           <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
             <feDropShadow
               dx={el.content.shadowOffsetX || 0}
@@ -150,6 +163,34 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       {pathContent}
     </g>
   );
+  /*
+   * WP-08 — C_out = (1 - w)*C + w*F(C), A_out = A. Inside an isolated group
+   * the layer is drawn once under (1 - w) and once, through the correction
+   * filter, under w, added with plus-lighter (premultiplied add): the colour
+   * is mixed and the alpha is exactly the layer's own. The mix sits BEFORE
+   * the layer masks, the Track Matte and the layer opacity, which therefore
+   * apply to the corrected layer as one. The second copy takes no pointer.
+   */
+  const transformedContent = colorCorrection ? (
+    <g style={{ isolation: 'isolate' }} data-color-correction="applied">
+      <g
+        mask={colorCorrection.inverseMaskId ? `url(#${colorCorrection.inverseMaskId})` : undefined}
+        opacity={colorCorrection.inverseMaskId ? undefined : 1 - colorCorrection.amount}
+      >
+        {renderTransformed(false)}
+      </g>
+      <g
+        mask={colorCorrection.coverageMaskId ? `url(#${colorCorrection.coverageMaskId})` : undefined}
+        opacity={colorCorrection.coverageMaskId ? undefined : colorCorrection.amount}
+        filter={`url(#${colorCorrection.filterId})`}
+        style={{ mixBlendMode: 'plus-lighter' }}
+        pointerEvents="none"
+        data-color-correction-copy="true"
+      >
+        {renderTransformed(true)}
+      </g>
+    </g>
+  ) : renderTransformed(false);
   const maskedContent = (layerMaskIds ?? []).reduceRight<React.ReactNode>(
     (content, maskId) => <g key={`${part.id}-${maskId}`} mask={`url(#${maskId})`}>{content}</g>,
     transformedContent,

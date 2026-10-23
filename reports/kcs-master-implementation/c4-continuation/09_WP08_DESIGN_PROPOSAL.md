@@ -1,9 +1,27 @@
-# WP-08 — mask-constrained colour correction: design proposal (NOT implemented)
+# WP-08 — mask-constrained colour correction: design proposal
 
-> C5 note: WP-08 still waits for your schema decision. Nothing here is implemented; the C5 UI/QA
-> approval does not cover the v3 format.
+> C6 update (2026-10-23): **option B approved by the user and implemented** in the first slice
+> below (images: brightness, contrast, saturation, amount; enable/reset; whole layer or one mask;
+> effect-only masks). Scenes that use an effect or an effect-only mask are written as version 3;
+> every other scene is still written as version 2; this build reads 1–3; a build before C6 refuses
+> v3 with "The file declares scene version 3, which this build does not know how to apply" (checked
+> against the fixed QA build). Existing user files are never converted in bulk.
+>
+> Differences from the text below, found while implementing:
+> - Copy/paste and duplicate: mask ids are unique only within a layer and the copies keep them
+>   (`structuredClone`), so a copied effect's `maskId` already points at the COPY's own mask — no
+>   remapping is needed. Effect ids are kept for the same reason (nothing outside the layer refers
+>   to them).
+> - GIF export renders the correction (it uses the same SVG renderer: pixel-checked); OGraf blocks
+>   colour correction AND effect-only masks with an ERROR (its runtime would read an effect-only
+>   mask as an alpha cut). There is no Lottie export (Lottie is import-only).
+> - Undo of a slider drag is one step; with keyboard focus still on the slider, Ctrl+Z belongs to
+>   the form field (the editor-wide rule for every Inspector field), so Undo is the toolbar control
+>   or Ctrl+Z after leaving the field.
+>
+> C5 note (superseded): WP-08 still waits for your schema decision.
 
-Status: **waiting for the user's schema approval**. The instruction for item 9 says new persistent
+Status (C4/C5, superseded by the C6 update above): **waiting for the user's schema approval**. The instruction for item 9 says new persistent
 data must be presented before implementation, and that the approval does not cover an incompatible
 schema/migration change. WP-08 needs new persistent data, so only the feasibility spike (QA-only,
 no product code, no scene data) was done.

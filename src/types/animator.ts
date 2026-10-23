@@ -82,6 +82,30 @@ export interface LayerMask {
   opacity?: number;
   expansion?: number;
   locked?: boolean;
+  /**
+   * WP-08 — false: an EFFECT-ONLY mask. It does not cut the layer; it only
+   * scopes an effect (colour correction). Absent = true: the mask cuts the
+   * layer's alpha exactly as before.
+   */
+  affectsAlpha?: boolean;
+}
+
+/**
+ * WP-08 — a colour correction on a layer (first slice: images). Absent
+ * fields are neutral: enabled true, amount 1, brightness 0, contrast 1,
+ * saturation 1. Scope 'mask' limits it to one of the SAME layer's masks; a
+ * missing or disabled mask means the correction is NOT applied.
+ */
+export interface ColorCorrectionEffect {
+  id: string;
+  type: 'colorCorrection';
+  enabled?: boolean;
+  amount?: number;
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  scope: 'layer' | 'mask';
+  maskId?: string;
 }
 
 export interface LayerMaskStack {
@@ -500,6 +524,8 @@ export interface CharacterPart {
   matte?: PartMatte;
   /** V6 source relationship. Legacy `matte` remains the fallback. */
   trackMatte?: TrackMatteV2;
+  /** WP-08 — layer effects (colour correction). Absent = none (every scene before v3). */
+  effects?: ColorCorrectionEffect[];
 
   // ── Feature 10: Custom Preset Animation Engine ──
   inCustomPresetId?: string;

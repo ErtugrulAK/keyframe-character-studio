@@ -598,8 +598,33 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
   const diagnostics: OGrafExportDiagnostic[] = [];
   const assets: OGrafAssetPlan[] = [];
 
-  if (!sceneData || (sceneData.version !== 1 && sceneData.version !== 2) || !Number.isFinite(sceneData.width) || !Number.isFinite(sceneData.height) || !Number.isFinite(sceneData.fps)) {
-    diagnostics.push({ code: 'OGRAF_INVALID_PROJECT', severity: 'ERROR', message: 'SceneData must be a version 1 or version 2 project with finite width, height, and FPS.' });
+  if (!sceneData || (sceneData.version !== 1 && sceneData.version !== 2 && sceneData.version !== 3) || !Number.isFinite(sceneData.width) || !Number.isFinite(sceneData.height) || !Number.isFinite(sceneData.fps)) {
+    diagnostics.push({ code: 'OGRAF_INVALID_PROJECT', severity: 'ERROR', message: 'SceneData must be a version 1, 2 or 3 project with finite width, height, and FPS.' });
+  }
+  // WP-08 — the generated OGraf runtime does not draw colour correction and
+  // would read an effect-only mask as an alpha cut, so either one blocks the
+  // package (never flattened, never silently dropped). GIF renders both.
+  for (const layer of sceneData?.layers || []) {
+    if (layer.effects?.some((effect) => effect.type === 'colorCorrection')) {
+      diagnostics.push({
+        code: 'OGRAF_UNSUPPORTED_COLOR_CORRECTION',
+        severity: 'ERROR',
+        message: `Layer "${describeOGrafValueForDiagnostics(layer.name || layer.id)}" has a colour correction, which the OGraf runtime does not render yet. Remove it (or export a GIF) to export this scene.`,
+        layerId: layer.id,
+        layerName: layer.name,
+        feature: 'color-correction',
+      });
+    }
+    if (layer.masks?.some((mask) => mask.affectsAlpha === false)) {
+      diagnostics.push({
+        code: 'OGRAF_UNSUPPORTED_EFFECT_MASK',
+        severity: 'ERROR',
+        message: `Layer "${describeOGrafValueForDiagnostics(layer.name || layer.id)}" has an effect-only mask; the OGraf runtime would cut the layer with it. Make it a normal mask or remove it to export this scene.`,
+        layerId: layer.id,
+        layerName: layer.name,
+        feature: 'effect-mask',
+      });
+    }
   }
   if (!sceneData || sceneData.width <= 0 || sceneData.height <= 0 || sceneData.fps <= 0) {
     diagnostics.push({ code: 'OGRAF_INVALID_PROJECT', severity: 'ERROR', message: 'SceneData width, height, and FPS must be greater than zero.' });

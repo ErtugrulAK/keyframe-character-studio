@@ -21,6 +21,12 @@ export type MaskDrawShape = 'rectangle' | 'ellipse' | 'pen';
 export interface MaskDrawSession {
   ownerPartId: string;
   shape: MaskDrawShape;
+  /**
+   * WP-08 — 'effect': the drawn mask is EFFECT-ONLY (it does not cut the
+   * layer) and becomes the scope of the layer's colour correction, in the
+   * same single write. Absent / 'alpha': a normal mask.
+   */
+  purpose?: 'alpha' | 'effect';
 }
 
 /** What one canvas mask gesture may need to put back when it is cancelled. */
@@ -130,14 +136,14 @@ export const useMaskEditing = ({
    * WP-03 — arms drawing a NEW mask on the owner (Rectangle, Ellipse or Pen).
    * Nothing is written until the drawing is committed.
    */
-  const startMaskDraw = useCallback((ownerPartId: string, shape: MaskDrawShape): string | null => {
+  const startMaskDraw = useCallback((ownerPartId: string, shape: MaskDrawShape, purpose: 'alpha' | 'effect' = 'alpha'): string | null => {
     if (appMode !== 'edit') return 'Masks are drawn in Edit mode.';
     const owner = characterParts.find((part) => part.id === ownerPartId);
     if (!owner || owner.isGroup) return 'Select a layer to draw a mask on.';
     gestureCancelRef.current?.();
     setIsPlaying(false);
     setStoredTarget(null);
-    setStoredDraw({ ownerPartId, shape });
+    setStoredDraw({ ownerPartId, shape, ...(purpose === 'effect' ? { purpose } : {}) });
     return null;
   }, [appMode, characterParts, setIsPlaying]);
 
@@ -155,17 +161,27 @@ export const useMaskEditing = ({
     const reserved = layerMaskIdsReferencedByTrack(tracks.find((track) => track.partId === owner.id));
     const id = nextLayerMaskId(masks, reserved);
     const shapeName = maskDrawSession.shape === 'pen' ? 'Pen' : maskDrawSession.shape === 'ellipse' ? 'Ellipse' : 'Rectangle';
+    const effectMask = maskDrawSession.purpose === 'effect';
     const mask: LayerMask = {
       id,
-      name: `${shapeName} Mask ${masks.length + 1}`,
+      name: effectMask ? `Effect Mask ${masks.length + 1}` : `${shapeName} Mask ${masks.length + 1}`,
       path,
       mode: 'add',
       enabled: true,
       opacity: 1,
       feather: 0,
       expansion: 0,
+      ...(effectMask ? { affectsAlpha: false } : {}),
     };
-    setCharacterParts((prev) => prev.map((part) => (part.id === owner.id ? { ...part, masks: [...(part.masks ?? []), mask] } : part)));
+    // One write (one undo step): the mask, and for an effect mask the colour
+    // correction re-scoped to it.
+    setCharacterParts((prev) => prev.map((part) => {
+      if (part.id !== owner.id) return part;
+      const effects = effectMask
+        ? part.effects?.map((effect) => (effect.type === 'colorCorrection' ? { ...effect, scope: 'mask' as const, maskId: id } : effect))
+        : part.effects;
+      return { ...part, masks: [...(part.masks ?? []), mask], ...(effects ? { effects } : {}) };
+    }));
     setStoredDraw(null);
     setStoredTarget({ ownerPartId: owner.id, maskId: id });
     return id;

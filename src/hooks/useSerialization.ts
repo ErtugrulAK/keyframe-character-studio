@@ -39,6 +39,7 @@ const readMotionTemplates = (value: unknown): MotionTemplate[] | undefined => {
   return templates.length > 0 ? templates : undefined;
 };
 import { normalizeBezierPath } from '../utils/bezierPath';
+import { SCENE_VERSION_WITH_EFFECTS, sceneUsesEffectFeatures } from '../utils/colorCorrection';
 import { validateImportedDocument, type ImportResult } from '../utils/importValidation';
 const noopSetCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>> = () => undefined;
 // A module-level stable default: a per-render inline default would join the
@@ -104,6 +105,7 @@ function toSceneData(
     matte: p.matte,
     masks: p.masks,
     trackMatte: p.trackMatte,
+    ...(p.effects?.length ? { effects: p.effects } : {}),
     booleanGroupId: p.booleanGroupId,
     booleanOperation: p.booleanOperation,
     booleanOperandIds: p.booleanOperandIds,
@@ -184,7 +186,9 @@ function toSceneData(
   });
 
   return {
-    version: 2,
+    // WP-08 option B: version 3 ONLY when the scene uses an effect or an
+    // effect-only mask; every other scene keeps writing 2, exactly as before.
+    version: sceneUsesEffectFeatures(layers) ? SCENE_VERSION_WITH_EFFECTS : 2,
     // Persist the active authoring contract; legacy-unknown is retained for
     // historical/mixed scenes until an explicit contract is selected.
     coordinateSystem,
@@ -234,6 +238,7 @@ function fromSceneData(
     matte: l.matte,
     masks: l.masks,
     trackMatte: l.trackMatte,
+    ...(l.effects?.length ? { effects: l.effects.map((effect) => ({ ...effect })) } : {}),
     booleanGroupId: l.booleanGroupId,
     booleanOperation: l.booleanOperation,
     booleanOperandIds: l.booleanOperandIds,

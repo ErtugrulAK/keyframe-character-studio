@@ -43,6 +43,7 @@ function toCharacterPart(layer: SceneLayer): CharacterPart {
     matte: layer.matte,
     masks: layer.masks,
     trackMatte: layer.trackMatte,
+    effects: layer.effects,
     textValue: layer.textValue,
     fontSize: layer.fontSize,
     fontFamily: layer.fontFamily,

@@ -9,6 +9,8 @@ import { StyleClonerSection } from './style/StyleClonerSection';
 import { StyleParticleSection } from './style/StyleParticleSection';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
 import { PathGeometryCard } from './style/PathGeometryCard';
+import { ColorCorrectionCard } from './style/ColorCorrectionCard';
+import type { ColorCorrectionEffect, LayerMask } from '../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../types/composition';
 import { StyleMatteSection } from './style/StyleMatteSection';
 import type { MaskDrawShape } from '../../../hooks/useMaskEditing';
@@ -50,6 +52,14 @@ interface StyleTabProps {
   onColorInteractionStart?: () => void;
   onColorInteractionEnd?: () => void;
   /** C6 — shape ↔ editable path: conversion, and the path's points shared with the canvas. */
+  /** WP-08 — colour correction of an image layer. */
+  colorCorrection?: {
+    evaluatedMasks?: LayerMask[];
+    onChangeEffects: (effects: ColorCorrectionEffect[] | undefined) => void;
+    onDrawEffectMask: (shape: MaskDrawShape) => void;
+    drawingEffectMask: MaskDrawShape | null;
+    readOnlyReason: string | null;
+  };
   pathEditing?: {
     tracks: Track[];
     readOnlyReason: string | null;
@@ -89,6 +99,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   onColorInteractionStart,
   onColorInteractionEnd,
   pathEditing,
+  colorCorrection,
 }) => {
   const isTextBearing =
     selectedPart.type === 'custom_card' ||
@@ -129,6 +140,18 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         onColorInteractionStart={onColorInteractionStart}
         onColorInteractionEnd={onColorInteractionEnd}
       />
+      {colorCorrection && selectedPart.type === 'custom_image' && (
+        <ColorCorrectionCard
+          part={selectedPart}
+          evaluatedMasks={colorCorrection.evaluatedMasks}
+          onChangeEffects={colorCorrection.onChangeEffects}
+          onDrawEffectMask={colorCorrection.onDrawEffectMask}
+          drawingEffectMask={colorCorrection.drawingEffectMask}
+          readOnlyReason={colorCorrection.readOnlyReason}
+          onInteractionStart={onColorInteractionStart}
+          onInteractionEnd={onColorInteractionEnd}
+        />
+      )}
       {pathEditing && (
         <PathGeometryCard
           selectedPart={selectedPart}

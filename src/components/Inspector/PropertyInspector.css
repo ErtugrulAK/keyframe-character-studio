@@ -2915,3 +2915,52 @@
   font-size: var(--font-size-caption);
   line-height: 1.4;
 }
+
+/* WP-08 — Color Correction card. */
+.color-correction {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.color-correction-row,
+.color-correction-draw {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.color-correction-draw .form-label {
+  margin-right: auto;
+}
+
+.color-correction-scope {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.color-correction-status {
+  margin: 0;
+  color: #f59e0b;
+  font-size: var(--font-size-caption);
+  line-height: 1.35;
+}
+
+.color-correction-value {
+  color: var(--kcs-accent, #00d2ff);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.layer-mask-row-effect {
+  padding: 0 4px;
+  border: 1px solid var(--kcs-border-default, var(--border-color));
+  border-radius: 4px;
+  color: var(--kcs-text-muted, var(--text-muted));
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}

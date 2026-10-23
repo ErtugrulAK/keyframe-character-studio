@@ -422,6 +422,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
               <span className="layer-mask-row-index" aria-hidden="true">{index + 1}</span>
               <span className="layer-mask-row-name">{layerMask.name}</span>
               <span className="layer-mask-row-mode" aria-hidden="true">{LAYER_MASK_MODE_LABEL[layerMask.mode] ?? layerMask.mode}</span>
+              {layerMask.affectsAlpha === false && <span className="layer-mask-row-effect" title="Effect-only: scopes an effect, does not cut the layer">Effect</span>}
               {layerMask.enabled === false && <span className="layer-mask-row-off" aria-hidden="true">Off</span>}
               {layerMask.locked && <Lock size={10} className="layer-mask-row-lock" aria-hidden="true" />}
             </button>
@@ -552,6 +553,18 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             <label className="matte-toggle-field matte-compact-field">
               <input type="checkbox" checked={activeLayerMask.enabled !== false} onChange={(event) => updateActiveLayerMask({ enabled: event.target.checked })} />
               Enabled
+            </label>
+            <label
+              className="matte-toggle-field matte-compact-field"
+              title="On: the mask cuts the layer (hides what is outside it). Off: an effect-only mask - it only limits an effect such as Color Correction."
+            >
+              <input
+                type="checkbox"
+                aria-label="Mask cuts the layer"
+                checked={activeLayerMask.affectsAlpha !== false}
+                onChange={(event) => updateActiveLayerMask(event.target.checked ? { affectsAlpha: undefined } : { affectsAlpha: false })}
+              />
+              Cuts layer
             </label>
             <div className="matte-field matte-compact-field">
               <label className="form-label">FEATHER</label>

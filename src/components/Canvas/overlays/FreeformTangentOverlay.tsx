@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { BezierPath, BezierVertex, CharacterPart, Transform } from '../../../types/animator';
+import type { BezierPath, CharacterPart, Transform } from '../../../types/animator';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
 import { getFreeformVertexWorldPositions, resolveFreeformPath } from '../../../utils/freeform';
-import { initializeSmoothHandles } from '../../../utils/bezierPath';
+import { initializeSmoothHandles, moveVertexHandle, type BezierHandleKind } from '../../../utils/bezierPath';
 import { worldToLocal } from '../../../utils/matte';
 import type { WorldAffine } from '../../../utils/containerMath';
 
@@ -20,7 +20,7 @@ const VERTEX_SELECTED_LABEL_FILL = '#0f172a';
 const HANDLE_FILL = '#facc15';
 const HANDLE_SELECTED_FILL = '#f97316';
 
-type HandleKind = 'in' | 'out';
+type HandleKind = BezierHandleKind;
 const HANDLE_KEY: Record<HandleKind, 'handleIn' | 'handleOut'> = { in: 'handleIn', out: 'handleOut' };
 
 interface DragState {
@@ -43,44 +43,8 @@ export interface FreeformTangentOverlayProps {
   outputOrigin?: CoordinatePoint;
 }
 
-/** Below this length a dragged handle vector is treated as zero. */
-const HANDLE_VECTOR_EPSILON = 1e-6;
-
 /** Moves one handle, keeping the counterpart mirrored for smooth vertices. */
-const withMovedHandle = (
-  vertex: BezierVertex,
-  handle: HandleKind,
-  next: { x: number; y: number },
-): BezierVertex => {
-  const key = HANDLE_KEY[handle];
-  // A non-finite pointer result is never written into the path.
-  if (!Number.isFinite(next.x) || !Number.isFinite(next.y)) return vertex;
-  if (vertex.kind !== 'smooth') return { ...vertex, [key]: next };
-
-  const counterpartKey = HANDLE_KEY[handle === 'out' ? 'in' : 'out'];
-  const counterpart = vertex[counterpartKey];
-  if (!counterpart) return { ...vertex, [key]: next };
-
-  const dx = handle === 'out' ? next.x - vertex.x : vertex.x - next.x;
-  const dy = handle === 'out' ? next.y - vertex.y : vertex.y - next.y;
-  const length = Math.hypot(dx, dy);
-  // A handle dragged exactly onto its anchor carries no direction, so the
-  // counterpart keeps its own length and direction instead of collapsing.
-  if (length <= HANDLE_VECTOR_EPSILON) return { ...vertex, [key]: next };
-  // An overflowing (Infinity) length would normalize to a zero direction and
-  // collapse the counterpart onto the anchor, so the drag only writes itself.
-  if (!Number.isFinite(length)) return { ...vertex, [key]: next };
-
-  const counterpartLength = Math.hypot(counterpart.x - vertex.x, counterpart.y - vertex.y);
-  const mirrored = handle === 'out'
-    ? { x: vertex.x - (dx / length) * counterpartLength, y: vertex.y - (dy / length) * counterpartLength }
-    : { x: vertex.x + (dx / length) * counterpartLength, y: vertex.y + (dy / length) * counterpartLength };
-  // Imported coordinates may be finite yet overflow the mirror arithmetic
-  // (for example a counterpart at ±1.7e308 makes the hypot infinite). The
-  // counterpart then keeps its previous value instead of gaining NaN/Infinity.
-  if (!Number.isFinite(mirrored.x) || !Number.isFinite(mirrored.y)) return { ...vertex, [key]: next };
-  return { ...vertex, [key]: next, [counterpartKey]: mirrored };
-};
+const withMovedHandle = moveVertexHandle;
 
 /**
  * Direct tangent-handle authoring for the selected freeform layer.

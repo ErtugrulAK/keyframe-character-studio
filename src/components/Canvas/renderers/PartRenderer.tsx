@@ -34,6 +34,8 @@ interface PartRendererProps {
   layerMaskIds?: string[];
   /** Output origin: edit camera center or project-resolution center. */
   outputOrigin?: CoordinatePoint;
+  /** C4 — a locked layer takes no canvas pointer: clicks reach the layer beneath. */
+  isLocked?: boolean;
 }
 
 export const PartRenderer: React.FC<PartRendererProps> = ({
@@ -51,6 +53,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   matteMaskId,
   layerMaskIds,
   outputOrigin = EDITOR_CAMERA_CENTER,
+  isLocked = false,
 }) => {
   const el = evaluatedLayer;
   if (!el.visible) return null;
@@ -128,7 +131,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       // exactly what the group frame shows. Every TRS layer keeps the historical
       // `translate(...) rotate(...) scale(...)` spelling, character for character.
       transform={affineSvgTransform(worldAffineOf(el.transform), el.transform, outputOrigin)}
-      style={{ opacity: finalOpacity, cursor: isGhost ? 'default' : 'pointer', filter: filterId ? `url(#${filterId})` : undefined }}
+      style={{ opacity: finalOpacity, cursor: isGhost ? 'default' : 'pointer', filter: filterId ? `url(#${filterId})` : undefined, pointerEvents: isLocked ? 'none' : undefined }}
       {...layerPointerHandlers}
     >
       <defs>

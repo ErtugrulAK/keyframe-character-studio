@@ -62,7 +62,8 @@ interface StagePartLayersProps {
    * selects that layer instead of the group it belongs to.
    */
   onDrillIn: (partId: string) => void;
-  tracks: (AnimationTrackData & RuntimeTrackState)[];
+  /** `locked` (the layer lock switch) only steers canvas picking, never the evaluation. */
+  tracks: (AnimationTrackData & RuntimeTrackState & { locked?: boolean })[];
   customPresets: CustomMotionPreset[];
   liveStuntsState: Record<string, { stunt: string; progress: number; loop?: boolean; customPresetId?: string }>;
   /** Project resolution — world-space artboard region for inverted masks.
@@ -99,7 +100,7 @@ function getEffectiveMatte(part: CharacterPart): CharacterPart['matte'] {
   return part.matte;
 }
 
-export const StagePartLayers: React.FC<StagePartLayersProps> = ({
+const StagePartLayersView: React.FC<StagePartLayersProps> = ({
   sortedParts,
   appMode,
   broadcastState,
@@ -761,6 +762,9 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
             const part = sortedParts.find((candidate) => candidate.id === el.id);
             return !hiddenMatteSources.has(el.id) && part?.booleanGroupId === booleanOperandEditingGroupId;
           }));
+        // C4 — a locked layer is drawn exactly as before but is not picked on
+        // the canvas: clicks fall through to the layer beneath (edit mode only).
+        const lockedIds = appMode === 'edit' ? new Set(tracks.filter((track) => track.locked).map((track) => track.partId)) : null;
         return layers.map((el) => {
           const part = sortedParts.find(p => p.id === el.id);
           if (!part) return null;
@@ -784,6 +788,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
               matteClipPathId={matteAttrs.clipId}
               matteMaskId={matteAttrs.maskId}
               outputOrigin={outputOrigin}
+              isLocked={lockedIds?.has(el.id) ?? false}
             />
           );
         });
@@ -791,3 +796,11 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     </g>
   );
 };
+
+/**
+ * C3 — rendering is a pure function of these props (no context read here), so
+ * the layers re-render only when one of them changes: a camera pan/zoom or a
+ * dock-layout frame of the canvas does not re-evaluate and re-render every
+ * part. Evaluation and SVG output are unchanged.
+ */
+export const StagePartLayers = React.memo(StagePartLayersView);

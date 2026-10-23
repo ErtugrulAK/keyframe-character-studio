@@ -105,6 +105,9 @@ test('corner resize preserves the existing transform pipeline', async ({ page })
   await page.mouse.move(canvasBox!.x + canvasBox!.width * 0.42, canvasBox!.y + canvasBox!.height * 0.42);
   await page.mouse.up();
   await page.locator('.actor-node', { hasText: 'Rectangle' }).click();
+  // The Rectangle tool stays armed for the next shape and owns every stage
+  // press (C3); resizing is a Select-tool gesture.
+  await page.getByRole('button', { name: 'Select', exact: true }).click();
   const handle = page.locator('[data-testid="transform-gizmo"] rect').last();
   await expect(handle).toBeVisible();
   const before = await page.locator('g[transform^="translate"]').first().getAttribute('transform');

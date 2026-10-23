@@ -1,4 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
+import { resolveOpeningTimelineHeight } from '../src/components/Timeline/timelineConstants';
 
 /**
  * TIMELINE WORKSPACE — findings R2-01, R2-02 and R2-03 of Manual QA round 2.
@@ -35,7 +36,10 @@ const MIN_HEIGHT = 150;
 const MAX_HEIGHT = 700;
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 520;
-const DEFAULT_HEIGHT = 320;
+// C4 — the timeline OPENS at `resolveOpeningTimelineHeight(window height)`:
+// 320 px on a tall window, about a third of a shorter one. These specs run in
+// the default 1280×720 window, so the opening height comes from the same rule.
+const DEFAULT_HEIGHT = resolveOpeningTimelineHeight(720);
 const DEFAULT_WIDTH = 280;
 /** The panned grid's px-per-frame at its default zoom, mirrored from `useTimeline`. */
 const DEFAULT_FRAME_WIDTH = 18;

@@ -61,7 +61,7 @@ test('the reference lists the bindings for this platform and closes on Escape', 
   const expected = modifier === 'Meta' ? '⌘G' : 'Ctrl+G';
   await expect(dialog).toContainText(expected);
   for (const category of [
-    'Selection and navigation', 'Creation', 'Transform and arrange', 'Grouping and Boolean',
+    'Selection and navigation', 'Creation', 'Transform and arrange', 'Layer list', 'Grouping and Boolean',
     'Timeline', 'View', 'General',
   ]) {
     await expect(dialog.getByRole('region', { name: category })).toBeVisible();
@@ -70,7 +70,9 @@ test('the reference lists the bindings for this platform and closes on Escape', 
   await expect(dialog.getByRole('region', { name: 'Transform and arrange' }))
     .toContainText(modifier === 'Meta' ? '⇧⌘←' : 'Ctrl+Shift+←');
   // Every command in the table is on screen — count the rows rather than spot-check.
-  await expect(dialog.locator('.shortcut-reference-row')).toHaveCount(28);
+  // (C2 added the layer-list, drawing and mask-editing bindings: 28 → 42.)
+  // C4 added five rows: lock / unlock all layers, and the mask point focus, ends and type keys.
+  await expect(dialog.locator('.shortcut-reference-row')).toHaveCount(47);
 
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);

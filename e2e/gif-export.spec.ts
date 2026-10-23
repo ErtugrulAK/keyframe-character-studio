@@ -76,8 +76,15 @@ const seed = async (
   });
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
+  // Seed ONCE per tab: an init script runs on every navigation, so an
+  // unguarded one re-seeded the scene on the editor's own reload and wiped the
+  // very save a reload test is about. sessionStorage survives the reload.
   await page.addInitScript(
-    (payload: { key: string; value: string }) => localStorage.setItem(payload.key, payload.value),
+    (payload: { key: string; value: string }) => {
+      if (sessionStorage.getItem('__kcs_e2e_seeded') === '1') return;
+      localStorage.setItem(payload.key, payload.value);
+      sessionStorage.setItem('__kcs_e2e_seeded', '1');
+    },
     { key: STORAGE_KEY, value: scene },
   );
   await page.goto('/');
@@ -451,7 +458,10 @@ test('A1 guard: an unsaved edit stops the reload at the informed choice and Save
   const group = page.getByRole('group', { name: 'Reload confirmation' });
   await expect(group).toBeVisible();
   await expect(group).toContainText(/unsaved/i);
+  // Wait for the real document reload, not for the old page's DOM.
+  const reloaded = page.waitForEvent('load');
   await group.getByRole('button', { name: 'Save and reload' }).click();
+  await reloaded;
 
   // The reload landed; the changed value itself proves the write survived.
   await expect(page.locator('.app-container')).toBeVisible();

@@ -87,7 +87,7 @@ test('BUG 3 — layer order (Bring Forward / Send Backward) preserves keyframes'
   expect(beforeTimeline.length).toBeGreaterThanOrEqual(3); // cow frames 0/20/40
 
   // Select "The Cow" in the outliner (Template Elements).
-  await page.getByText('The Cow', { exact: true }).first().click();
+  await page.locator('[role="tree"] .actor-name', { hasText: 'The Cow' }).first().click(); // C5: the outliner row (the stage strip also shows the name)
   await expect(page.locator('.details-container .section-block')).toHaveCount(0);
   await openTransformSection(page);
   const framesBefore = await timelineKeyframeFrameValues(page);
@@ -101,7 +101,7 @@ test('BUG 3 — layer order (Bring Forward / Send Backward) preserves keyframes'
   await page.getByRole('button', { name: 'Send backward', exact: true }).click();
 
   // Re-select The Cow; the consolidated surface keeps keyframes reachable.
-  await page.getByText('The Cow', { exact: true }).first().click();
+  await page.locator('[role="tree"] .actor-name', { hasText: 'The Cow' }).first().click(); // C5: the outliner row (the stage strip also shows the name)
   await expect(page.locator('.details-container .section-block')).toHaveCount(0);
   await openTransformSection(page);
   const framesAfter = await timelineKeyframeFrameValues(page);

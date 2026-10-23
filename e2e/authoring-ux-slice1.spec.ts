@@ -72,8 +72,10 @@ test('each Boolean operation renders its own icon and accessible name', async ({
     const svg = button.locator('svg');
     await expect(svg).toHaveCount(1);
     // Union and Exclude share the operand geometry and differ by fill rule, so
-    // the pair is what makes each icon distinguishable.
-    const path = svg.locator('path');
+    // the pair is what makes each icon distinguishable. (C3: every icon also
+    // draws the same two operand outlines; the RESULT region is the one that
+    // identifies the operation.)
+    const path = svg.locator('path[data-boolean-result]');
     paths.push(`${await path.getAttribute('d')}|${await path.getAttribute('fill-rule')}`);
   }
   // Four operations, four distinguishable icons.

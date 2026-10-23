@@ -240,6 +240,10 @@ test('R5-01 — both dock handles are anchored to the panel boundary, never to p
 test('R5-01 — the dock handles keep their accessible names and a visible keyboard focus ring', async ({ page }) => {
   await seed(page);
   await page.setViewportSize({ width: 1440, height: 900 });
+  // C2: the seed's mouse click now focuses the (focusable) layer-tree row, so the
+  // browser's last input modality is "pointer". A keyboard user reaches these
+  // handles with the keyboard: establish that modality before focusing them.
+  await page.keyboard.press('Shift');
 
   for (const selector of ['.left-toolbar-toggle', '.inspector-dock-toggle']) {
     const state = await page.evaluate((sel) => {

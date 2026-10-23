@@ -556,6 +556,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
               style={{ height: 24, fontSize: 10, fontWeight: 700, padding: '0 8px', borderRadius: 4 }}
               title="Copy animation from this element"
               aria-label="Copy Animation"
+              data-lock-exempt
               onClick={onCopyAnimation}
             >
               Copy Animation

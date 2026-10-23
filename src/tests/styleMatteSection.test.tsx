@@ -7,7 +7,7 @@
  * gracefully.
  */
 import React from 'react';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { StyleMatteSection } from '../components/Inspector/sections/style/StyleMatteSection';
 import { normalizeGradientType, normalizeGradientStops, gradientId, gradientStopsHash } from '../utils/matte';
@@ -27,7 +27,12 @@ function renderMatte(target: CharacterPart, allParts: CharacterPart[]) {
   const utils = render(
     <StyleMatteSection selectedPart={target} characterParts={allParts} onPartPropChange={onPartPropChange} />
   );
-  fireEvent.click(utils.getByRole('button', { name: 'Expand MASK / TRACK MATTE' }));
+  // The card's open state is session UI memory (C3): a second render in the
+  // same test finds it already open.
+  const own = within(utils.container);
+  const expand = own.queryByRole('button', { name: 'Expand LEGACY CLIP MATTE' });
+  if (expand) fireEvent.click(expand);
+  expect(own.getByRole('button', { name: 'Collapse LEGACY CLIP MATTE' })).toBeInTheDocument();
   return { onPartPropChange, ...utils };
 }
 
@@ -1219,7 +1224,10 @@ describe('StyleMatteSection — Track Matte V2 source affordance', () => {
     const utils = render(
       <StyleMatteSection selectedPart={target} characterParts={allParts} onPartPropChange={onPartPropChange} />
     );
-    fireEvent.click(utils.getByRole('button', { name: 'Expand TRACK MATTE V2' }));
+    const own = within(utils.container);
+    const expand = own.queryByRole('button', { name: 'Expand TRACK MATTE' });
+    if (expand) fireEvent.click(expand);
+    expect(own.getByRole('button', { name: 'Collapse TRACK MATTE' })).toBeInTheDocument();
     return { onPartPropChange, ...utils };
   }
 

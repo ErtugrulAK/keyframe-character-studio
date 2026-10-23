@@ -1,11 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
-import type { BezierPath, CharacterPart, LayerMask, MatteMode, PartMatte } from '../../../../types/animator';
+import { Eye, EyeOff, Lock, PenLine, Unlock, X } from 'lucide-react';
+import type { BezierPath, CharacterPart, LayerMask, MatteMode, PartMatte, Track } from '../../../../types/animator';
+import { maskPathTopologyLockReason } from '../../../../utils/maskPathCreation';
 import { BezierPathEditor } from '../../BezierPathEditor';
+import { TrackMattePickWhip } from './TrackMattePickWhip';
+import { pickedTrackMatte } from '../../../../utils/trackMattePick';
+import { requestMaskPointsFocus } from '../../../../utils/maskPointFocus';
+import type { PathOrderCommand } from '../../../../utils/maskPathOrder';
 import { createBezierPath } from '../../../../utils/bezierPath';
-import { resolveMatteMode, normalizeFeather, isMatteEligible, suppressedMatteSourceIds, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/matte';
+import { nextLayerMaskId } from '../../../../utils/layerMasks';
+import type { MaskDrawShape } from '../../../../hooks/useMaskEditing';
+import { resolveMatteSource, resolveMatteMode, normalizeFeather, isMatteEligible, suppressedMatteSourceIds, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/matte';
 import type { MatteGradientStop } from '../../../../utils/matte';
 import { StyleCard } from './StyleCard';
+import { TrackMatteSummary } from './TrackMatteSummary';
 interface StyleMatteSectionProps {
   /** Opens/closes ONE undo entry around a continuous pointer gesture in this section. */
   onInteractionStart?: () => void;
@@ -14,7 +22,45 @@ interface StyleMatteSectionProps {
   characterParts: CharacterPart[];
   onPartPropChange: (key: keyof CharacterPart, value: any) => void;
   onChangeMaskPath?: (maskId: string, path: BezierPath) => void;
+  /** Mask IDs the layer's track still animates; a new mask never reuses one. */
+  reservedMaskIds?: readonly string[];
+  /** WP-02: the mask of THIS layer edited on the canvas, if any. */
+  maskEditTargetId?: string | null;
+  onEditMaskOnCanvas?: (maskId: string) => void;
+  onExitMaskEditing?: () => void;
+  /** WP-03: the shape a new mask is being drawn as on the canvas, if any. */
+  maskDrawShape?: MaskDrawShape | null;
+  onStartMaskDraw?: (shape: MaskDrawShape) => void;
+  /** WP-03: rotates/scales the active mask path about its own centre (layer pivot untouched). */
+  onTransformMaskPath?: (maskId: string, change: { rotation?: number; scaleX?: number; scaleY?: number }) => void;
+  /** WP-04: transient Track Matte navigation (selection only). */
+  matteReturnTargetId?: string | null;
+  onSelectMatteSource?: (targetId: string, sourceId: string) => void;
+  onBackToMatteTarget?: () => void;
+  /** C4 — tells why a pick-whip drop on a layer was refused. */
+  onPickRefused?: (reason: string) => void;
+  /** C4 — a mask path structure command; returns the selected point's new index, undefined when refused. */
+  onMaskPathOrder?: (maskId: string, command: PathOrderCommand, selectedIndex: number | null) => number | null | undefined;
+  onSelectMatteTarget?: (targetId: string) => void;
+  /** C2: the layer's mask path keys (the topology guard reads them) and the canvas-selected point. */
+  maskPathChannels?: Track['maskPathChannels'];
+  maskVertexIndex?: number | null;
+  onSelectMaskVertex?: (index: number | null) => void;
 }
+
+const MASK_DRAW_SHAPES: { shape: MaskDrawShape; label: string }[] = [
+  { shape: 'rectangle', label: 'Rectangle' },
+  { shape: 'ellipse', label: 'Ellipse' },
+  { shape: 'pen', label: 'Pen' },
+];
+
+/** The mask list row's mode tag — the same words as the MODE select. */
+const LAYER_MASK_MODE_LABEL: Record<LayerMask['mode'], string> = {
+  add: 'Add',
+  subtract: 'Subtract',
+  intersect: 'Intersect',
+  difference: 'Difference',
+};
 
 const selectStyle: React.CSSProperties = {
   width: '100%',
@@ -51,6 +97,22 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   onInteractionStart,
   onInteractionEnd,
   onChangeMaskPath,
+  reservedMaskIds = [],
+  maskEditTargetId = null,
+  onEditMaskOnCanvas,
+  onExitMaskEditing,
+  maskDrawShape = null,
+  onStartMaskDraw,
+  onTransformMaskPath,
+  matteReturnTargetId = null,
+  onSelectMatteSource,
+  onBackToMatteTarget,
+  onMaskPathOrder,
+  onPickRefused,
+  onSelectMatteTarget,
+  maskPathChannels,
+  maskVertexIndex,
+  onSelectMaskVertex,
 }) => {
   /**
    * A slider is one continuous gesture: the transaction opens when the pointer
@@ -279,10 +341,13 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   };
   const layerMasks = selectedPart.masks ?? [];
   const [selectedLayerMaskId, setSelectedLayerMaskId] = useState<string | undefined>(layerMasks[0]?.id);
-  const activeLayerMask = layerMasks.find((layerMask) => layerMask.id === selectedLayerMaskId) ?? layerMasks[0];
+  // While a mask is edited on the canvas, the Inspector shows that same mask:
+  // Canvas, Inspector and Timeline never point at two different masks.
+  const activeLayerMask = layerMasks.find((layerMask) => layerMask.id === (maskEditTargetId ?? selectedLayerMaskId)) ?? layerMasks[0];
+  const isEditingActiveMaskOnCanvas = !!maskEditTargetId && activeLayerMask?.id === maskEditTargetId;
   const setLayerMasks = (next: LayerMask[]) => onPartPropChange('masks', next);
   const addLayerMask = () => {
-    const id = `mask-${layerMasks.length + 1}`;
+    const id = nextLayerMaskId(layerMasks, reservedMaskIds);
     setLayerMasks([
       ...layerMasks,
       {
@@ -303,9 +368,12 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
     ]);
     setSelectedLayerMaskId(id);
   };
+  const updateLayerMask = (maskId: string, patch: Partial<LayerMask>) => {
+    setLayerMasks(layerMasks.map((layerMask) => layerMask.id === maskId ? { ...layerMask, ...patch } : layerMask));
+  };
   const updateActiveLayerMask = (patch: Partial<LayerMask>) => {
     if (!activeLayerMask) return;
-    setLayerMasks(layerMasks.map((layerMask) => layerMask.id === activeLayerMask.id ? { ...layerMask, ...patch } : layerMask));
+    updateLayerMask(activeLayerMask.id, patch);
   };
   const trackMatte = selectedPart.trackMatte;
   const trackMatteSourceMissing = !!trackMatte && !characterParts.some((part) => part.id === trackMatte.sourceLayerId);
@@ -315,14 +383,294 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   // switched-off matte source — never the candidate's own relationship flag.
   const suppressedSourceIds = suppressedMatteSourceIds(characterParts);
   const setTrackMatte = (next: CharacterPart['trackMatte'] | undefined) => onPartPropChange('trackMatte', next);
+  const trackMatteSourceRef = useRef<HTMLSelectElement | null>(null);
+
+  // WP-04: the effective relationship (and the layers this one is the matte
+  // of) is always visible above the settings, so the user never has to know
+  // which stored representation is in effect.
+  const showMatteSummary = Boolean(resolveMatteSource(selectedPart))
+    || characterParts.some((part) => part.id !== selectedPart.id && resolveMatteSource(part)?.sourceId === selectedPart.id);
 
   return (
     <>
-    <StyleCard title="MASK / TRACK MATTE" collapsible defaultOpen={false}>
+    <StyleCard title="LAYER MASKS" collapsible defaultOpen={false} retainKey="layer-masks">
+      <div className="matte-control-grid">
+        {/* C3 — one compact row per mask (order, name, mode, off state); the
+            selected row is the mask the settings below edit. C5 — each row also
+            carries its own aligned actions: Enabled, Lock path, Edit on canvas
+            (the same settings the controls below write, for that mask). */}
+        <div className="matte-span-full layer-mask-list" role="group" aria-label="Layer masks of this layer">
+          {layerMasks.map((layerMask, index) => {
+            const isOn = layerMask.enabled !== false;
+            const isLockedMask = layerMask.locked === true;
+            const isEditingThis = isEditingActiveMaskOnCanvas && layerMask.id === activeLayerMask?.id;
+            return (
+            <div key={layerMask.id} className="layer-mask-row-wrap">
+            <button
+              type="button"
+              className={`layer-mask-row${layerMask.id === activeLayerMask?.id ? ' is-active' : ''}${layerMask.enabled === false ? ' is-off' : ''}`}
+              // Choosing which mask to look at is inspection: it works on a locked layer.
+              data-lock-exempt
+              aria-pressed={layerMask.id === activeLayerMask?.id}
+              aria-label={`${index + 1}. ${layerMask.name}${layerMask.locked ? ' (locked)' : ''}`}
+              title={`${layerMask.name} — ${LAYER_MASK_MODE_LABEL[layerMask.mode] ?? layerMask.mode}${layerMask.enabled === false ? ', disabled' : ''}${layerMask.locked ? ', path locked' : ''}`}
+              onClick={() => {
+                setSelectedLayerMaskId(layerMask.id);
+                if (maskEditTargetId && layerMask.id !== maskEditTargetId) onEditMaskOnCanvas?.(layerMask.id);
+              }}
+            >
+              <span className="layer-mask-row-index" aria-hidden="true">{index + 1}</span>
+              <span className="layer-mask-row-name">{layerMask.name}</span>
+              <span className="layer-mask-row-mode" aria-hidden="true">{LAYER_MASK_MODE_LABEL[layerMask.mode] ?? layerMask.mode}</span>
+              {layerMask.enabled === false && <span className="layer-mask-row-off" aria-hidden="true">Off</span>}
+              {layerMask.locked && <Lock size={10} className="layer-mask-row-lock" aria-hidden="true" />}
+            </button>
+            <button
+              type="button"
+              className={`layer-mask-row-action${isOn ? '' : ' is-off'}`}
+              aria-label={`Enable ${layerMask.name}`}
+              aria-pressed={isOn}
+              title={isOn ? 'Enabled — click to switch this mask off' : 'Off — click to switch this mask on'}
+              onClick={() => updateLayerMask(layerMask.id, { enabled: !isOn })}
+            >
+              {isOn ? <Eye size={12} aria-hidden="true" /> : <EyeOff size={12} aria-hidden="true" />}
+            </button>
+            <button
+              type="button"
+              className={`layer-mask-row-action${isLockedMask ? ' is-locked' : ''}`}
+              aria-label={`Lock path of ${layerMask.name}`}
+              aria-pressed={isLockedMask}
+              title={isLockedMask ? 'Path locked — click to unlock' : 'Lock this mask path against accidental edits'}
+              onClick={() => updateLayerMask(layerMask.id, { locked: !isLockedMask })}
+            >
+              {isLockedMask ? <Lock size={12} aria-hidden="true" /> : <Unlock size={12} aria-hidden="true" />}
+            </button>
+            {onEditMaskOnCanvas && (
+              <button
+                type="button"
+                className={`layer-mask-row-action${isEditingThis ? ' is-active' : ''}`}
+                aria-label={`Edit ${layerMask.name} on the canvas`}
+                aria-pressed={isEditingThis}
+                disabled={!isEditingThis && isLockedMask}
+                title={isLockedMask && !isEditingThis ? 'This mask path is locked — unlock it to edit' : isEditingThis ? 'Finish editing this mask (Esc)' : 'Edit this mask on the canvas'}
+                onClick={() => {
+                  if (isEditingThis) {
+                    onExitMaskEditing?.();
+                    return;
+                  }
+                  setSelectedLayerMaskId(layerMask.id);
+                  onEditMaskOnCanvas(layerMask.id);
+                }}
+              >
+                <PenLine size={12} aria-hidden="true" />
+              </button>
+            )}
+            </div>
+            );
+          })}
+          <button type="button" className="btn-secondary layer-mask-add" onClick={addLayerMask}>Add mask</button>
+        </div>
+        {onStartMaskDraw && (
+          <div className="matte-span-full" role="group" aria-label="Draw a new mask on the canvas" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span className="form-label" style={{ margin: 0 }}>DRAW MASK</span>
+            {MASK_DRAW_SHAPES.map(({ shape, label }) => (
+              <button
+                key={shape}
+                type="button"
+                className={maskDrawShape === shape ? 'btn-primary' : 'btn-secondary'}
+                aria-pressed={maskDrawShape === shape}
+                aria-label={`Draw ${label.toLowerCase()} mask`}
+                title={`Draw a ${label.toLowerCase()} mask on this layer, on the canvas`}
+                onClick={() => onStartMaskDraw(shape)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+        {activeLayerMask && (
+          <>
+            {onEditMaskOnCanvas && (
+              <div className="matte-span-full">
+                <button
+                  type="button"
+                  className={isEditingActiveMaskOnCanvas ? 'btn-primary' : 'btn-secondary'}
+                  aria-pressed={isEditingActiveMaskOnCanvas}
+                  // Where keyboard focus returns when mask editing ends on the canvas.
+                  data-mask-edit-entry
+                  disabled={!isEditingActiveMaskOnCanvas && activeLayerMask.locked === true}
+                  title={activeLayerMask.locked
+                    ? 'This mask is locked'
+                    : isEditingActiveMaskOnCanvas
+                      ? 'Return to layer editing (Esc)'
+                      : 'Move the mask path and its points directly on the canvas; the layer stays in place'}
+                  onClick={(event) => {
+                    if (isEditingActiveMaskOnCanvas) {
+                      onExitMaskEditing?.();
+                      return;
+                    }
+                    // A keyboard activation (no pointer: detail 0) continues on the points.
+                    if (event.detail === 0) requestMaskPointsFocus();
+                    onEditMaskOnCanvas(activeLayerMask.id);
+                  }}
+                >
+                  {isEditingActiveMaskOnCanvas ? 'Exit Mask Editing' : 'Edit on Canvas'}
+                </button>
+              </div>
+            )}
+            {/* C4 — the mask lock protects this mask's path and its path transform. */}
+            <label className="matte-toggle-field matte-span-full">
+              <input
+                type="checkbox"
+                checked={activeLayerMask.locked === true}
+                aria-describedby="layer-mask-lock-hint"
+                onChange={(event) => updateActiveLayerMask({ locked: event.target.checked })}
+              />
+              Lock path
+              <span id="layer-mask-lock-hint" className="matte-field-hint">
+                {activeLayerMask.locked ? 'The path and its transform cannot change; mode, feather and opacity still can.' : 'Protects the path from accidental edits.'}
+              </span>
+            </label>
+            {onTransformMaskPath && (
+              <div className="matte-span-full" role="group" aria-label="Transform the mask path" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                <span className="form-label" style={{ margin: 0 }}>PATH</span>
+                <button type="button" className="btn-secondary" aria-label="Rotate mask path 15 degrees counter-clockwise" disabled={activeLayerMask.locked === true} title="Rotate the path −15° about its centre" onClick={() => onTransformMaskPath(activeLayerMask.id, { rotation: -15 })}>⟲ 15°</button>
+                <button type="button" className="btn-secondary" aria-label="Rotate mask path 15 degrees clockwise" disabled={activeLayerMask.locked === true} title="Rotate the path +15° about its centre" onClick={() => onTransformMaskPath(activeLayerMask.id, { rotation: 15 })}>⟳ 15°</button>
+                <button type="button" className="btn-secondary" aria-label="Scale mask path down 10 percent" disabled={activeLayerMask.locked === true} title="Scale the path to 90% about its centre" onClick={() => onTransformMaskPath(activeLayerMask.id, { scaleX: 0.9, scaleY: 0.9 })}>90%</button>
+                <button type="button" className="btn-secondary" aria-label="Scale mask path up 10 percent" disabled={activeLayerMask.locked === true} title="Scale the path to 110% about its centre" onClick={() => onTransformMaskPath(activeLayerMask.id, { scaleX: 1.1, scaleY: 1.1 })}>110%</button>
+              </div>
+            )}
+            <div className="matte-field matte-compact-field">
+              <label className="form-label">MODE</label>
+              <select className="select-control" style={compactSelectStyle} value={activeLayerMask.mode} onChange={(event) => updateActiveLayerMask({ mode: event.target.value as LayerMask['mode'] })}>
+                <option value="add">Add</option>
+                <option value="subtract">Subtract</option>
+                <option value="intersect">Intersect</option>
+                <option value="difference">Difference</option>
+              </select>
+            </div>
+            <label className="matte-toggle-field matte-compact-field">
+              <input type="checkbox" checked={activeLayerMask.enabled !== false} onChange={(event) => updateActiveLayerMask({ enabled: event.target.checked })} />
+              Enabled
+            </label>
+            <div className="matte-field matte-compact-field">
+              <label className="form-label">FEATHER</label>
+              <input className="input-control" type="number" aria-label="Mask feather" min={0} step={0.5} value={activeLayerMask.feather ?? 0} onChange={(event) => updateActiveLayerMask({ feather: Number(event.target.value) })} />
+            </div>
+            <div className="matte-field matte-compact-field">
+              <label className="form-label">OPACITY</label>
+              <input className="input-control" type="number" aria-label="Mask opacity" min={0} max={1} step={0.05} value={activeLayerMask.opacity ?? 1} onChange={(event) => updateActiveLayerMask({ opacity: Number(event.target.value) })} />
+            </div>
+            <div className="matte-field matte-compact-field">
+              <label className="form-label">EXPANSION</label>
+              <input className="input-control" type="number" aria-label="Mask expansion" step={1} value={activeLayerMask.expansion ?? 0} onChange={(event) => updateActiveLayerMask({ expansion: Number(event.target.value) })} />
+            </div>
+            <div className="matte-span-full">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <label className="form-label">MASK PATH</label>
+              </div>
+              <BezierPathEditor
+                onInteractionStart={onInteractionStart}
+                onInteractionEnd={onInteractionEnd}
+                path={activeLayerMask.path}
+                aspectRatio={(selectedPart.width ?? 260) / Math.max(1, selectedPart.height ?? 160)}
+                topologyLockReason={maskPathTopologyLockReason({ maskPathChannels }, activeLayerMask.id)}
+                readOnlyReason={activeLayerMask.locked ? 'This mask is locked. Unlock its path to edit it.' : null}
+                {...(onMaskPathOrder ? { onOrderCommand: (command: PathOrderCommand, index: number | null) => onMaskPathOrder(activeLayerMask.id, command, index) } : {})}
+                {...(isEditingActiveMaskOnCanvas && onSelectMaskVertex
+                  ? { selectedIndex: maskVertexIndex ?? null, onSelectIndex: onSelectMaskVertex }
+                  : {})}
+                onChange={(path) => onChangeMaskPath
+                  ? onChangeMaskPath(activeLayerMask.id, path)
+                  : updateActiveLayerMask({ path })}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    </StyleCard>
+    {/* C5 — the effective relationship sits with the Track Matte card it
+        belongs to (after the layer's own masks), not ahead of them. */}
+    {showMatteSummary && (
+      <TrackMatteSummary
+        selectedPart={selectedPart}
+        characterParts={characterParts}
+        returnTargetId={matteReturnTargetId}
+        onSelectSource={onSelectMatteSource}
+        onBackToTarget={onBackToMatteTarget}
+        onSelectTarget={onSelectMatteTarget}
+      />
+    )}
+    <StyleCard title="TRACK MATTE" collapsible defaultOpen={false} retainKey="track-matte">
+      <div className="matte-control-grid">
+        <div className="matte-field matte-source-field matte-span-full">
+          <label className="form-label">SOURCE LAYER</label>
+          <div className="track-matte-source-row">
+          {/* C4 — the pick-whip: drag to a layer; Enter goes to the list below. */}
+          <TrackMattePickWhip
+            target={selectedPart}
+            characterParts={characterParts}
+            onPick={(sourceLayerId) => setTrackMatte(pickedTrackMatte(trackMatte, sourceLayerId))}
+            onKeyboardActivate={() => trackMatteSourceRef.current?.focus()}
+            onRefused={(reason) => onPickRefused?.(reason)}
+          />
+          <select
+            ref={trackMatteSourceRef}
+            className="select-control"
+            style={selectStyle}
+            aria-label="Track matte source"
+            value={trackMatte && !trackMatteSourceMissing ? trackMatte.sourceLayerId : ''}
+            onChange={(event) => {
+              const sourceLayerId = event.target.value;
+              setTrackMatte(sourceLayerId ? {
+                sourceLayerId,
+                mode: trackMatte?.mode ?? 'alpha',
+                enabled: trackMatte?.enabled !== false,
+                inverted: trackMatte?.inverted === true,
+                sourceVisible: trackMatte?.sourceVisible !== false,
+              } : undefined);
+            }}
+          >
+            <option value="">None</option>
+            {trackMatteSources.map((part) => <option key={part.id} value={part.id}>{`${part.name || part.id}${suppressedSourceIds.has(part.id) ? ' (hidden)' : ''}`}</option>)}
+          </select>
+          </div>
+        </div>
+        {trackMatteSourceMissing && (
+          <div className="matte-span-full" style={{ fontSize: 11, color: '#f59e0b' }}>
+            Missing source ({trackMatte!.sourceLayerId}) — track matte not applied
+          </div>
+        )}
+        {trackMatte && !trackMatteSourceMissing && (
+          <>
+            <div className="matte-field matte-compact-field">
+              <label className="form-label">MODE</label>
+              <select className="select-control" style={compactSelectStyle} value={trackMatte.mode} onChange={(event) => setTrackMatte({ ...trackMatte, mode: event.target.value as 'alpha' | 'luminance' })}>
+                <option value="alpha">Alpha</option>
+                <option value="luminance">Luminance</option>
+              </select>
+            </div>
+            <label className="matte-toggle-field matte-compact-field">
+              <input type="checkbox" checked={trackMatte.enabled !== false} onChange={(event) => setTrackMatte({ ...trackMatte, enabled: event.target.checked })} />
+              Enabled
+            </label>
+            <label className="matte-toggle-field matte-compact-field">
+              <input type="checkbox" checked={trackMatte.inverted === true} onChange={(event) => setTrackMatte({ ...trackMatte, inverted: event.target.checked })} />
+              Inverted
+            </label>
+            <label className="matte-toggle-field matte-compact-field">
+              <input type="checkbox" checked={trackMatte.sourceVisible !== false} onChange={(event) => setTrackMatte({ ...trackMatte, sourceVisible: event.target.checked })} />
+              Show source
+            </label>
+          </>
+        )}
+      </div>
+    </StyleCard>
+    <StyleCard title="LEGACY CLIP MATTE" collapsible defaultOpen={false} retainKey="legacy-clip-matte">
       {trackMatte && trackMatte.enabled !== false && (
         <div className="matte-span-full" style={{ fontSize: 11, color: '#f59e0b', marginBottom: 8 }}>
-          An enabled <strong>Track Matte V2</strong> relation is active on this layer, so these
-          settings are not applied. Clear it in the TRACK MATTE V2 card to use this matte.
+          These legacy settings are preserved but inactive while the <strong>Track Matte</strong> above
+          is enabled. Disable or clear the Track Matte to use them.
         </div>
       )}
       <div className="matte-control-grid">
@@ -552,119 +900,6 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
           </button>
         </div>
       )}
-    </StyleCard>
-    <StyleCard title="LAYER MASKS" collapsible defaultOpen={false}>
-      <div className="matte-control-grid">
-        <div className="matte-span-full" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {layerMasks.map((layerMask, index) => (
-            <button
-              key={layerMask.id}
-              type="button"
-              className={layerMask.id === activeLayerMask?.id ? 'btn-primary' : 'btn-secondary'}
-              onClick={() => setSelectedLayerMaskId(layerMask.id)}
-            >
-              {index + 1}. {layerMask.name}
-            </button>
-          ))}
-          <button type="button" className="btn-secondary" onClick={addLayerMask}>Add mask</button>
-        </div>
-        {activeLayerMask && (
-          <>
-            <div className="matte-field matte-compact-field">
-              <label className="form-label">MODE</label>
-              <select className="select-control" style={compactSelectStyle} value={activeLayerMask.mode} onChange={(event) => updateActiveLayerMask({ mode: event.target.value as LayerMask['mode'] })}>
-                <option value="add">Add</option>
-                <option value="subtract">Subtract</option>
-                <option value="intersect">Intersect</option>
-                <option value="difference">Difference</option>
-              </select>
-            </div>
-            <label className="matte-toggle-field matte-compact-field">
-              <input type="checkbox" checked={activeLayerMask.enabled !== false} onChange={(event) => updateActiveLayerMask({ enabled: event.target.checked })} />
-              Enabled
-            </label>
-            <div className="matte-field matte-compact-field">
-              <label className="form-label">FEATHER</label>
-              <input className="input-control" type="number" min={0} step={0.5} value={activeLayerMask.feather ?? 0} onChange={(event) => updateActiveLayerMask({ feather: Number(event.target.value) })} />
-            </div>
-            <div className="matte-field matte-compact-field">
-              <label className="form-label">OPACITY</label>
-              <input className="input-control" type="number" min={0} max={1} step={0.05} value={activeLayerMask.opacity ?? 1} onChange={(event) => updateActiveLayerMask({ opacity: Number(event.target.value) })} />
-            </div>
-            <div className="matte-field matte-compact-field">
-              <label className="form-label">EXPANSION</label>
-              <input className="input-control" type="number" step={1} value={activeLayerMask.expansion ?? 0} onChange={(event) => updateActiveLayerMask({ expansion: Number(event.target.value) })} />
-            </div>
-            <div className="matte-span-full">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <label className="form-label">MASK PATH</label>
-              </div>
-              <BezierPathEditor
-                onInteractionStart={onInteractionStart}
-                onInteractionEnd={onInteractionEnd}
-                path={activeLayerMask.path}
-                onChange={(path) => onChangeMaskPath
-                  ? onChangeMaskPath(activeLayerMask.id, path)
-                  : updateActiveLayerMask({ path })}
-              />
-            </div>
-          </>
-        )}
-      </div>
-    </StyleCard>
-    <StyleCard title="TRACK MATTE V2" collapsible defaultOpen={false}>
-      <div className="matte-control-grid">
-        <div className="matte-field matte-source-field matte-span-full">
-          <label className="form-label">SOURCE LAYER</label>
-          <select
-            className="select-control"
-            style={selectStyle}
-            aria-label="Track matte source"
-            value={trackMatte && !trackMatteSourceMissing ? trackMatte.sourceLayerId : ''}
-            onChange={(event) => {
-              const sourceLayerId = event.target.value;
-              setTrackMatte(sourceLayerId ? {
-                sourceLayerId,
-                mode: trackMatte?.mode ?? 'alpha',
-                enabled: trackMatte?.enabled !== false,
-                inverted: trackMatte?.inverted === true,
-                sourceVisible: trackMatte?.sourceVisible !== false,
-              } : undefined);
-            }}
-          >
-            <option value="">None</option>
-            {trackMatteSources.map((part) => <option key={part.id} value={part.id}>{`${part.name || part.id}${suppressedSourceIds.has(part.id) ? ' (hidden)' : ''}`}</option>)}
-          </select>
-        </div>
-        {trackMatteSourceMissing && (
-          <div className="matte-span-full" style={{ fontSize: 11, color: '#f59e0b' }}>
-            Missing source ({trackMatte!.sourceLayerId}) — track matte not applied
-          </div>
-        )}
-        {trackMatte && !trackMatteSourceMissing && (
-          <>
-            <div className="matte-field matte-compact-field">
-              <label className="form-label">MODE</label>
-              <select className="select-control" style={compactSelectStyle} value={trackMatte.mode} onChange={(event) => setTrackMatte({ ...trackMatte, mode: event.target.value as 'alpha' | 'luminance' })}>
-                <option value="alpha">Alpha</option>
-                <option value="luminance">Luminance</option>
-              </select>
-            </div>
-            <label className="matte-toggle-field matte-compact-field">
-              <input type="checkbox" checked={trackMatte.enabled !== false} onChange={(event) => setTrackMatte({ ...trackMatte, enabled: event.target.checked })} />
-              Enabled
-            </label>
-            <label className="matte-toggle-field matte-compact-field">
-              <input type="checkbox" checked={trackMatte.inverted === true} onChange={(event) => setTrackMatte({ ...trackMatte, inverted: event.target.checked })} />
-              Inverted
-            </label>
-            <label className="matte-toggle-field matte-compact-field">
-              <input type="checkbox" checked={trackMatte.sourceVisible !== false} onChange={(event) => setTrackMatte({ ...trackMatte, sourceVisible: event.target.checked })} />
-              Show source
-            </label>
-          </>
-        )}
-      </div>
     </StyleCard>
     </>
   );

@@ -33,4 +33,28 @@ describe('StyleCard unified Inspector disclosure', () => {
     expect(screen.getByRole('button', { name: 'Collapse TRIM PATH' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText('Trim content')).toBeVisible();
   });
+
+  it('C3 — a card with a retainKey keeps its open state across an unmount (Broadcast round trip); keys are independent', () => {
+    const cards = () => (
+      <>
+        <StyleCard title="APPEARANCE" collapsible defaultOpen={false} retainKey="appearance">A</StyleCard>
+        <StyleCard title="APPEARANCE" collapsible defaultOpen={false} retainKey="text-appearance">T</StyleCard>
+        <StyleCard title="EFFECTS" collapsible defaultOpen={false}>E</StyleCard>
+      </>
+    );
+    const first = render(cards());
+    fireEvent.click(screen.getAllByRole('button', { name: 'Expand APPEARANCE' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Expand EFFECTS' }));
+    first.unmount();
+
+    render(cards());
+    // The retained card is still open; the same title under another key is not.
+    expect(screen.getByText('A')).toBeVisible();
+    expect(screen.queryByText('T')).toBeNull();
+    // A card without a key keeps the per-mount default.
+    expect(screen.queryByText('E')).toBeNull();
+    // Closing is retained too.
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse APPEARANCE' }));
+    expect(screen.queryByText('A')).toBeNull();
+  });
 });

@@ -1,5 +1,6 @@
 import React from 'react';
-import type { BezierPath, CharacterPart, Transform } from '../../../types/animator';
+import type { PathOrderCommand } from '../../../utils/maskPathOrder';
+import type { BezierPath, CharacterPart, Track, Transform } from '../../../types/animator';
 import { StyleColorSection } from './style/StyleColorSection';
 import { StyleAppearanceSection } from './style/StyleAppearanceSection';
 import { isShapeAppearanceEligible } from '../../../utils/shapeAppearance';
@@ -9,6 +10,7 @@ import { StyleParticleSection } from './style/StyleParticleSection';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
 import type { SceneCoordinateSystem } from '../../../types/composition';
 import { StyleMatteSection } from './style/StyleMatteSection';
+import type { MaskDrawShape } from '../../../hooks/useMaskEditing';
 import { TrimPathSection, type TrimPathChannel } from './style/TrimPathSection';
 import { isTrimPathEligible } from '../../../utils/trimPath';
 
@@ -20,6 +22,26 @@ interface StyleTabProps {
   transform?: Transform;
   coordinateSystem?: SceneCoordinateSystem;
   onChangeMaskPath?: (maskId: string, path: BezierPath) => void;
+  /** Mask IDs the layer's track still animates; a new mask never reuses one. */
+  reservedMaskIds?: readonly string[];
+  /** WP-02: canvas mask editing of this layer. */
+  maskEditTargetId?: string | null;
+  onEditMaskOnCanvas?: (maskId: string) => void;
+  onExitMaskEditing?: () => void;
+  /** WP-03: drawing new masks and whole-path transforms. */
+  maskDrawShape?: MaskDrawShape | null;
+  onStartMaskDraw?: (shape: MaskDrawShape) => void;
+  onTransformMaskPath?: (maskId: string, change: { rotation?: number; scaleX?: number; scaleY?: number }) => void;
+  /** WP-04: Track Matte target/source navigation. */
+  matteReturnTargetId?: string | null;
+  onSelectMatteSource?: (targetId: string, sourceId: string) => void;
+  onBackToMatteTarget?: () => void;
+  onMaskPathOrder?: (maskId: string, command: PathOrderCommand, selectedIndex: number | null) => number | null | undefined;
+  onPickRefused?: (reason: string) => void;
+  onSelectMatteTarget?: (targetId: string) => void;
+  maskPathChannels?: Track['maskPathChannels'];
+  maskVertexIndex?: number | null;
+  onSelectMaskVertex?: (index: number | null) => void;
   /** Evaluated Trim Path at the current frame; the fields must show what the stage draws. */
   evaluatedTrim?: { start: number; end: number; offset: number };
   onUpdateTrimChannel?: (channel: TrimPathChannel, value: number) => void;
@@ -36,6 +58,22 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   transform,
   coordinateSystem,
   onChangeMaskPath,
+  reservedMaskIds,
+  maskEditTargetId,
+  onEditMaskOnCanvas,
+  onExitMaskEditing,
+  maskDrawShape,
+  onStartMaskDraw,
+  onTransformMaskPath,
+  matteReturnTargetId,
+  onSelectMatteSource,
+  onBackToMatteTarget,
+  onMaskPathOrder,
+  onPickRefused,
+  onSelectMatteTarget,
+  maskPathChannels,
+  maskVertexIndex,
+  onSelectMaskVertex,
   evaluatedTrim,
   onUpdateTrimChannel,
   onColorInteractionStart,
@@ -90,6 +128,22 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         onInteractionStart={onColorInteractionStart}
         onInteractionEnd={onColorInteractionEnd}
         onChangeMaskPath={onChangeMaskPath}
+        reservedMaskIds={reservedMaskIds}
+        maskEditTargetId={maskEditTargetId}
+        onEditMaskOnCanvas={onEditMaskOnCanvas}
+        onExitMaskEditing={onExitMaskEditing}
+        maskDrawShape={maskDrawShape}
+        onStartMaskDraw={onStartMaskDraw}
+        onTransformMaskPath={onTransformMaskPath}
+        matteReturnTargetId={matteReturnTargetId}
+        onSelectMatteSource={onSelectMatteSource}
+        onBackToMatteTarget={onBackToMatteTarget}
+        onMaskPathOrder={onMaskPathOrder}
+        onPickRefused={onPickRefused}
+        onSelectMatteTarget={onSelectMatteTarget}
+        maskPathChannels={maskPathChannels}
+        maskVertexIndex={maskVertexIndex}
+        onSelectMaskVertex={onSelectMaskVertex}
       />
       <StyleClonerSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
       <StyleParticleSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />

@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useAnimator } from '../../context/useAnimator';
 import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
+import { useLockedRegion } from '../../hooks/useLockedRegion';
 import { makeEmptyChannels } from '../../utils/defaults';
 import { evaluateLayerMasks } from '../../utils/evaluateLayerMasks';
+import { layerMaskIdsReferencedByTrack } from '../../utils/layerMasks';
+import { transformMaskPathInLayerSpace } from '../../utils/maskPathCreation';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { TransformTab } from './sections/TransformTab';
+import { LayerParentField } from './LayerParentField';
+import { editTargetText, resolveEditTarget } from '../../utils/editTarget';
 import { StyleTab } from './sections/StyleTab';
 import { evaluateTrimPath } from '../../utils/trimPath';
 import { DuplicateTab } from './sections/DuplicateTab';
@@ -13,6 +18,7 @@ import {
   Copy,
   Trash2,
   CopyPlus,
+  Lock,
 } from 'lucide-react';
 
 /**
@@ -49,17 +55,53 @@ export const DetailsPanel: React.FC = () => {
     tracks,
     activeTemplateId,
       coordinateSystem,
+    maskEditTarget,
+    enterMaskEditing,
+    exitMaskEditing,
+    maskDrawSession,
+    startMaskDraw,
+    matteReturnTargetId,
+    selectMatteSource,
+    backToMatteTarget,
+    handleSelectPart,
+    maskVertexIndex,
+    setMaskVertexIndex,
+    setLayersLocked,
+    applyMaskPathOrder,
   } = useAnimator();
 
   const [activeTabSection, setActiveTabSection] = useState<'edit' | 'duplicate'>('edit');
+  // C5 — the same "what am I editing" description the canvas strip shows; the
+  // Inspector names the session (mask path, mask drawing, matte source) under
+  // the layer it belongs to. Its controls stay where they are (the canvas
+  // strip's Finish, the mask row's toggle, the matte summary's Back), so no
+  // second copy of them is added here.
+  const editTarget = resolveEditTarget({
+    characterParts,
+    selectedPartId,
+    selectedPartIds: selectedPartId ? [selectedPartId] : [],
+    maskEditTarget,
+    maskDrawSession,
+    matteReturnTargetId,
+    activeTool: 'select',
+    pendingShapeType: null,
+    freeformPointCount: null,
+  });
+  const sessionTarget = editTarget && (editTarget.kind === 'mask' || editTarget.kind === 'drawing-mask' || editTarget.kind === 'matte-source') ? editTarget : null;
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const selectedTrack = selectedPartId ? tracks.find((track) => track.partId === selectedPartId) : undefined;
+  // WP-01: the Inspector shows the ACTIVE sequence's mask, as the renderer does.
   const evaluatedMasks = selectedPart && selectedTrack
-    ? evaluateLayerMasks(selectedPart, selectedTrack, currentFrame)
+    ? evaluateLayerMasks(selectedPart, selectedTrack, currentFrame, activeTemplateId || 'Sequence')
     : undefined;
   const inspectorPart = selectedPart && evaluatedMasks ? { ...selectedPart, masks: evaluatedMasks } : selectedPart;
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
+  // C4 — a locked layer is inspected, not edited: its controls are disabled
+  // (disclosure and navigation stay), and the banner offers the unlock.
+  const isLocked = Boolean(selectedTrack?.locked);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useLockedRegion(bodyRef, isLocked);
 
   /**
    * Trim Path authoring follows the same rule as every other scalar channel:
@@ -143,7 +185,7 @@ export const DetailsPanel: React.FC = () => {
       {selectedPart ? (
         <div className="details-actor-header">
           <div className="actor-title-box">
-            <span className="actor-main-name">{selectedPart.name}</span>
+            <span className="actor-main-name" title={selectedPart.name}>{selectedPart.name}</span>
             <span className="actor-type-label">{selectedPart.isGroup ? 'group' : selectedPart.type.replace('custom_', '')}</span>
           </div>
 
@@ -171,7 +213,8 @@ export const DetailsPanel: React.FC = () => {
               type="button"
               className="btn-icon-small danger"
               onClick={() => deletePart(selectedPart.id)}
-              title="Delete Actor Instance"
+              disabled={isLocked}
+              title={isLocked ? 'A locked layer cannot be deleted' : 'Delete Actor Instance'}
               aria-label="Delete Actor Instance"
             >
               <Trash2 size={12} />
@@ -184,12 +227,32 @@ export const DetailsPanel: React.FC = () => {
         </div>
       )}
 
+      {selectedPart && sessionTarget && (
+        <div className="details-edit-target" role="status" data-testid="inspector-edit-target" data-edit-target={sessionTarget.kind}>
+          <span className="edit-target-mode">{sessionTarget.mode}</span>
+          <span className="details-edit-target-path" title={editTargetText(sessionTarget)}>
+            {sessionTarget.path.join(' / ')}
+            {sessionTarget.detail ? <span className="details-edit-target-detail"> · {sessionTarget.detail}</span> : null}
+          </span>
+        </div>
+      )}
+
+      {selectedPart && isLocked && (
+        <div className="details-lock-banner" role="status" data-testid="details-lock-banner">
+          <Lock size={12} aria-hidden="true" />
+          <span>This layer is locked. Its properties are shown but cannot be changed.</span>
+          <button type="button" className="btn-secondary" onClick={() => setLayersLocked([selectedPart.id], false)}>
+            Unlock
+          </button>
+        </div>
+      )}
 
       {/* 4. Property Section Body */}
       {selectedPart && transform && (
-        <div className="details-body">
+        <div className="details-body" ref={bodyRef} data-locked={isLocked ? 'true' : undefined}>
           {activeTabSection === 'edit' && (
             <>
+              <LayerParentField part={selectedPart} characterParts={characterParts} tracks={tracks} />
               <TransformTab
                 selectedPart={selectedPart}
                 transform={transform}
@@ -222,6 +285,39 @@ export const DetailsPanel: React.FC = () => {
                 onUpdateTrimChannel={updateCurrentPropertyChannel}
                 onChangeMaskPath={(maskId, path) => {
                   if (selectedPartId) authorMaskPath(selectedPartId, maskId, path);
+                }}
+                reservedMaskIds={layerMaskIdsReferencedByTrack(selectedTrack)}
+                maskEditTargetId={maskEditTarget?.ownerPartId === selectedPart.id ? maskEditTarget.maskId : null}
+                onEditMaskOnCanvas={(maskId) => {
+                  const refusal = enterMaskEditing(selectedPart.id, maskId);
+                  if (refusal) showToast(refusal, 'error');
+                }}
+                onExitMaskEditing={exitMaskEditing}
+                maskDrawShape={maskDrawSession?.ownerPartId === selectedPart.id ? maskDrawSession.shape : null}
+                onStartMaskDraw={(shape) => {
+                  const refusal = startMaskDraw(selectedPart.id, shape);
+                  if (refusal) showToast(refusal, 'error');
+                }}
+                maskPathChannels={selectedTrack?.maskPathChannels}
+                maskVertexIndex={maskVertexIndex}
+                onSelectMaskVertex={setMaskVertexIndex}
+                matteReturnTargetId={matteReturnTargetId}
+                onSelectMatteSource={selectMatteSource}
+                onBackToMatteTarget={backToMatteTarget}
+                onPickRefused={(reason) => showToast(reason, 'info')}
+                onMaskPathOrder={(maskId, command, index) => {
+                  const outcome = applyMaskPathOrder(selectedPart.id, maskId, command, index);
+                  if (!outcome.applied) return undefined;
+                  if (maskEditTarget?.maskId === maskId) setMaskVertexIndex(outcome.selectedIndex);
+                  return outcome.selectedIndex;
+                }}
+                onSelectMatteTarget={(targetId) => handleSelectPart(targetId)}
+                onTransformMaskPath={(maskId, change) => {
+                  // The DISPLAYED (active-sequence, current-frame) path is the
+                  // one transformed, and the existing writer decides base vs key.
+                  const displayed = evaluatedMasks?.find((mask) => mask.id === maskId) ?? selectedPart.masks?.find((mask) => mask.id === maskId);
+                  if (!displayed) return;
+                  authorMaskPath(selectedPart.id, maskId, transformMaskPathInLayerSpace(displayed.path, selectedPart, change));
                 }}
                 onColorInteractionStart={startBatchInteraction}
                 onColorInteractionEnd={endBatchInteraction}

@@ -91,7 +91,7 @@ describe('K5 — V2 picker labels reflect WHO IS SUPPRESSED AS A SOURCE (target 
   ];
 
   function picker(view: ReturnType<typeof render>) {
-    fireEvent.click(view.getByRole('button', { name: 'Expand TRACK MATTE V2' }));
+    fireEvent.click(view.getByRole('button', { name: 'Expand TRACK MATTE' }));
     return view.container.querySelector('select[aria-label="Track matte source"]') as HTMLSelectElement;
   }
 

@@ -131,8 +131,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .motion-design-right-sidebar { background: #10151c; border-left-color: var(--kcs-border-default); box-shadow: -8px 0 24px rgba(0,0,0,.2); }
 .outliner-dock { background: #11161e; border-bottom-color: var(--kcs-border-default); }
 .details-dock { background: #0e131a; }
-.sidebar-pane-divider { height: 4px; background: #080b10; border-color: var(--kcs-border-subtle); }
-.sidebar-pane-divider:hover { background: var(--kcs-accent); }
+/* C5 — the split is a focusable splitter: a short grip shows it can be moved, and
+   keyboard focus gets the same ring as every other control. */
+.sidebar-pane-divider { position: relative; height: 6px; background: #080b10; border-color: var(--kcs-border-subtle); outline: none; }
+.sidebar-pane-divider::after { content: ''; position: absolute; left: 50%; top: 2px; width: 28px; height: 2px; margin-left: -14px; border-radius: 1px; background: var(--kcs-border-strong); pointer-events: none; }
+.sidebar-pane-divider:hover, .sidebar-pane-divider:focus-visible { background: var(--kcs-bg-active); }
+.sidebar-pane-divider:hover::after, .sidebar-pane-divider:focus-visible::after { background: var(--kcs-accent); }
+.sidebar-pane-divider:focus-visible { box-shadow: inset 0 0 0 2px var(--kcs-border-focus); }
 .outliner-header, .outliner-table-header { background: #151b23; border-bottom-color: var(--kcs-border-subtle); }
 .outliner-title { letter-spacing: .08em; font-size: 10px; }
 .outliner-search-box { background: #0d1218; }
@@ -165,7 +170,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 @media (max-width: 800px) {
   .header-brand { flex-basis: auto; }
-  .header-center-controls { order: 3; flex-basis: 100%; }
+  /* C3: the mode switch is no longer forced onto a row of its own; with the
+     icon-only header actions (HeaderBar.css, ≤ 860 px) the header fits one row,
+     and it still wraps naturally when it really does not fit. */
+  .header-center-controls { flex: 0 0 auto; }
   .header-bar { height: auto; min-height: 48px; padding-block: 4px; }
   .app-container { --left-drawer-width: 196px; --right-inspector-width: 286px; }
 }
@@ -1282,4 +1290,43 @@ button:disabled {
 .header-center-controls > div > button:focus-visible {
   outline: 2px solid var(--kcs-border-focus);
   outline-offset: 2px;
+}
+
+/* WP-06 — narrow windows (≤ 1100 px). The 79 px header frame is kept; what
+   changes is how its actions use it. The brand no longer reserves a third of
+   the bar for two small controls, and the restore-provenance chip truncates
+   its label (the full text stays in its tooltip and accessible name), so the
+   actions fit in two rows instead of three and no longer paint over the
+   authoring toolbar's crop controls. */
+@media (max-width: 1100px) {
+  .header-brand { flex: 0 1 auto; }
+  .restored-from-local-badge { max-width: 132px; min-width: 0; }
+  .restored-from-local-badge span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+/* WP-06 — below 1180 px the timeline header wraps its actions band onto a
+   second row (see SequencerTimeline.css); the fixed 44 px header height would
+   clip that row, hiding Motion Curves, Undo/Redo and zoom. */
+@media (max-width: 1180px) {
+  .timeline-header { height: auto; row-gap: 6px; }
+}
+
+/* C4 — keyboard focus on a canvas mask point: a visible ring, screen-constant. */
+.mask-vertex-hit:focus {
+  outline: none;
+}
+.mask-vertex-hit:focus-visible {
+  stroke: #ffffff;
+  stroke-width: 2px;
+  stroke-dasharray: 3 2;
+  vector-effect: non-scaling-stroke;
+}
+
+/*
+ * C4 — compact header only where height is scarce: on a short window (a
+ * laptop at 768 px, a 200 %-zoomed browser) the 79 px shell frame gives its
+ * spare 31 px to the stage. Tall windows keep the 79 px frame.
+ */
+@media (max-height: 820px) {
+  .header-bar { height: auto; min-height: 48px; padding-block: 4px; }
 }

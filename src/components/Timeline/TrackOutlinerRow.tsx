@@ -9,6 +9,10 @@ import { InlineRename } from '../Shared/InlineRename';
 
 interface TrackOutlinerRowProps {
   track: Track;
+  /** WP-05: the layer's derived display ordinal (shared with the Outliner). */
+  ordinal?: number;
+  /** Total layer count, for the ordinal's description. */
+  layerCount?: number;
   /** BUGFIX: parts resolve the real element name — the track only carries
    *  partId (track.name may be a generated "Track part_x" placeholder after
    *  import, since the name field is not serialized). */
@@ -77,8 +81,10 @@ const activateOnKey = (toggle: () => void) => (event: React.KeyboardEvent) => {
  * accessible name, so a Transform row can never read as an orphan that belongs
  * to no layer (or to the timeline as a whole).
  */
-export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
+const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
   track,
+  ordinal,
+  layerCount,
   parts,
   isChildLayer,
   isSelected,
@@ -194,9 +200,11 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
           {/* K1 (D2) — the stopwatch owns the property's animation state; the
               plus below stays the "add a key here" action it has always been.
               K3: a mask PATH row shows its geometry keyframes and navigates
-              them, but its keys are authored on the path lane — the stopwatch
-              and the plus have no meaning for a shape. */}
-          {!isPathChannel && (
+              them. WP-03: its stopwatch arms the path at the playhead (the
+              shape shown there becomes the first key) and disarms it with the
+              same confirmation; new path keys come from editing the path on
+              the canvas or in the Inspector, so the plus stays inert. */}
+          {(
           <button
             className="btn-icon ue-channel-stopwatch"
             data-property-channel={ch}
@@ -281,7 +289,7 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
   );
 
   return (
-    <div key={track.id} className="ue-track-group">
+    <div key={track.id} className="ue-track-group" data-track-row-id={track.id} data-track-part-id={track.partId}>
       {/* ── LAYER ROW ── */}
       <div
         className={`ue-track-row ${isSelected ? 'selected' : ''}`}
@@ -302,6 +310,15 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
           {isTrackExpanded ? <ChevronDown size={12} aria-hidden="true" /> : <ChevronRight size={12} aria-hidden="true" />}
         </button>
 
+        {ordinal !== undefined && (
+          <span
+            className="layer-ordinal"
+            data-layer-ordinal={ordinal}
+            title={`Position ${ordinal}${layerCount ? ` of ${layerCount}` : ''} in the layer list — a display number, not an ID`}
+          >
+            {ordinal}
+          </span>
+        )}
         <span className="ue-color-dot" style={{ backgroundColor: track.color }} />
 
         {editingPartId === track.partId ? (
@@ -345,7 +362,7 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
           </button>
 
           {/* 3. Lock Button */}
-          <button className="btn-icon track-icon-btn" onClick={(e) => { e.stopPropagation(); onToggleLock(track.id); }} title={track.locked ? 'Unlock' : 'Lock Layer'}>
+          <button type="button" className={`btn-icon track-icon-btn${track.locked ? ' is-locked' : ''}`} onClick={(e) => { e.stopPropagation(); onToggleLock(track.id); }} title={track.locked ? 'Unlock (Ctrl+L)' : 'Lock Layer (Ctrl+L)'} aria-label={`${track.locked ? 'Unlock' : 'Lock'} ${displayName}`} aria-pressed={Boolean(track.locked)}>
             {track.locked ? <Lock size={12} className="text-gold" /> : <Unlock size={12} />}
           </button>
 
@@ -371,6 +388,8 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
           </button>
 
           {/* 4. Add Keyframe Button */}
+          {/* The frame is resolved by the parent at call time: a collapsed row
+              is not re-rendered for every playhead frame (C3). */}
           <button className="btn-icon track-add-kf-btn" onClick={(e) => { e.stopPropagation(); onAddKeyframe(track.id, currentFrame); }} title="Add Composite Keyframe">
             <Plus size={12} />
           </button>
@@ -439,3 +458,27 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
     </div>
   );
 };
+
+/** The previous/next keyframe a collapsed row offers at `frame` — all it shows of the playhead. */
+const collapsedRowNavigation = (props: TrackOutlinerRowProps): string => {
+  const frames = resolveLayerKeyframeFrames(props.track, props.activeTemplateId || 'Sequence', resolveAuthoredBasePose(props.parts, props.track.partId));
+  return `${resolveAdjacentKeyframeFrame(frames, props.currentFrame, 'previous')}:${resolveAdjacentKeyframeFrame(frames, props.currentFrame, 'next')}`;
+};
+
+/**
+ * C3 — a playhead frame re-renders only what shows the frame. Every prop is
+ * compared by identity (the parent passes stable actions that read the latest
+ * handlers at call time), except the frame: an expanded row shows per-channel
+ * state at the frame, a collapsed one only its previous/next keyframe
+ * navigation, so it re-renders when that navigation changes.
+ */
+const sameRowProps = (prev: TrackOutlinerRowProps, next: TrackOutlinerRowProps): boolean => {
+  const keys = Object.keys(next) as (keyof TrackOutlinerRowProps)[];
+  if (keys.length !== Object.keys(prev).length) return false;
+  if (keys.some((key) => key !== 'currentFrame' && prev[key] !== next[key])) return false;
+  if (prev.currentFrame === next.currentFrame) return true;
+  if (next.track.expanded === true) return false;
+  return collapsedRowNavigation(prev) === collapsedRowNavigation(next);
+};
+
+export const TrackOutlinerRow = React.memo(TrackOutlinerRowView, sameRowProps);

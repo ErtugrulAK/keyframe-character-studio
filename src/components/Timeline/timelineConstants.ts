@@ -58,6 +58,26 @@ export const OUTLINER_MAX_WIDTH = 520;
 export const TIMELINE_COLLAPSED_HEIGHT = 39;
 
 /**
+ * C4 — the height the timeline OPENS with (a session's first mount only; the
+ * user's later resize or collapse is kept for the rest of the session). A tall
+ * window keeps the historic 320 px; a shorter one gives the timeline about a
+ * third of its height, so the stage and the layer list are not squeezed by a
+ * fixed 320 px; a very short window (a 200 %-zoomed browser) opens the timeline
+ * collapsed to its strip — one click on the strip expands it.
+ */
+export const TALL_WINDOW_MIN_HEIGHT = 860;
+export const SHORT_WINDOW_TIMELINE_RATIO = 0.34;
+export const COLLAPSED_OPENING_MAX_WINDOW_HEIGHT = 520;
+
+export const resolveOpeningTimelineHeight = (windowHeight: number): number => (
+  windowHeight >= TALL_WINDOW_MIN_HEIGHT
+    ? TIMELINE_DEFAULT_HEIGHT
+    : Math.max(TIMELINE_MIN_HEIGHT, Math.min(TIMELINE_DEFAULT_HEIGHT, Math.round(windowHeight * SHORT_WINDOW_TIMELINE_RATIO)))
+);
+
+export const shouldOpenTimelineCollapsed = (windowHeight: number): boolean => windowHeight < COLLAPSED_OPENING_MAX_WINDOW_HEIGHT;
+
+/**
  * R5-03 — how long the collapse/expand edge takes. Short enough to read as one
  * motion of the same edge, long enough that the eye follows the strip instead of
  * seeing it jump.

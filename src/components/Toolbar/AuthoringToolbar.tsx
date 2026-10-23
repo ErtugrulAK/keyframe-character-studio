@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import {
+  Combine,
   AlignCenterHorizontal,
   AlignCenterVertical,
   AlignEndHorizontal,
@@ -14,6 +15,7 @@ import {
   Circle,
   Compass,
   Crop,
+  Crosshair,
   FlipHorizontal2,
   FlipVertical2,
   Grid,
@@ -42,7 +44,7 @@ import { useLayerGrouping } from '../../hooks/useLayerGrouping';
 import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
 import { useVectorArrangeAuthoring } from '../../hooks/useVectorArrangeAuthoring';
 import { BooleanOperationIcon } from '../Inspector/BooleanOperationIcon';
-import { ToolbarMenu } from './ToolbarMenu';
+import { ToolbarMenu, type ToolbarMenuItem } from './ToolbarMenu';
 import type { BooleanOperation } from '../../utils/booleanGeometry';
 import type { AlignEdge } from '../../utils/vectorArrange';
 import {
@@ -172,6 +174,8 @@ export const AuthoringToolbar: React.FC = () => {
     setActiveTool,
     showGrid,
     setShowGrid,
+    showCoordinateOverlay,
+    setShowCoordinateOverlay,
     snapEnabled,
     setSnapEnabled,
     cropMode,
@@ -187,6 +191,8 @@ export const AuthoringToolbar: React.FC = () => {
     selectedPartId,
     characterParts,
     armShapeCreation,
+    clearShapeCreation,
+    pendingShapeType,
     addCustomPart,
   } = useAnimator();
   const {
@@ -213,7 +219,39 @@ export const AuthoringToolbar: React.FC = () => {
   // actions carry the availability.
   const booleanReady = Boolean(selectedBooleanGroup) || booleanEligibleParts.length >= 2;
   const penActive = activeTool === 'freeform_draw';
+  // C2: a creation button shows the mode the stage is really in, and a second
+  // press disarms it (back to Select) — the toolbar never disagrees with the stage.
+  const rectangleArmed = activeTool === 'shape_create' && pendingShapeType === 'custom_rect';
+  const circleArmed = activeTool === 'shape_create' && pendingShapeType === 'custom_circle';
   const activeCanvasToolIndex = CANVAS_TOOLS.indexOf(activeTool as 'select' | 'pan');
+
+  // C3 — the narrow strip's two menus: the same commands as the wide bands.
+  const alignMenuItems: ToolbarMenuItem[] = [
+    ...[...ALIGN_EDGE_ITEMS, ...CENTER_ITEMS].map(({ id, label, note, icon }) => ({
+      id: `align-${id}`,
+      label,
+      icon,
+      run: () => arrange.align(id),
+      disabled: !arrange.canAlign,
+      title: arrange.canAlign ? `${label} — ${note}` : `${label} needs two measurable layers`,
+    })),
+    ...DISTRIBUTE_ITEMS.map(({ axis, label, note, icon }) => ({
+      id: `distribute-${axis}`,
+      label,
+      icon,
+      run: () => arrange.distributeGap(axis),
+      disabled: !arrange.canDistribute,
+      title: arrange.canDistribute ? `${label} — ${note}` : `${label} needs three measurable layers`,
+    })),
+  ];
+  const arrangeMenuItems: ToolbarMenuItem[] = [
+    { id: 'rotate-ccw', label: 'Rotate counter-clockwise', icon: RotateCcw, run: () => arrange.rotate('ccw'), disabled: !arrange.canTransform, keyshortcuts: ariaKeyshortcuts('rotate-ccw', platform), title: arrange.canTransform ? `Rotate the selection 90° counter-clockwise (${hint('rotate-ccw')})` : 'Rotate needs a selected layer' },
+    { id: 'rotate-cw', label: 'Rotate clockwise', icon: RotateCw, run: () => arrange.rotate('cw'), disabled: !arrange.canTransform, keyshortcuts: ariaKeyshortcuts('rotate-cw', platform), title: arrange.canTransform ? `Rotate the selection 90° clockwise (${hint('rotate-cw')})` : 'Rotate needs a selected layer' },
+    { id: 'flip-h', label: 'Flip horizontal', icon: FlipHorizontal2, run: () => arrange.flip('horizontal'), disabled: !arrange.canTransform, keyshortcuts: ariaKeyshortcuts('flip-horizontal', platform), title: arrange.canTransform ? `Mirror the selection horizontally about its centre (${hint('flip-horizontal')})` : 'Flip needs a selected layer' },
+    { id: 'flip-v', label: 'Flip vertical', icon: FlipVertical2, run: () => arrange.flip('vertical'), disabled: !arrange.canTransform, keyshortcuts: ariaKeyshortcuts('flip-vertical', platform), title: arrange.canTransform ? `Mirror the selection vertically about its centre (${hint('flip-vertical')})` : 'Flip needs a selected layer' },
+    { id: 'bring-forward', label: 'Bring forward', icon: ArrowUp, run: () => { if (selectedPart) handleZIndexChange(selectedPart.zIndex + 1); }, disabled: !selectedPart, title: selectedPart ? 'Bring layer forward by one' : 'Arrange needs a selected layer' },
+    { id: 'send-backward', label: 'Send backward', icon: ArrowDown, run: () => { if (selectedPart) handleZIndexChange(Math.max(1, selectedPart.zIndex - 1)); }, disabled: !selectedPart, title: selectedPart ? 'Send layer backward by one' : 'Arrange needs a selected layer' },
+  ];
 
   /** One Tab stop for the tool pair; Arrow/Home/End move it like the stage did. */
   const handleToolKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -271,19 +309,27 @@ export const AuthoringToolbar: React.FC = () => {
       <div className="authoring-toolbar-group" role="group" aria-label="Create">
         <button
           type="button"
-          className="authoring-toolbar-button"
+          className={`authoring-toolbar-button${rectangleArmed ? ' active' : ''}`}
           aria-label="Add rectangle"
-          title={`Add a rectangle (${hint('create-rectangle')}), then drag on the stage to place it`}
-          onClick={() => armShapeCreation('custom_rect', 'Rectangle')}
+          aria-keyshortcuts={ariaKeyshortcuts('create-rectangle', platform)}
+          aria-pressed={rectangleArmed}
+          title={rectangleArmed
+            ? 'Rectangle armed: drag on the stage to place it (press again or Esc to stop)'
+            : `Add a rectangle (${hint('create-rectangle')}), then drag on the stage to place it`}
+          onClick={() => (rectangleArmed ? clearShapeCreation() : armShapeCreation('custom_rect', 'Rectangle'))}
         >
           <Square />
         </button>
         <button
           type="button"
-          className="authoring-toolbar-button"
+          className={`authoring-toolbar-button${circleArmed ? ' active' : ''}`}
           aria-label="Add circle"
-          title={`Add a circle (${hint('create-circle')}), then drag on the stage to place it`}
-          onClick={() => armShapeCreation('custom_circle', 'Circle')}
+          aria-keyshortcuts={ariaKeyshortcuts('create-circle', platform)}
+          aria-pressed={circleArmed}
+          title={circleArmed
+            ? 'Circle armed: drag on the stage to place it (press again or Esc to stop)'
+            : `Add a circle (${hint('create-circle')}), then drag on the stage to place it`}
+          onClick={() => (circleArmed ? clearShapeCreation() : armShapeCreation('custom_circle', 'Circle'))}
         >
           <Circle />
         </button>
@@ -291,6 +337,7 @@ export const AuthoringToolbar: React.FC = () => {
           type="button"
           className="authoring-toolbar-button"
           aria-label="Add text"
+          aria-keyshortcuts={ariaKeyshortcuts('create-text', platform)}
           title={`Add a text layer (${hint('create-text')})`}
           onClick={() => addCustomPart('custom_text', 'Text')}
         >
@@ -300,8 +347,11 @@ export const AuthoringToolbar: React.FC = () => {
           type="button"
           className={`authoring-toolbar-button${penActive ? ' active' : ''}`}
           aria-label="Pen"
+          aria-keyshortcuts={ariaKeyshortcuts('tool-pen', platform)}
           aria-pressed={penActive}
-          title={penActive ? 'Stop drawing a path (Esc)' : `Draw a freeform path (${hint('tool-pen')})`}
+          title={penActive
+            ? 'Leave the Pen (press again). A drawing with 3+ points is kept as a shape; Esc discards it instead'
+            : `Draw a freeform path (${hint('tool-pen')}). Click the first point, double-click or press Enter to finish`}
           onClick={() => setActiveTool(penActive ? 'select' : 'freeform_draw')}
         >
           <PenTool />
@@ -310,6 +360,11 @@ export const AuthoringToolbar: React.FC = () => {
 
       <span className="authoring-toolbar-divider" aria-hidden="true" />
 
+      {/*
+        C4 — at ≤ 860 px (AuthoringToolbar.css) the Boolean band folds into one
+        menu (below) with the same commands, availability and pressed state.
+      */}
+      <div className="authoring-toolbar-wide-860">
       <div className="authoring-toolbar-group" role="group" aria-label="Boolean operations">
         {BOOLEAN_OPERATIONS.map((operation) => {
           const active = selectedBooleanGroup?.booleanOperation === operation;
@@ -346,6 +401,30 @@ export const AuthoringToolbar: React.FC = () => {
           <Unlink />
         </button>
       </div>
+      </div>
+      <div className="authoring-toolbar-compact-860">
+        <div className="authoring-toolbar-group" role="group" aria-label="Boolean">
+          <ToolbarMenu
+            label="Boolean operations"
+            icon={Combine}
+            active={Boolean(selectedBooleanGroup)}
+            disabled={!booleanReady && !selectedBooleanGroup}
+            title={selectedBooleanGroup ? 'Switch or dissolve the Boolean' : booleanReady ? 'Create a Boolean from the selection' : 'Boolean needs two compatible layers'}
+            items={[
+              ...BOOLEAN_OPERATIONS.map((operation) => ({
+                id: `boolean-${operation}`,
+                label: `Boolean ${BOOLEAN_LABEL[operation]}`,
+                icon: Combine,
+                checked: selectedBooleanGroup?.booleanOperation === operation,
+                disabled: !booleanReady,
+                title: booleanReady ? undefined : `${BOOLEAN_LABEL[operation]} needs two compatible layers`,
+                run: () => (selectedBooleanGroup ? updateBooleanOperation(operation) : createBooleanGroup(operation)),
+              })),
+              { id: 'boolean-dissolve', label: 'Dissolve Boolean', icon: Unlink, disabled: !selectedBooleanGroup, title: selectedBooleanGroup ? undefined : 'Dissolve needs a Boolean group', run: dissolveBooleanGroup },
+            ]}
+          />
+        </div>
+      </div>
 
       <span className="authoring-toolbar-divider" aria-hidden="true" />
 
@@ -376,6 +455,14 @@ export const AuthoringToolbar: React.FC = () => {
         </button>
       </div>
 
+      {/*
+        C3 — the five arrange bands below are shown as they are on a wide strip.
+        On a narrow one (≤ 1200 px, AuthoringToolbar.css) they fold into the two
+        menus after this block, which run the SAME commands with the same labels
+        and the same availability — nothing is dropped, only regrouped. Each
+        variant carries its own dividers, so every band still sits behind one.
+      */}
+      <div className="authoring-toolbar-wide-bands">
       <span className="authoring-toolbar-divider" aria-hidden="true" />
 
       <div className="authoring-toolbar-group" role="group" aria-label="Align">
@@ -517,6 +604,28 @@ export const AuthoringToolbar: React.FC = () => {
       </div>
 
       <span className="authoring-toolbar-divider" aria-hidden="true" />
+      </div>
+
+      <div className="authoring-toolbar-narrow-bands">
+      <span className="authoring-toolbar-divider" aria-hidden="true" />
+      <div className="authoring-toolbar-group" role="group" aria-label="Align and arrange">
+        <ToolbarMenu
+          label="Align and distribute"
+          icon={AlignStartVertical}
+          disabled={!alignMenuItems.some((item) => !item.disabled)}
+          title={arrange.canAlign ? 'Align, center or distribute the selection' : 'Align needs two measurable layers'}
+          items={alignMenuItems}
+        />
+        <ToolbarMenu
+          label="Arrange and rotate"
+          icon={RotateCw}
+          disabled={!arrangeMenuItems.some((item) => !item.disabled)}
+          title={selectedPart ? 'Rotate, flip or change the layer order' : 'Arrange needs a selected layer'}
+          items={arrangeMenuItems}
+        />
+      </div>
+      <span className="authoring-toolbar-divider" aria-hidden="true" />
+      </div>
 
       {/*
         Stage crop / region of interest. The mode and the region are TRANSIENT
@@ -527,6 +636,7 @@ export const AuthoringToolbar: React.FC = () => {
         position animates away from the region will still leave the new frame at
         the frames that move it.
       */}
+      <div className="authoring-toolbar-wide-860">
       <div className="authoring-toolbar-group" role="group" aria-label="Crop">
         <button
           type="button"
@@ -608,6 +718,16 @@ export const AuthoringToolbar: React.FC = () => {
         </button>
         <button
           type="button"
+          className={`authoring-toolbar-button${showCoordinateOverlay ? ' active' : ''}`}
+          aria-label="Toggle coordinate overlay"
+          aria-pressed={showCoordinateOverlay}
+          title={showCoordinateOverlay ? 'Hide X/Y coordinate overlay' : 'Show X/Y coordinate overlay'}
+          onClick={() => setShowCoordinateOverlay(!showCoordinateOverlay)}
+        >
+          <Crosshair />
+        </button>
+        <button
+          type="button"
           className={`authoring-toolbar-button${snapEnabled ? ' active' : ''}`}
           aria-label="Toggle snapping"
           aria-pressed={snapEnabled}
@@ -622,6 +742,7 @@ export const AuthoringToolbar: React.FC = () => {
           type="button"
           className="authoring-toolbar-button"
           aria-label="Zoom out"
+          aria-keyshortcuts={ariaKeyshortcuts('zoom-out', platform)}
           title={`Zoom out (${hint('zoom-out')})`}
           onClick={() => dispatchViewportCommand('zoom-out')}
         >
@@ -640,11 +761,49 @@ export const AuthoringToolbar: React.FC = () => {
           type="button"
           className="authoring-toolbar-button"
           aria-label="Zoom in"
+          aria-keyshortcuts={ariaKeyshortcuts('zoom-in', platform)}
           title={`Zoom in (${hint('zoom-in')})`}
           onClick={() => dispatchViewportCommand('zoom-in')}
         >
           <ZoomIn />
         </button>
+      </div>
+      </div>
+      {/*
+        C4 — at ≤ 860 px the Crop, Crop to content and View bands fold into two
+        menus that run the same commands; on/off commands show their state.
+      */}
+      <div className="authoring-toolbar-compact-860">
+        <div className="authoring-toolbar-group" role="group" aria-label="Crop and view">
+          <ToolbarMenu
+            label="Crop"
+            icon={Crop}
+            active={cropMode}
+            disabled={false}
+            title={cropMode ? 'Crop mode is on — apply or clear the region, or turn the mode off' : 'Crop the stage to a region or to content'}
+            items={[
+              { id: 'crop-mode', label: 'Crop / region of interest', icon: Crop, checked: cropMode, run: () => setCropMode(!cropMode) },
+              { id: 'crop-apply', label: 'Apply crop', icon: Check, disabled: !cropRegion || Boolean(stageCropBlockReason), title: stageCropBlockReason ?? (cropRegion ? undefined : 'Draw a crop region on the stage first'), run: () => { applyStageCrop(); } },
+              { id: 'crop-clear', label: 'Clear crop region', icon: X, disabled: !cropRegion, title: cropRegion ? undefined : 'There is no crop region to clear', run: () => clearStageCropRegion() },
+              { id: 'crop-to-selection', label: 'Crop to current selection at current frame', icon: SquareDashed, disabled: !canCropStageToSelection, run: cropStageToSelection },
+              { id: 'crop-to-visible-content', label: 'Crop to visible content at current frame', icon: Maximize, disabled: !canCropStageToVisibleContent, run: cropStageToVisibleContent },
+            ]}
+          />
+          <ToolbarMenu
+            label="View"
+            icon={Grid}
+            disabled={false}
+            title="Grid, snapping and zoom"
+            items={[
+              { id: 'view-grid', label: 'Toggle grid', icon: Grid, checked: showGrid, run: () => setShowGrid(!showGrid) },
+              { id: 'view-coordinates', label: 'Toggle coordinate overlay', icon: Crosshair, checked: showCoordinateOverlay, run: () => setShowCoordinateOverlay(!showCoordinateOverlay) },
+              { id: 'view-snap', label: 'Toggle snapping', icon: Magnet, checked: snapEnabled, run: () => setSnapEnabled(!snapEnabled) },
+              { id: 'view-zoom-out', label: 'Zoom out', icon: ZoomOut, keyshortcuts: ariaKeyshortcuts('zoom-out', platform), run: () => dispatchViewportCommand('zoom-out') },
+              { id: 'view-reset', label: 'Reset view', icon: Compass, run: () => dispatchViewportCommand('reset-view') },
+              { id: 'view-zoom-in', label: 'Zoom in', icon: ZoomIn, keyshortcuts: ariaKeyshortcuts('zoom-in', platform), run: () => dispatchViewportCommand('zoom-in') },
+            ]}
+          />
+        </div>
       </div>
     </div>
   );

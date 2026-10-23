@@ -4,6 +4,7 @@ import type { KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, KEYFRAME_DRAG_THRESHOLD_PX, KEYFRAME_GLYPH_GAP_PX, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/channelKeyframeGroups';
 import { hasChannelDataForTemplate, resolveConnectorSegments } from '../../utils/timelineMetrics';
+import { resolveLaneRows } from './timelineLaneLayout';
 
 interface TrackLaneProps {
   track: Track;
@@ -123,7 +124,7 @@ const diamondKeyboardProps = (
   },
 });
 
-export const TrackLane: React.FC<TrackLaneProps> = ({
+const TrackLaneView: React.FC<TrackLaneProps> = ({
   track,
   basePose,
   isSelected,
@@ -151,9 +152,6 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
   onFrameFromClientX,
 }) => {
   const isTrackExpanded = track.expanded === true;
-  const isPositionExpanded = isGroupExpanded(`${track.id}_position`, true);
-  const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
-  const isTrimPathExpanded = isGroupExpanded(`${track.id}_trim`, true);
 
   // M27 — minimal keyframe context menu (right-click on any keyframe).
   // The menu exposes "Duplicate Keyframes" (whole frame-group, 27A helper)
@@ -466,32 +464,18 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
           are the layer's own properties, and Trim Path is their peer. */}
       {isTrackExpanded && (
         <div className="ue-channel-lanes">
-          {/* Position Header Lane Spacer */}
-          <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
-          {isPositionExpanded && ['x', 'y'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
-
-          {/* Rotation is a leaf of the tree, so it owns exactly one lane. */}
-          {renderChannelLane('rotation')}
-
-          {/* Scale Sub-Group */}
-          <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
-          {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
-
-          {/* Opacity: the outliner lists it between the scale group and the
-              trim group, so the lane sits in exactly the same place — the
-              property tree and the lanes stay row-for-row aligned, and
-              authored opacity keys are visible on the timeline. */}
-          {renderChannelLane('opacity')}
-
-          {/* Trim Path is a peer of the transform channels in the tree, so its lanes are too. */}
-          <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
-          {isTrimPathExpanded && ['trimPathStart', 'trimPathEnd', 'trimPathOffset'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
-
-          {/* K3 — V6 Layer Mask channels share the track and evaluator, and
-              their lanes sit exactly where the tree lists them: after Trim
-              Path, one lane per authored property per mask. */}
-          {Object.keys(track.maskChannels ?? {}).map((channel) => renderChannelLane(channel as AnimationChannel))}
-          {Object.keys(track.maskPathChannels ?? {}).map((channel) => renderChannelLane(channel as LayerMaskPathChannel))}
+          {/* The row order (Position header, x/y, Rotation, Scale header, …,
+              Opacity, Trim Path, then the K3 mask channels) is
+              `resolveLaneRows` — the layout the timeline marquee hit-tests (C5),
+              so the property tree, the lanes and the marquee stay row-for-row
+              aligned. */}
+          {resolveLaneRows(track, isGroupExpanded).map((row) => {
+            if (row.kind === 'track') return null;
+            if (row.kind === 'header') {
+              return <div key={`header-${row.group}`} className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />;
+            }
+            return renderChannelLane(row.channel);
+          })}
         </div>
       )}
 
@@ -609,3 +593,9 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
     </div>
   );
 };
+
+/**
+ * C3 — a lane draws no playhead state, so it re-renders only when its own
+ * props change; the parent passes stable actions and a memoized base pose.
+ */
+export const TrackLane = React.memo(TrackLaneView);

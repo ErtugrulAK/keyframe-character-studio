@@ -1,7 +1,7 @@
 // Keyframe Studio - 2D Motion Sequencer Timeline Component
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
 import { useAnimator } from '../../context/useAnimator';
-import { commitWorkspaceLayout, createFrameEase, type FrameEase } from '../../utils/workspaceLayout';
+import { commitWorkspaceLayout, createFrameEase, REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, type FrameEase } from '../../utils/workspaceLayout';
 import { type TrackChannel, type AnimationChannel } from '../../types/animator';
 import { computeMaxFrame, resolveChannelAnimationState, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/timelineMetrics';
 import { resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../../utils/channelKeyframeGroups';
@@ -30,11 +30,16 @@ import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { TimeRuler } from './TimeRuler';
 import { TrackLane, type KeyframePress } from './TrackLane';
-import { CHANNEL_META, clampPanelSize, KEYFRAME_DRAG_THRESHOLD_PX, OUTLINER_DEFAULT_WIDTH, OUTLINER_MAX_WIDTH, OUTLINER_MIN_WIDTH, resolveTimelineHeightCeiling, TIMELINE_COLLAPSED_HEIGHT, TIMELINE_DEFAULT_HEIGHT, TIMELINE_EDGE_TRANSITION_MS, TIMELINE_MIN_HEIGHT } from './timelineConstants';
+import { CHANNEL_META, clampPanelSize, TRACK_ROW_HEIGHT, KEYFRAME_DRAG_THRESHOLD_PX, OUTLINER_DEFAULT_WIDTH, OUTLINER_MAX_WIDTH, OUTLINER_MIN_WIDTH, resolveTimelineHeightCeiling, TIMELINE_COLLAPSED_HEIGHT, TIMELINE_DEFAULT_HEIGHT, TIMELINE_EDGE_TRANSITION_MS, TIMELINE_MIN_HEIGHT, resolveOpeningTimelineHeight, shouldOpenTimelineCollapsed } from './timelineConstants';
 import { copyKeyframeGroupData, type KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
 import { TrackOutlinerRow } from './TrackOutlinerRow';
+import { projectLayerOrdinals } from '../../utils/layerOrdinal';
 import { frameToSeconds, secondsToFrame } from '../../utils/timebase';
 import { InlineRename } from '../Shared/InlineRename';
+import { useRowWindow, type RowViewport } from '../../hooks/useRowWindow';
+import { useRetainedScrollTop, useRetainedUiState } from '../../hooks/useRetainedUiState';
+import { rowOffsets, type RowWindowSegment } from '../../utils/rowWindow';
+import { edgeScrollStep, laneGroupHeight, laneKeyframePositions, laneKeyframes } from './timelineLaneLayout';
 import './SequencerTimeline.css';
 
 /**
@@ -51,8 +56,8 @@ const MARQUEE_DRAG_THRESHOLD_PX = 3;
 /** How close to the playhead line a press still counts as "on the playhead". */
 const PLAYHEAD_POINTER_TOLERANCE_PX = 4;
 
-/** A rendered keyframe diamond, the only thing a marquee can hit. */
-const MARQUEE_KEYFRAME_SELECTOR = '.keyframe-diamond[data-keyframe-id], .ue-prop-diamond[data-keyframe-id]';
+/** Edge auto-scroll cadence of a marquee held at the edge of the lanes. */
+const MARQUEE_AUTOSCROLL_INTERVAL_MS = 30;
 
 /** A keyframe press that has been armed but has not travelled far enough yet. */
 interface KeyframePressArm {
@@ -148,6 +153,8 @@ export const SequencerTimeline: React.FC = () => {
     deleteMotionTemplate,
     updateMotionTemplateDuration,
   } = useAnimator();
+  // WP-05: the derived display ordinal, the same projection the Outliner shows.
+  const layerOrdinals = useMemo(() => projectLayerOrdinals(characterParts), [characterParts]);
   // Sequencer Tree Modal Toggle State & Inline Sequence Rename
   const [isSeqTreeOpen, setIsSeqTreeOpen] = useState<boolean>(false);
   const [isAddSeqModalOpen, setIsAddSeqModalOpen] = useState<boolean>(false);
@@ -309,27 +316,30 @@ export const SequencerTimeline: React.FC = () => {
   /**
    * Timeline marquee (box) selection.
    *
-   * The rectangle is a transient gesture, not a selection store: it hit-tests
-   * the diamonds the timeline has actually rendered, so only keys the user can
-   * see are selectable (a collapsed or hidden channel contributes none), and the
-   * timeline keeps no second copy of keyframe geometry — a diamond's centre IS
-   * its frame position. The outcome lands in the one keyframe-selection
-   * authority, `selectKeyframes`.
+   * The rectangle is a transient gesture, not a selection store. C5: it
+   * hit-tests the lane LAYOUT (`timelineLaneLayout`), the data the lanes are
+   * rendered from, not the diamonds that happen to be mounted — a long list
+   * mounts only the rows near its viewport, and a marquee dragged (with edge
+   * auto-scroll) over rows that were scrolled away must still cover their keys.
+   * Only keys the user could see are selectable (a collapsed channel group
+   * contributes none); a diamond's centre IS its frame position. The outcome
+   * lands in the one keyframe-selection authority, `selectKeyframes`.
    *
-   * Everything is measured in the grid's CONTENT space, captured at pointerdown,
-   * so the drawn rectangle and the hit test can never disagree: a key is selected
-   * exactly when its centre falls inside the rectangle that is on screen.
+   * Everything is measured in the grid's CONTENT space, so the drawn rectangle
+   * and the hit test can never disagree: a key is selected exactly when its
+   * centre falls inside the rectangle that is on screen, at any scroll offset.
    */
   const [marqueeRect, setMarqueeRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const [isMarqueeActive, setIsMarqueeActive] = useState<boolean>(false);
   const marqueeGestureRef = useRef<{
-    frame: { left: number; top: number; scrollLeft: number; scrollTop: number };
     originX: number;
     originY: number;
     preGestureIds: string[];
     additive: boolean;
     candidates: Array<{ id: string; x: number; y: number }>;
     moved: boolean;
+    /** The pointer's last client position (edge auto-scroll re-applies it). */
+    pointer: { x: number; y: number };
   } | null>(null);
 
   const handleMarqueeStart = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -350,23 +360,29 @@ export const SequencerTimeline: React.FC = () => {
     // excluded geometrically: its column is the playhead's, not the marquee's.
     if (Math.abs(originX - currentFrame * FRAME_WIDTH) <= PLAYHEAD_POINTER_TOLERANCE_PX) return;
 
-    const candidates = Array.from(grid.querySelectorAll<HTMLElement>(MARQUEE_KEYFRAME_SELECTOR)).map((element) => {
-      const diamond = element.getBoundingClientRect();
-      return {
-        id: element.dataset.keyframeId as string,
-        x: diamond.left + diamond.width / 2 - box.left + grid.scrollLeft,
-        y: diamond.top + diamond.height / 2 - box.top + grid.scrollTop,
-      };
-    });
+    // The lanes block is always mounted (its window spacers stand in for the
+    // rows that are not), so its position is the origin of every track's top.
+    const lanes = grid.querySelector<HTMLElement>('.ue-track-lanes');
+    const lanesBox = lanes?.getBoundingClientRect();
+    const lanesOrigin = lanesBox
+      ? { x: lanesBox.left - box.left + grid.scrollLeft, y: lanesBox.top - box.top + grid.scrollTop }
+      : { x: 0, y: 0 };
+    const candidates = laneKeyframePositions(
+      tracks,
+      rowOffsets(tracks.length, trackHeightAt),
+      lanesOrigin,
+      FRAME_WIDTH,
+      (track) => laneKeyframes(track, basePoseByPart.get(track.partId), activeTemplateId, isGroupExpanded),
+    );
 
     marqueeGestureRef.current = {
-      frame: { left: box.left, top: box.top, scrollLeft: grid.scrollLeft, scrollTop: grid.scrollTop },
       originX,
       originY,
       preGestureIds: selectedKeyframeIds,
       additive: event.shiftKey || event.ctrlKey || event.metaKey,
       candidates,
       moved: false,
+      pointer: { x: event.clientX, y: event.clientY },
     };
     setMarqueeRect({ left: originX, top: originY, width: 0, height: 0 });
     setIsMarqueeActive(true);
@@ -376,10 +392,14 @@ export const SequencerTimeline: React.FC = () => {
 
   const updateMarquee = useCallback((clientX: number, clientY: number) => {
     const gesture = marqueeGestureRef.current;
-    if (!gesture) return;
-    const { frame } = gesture;
-    const currentX = clientX - frame.left + frame.scrollLeft;
-    const currentY = clientY - frame.top + frame.scrollTop;
+    const grid = timelineGridRef.current;
+    if (!gesture || !grid) return;
+    gesture.pointer = { x: clientX, y: clientY };
+    // Content space at the CURRENT scroll offset: the box keeps its origin in
+    // content space while edge auto-scroll moves the view under the pointer.
+    const box = grid.getBoundingClientRect();
+    const currentX = clientX - box.left + grid.scrollLeft;
+    const currentY = clientY - box.top + grid.scrollTop;
     const left = Math.min(gesture.originX, currentX);
     const top = Math.min(gesture.originY, currentY);
     const width = Math.abs(currentX - gesture.originX);
@@ -420,10 +440,28 @@ export const SequencerTimeline: React.FC = () => {
       event.preventDefault();
       endMarquee(true);
     };
+    // C5 — edge auto-scroll: while the pointer rests at (or beyond) an edge of
+    // the lane viewport, the grid scrolls on a gesture-scoped timer (a UI
+    // gesture helper, not a playback clock) and the box grows with it.
+    const autoScroll = window.setInterval(() => {
+      const gesture = marqueeGestureRef.current;
+      const grid = timelineGridRef.current;
+      if (!gesture || !grid) return;
+      const box = grid.getBoundingClientRect();
+      const ruler = grid.querySelector<HTMLElement>('.time-ruler')?.offsetHeight ?? 0;
+      const dy = edgeScrollStep(gesture.pointer.y, box.top + ruler, box.top + grid.clientHeight);
+      const dx = edgeScrollStep(gesture.pointer.x, box.left, box.left + grid.clientWidth);
+      if (!dx && !dy) return;
+      const before = { left: grid.scrollLeft, top: grid.scrollTop };
+      grid.scrollTop += dy;
+      grid.scrollLeft += dx;
+      if (grid.scrollTop !== before.top || grid.scrollLeft !== before.left) updateMarquee(gesture.pointer.x, gesture.pointer.y);
+    }, MARQUEE_AUTOSCROLL_INTERVAL_MS);
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);
     window.addEventListener('keydown', handleKeyDown);
     return () => {
+      window.clearInterval(autoScroll);
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleUp);
       window.removeEventListener('keydown', handleKeyDown);
@@ -730,10 +768,14 @@ export const SequencerTimeline: React.FC = () => {
    * height writes it too, so it can never disagree with what a drag or a window
    * clamp asked for.
    */
-  const [timelineHeight, setTimelineHeight] = useState<number>(TIMELINE_DEFAULT_HEIGHT);
-  const [edgeHeight, setEdgeHeight] = useState<number>(TIMELINE_DEFAULT_HEIGHT);
-  const [isTimelineCollapsed, setIsTimelineCollapsed] = useState<boolean>(false);
-  const [outlinerWidth, setOutlinerWidth] = useState<number>(OUTLINER_DEFAULT_WIDTH);
+  // C4 — session UI memory: the opening policy (`resolveOpeningTimelineHeight`,
+  // `shouldOpenTimelineCollapsed`) applies to the session's first mount only;
+  // after that the user's height, collapse and column width win, also across
+  // an Edit ⇄ Broadcast round trip (the panel unmounts in Broadcast).
+  const [timelineHeight, setTimelineHeight] = useRetainedUiState<number>('timeline.height', () => resolveOpeningTimelineHeight(window.innerHeight));
+  const [isTimelineCollapsed, setIsTimelineCollapsed] = useRetainedUiState<boolean>('timeline.collapsed', () => shouldOpenTimelineCollapsed(window.innerHeight));
+  const [edgeHeight, setEdgeHeight] = useState<number>(() => (isTimelineCollapsed ? TIMELINE_COLLAPSED_HEIGHT : timelineHeight));
+  const [outlinerWidth, setOutlinerWidth] = useRetainedUiState<number>('timeline.outlinerWidth', OUTLINER_DEFAULT_WIDTH);
   const [resizeAxis, setResizeAxis] = useState<'rows' | 'columns' | null>(null);
   const timelineRef = useRef<HTMLElement>(null);
   const edgeHeightRef = useRef(edgeHeight);
@@ -771,18 +813,32 @@ export const SequencerTimeline: React.FC = () => {
   // sits at a size the layout silently refuses. Collapsed, only the authored
   // height moves: the strip stays the strip and expanding honours the new bound.
   useEffect(() => {
-    const handleWindowResize = () => {
+    const handleWindowResize = (): boolean => {
       const ceiling = timelineHeightCeiling();
-      if (timelineHeightRef.current <= ceiling) return;
+      if (timelineHeightRef.current <= ceiling) return false;
       const collapsed = collapsedRef.current;
       commitWorkspaceLayout(() => {
         setTimelineHeight(ceiling);
         if (!collapsed) setEdgeHeight(ceiling);
       });
+      return true;
     };
     window.addEventListener('resize', handleWindowResize);
-    return () => window.removeEventListener('resize', handleWindowResize);
-  }, [timelineHeightCeiling]);
+    // C2 — the same clamp also applies to the window the editor OPENS in (a
+    // short or 200 %-zoomed window), not only to later resizes; otherwise the
+    // default height could leave the stage with almost no room. Deferred one
+    // microtask so the synchronous layout commit does not run inside the effect.
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled || !handleWindowResize()) return;
+      // The opening camera was fitted to the box BEFORE this correction.
+      window.dispatchEvent(new CustomEvent(WORKSPACE_LAYOUT_COMMAND_EVENT, { detail: { type: REFIT_UNTOUCHED_CAMERA_COMMAND } }));
+    });
+    return () => {
+      cancelled = true;
+      window.removeEventListener('resize', handleWindowResize);
+    };
+  }, [setTimelineHeight, timelineHeightCeiling]);
 
   /**
    * Applies at most one workspace size per frame: the pointer can move several
@@ -805,7 +861,7 @@ export const SequencerTimeline: React.FC = () => {
       }
       if (pending.width !== undefined) setOutlinerWidth(pending.width);
     });
-  }, []);
+  }, [setOutlinerWidth, setTimelineHeight]);
 
   const beginResize = (axis: 'rows' | 'columns') => (e: React.MouseEvent) => {
     if (e.button !== 0 || isTimelineCollapsed) return;
@@ -972,16 +1028,144 @@ export const SequencerTimeline: React.FC = () => {
   const [editingPartId, setEditingPartId] = useState<string | null>(null);
   const [editingNameValue, setEditingNameValue] = useState<string>('');
 
-  const isGroupExpanded = (key: string, defaultVal: boolean = true) => {
+  // Changes identity only with the sub-group state, so the memoized rows
+  // re-render exactly when a disclosure they show changes.
+  const isGroupExpanded = useCallback((key: string, defaultVal: boolean = true) => {
     return subGroupState[key] !== undefined ? subGroupState[key] : defaultVal;
-  };
+  }, [subGroupState]);
 
   const toggleSubGroup = (key: string, defaultVal: boolean = true) => {
     setSubGroupState((prev) => ({
       ...prev,
-      [key]: !isGroupExpanded(key, defaultVal),
+      [key]: !(prev[key] !== undefined ? prev[key] : defaultVal),
     }));
   };
+
+  /**
+   * C3 — the timeline rows and lanes are memoized: a playhead frame re-renders
+   * neither a lane nor a collapsed layer row (measured as the largest per-frame
+   * cost of playback and scrub on a heavy scene). Their actions are ONE stable
+   * bag that reads the latest handlers at call time, so a row that skipped a
+   * render never acts on a stale closure. The add-keyframe action resolves the
+   * CURRENT frame itself for the same reason.
+   */
+  const rowLatest = useRef({
+    handleSelectPart, renamePartAndTrack, toggleTrackExpanded, toggleTrackEditVisibility, toggleTrackVisibility,
+    toggleTrackLock, addKeyframeToTrack, currentFrame, handleAddChannelKeyframe, handleToggleChannelAnimation,
+    toggleSubGroup, setCurrentFrame, setSelectedKeyframeId, selectKeyframes, beginKeyframePress, deleteKeyframe,
+    deletePropertyKeyframe, deleteKeyframeFrameGroup, updateMaskPathKeyframeFrame, deleteMaskPathKeyframe,
+    duplicateKeyframeGroup, handleCopyKeyframes, handlePasteKeyframes, getFrameFromMouse,
+  });
+  useLayoutEffect(() => {
+    rowLatest.current = {
+      handleSelectPart, renamePartAndTrack, toggleTrackExpanded, toggleTrackEditVisibility, toggleTrackVisibility,
+      toggleTrackLock, addKeyframeToTrack, currentFrame, handleAddChannelKeyframe, handleToggleChannelAnimation,
+      toggleSubGroup, setCurrentFrame, setSelectedKeyframeId, selectKeyframes, beginKeyframePress, deleteKeyframe,
+      deletePropertyKeyframe, deleteKeyframeFrameGroup, updateMaskPathKeyframeFrame, deleteMaskPathKeyframe,
+      duplicateKeyframeGroup, handleCopyKeyframes, handlePasteKeyframes, getFrameFromMouse,
+    };
+  });
+  const rowActions = useMemo(() => {
+    const latest = () => rowLatest.current;
+    return {
+      onSelect: (partId: string, shiftKey: boolean) => latest().handleSelectPart(partId, shiftKey),
+      onStartEdit: (partId: string, name: string) => { setEditingPartId(partId); setEditingNameValue(name); },
+      onEnterCommit: (partId: string, name: string) => { if (name.trim()) latest().renamePartAndTrack(partId, name.trim()); setEditingPartId(null); },
+      onCancelEdit: () => setEditingPartId(null),
+      onToggleExpand: (trackId: string) => latest().toggleTrackExpanded(trackId),
+      onToggleEditVisible: (trackId: string) => latest().toggleTrackEditVisibility(trackId),
+      onToggleVisible: (trackId: string) => latest().toggleTrackVisibility(trackId),
+      onToggleLock: (trackId: string) => latest().toggleTrackLock(trackId),
+      onAddKeyframe: (trackId: string) => latest().addKeyframeToTrack(trackId, latest().currentFrame),
+      onAddChannelKeyframe: (trackId: string, channel: AnimationChannel, partId: string) => latest().handleAddChannelKeyframe(trackId, channel, partId),
+      onToggleChannelAnimation: (trackId: string, channel: AnimationChannel) => latest().handleToggleChannelAnimation(trackId, channel),
+      onToggleSubGroup: (key: string, defaultVal?: boolean) => latest().toggleSubGroup(key, defaultVal),
+      onJumpToFrame: (frame: number) => latest().setCurrentFrame(frame),
+      onSelectKeyframe: (id: string | null) => latest().setSelectedKeyframeId(id),
+      onToggleKeyframe: (id: string) => latest().selectKeyframes([id], 'toggle'),
+      onSelectPart: (partId: string, shiftKey: boolean) => latest().handleSelectPart(partId, shiftKey),
+      onSetFrame: (frame: number) => latest().setCurrentFrame(frame),
+      onStartDragKf: (press: KeyframePress) => latest().beginKeyframePress(press, true),
+      onStartDragPKf: (press: KeyframePress) => latest().beginKeyframePress(press, false),
+      onHoverKf: (hover: { frame: number; label: string } | null) => setHoveredKf(hover),
+      onDeleteKeyframe: (...args: Parameters<typeof deleteKeyframe>) => latest().deleteKeyframe(...args),
+      onDeletePropertyKeyframe: (...args: Parameters<typeof deletePropertyKeyframe>) => latest().deletePropertyKeyframe(...args),
+      onDeleteKeyframeGroup: (...args: Parameters<typeof deleteKeyframeFrameGroup>) => latest().deleteKeyframeFrameGroup(...args),
+      onUpdateMaskPathKeyframeFrame: (...args: Parameters<typeof updateMaskPathKeyframeFrame>) => latest().updateMaskPathKeyframeFrame(...args),
+      onDeleteMaskPathKeyframe: (...args: Parameters<typeof deleteMaskPathKeyframe>) => latest().deleteMaskPathKeyframe(...args),
+      onDuplicateKeyframeGroup: (...args: Parameters<typeof duplicateKeyframeGroup>) => latest().duplicateKeyframeGroup(...args),
+      onCopyKeyframes: (...args: Parameters<typeof handleCopyKeyframes>) => latest().handleCopyKeyframes(...args),
+      onPasteKeyframes: (...args: Parameters<typeof handlePasteKeyframes>) => latest().handlePasteKeyframes(...args),
+      onFrameFromClientX: (clientX: number) => latest().getFrameFromMouse(clientX),
+    };
+  }, []);
+  const basePoseByPart = useMemo(
+    () => new Map(tracks.map((track) => [track.partId, resolveAuthoredBasePose(characterParts, track.partId)])),
+    [characterParts, tracks],
+  );
+
+  /*
+   * C4 — a long layer list mounts only the tracks near its viewport, in BOTH
+   * columns (layer rows and lanes share one window and one set of spacers, so
+   * they stay aligned). A track's height is measured from its mounted layer row
+   * (it grows when the track or a channel group expands); an unmeasured one is
+   * the lane layout's own height (C5: `laneGroupHeight`, the rows the lanes
+   * render), so the spacers stand for expanded tracks exactly. The selected,
+   * renamed and focused tracks stay mounted.
+   */
+  const trackHeightsRef = useRef(new Map<string, number>());
+  const [trackHeightsVersion, setTrackHeightsVersion] = useState(0);
+  const trackHeightAt = useCallback(
+    (index: number) => {
+      const track = tracks[index];
+      return track ? (trackHeightsRef.current.get(track.id) || laneGroupHeight(track, isGroupExpanded)) : TRACK_ROW_HEIGHT;
+    },
+    // `trackHeightsVersion` is the cache key of the measured heights.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    [tracks, trackHeightsVersion, isGroupExpanded],
+  );
+  const [focusedTrackPartId, setFocusedTrackPartId] = useState<string | null>(null);
+  const pinnedTracks = useMemo(() => {
+    const keep = new Set<string>([...(selectedPartIds ?? []), ...(editingPartId ? [editingPartId] : []), ...(focusedTrackPartId ? [focusedTrackPartId] : [])]);
+    if (selectedPartId) keep.add(selectedPartId);
+    const pinned: number[] = [];
+    tracks.forEach((track, index) => {
+      if (keep.has(track.partId)) pinned.push(index);
+    });
+    return pinned;
+  }, [tracks, selectedPartIds, selectedPartId, editingPartId, focusedTrackPartId]);
+  const trackViewport = useCallback((scrollElement: HTMLElement): RowViewport => ({ top: scrollElement.scrollTop, height: scrollElement.clientHeight }), []);
+  // Kept across an Edit ⇄ Broadcast round trip; restored before the window reads it.
+  useRetainedScrollTop('timeline.rows.scrollTop', outlinerRef);
+  useRetainedScrollTop('timeline.grid.scrollTop', timelineGridRef);
+  const trackWindow = useRowWindow({ count: tracks.length, heightAt: trackHeightAt, pinned: pinnedTracks, scrollRef: outlinerRef, viewportOf: trackViewport });
+  useEffect(() => {
+    const list = outlinerRef.current;
+    if (!trackWindow.windowed || !list || typeof ResizeObserver !== 'function') return undefined;
+    const observer = new ResizeObserver((entries) => {
+      let changed = false;
+      entries.forEach((entry) => {
+        const element = entry.target as HTMLElement;
+        const id = element.dataset.trackRowId;
+        const height = element.offsetHeight;
+        if (!id || height <= 0 || trackHeightsRef.current.get(id) === height) return;
+        trackHeightsRef.current.set(id, height);
+        changed = true;
+      });
+      if (changed) setTrackHeightsVersion((version) => version + 1);
+    });
+    list.querySelectorAll<HTMLElement>('[data-track-row-id]').forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, [trackWindow.windowed, trackWindow.segments]);
+  const handleTrackFocus = useCallback((event: React.FocusEvent<HTMLElement>) => {
+    const owner = (event.target as HTMLElement).closest<HTMLElement>('[data-track-part-id], [data-owner-part-id]');
+    setFocusedTrackPartId(owner?.dataset.trackPartId ?? owner?.dataset.ownerPartId ?? null);
+  }, []);
+  const renderTrackWindow = (renderTrack: (track: (typeof tracks)[number]) => React.ReactElement) => trackWindow.segments.flatMap((segment: RowWindowSegment): React.ReactElement[] => (
+    segment.kind === 'gap'
+      ? [<div key={`gap-${segment.start}`} className="row-window-spacer" aria-hidden="true" style={{ height: segment.height, flex: 'none' }} />]
+      : tracks.slice(segment.start, segment.end).map(renderTrack)
+  ));
 
   return (
     <footer
@@ -1241,8 +1425,8 @@ export const SequencerTimeline: React.FC = () => {
             <span>LAYERS ({tracks.length})</span>
           </div>
 
-          <div className="ue-outliner-list" ref={outlinerRef} onScroll={handleOutlinerScroll}>
-            {tracks.map((track) => {
+          <div className="ue-outliner-list" ref={outlinerRef} onScroll={handleOutlinerScroll} onFocus={handleTrackFocus}>
+            {renderTrackWindow((track) => {
               const partItem = characterParts.find((p) => p.id === track.partId);
               const isChildLayer = Boolean(partItem?.parentId);
 
@@ -1250,6 +1434,8 @@ export const SequencerTimeline: React.FC = () => {
                 <TrackOutlinerRow
                   key={track.id}
                   track={track}
+                  ordinal={layerOrdinals.get(track.partId)}
+                  layerCount={characterParts.length}
                   parts={characterParts}
                   isChildLayer={isChildLayer}
                   isSelected={selectedPartIds?.includes(track.partId)}
@@ -1257,27 +1443,27 @@ export const SequencerTimeline: React.FC = () => {
                   editingNameValue={editingNameValue}
                   currentFrame={currentFrame}
                   activeTemplateId={activeTemplateId}
-                  onSelect={handleSelectPart}
-                  onStartEdit={(partId, name) => { setEditingPartId(partId); setEditingNameValue(name); }}
-                  onEnterCommit={(partId, name) => { if (name.trim()) renamePartAndTrack(partId, name.trim()); setEditingPartId(null); }}
-                  onCancelEdit={() => setEditingPartId(null)}
-                  onToggleExpand={toggleTrackExpanded}
-                  onToggleEditVisible={toggleTrackEditVisibility}
-                  onToggleVisible={toggleTrackVisibility}
-                  onToggleLock={toggleTrackLock}
+                  onSelect={rowActions.onSelect}
+                  onStartEdit={rowActions.onStartEdit}
+                  onEnterCommit={rowActions.onEnterCommit}
+                  onCancelEdit={rowActions.onCancelEdit}
+                  onToggleExpand={rowActions.onToggleExpand}
+                  onToggleEditVisible={rowActions.onToggleEditVisible}
+                  onToggleVisible={rowActions.onToggleVisible}
+                  onToggleLock={rowActions.onToggleLock}
                   // M7/R3-10: the ONE canonical transform keyframe group action — it
                   // materializes every transform channel at the frame and migrates
                   // any legacy composite animation instead of hiding it.
-                  onAddKeyframe={addKeyframeToTrack}
-                  onAddChannelKeyframe={handleAddChannelKeyframe}
+                  onAddKeyframe={rowActions.onAddKeyframe}
+                  onAddChannelKeyframe={rowActions.onAddChannelKeyframe}
                   // K1 (D2) — stopwatch: arms an unanimated channel, or asks
                   // before removing the animation of an animated one.
-                  onToggleChannelAnimation={handleToggleChannelAnimation}
+                  onToggleChannelAnimation={rowActions.onToggleChannelAnimation}
                   isGroupExpanded={isGroupExpanded}
-                  onToggleSubGroup={toggleSubGroup}
+                  onToggleSubGroup={rowActions.onToggleSubGroup}
                   // R3-07 — the layer row's keyframe navigation moves the playhead
                   // and nothing else: the callback writes the frame cursor only.
-                  onJumpToFrame={setCurrentFrame}
+                  onJumpToFrame={rowActions.onJumpToFrame}
                 />
               );
             })}
@@ -1315,35 +1501,35 @@ export const SequencerTimeline: React.FC = () => {
           </div>
 
           {/* Track Lanes */}
-          <div className="ue-track-lanes">
-            {tracks.map((track) => (
+          <div className="ue-track-lanes" onFocus={handleTrackFocus}>
+            {renderTrackWindow((track) => (
               <TrackLane
                 key={track.id}
                 track={track}
-                basePose={resolveAuthoredBasePose(characterParts, track.partId)}
+                basePose={basePoseByPart.get(track.partId)}
                 isSelected={selectedPartId === track.partId}
                 selectedKeyframeIds={selectedKeyframeIds}
                 frameWidth={FRAME_WIDTH}
                 totalFrames={totalFrames}
                 activeTemplateId={activeTemplateId}
                 isGroupExpanded={isGroupExpanded}
-                onSelectKeyframe={setSelectedKeyframeId}
-                onToggleKeyframe={(id) => selectKeyframes([id], 'toggle')}
-                onSelectPart={handleSelectPart}
-                onSetFrame={setCurrentFrame}
-                onStartDragKf={(press) => beginKeyframePress(press, true)}
-                onStartDragPKf={(press) => beginKeyframePress(press, false)}
-                onHoverKf={setHoveredKf}
-                onDeleteKeyframe={deleteKeyframe}
-                onDeletePropertyKeyframe={deletePropertyKeyframe}
-                onDeleteKeyframeGroup={deleteKeyframeFrameGroup}
-                onUpdateMaskPathKeyframeFrame={updateMaskPathKeyframeFrame}
-                onDeleteMaskPathKeyframe={deleteMaskPathKeyframe}
-                onDuplicateKeyframeGroup={duplicateKeyframeGroup}
+                onSelectKeyframe={rowActions.onSelectKeyframe}
+                onToggleKeyframe={rowActions.onToggleKeyframe}
+                onSelectPart={rowActions.onSelectPart}
+                onSetFrame={rowActions.onSetFrame}
+                onStartDragKf={rowActions.onStartDragKf}
+                onStartDragPKf={rowActions.onStartDragPKf}
+                onHoverKf={rowActions.onHoverKf}
+                onDeleteKeyframe={rowActions.onDeleteKeyframe}
+                onDeletePropertyKeyframe={rowActions.onDeletePropertyKeyframe}
+                onDeleteKeyframeGroup={rowActions.onDeleteKeyframeGroup}
+                onUpdateMaskPathKeyframeFrame={rowActions.onUpdateMaskPathKeyframeFrame}
+                onDeleteMaskPathKeyframe={rowActions.onDeleteMaskPathKeyframe}
+                onDuplicateKeyframeGroup={rowActions.onDuplicateKeyframeGroup}
                 kfClipboard={kfClipboard}
-                onCopyKeyframes={handleCopyKeyframes}
-                onPasteKeyframes={handlePasteKeyframes}
-                onFrameFromClientX={getFrameFromMouse}
+                onCopyKeyframes={rowActions.onCopyKeyframes}
+                onPasteKeyframes={rowActions.onPasteKeyframes}
+                onFrameFromClientX={rowActions.onFrameFromClientX}
               />
             ))}
           </div>

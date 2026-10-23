@@ -506,3 +506,91 @@
     transition: none !important;
   }
 }
+
+/*
+ * C3 — a narrow window (a real 200 % browser zoom of a 1440 px window is
+ * ~712 CSS px) used to wrap the header into a second row and take a quarter of
+ * the height from the stage. Below 860 px the action labels become icon-only:
+ * the text stays in the DOM as the accessible name (visually hidden, never
+ * display:none) and every control keeps its title tooltip.
+ */
+@media (max-width: 860px) {
+  .header-bar {
+    gap: var(--space-sm);
+  }
+
+  .header-brand {
+    flex: 0 1 auto;
+  }
+
+  .header-action-btn > span,
+  .restored-from-local-badge > span,
+  .autosave-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .header-action-btn {
+    padding: 0 6px;
+  }
+}
+
+/*
+ * C4 — one header row. The three columns used to be equal thirds, so the
+ * action group (≈640 px) wrapped onto a second row even at 1440 px, costing
+ * every window ~35 px of stage height. The actions now take their content
+ * width and never wrap; the template tabs give way first (they scroll), the
+ * restore chip keeps its full text for assistive tech and in its tooltip but
+ * is clipped to a short width, and below 1200 px the Import/Export labels
+ * become icon-only (the accessible names stay).
+ */
+.header-bar {
+  flex-wrap: nowrap;
+}
+.header-brand {
+  flex: 1 1 0;
+  overflow: hidden;
+}
+.header-template-tabs {
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.header-center-controls {
+  flex: 0 0 auto;
+}
+.header-actions {
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
+}
+.restored-from-local-badge {
+  max-width: 150px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.restored-from-local-badge > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 1200px) {
+  .header-action-btn > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .restored-from-local-badge {
+    max-width: 30px;
+  }
+}

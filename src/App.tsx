@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnimatorProvider } from './context/AnimatorContext';
 import { EditorContextMenuProvider } from './context/EditorContextMenuContext';
@@ -11,8 +11,23 @@ import { PropertyInspector } from './components/Inspector/PropertyInspector';
 import { SequencerTimeline } from './components/Timeline/SequencerTimeline';
 import { LiveDirectorPanel } from './components/Broadcast/LiveDirectorPanel';
 import { useDockedPanelEdge } from './hooks/useDockedPanelEdge';
+import { REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, shouldOpenWithLeftDockClosed } from './utils/workspaceLayout';
 
 import './kcsEditorTheme.css';
+
+/*
+ * C2 perf — a docked panel's edge eases through ~15 synchronous commits
+ * (`commitWorkspaceLayout`), each re-rendering this shell. These surfaces take
+ * no props and read the editor state from context, so memoizing them keeps a
+ * dock frame to the panel's own width write; any real state change still
+ * re-renders them through the context.
+ */
+const MemoHeaderBar = React.memo(HeaderBar);
+const MemoAuthoringToolbar = React.memo(AuthoringToolbar);
+const MemoStageCanvas = React.memo(StageCanvas);
+const MemoSequencerTimeline = React.memo(SequencerTimeline);
+const MemoLiveDirectorPanel = React.memo(LiveDirectorPanel);
+
 const MainAppContent: React.FC = () => {
   const { appMode, modeSwapActive, finishModeSwap } = useAnimator();
 
@@ -23,8 +38,32 @@ const MainAppContent: React.FC = () => {
   const handleModeSwapAnimationEnd = useCallback((event: React.AnimationEvent<HTMLDivElement>) => {
     if (event.animationName === 'kcs-mode-enter') finishModeSwap();
   }, [finishModeSwap]);
-  const leftToolbar = useDockedPanelEdge(true);
-  const inspector = useDockedPanelEdge(true);
+  const leftToolbar = useDockedPanelEdge(true, 'left');
+  const inspector = useDockedPanelEdge(true, 'right');
+
+  // C3 — a narrow (or browser-zoomed) window opens with the left dock closed
+  // when the stage would otherwise be narrower than MIN_OPENING_STAGE_WIDTH.
+  // Measured once from the real first layout, before the first paint (the
+  // microtask runs before the browser paints, outside React's commit), then the
+  // untouched opening camera is re-fitted to the wider stage. Never re-applied:
+  // after this the dock opens and closes only when the user says so.
+  const snapLeftDock = leftToolbar.snap;
+  useLayoutEffect(() => {
+    if (appMode !== 'edit') return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      const stage = document.querySelector('.stage-canvas-container');
+      if (!stage || !shouldOpenWithLeftDockClosed(stage.getBoundingClientRect().width)) return;
+      snapLeftDock(false);
+      window.dispatchEvent(new CustomEvent(WORKSPACE_LAYOUT_COMMAND_EVENT, { detail: { type: REFIT_UNTOUCHED_CAMERA_COMMAND } }));
+    });
+    return () => {
+      cancelled = true;
+    };
+    // Mount only, by design.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // R2-07 — the browser's native context menu is suppressed for the whole
   // editor: canvas, layer list, sequence tabs, toolbar, timeline, Details and
@@ -55,21 +94,21 @@ const MainAppContent: React.FC = () => {
       className={`app-container ${leftToolbar.visible ? '' : 'left-toolbar-hidden'} ${inspector.visible ? '' : 'inspector-hidden'} ${modeSwapActive ? 'kcs-mode-swap' : ''}`}
       onAnimationEnd={handleModeSwapAnimationEnd}
     >
-      <HeaderBar />
-      {appMode === 'edit' && <AuthoringToolbar />}
+      <MemoHeaderBar />
+      {appMode === 'edit' && <MemoAuthoringToolbar />}
       <div className="main-layout">
         {appMode === 'edit' && (
           <LeftToolbar
             isHidden={!leftToolbar.visible}
-            edgeWidth={leftToolbar.edgeWidth}
+            edgeStyle={leftToolbar.edgeStyle}
             panelRef={leftToolbar.panelRef}
           />
         )}
-        <StageCanvas />
+        <MemoStageCanvas />
         {appMode === 'edit' && (
           <PropertyInspector
             isHidden={!inspector.visible}
-            edgeWidth={inspector.edgeWidth}
+            edgeStyle={inspector.edgeStyle}
             panelRef={inspector.panelRef}
           />
         )}
@@ -98,7 +137,7 @@ const MainAppContent: React.FC = () => {
           </button>
         )}
       </div>
-      {appMode === 'edit' ? <SequencerTimeline /> : <LiveDirectorPanel />}
+      {appMode === 'edit' ? <MemoSequencerTimeline /> : <MemoLiveDirectorPanel />}
     </div>
   );
 };

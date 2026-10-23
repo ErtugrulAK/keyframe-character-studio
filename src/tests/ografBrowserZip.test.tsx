@@ -105,8 +105,9 @@ describe('HeaderBar OGraf export integration', () => {
     expect(screen.getByRole('menuitem', { name: 'JSON', exact: true })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: 'Animated GIF', exact: true })).toBeTruthy();
-    // The single-file legacy export is gone: the menu offers exactly these three.
-    expect(screen.getAllByRole('menuitem')).toHaveLength(3);
+    // The single-file legacy export is gone: the menu offers exactly these three
+    // exports, plus the WP-07 read-only pre-export check (not an export format).
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['JSON', 'OGraf Package', 'Animated GIF', 'Check OGraf Export…']);
     fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
     await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
     expect(downloads[0]).toBe('my-project-demo-ograf.zip');
@@ -247,7 +248,8 @@ describe('HeaderBar OGraf export integration', () => {
     // The OGraf item reports its in-flight state through both its label and its
     // disabled flag; JSON and the GIF panel stay available throughout.
     const menuItems = screen.getAllByRole('menuitem') as HTMLButtonElement[];
-    expect(menuItems.map((item) => item.disabled)).toEqual([false, true, false]);
+    // The WP-07 check stays available too: it only reads the scene.
+    expect(menuItems.map((item) => item.disabled)).toEqual([false, true, false, false]);
     expect(menuItems[1].textContent).toContain('Packaging OGraf');
     fireEvent.click(menuItems[1]);
     expect(createZipMock).toHaveBeenCalledTimes(1);

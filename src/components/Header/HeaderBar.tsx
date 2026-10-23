@@ -34,6 +34,8 @@ import {
   type OGrafDiagnosticRemediation,
 } from '../../ograf/diagnostics';
 import type { OGrafExportDiagnostic } from '../../ograf/types';
+import { buildOGrafCapabilityReport, type OGrafCapabilityReport } from '../../ograf/capabilityReport';
+import { OGrafCapabilityDialog } from './OGrafCapabilityDialog';
 import type { ToastOptions } from '../../hooks/useToast';
 import { ImportReportDialog } from '../Modal/ImportReportDialog';
 import { classifyImport } from '../../utils/importDispatch';
@@ -174,6 +176,25 @@ export const HeaderBar: React.FC = () => {
     const preparation = prepareLegacyOGrafExport(sceneData);
     const prepared = preparation instanceof Promise ? await preparation : preparation;
     return compileOGrafPackage(prepared.sceneData, prepared.options);
+  };
+
+  /**
+   * WP-07 — the pre-export check: the SAME compile the OGraf export runs, read
+   * per layer. Opening it never writes or downloads anything.
+   */
+  const [ografCheck, setOgrafCheck] = useState<{ report: OGrafCapabilityReport | null } | null>(null);
+  const handleOpenOGrafCheck = async () => {
+    setIsExportMenuOpen(false);
+    setOgrafCheck({ report: null });
+    try {
+      const layers = (JSON.parse(exportProject()) as SceneData).layers ?? [];
+      const plan = await compileOGrafPlan();
+      setOgrafCheck({ report: buildOGrafCapabilityReport(layers, plan.diagnostics) });
+    } catch (error) {
+      setOgrafCheck(null);
+      const message = error instanceof Error ? error.message : 'Unexpected failure.';
+      showToast(`Could not check the scene for OGraf: ${sanitizeOGrafDiagnosticText(message)}`, 'error');
+    }
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -675,8 +696,27 @@ export const HeaderBar: React.FC = () => {
                 >
                   Animated GIF
                 </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="header-action-btn"
+                  style={{ width: '100%', justifyContent: 'flex-start' }}
+                  title="See, per layer, what an OGraf export supports, exports with warnings, or blocks — before exporting"
+                  onClick={() => { void handleOpenOGrafCheck(); }}
+                >
+                  Check OGraf Export…
+                </button>
               </div>
             )}
+            <OGrafCapabilityDialog
+              isOpen={ografCheck !== null}
+              report={ografCheck?.report ?? null}
+              onClose={() => setOgrafCheck(null)}
+              onExport={() => {
+                setOgrafCheck(null);
+                void handleOGrafExport();
+              }}
+            />
             {gifExportScene && (
               <GifPanelGate
                 scene={gifExportScene}

@@ -23,6 +23,8 @@ const animatorCtx = {
   setActiveTool: vi.fn(),
   showGrid: false,
   setShowGrid: vi.fn(),
+  showCoordinateOverlay: true,
+  setShowCoordinateOverlay: vi.fn(),
   snapEnabled: true,
   setSnapEnabled: vi.fn(),
   cropMode: false,
@@ -75,6 +77,7 @@ describe('AuthoringToolbar', () => {
   beforeEach(() => {
     animatorCtx.activeTool = 'select';
     animatorCtx.showGrid = false;
+    animatorCtx.showCoordinateOverlay = true;
     animatorCtx.characterParts = [];
     animatorCtx.tracks = [];
     animatorCtx.cropMode = false;
@@ -106,6 +109,17 @@ describe('AuthoringToolbar', () => {
 
     fireEvent.click(grid);
     expect(animatorCtx.setShowGrid).toHaveBeenCalledWith(false);
+  });
+
+  it('toggles the coordinate overlay through the shared presentation flag', () => {
+    renderToolbar();
+
+    const overlay = screen.getByRole('button', { name: 'Toggle coordinate overlay' });
+    expect(overlay).toHaveAttribute('aria-pressed', 'true');
+    expect(within(screen.getByRole('group', { name: 'View controls' })).getByRole('button', { name: 'Toggle coordinate overlay' })).toBe(overlay);
+
+    fireEvent.click(overlay);
+    expect(animatorCtx.setShowCoordinateOverlay).toHaveBeenCalledWith(false);
   });
 
   it('toggles canvas snapping through the shared context flag the stage reads', () => {
@@ -140,7 +154,7 @@ describe('AuthoringToolbar', () => {
 
   it('never writes the document for view-only tools', () => {
     renderToolbar();
-    for (const name of ['Select', 'Pan', 'Toggle grid', 'Toggle snapping', 'Zoom in', 'Zoom out', 'Reset view']) {
+    for (const name of ['Select', 'Pan', 'Toggle grid', 'Toggle coordinate overlay', 'Toggle snapping', 'Zoom in', 'Zoom out', 'Reset view']) {
       fireEvent.click(screen.getByRole('button', { name }));
     }
     expect(animatorCtx.setCharacterParts).not.toHaveBeenCalled();
@@ -267,9 +281,15 @@ describe('AuthoringToolbar', () => {
 
     // The bands are announced, so the strip's structure is readable and testable
     // rather than implied by pixels.
+    // C3 — the DOM carries both arrange variants: the wide bands (Align …
+    // Arrange) and their narrow fold ("Align and arrange"). The stylesheet shows
+    // exactly one of them per width (jsdom applies no media query); the visible
+    // set per width is asserted in the browser (e2e/c3-toolbar-narrow.spec.ts).
+    // C4 — likewise the second fold (≤ 860 px): "Boolean" and "Crop and view"
+    // are the menu variants of the Boolean, Crop, Crop to content and View bands.
     const bands = [
-      'Canvas tools', 'Create', 'Boolean operations', 'Layer group',
-      'Align', 'Center', 'Distribute', 'Rotate and flip', 'Arrange', 'Crop', 'Crop to content', 'View controls',
+      'Canvas tools', 'Create', 'Boolean operations', 'Boolean', 'Layer group',
+      'Align', 'Center', 'Distribute', 'Rotate and flip', 'Arrange', 'Align and arrange', 'Crop', 'Crop to content', 'View controls', 'Crop and view',
     ];
     expect(screen.getAllByRole('group').map((group) => group.getAttribute('aria-label'))).toEqual(bands);
 

@@ -228,9 +228,12 @@ test('the shortcut reference is one dense row per command with the detail one ho
 
 test('a restored project says where it came from, and a reset stops saying it', async ({ page }) => {
   await seed(page, [shape('a', 'Alpha', 0, 0)]);
-  const chip = page.locator('.restored-from-local-badge');
-  await expect(chip).toBeVisible();
-  await expect(chip).toContainText("Restored from this browser's autosave");
+  // C7: no header chip any more (the user asked for it to go); the provenance
+  // is stated on the save status instead.
+  await expect(page.locator('.restored-from-local-badge')).toHaveCount(0);
+  const badge = page.locator('.autosave-status-badge');
+  await expect(badge).toHaveAttribute('data-restored-from-local', 'true');
+  await expect(badge).toHaveAttribute('title', /restored from this browser's autosave/);
 
   // SAFE-03-A made reset a confirmed action; the provenance statement goes
   // away only when the confirmation replaces the document — assert that flow.
@@ -238,5 +241,6 @@ test('a restored project says where it came from, and a reset stops saying it', 
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: /reset/i }).click();
-  await expect(chip).toHaveCount(0);
+  await expect(badge).not.toHaveAttribute('data-restored-from-local', 'true');
+  await expect(badge).not.toHaveAttribute('title', /restored from this browser's autosave/);
 });

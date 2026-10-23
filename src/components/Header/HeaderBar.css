@@ -297,6 +297,18 @@
   box-sizing: border-box;
 }
 
+.text-green {
+  color: inherit;
+}
+
+.pulse-pending-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  box-sizing: border-box;
+}
+
 /* Restore provenance chip: informational, so it borrows the autosave badge's
    silhouette with a neutral (non-green, non-clickable) skin. */
 .restored-from-local-badge {
@@ -554,7 +566,6 @@
   }
 
   .header-action-btn > span,
-  .restored-from-local-badge > span,
   .autosave-text {
     position: absolute;
     width: 1px;

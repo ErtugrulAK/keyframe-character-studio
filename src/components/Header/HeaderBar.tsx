@@ -18,7 +18,6 @@ import {
   Plus,
   ChevronDown,
   Keyboard,
-  HardDriveDownload,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
@@ -577,31 +576,16 @@ export const HeaderBar: React.FC = () => {
             onClick={triggerManualSave}
             data-last-saved-at={lastSavedAt ? String(lastSavedAt.getTime()) : ''}
             data-save-state={saveStatus.state}
-            title={saveStatus.detail}
+            // C7 — restore provenance (this browser's autosave vs a shared
+            // file; autosave is per origin, so a LAN visitor may see another
+            // project) is stated here instead of a header chip.
+            title={restoredFromLocalStorage ? `${saveStatus.detail} This project was restored from this browser's autosave, not from a shared project file; use Import to open another machine's document.` : saveStatus.detail}
+            data-restored-from-local={restoredFromLocalStorage ? 'true' : undefined}
           >
             <div className={autosaveConflict ? 'pulse-amber-dot' : autosaveError ? 'pulse-red-dot' : saveStatus.state === 'unsaved' || saveStatus.state === 'saving' ? 'pulse-pending-dot' : 'pulse-green-dot'} />
             {autosaveConflict || autosaveError ? <AlertTriangle size={13} /> : <CheckCircle2 size={13} className="text-green" />}
             <span className="autosave-text">{saveStatus.label}</span>
           </div>
-
-          {/*
-            Restore provenance. The same browser profile serves localhost and
-            the LAN address, and autosave is keyed per origin — a machine that
-            reaches the editor over the LAN can therefore open with a DIFFERENT
-            (or empty) project than the machine that authored it, silently.
-            This chip states where the document currently on screen came from,
-            and it disappears the moment an import or a reset replaces it.
-          */}
-          {restoredFromLocalStorage && (
-            <div
-              className="restored-from-local-badge"
-              role="status"
-              title="This project was restored from this browser's autosave, not from a shared project file. Use Import project to open the other machine's document."
-            >
-              <HardDriveDownload size={13} aria-hidden="true" />
-              <span>Restored from this browser&#39;s autosave</span>
-            </div>
-          )}
 
           {/* FPS Control */}
           <select className="select-control"

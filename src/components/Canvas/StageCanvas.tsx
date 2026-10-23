@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useLayoutEffect, useCallback, useMe
 import { flushSync } from 'react-dom';
 import { useAnimator } from '../../context/useAnimator';
 import { useEditorContextMenu } from '../../context/editorContextMenu';
-import type { CharacterPart, Transform } from '../../types/animator';
+import type { BezierPath, CharacterPart, Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { parseElementDropPayload } from '../../utils/elementDropPayload';
 import { getPartBounds } from '../../utils/bounds';
@@ -47,10 +47,12 @@ import {
 import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter, type CoordinatePoint } from '../../utils/projectCoordinates';
 import { REFIT_UNTOUCHED_CAMERA_COMMAND, REMEASURE_STAGE_BOX_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT } from '../../utils/workspaceLayout';
-import { buildFreeformPath, normalizeFreeformPoints } from '../../utils/freeform';
+import { normalizeFreeformPoints } from '../../utils/freeform';
+import { buildBezierPathD } from '../../utils/bezierPath';
+import { penAnchorsToPath } from '../../utils/penDraft';
 import { resolveBondGroup } from '../../utils/partBinding';
 import { lockedLayerIds, lockedLayersRefusal } from '../../utils/layerLocks';
-import { useFreeformDraw } from '../../hooks/useFreeformDraw';
+import { useFreeformDraw, type FreeformFinishReason } from '../../hooks/useFreeformDraw';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
 import { CanvasCoordinateOverlay } from './overlays/CanvasCoordinateOverlay';
 import { CanvasCoordinateReadout } from './overlays/CanvasCoordinateReadout';
@@ -461,10 +463,21 @@ export const StageCanvas: React.FC = () => {
       return matrix ? Math.hypot(matrix.a, matrix.b) : 1;
     }, []),
     onComplete: useCallback(
-      (stagePoints, reason) => {
-        const { points, centerX, centerY } = normalizeFreeformPoints(stagePoints);
+      (stagePath: BezierPath, reason: FreeformFinishReason) => {
+        // The layer sits at the centre of its points; the path (points AND
+        // their tangents) is stored around it in the layer's local space.
+        const { centerX, centerY } = normalizeFreeformPoints(stagePath.points);
+        const path: BezierPath = { ...stagePath, points: stagePath.points.map((vertex) => ({
+          ...vertex,
+          x: vertex.x - centerX,
+          y: vertex.y - centerY,
+          ...(vertex.handleIn ? { handleIn: { x: vertex.handleIn.x - centerX, y: vertex.handleIn.y - centerY } } : {}),
+          ...(vertex.handleOut ? { handleOut: { x: vertex.handleOut.x - centerX, y: vertex.handleOut.y - centerY } } : {}),
+        })) };
         addCustomPart('custom_freeform', 'Freeform Shape', {
-          points,
+          path,
+          // The legacy anchor list stays in step for readers that still use it.
+          points: path.points.map(({ x, y }) => ({ x, y })),
           baseTransform: { x: centerX, y: centerY, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
         });
         // A finished drawing hands the stage back to Select; a tool switch
@@ -1639,33 +1652,49 @@ export const StageCanvas: React.FC = () => {
                 />
               )}
 
-              {/* Freeform Drawing Preview (active draw tool) */}
+              {/* Pen drawing preview: the path so far (with its tangents), the
+                  live segment to the cursor, and the handles of the point being
+                  shaped. */}
               {freeform.isDrawing && freeform.points.length > 0 && (
-                <g transform={`translate(${EDITOR_CAMERA_CENTER.x}, ${EDITOR_CAMERA_CENTER.y})`} pointerEvents="none">
+                <g transform={`translate(${EDITOR_CAMERA_CENTER.x}, ${EDITOR_CAMERA_CENTER.y})`} pointerEvents="none" data-testid="pen-draft">
                   <path
-                    d={buildFreeformPath([...freeform.points, ...(freeform.cursorPoint ? [freeform.cursorPoint] : [])])}
+                    data-testid="pen-draft-path"
+                    d={buildBezierPathD({
+                      ...penAnchorsToPath([...freeform.points, ...(freeform.cursorPoint && !freeform.cursorClosesShape ? [freeform.cursorPoint] : [])], 'local', freeform.cursorClosesShape),
+                    })}
                     fill="rgba(56, 189, 248, 0.10)"
                     stroke="var(--accent-cyan)"
                     strokeWidth={1.5 * zScale}
                     strokeDasharray="5 3"
                     strokeLinejoin="round"
                   />
-                  {freeform.points.map((p, i) => (
-                    <circle
-                      key={`vf-${i}`}
-                      data-testid="freeform-draft-point"
-                      data-close-target={i === 0 && freeform.cursorClosesShape ? 'true' : undefined}
-                      cx={p.x}
-                      cy={p.y}
-                      r={(i === 0 && freeform.cursorClosesShape ? 6 : i === 0 ? 3.5 : 2.5) * zScale}
-                      fill={i === 0 && freeform.cursorClosesShape ? '#0f172a' : '#38bdf8'}
-                      stroke={i === 0 ? '#38bdf8' : 'none'}
-                      strokeWidth={1.5 * zScale}
-                    />
-                  ))}
-                  {freeform.points.length > 0 && freeform.cursorPoint && (
+                  {freeform.points.map((p, i) => {
+                    const shaping = freeform.activeIndex === i || (freeform.activeIndex === null && i === freeform.points.length - 1);
+                    return (
+                      <g key={`vf-${i}`}>
+                        {shaping && [p.handleIn, p.handleOut].map((handle, side) => handle && (
+                          <g key={side} data-testid="pen-draft-handle">
+                            <line x1={p.x} y1={p.y} x2={handle.x} y2={handle.y} stroke="#facc15" strokeWidth={1.2 * zScale} />
+                            <circle cx={handle.x} cy={handle.y} r={3.5 * zScale} fill="#facc15" stroke="#0f172a" strokeWidth={1 * zScale} />
+                          </g>
+                        ))}
+                        <circle
+                          data-testid="freeform-draft-point"
+                          data-point-kind={p.handleOut || p.handleIn ? 'smooth' : 'corner'}
+                          data-close-target={i === 0 && freeform.cursorClosesShape ? 'true' : undefined}
+                          cx={p.x}
+                          cy={p.y}
+                          r={(i === 0 && freeform.cursorClosesShape ? 6 : i === 0 ? 3.5 : 3) * zScale}
+                          fill={i === 0 && freeform.cursorClosesShape ? '#0f172a' : p.handleOut || p.handleIn ? '#0f172a' : '#38bdf8'}
+                          stroke="#38bdf8"
+                          strokeWidth={1.5 * zScale}
+                        />
+                      </g>
+                    );
+                  })}
+                  {freeform.cursorPoint && (
                     <text x={freeform.cursorPoint.x} y={freeform.cursorPoint.y - 10 * zScale} fontSize={10 * zScale} fill="#7dd3fc" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                      {freeform.cursorClosesShape ? 'Click to close the shape' : freeform.canFinish ? 'Click the first point or double-click to finish' : 'Click to add corners • Drag to draw freely'}
+                      {freeform.cursorClosesShape ? 'Click to close the shape' : freeform.canFinish ? 'Click: corner · Drag: smooth · First point closes' : 'Click: corner point · Drag: smooth point'}
                     </text>
                   )}
                 </g>
@@ -1955,7 +1984,7 @@ export const StageCanvas: React.FC = () => {
               hint={maskDrawing.block
                 ? maskDrawing.block.message
                 : maskDrawing.shape === 'pen'
-                  ? 'Click to add points · click the first point, double-click or Enter to finish · Backspace removes a point · Esc cancels'
+                  ? 'Click: corner point · drag: smooth point · click the first point, double-click or Enter to finish · Backspace removes a point · Esc cancels'
                   : 'Drag on the canvas to draw · Esc cancels'}
             >
               {maskDrawing.shape === 'pen' && maskPenDraft && (

@@ -163,25 +163,30 @@ test('C2 — Undo/Redo inside an unfinished Pen draft never touches finished sha
 });
 
 test.describe('C2 — finishing and leaving a freeform drawing with the mouse', () => {
-  test('a freehand stroke is ONE draft step; clicking the first point closes; then Select works again', async ({ page }) => {
+  // C6 — the Pen no longer samples a freehand stroke: a drag places ONE
+  // smooth point whose tangent follows the mouse (the user's requested Pen).
+  test('a dragged point is ONE draft step (point + tangent); clicking the first point closes; then Select works again', async ({ page }) => {
     await seed(page);
     const c = await stageCenter(page);
     await page.getByRole('button', { name: 'Pen' }).click();
     await page.mouse.click(c.x - 100, c.y - 60);
-    // A dragged stroke adds many samples …
+    // A long drag with many move events places ONE smooth point …
     await page.mouse.move(c.x + 100, c.y - 60);
     await page.mouse.down();
     await page.mouse.move(c.x + 120, c.y + 20, { steps: 12 });
     await page.mouse.move(c.x + 60, c.y + 70, { steps: 12 });
     await page.mouse.up();
     const points = page.getByTestId('freeform-draft-point');
-    const afterStroke = await points.count();
-    expect(afterStroke).toBeGreaterThan(4);
-    // … and one Undo removes the whole stroke.
+    await expect(points).toHaveCount(2);
+    await expect(points.nth(1)).toHaveAttribute('data-point-kind', 'smooth');
+    // … and one Undo removes the point together with its tangent; Redo restores both.
     await page.keyboard.press('Control+z');
     await expect(points).toHaveCount(1);
     await page.keyboard.press('Control+Shift+z');
-    await expect(points).toHaveCount(afterStroke);
+    await expect(points).toHaveCount(2);
+    await expect(points.nth(1)).toHaveAttribute('data-point-kind', 'smooth');
+    await page.mouse.click(c.x - 20, c.y + 90);
+    await expect(points).toHaveCount(3);
     // The first point shows a close affordance on hover and closes on click.
     const first = await points.first().boundingBox();
     if (!first) throw new Error('no first point');

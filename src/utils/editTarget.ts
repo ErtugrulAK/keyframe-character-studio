@@ -70,7 +70,7 @@ export const resolveEditTarget = (input: EditTargetInput): EditTarget | null => 
     const mask = owner?.masks?.find((candidate) => candidate.id === input.maskEditTarget?.maskId);
     return { kind: 'mask', mode: 'Mask editing', path: [nameOf(owner, input.maskEditTarget.ownerPartId), mask?.name || input.maskEditTarget.maskId] };
   }
-  if (input.activeTool === 'freeform_draw') return { kind: 'new-shape', mode: 'New shape', path: ['Pen'], detail: 'click to add points' };
+  if (input.activeTool === 'freeform_draw') return { kind: 'new-shape', mode: 'New shape', path: ['Pen'], detail: 'click: corner · drag: smooth' };
   if (input.activeTool === 'shape_create' && input.pendingShapeType) {
     return { kind: 'new-shape', mode: 'New shape', path: [shapeName(input.pendingShapeType)], detail: 'drag on the canvas' };
   }

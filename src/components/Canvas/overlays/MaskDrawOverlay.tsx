@@ -5,7 +5,9 @@ import type { PathPoint } from '../../../utils/bezierPath';
 import { applyAffine } from '../../../utils/containerMath';
 import { buildLayerMaskPathD } from '../../../utils/layerMasks';
 import { resolveMaskPathFrame } from '../../../utils/maskPathEditing';
-import { createEllipseMaskPath, createPolygonMaskPath, createRectangleMaskPath, MIN_CLOSED_MASK_POINTS } from '../../../utils/maskPathCreation';
+import { createEllipseMaskPath, createRectangleMaskPath, MIN_CLOSED_MASK_POINTS } from '../../../utils/maskPathCreation';
+import { addPenAnchor, dragPenTangent, penAnchorsToPath, penAnchorIsSmooth, type PenAnchor } from '../../../utils/penDraft';
+import { PEN_DRAG_THRESHOLD_PX } from '../../../hooks/useFreeformDraw';
 import type { MaskDrawShape } from '../../../hooks/useMaskEditing';
 import type { DraftHistoryOwner } from '../../../context/AnimatorContext';
 import { isEditableElement } from '../../../utils/keyboardFocus';
@@ -61,6 +63,10 @@ export interface MaskDrawOverlayProps {
  * is transient, so Escape (handled by the editor's Escape chain) leaves no
  * trace.
  *
+ * C6 — the mask Pen follows the shape Pen: a click is a corner point, a
+ * press-and-drag is ONE smooth point whose tangent follows the pointer, and
+ * "place + shape its tangent" is one draft undo step.
+ *
  * C2 — the pen draft keeps its own undo/redo (one step per point) and owns the
  * editor's Undo/Redo while it is open; the first point shows a close target on
  * hover and closes on click; Finish is also a visible control.
@@ -81,7 +87,10 @@ export const MaskDrawOverlay: React.FC<MaskDrawOverlayProps> = ({
   const frame = resolveMaskPathFrame(owner, 'normalized', transform);
   const groupRef = useRef<SVGGElement>(null);
   const [box, setBox] = useState<{ from: PathPoint; to: PathPoint; fromClient: PathPoint; pointerId: number } | null>(null);
-  const [draft, setDraft] = useState<{ points: PathPoint[]; past: PathPoint[][]; future: PathPoint[][] }>({ points: [], past: [], future: [] });
+  const [draft, setDraft] = useState<{ points: PenAnchor[]; past: PenAnchor[][]; future: PenAnchor[][] }>({ points: [], past: [], future: [] });
+  /** The pen press in flight: which point it shapes, and whether it closes the path. */
+  const penGestureRef = useRef<{ pointerId: number; index: number; closing: boolean; startX: number; startY: number; dragging: boolean; recorded: boolean } | null>(null);
+  const [shapingIndex, setShapingIndex] = useState<number | null>(null);
   const [cursor, setCursor] = useState<PathPoint | null>(null);
   const [closeReady, setCloseReady] = useState(false);
   const penPoints = draft.points;
@@ -108,9 +117,15 @@ export const MaskDrawOverlay: React.FC<MaskDrawOverlayProps> = ({
     penPoints.length >= MIN_CLOSED_MASK_POINTS && screenDistanceTo(penPoints[0], clientX, clientY) <= MASK_PEN_CLOSE_RADIUS_PX;
 
   const pushPoint = (point: PathPoint) => setDraft((current) => ({
-    points: [...current.points, point],
+    points: addPenAnchor(current.points, point),
     past: [...current.past, current.points],
     future: [],
+  }));
+  /** Pulls the tangent of one draft point; `record` makes it a new draft step. */
+  const shapeTangent = (index: number, pointer: PathPoint, record: boolean) => setDraft((current) => ({
+    points: dragPenTangent(current.points, index, pointer),
+    past: record ? [...current.past, current.points] : current.past,
+    future: record ? [] : current.future,
   }));
   const undoPoint = useCallback(() => setDraft((current) => (current.past.length === 0 ? current : {
     points: current.past[current.past.length - 1],
@@ -141,7 +156,7 @@ export const MaskDrawOverlay: React.FC<MaskDrawOverlayProps> = ({
       return;
     }
     committedRef.current = true;
-    onCommit(createPolygonMaskPath('normalized', penPoints));
+    onCommit(penAnchorsToPath(penPoints, 'normalized', true));
     setDraft({ points: [], past: [], future: [] });
   };
   const finishPenRef = useRef(finishPen);
@@ -193,12 +208,20 @@ export const MaskDrawOverlay: React.FC<MaskDrawOverlayProps> = ({
     const point = toPathPoint(event.clientX, event.clientY);
     if (!point) return;
     if (shape === 'pen') {
+      (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
+      const base = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, dragging: false };
       if (closesAt(event.clientX, event.clientY)) {
-        finishPen();
+        // Closes on release; a drag first shapes the first point's tangent.
+        penGestureRef.current = { ...base, index: 0, closing: true, recorded: false };
         return;
       }
-      if (screenDistanceTo(penPoints[penPoints.length - 1], event.clientX, event.clientY) < DUPLICATE_CLICK_PX) return;
+      if (screenDistanceTo(penPoints[penPoints.length - 1], event.clientX, event.clientY) < DUPLICATE_CLICK_PX) {
+        // The second press of a double-click: no new point; a drag re-shapes it.
+        penGestureRef.current = { ...base, index: penPoints.length - 1, closing: false, recorded: false };
+        return;
+      }
       pushPoint(point);
+      penGestureRef.current = { ...base, index: penPoints.length, closing: false, recorded: true };
       return;
     }
     (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
@@ -209,6 +232,17 @@ export const MaskDrawOverlay: React.FC<MaskDrawOverlayProps> = ({
     const point = toPathPoint(event.clientX, event.clientY);
     if (!point) return;
     if (shape === 'pen') {
+      const gesture = penGestureRef.current;
+      if (gesture && event.pointerId === gesture.pointerId) {
+        if (!gesture.dragging && Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY) <= PEN_DRAG_THRESHOLD_PX) return;
+        // A drag shapes the tangent of the pressed point; it never adds points.
+        shapeTangent(gesture.index, point, !gesture.recorded);
+        gesture.dragging = true;
+        gesture.recorded = true;
+        setShapingIndex(gesture.index);
+        setCursor(null);
+        return;
+      }
       setCursor(point);
       setCloseReady(closesAt(event.clientX, event.clientY));
       return;
@@ -217,6 +251,15 @@ export const MaskDrawOverlay: React.FC<MaskDrawOverlayProps> = ({
   };
 
   const onPointerUp = (event: React.PointerEvent<SVGRectElement>) => {
+    const penGesture = penGestureRef.current;
+    if (shape === 'pen' && penGesture && event.pointerId === penGesture.pointerId) {
+      event.stopPropagation();
+      (event.currentTarget as Element).releasePointerCapture?.(event.pointerId);
+      penGestureRef.current = null;
+      setShapingIndex(null);
+      if (penGesture.closing) finishPen();
+      return;
+    }
     if (!box || event.pointerId !== box.pointerId) return;
     event.stopPropagation();
     (event.currentTarget as Element).releasePointerCapture?.(event.pointerId);
@@ -234,9 +277,9 @@ export const MaskDrawOverlay: React.FC<MaskDrawOverlayProps> = ({
 
   const preview: BezierPath | null = (() => {
     if (shape === 'pen') {
-      const points = [...penPoints, ...(cursor && penPoints.length > 0 && !closeReady ? [cursor] : [])];
+      const points: PenAnchor[] = [...penPoints, ...(cursor && penPoints.length > 0 && !closeReady ? [cursor] : [])];
       if (points.length < 2) return null;
-      return { ...createPolygonMaskPath('normalized', points), closed: closeReady };
+      return penAnchorsToPath(points, 'normalized', closeReady);
     }
     if (!box) return null;
     return shape === 'ellipse'
@@ -244,12 +287,18 @@ export const MaskDrawOverlay: React.FC<MaskDrawOverlayProps> = ({
       : createRectangleMaskPath('normalized', box.from, box.to);
   })();
   const previewD = preview ? buildLayerMaskPathD(preview, owner, transform, EDITOR_CAMERA_CENTER) : '';
+  const toStage = (point: PathPoint) => {
+    const world = applyAffine(frame!.toWorld, point);
+    return { x: world.x + EDITOR_CAMERA_CENTER.x, y: world.y + EDITOR_CAMERA_CENTER.y };
+  };
   const penMarkers = frame
-    ? penPoints.map((point) => {
-      const world = applyAffine(frame.toWorld, point);
-      return { x: world.x + EDITOR_CAMERA_CENTER.x, y: world.y + EDITOR_CAMERA_CENTER.y };
-    })
+    ? penPoints.map((point) => ({
+      ...toStage(point),
+      smooth: penAnchorIsSmooth(point),
+      handles: [point.handleIn, point.handleOut].filter((handle): handle is PathPoint => Boolean(handle)).map(toStage),
+    }))
     : [];
+  const shapedMarker = shapingIndex ?? (penMarkers.length > 0 ? penMarkers.length - 1 : null);
 
   return (
     <g ref={groupRef} data-testid="mask-draw-overlay" data-shape={shape} data-interactive={interactive && frame ? 'true' : 'false'}>
@@ -265,7 +314,11 @@ export const MaskDrawOverlay: React.FC<MaskDrawOverlayProps> = ({
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
-          onPointerCancel={() => setBox(null)}
+          onPointerCancel={() => {
+            setBox(null);
+            penGestureRef.current = null;
+            setShapingIndex(null);
+          }}
           onDoubleClick={(event) => {
             if (shape !== 'pen') return;
             event.stopPropagation();
@@ -288,12 +341,19 @@ export const MaskDrawOverlay: React.FC<MaskDrawOverlayProps> = ({
         const isCloseTarget = index === 0 && closeReady;
         return (
           <g key={`pen-point-${index}`} pointerEvents="none">
+            {index === shapedMarker && marker.handles.map((handle, side) => (
+              <g key={`pen-handle-${side}`} data-testid="mask-draw-handle">
+                <line x1={marker.x} y1={marker.y} x2={handle.x} y2={handle.y} stroke="#facc15" strokeWidth={1.2 * zScale} />
+                <circle cx={handle.x} cy={handle.y} r={3.5 * zScale} fill="#facc15" stroke="#0f172a" strokeWidth={1 * zScale} />
+              </g>
+            ))}
             {isCloseTarget && (
               <circle cx={marker.x} cy={marker.y} r={MASK_PEN_CLOSE_RADIUS_PX * zScale} fill="rgba(34, 211, 238, 0.18)" stroke={PREVIEW_COLOR} strokeWidth={1 * zScale} />
             )}
             <circle
               data-testid="mask-draw-point"
               data-close-target={isCloseTarget ? 'true' : undefined}
+              data-point-kind={marker.smooth ? 'smooth' : 'corner'}
               cx={marker.x}
               cy={marker.y}
               r={(index === 0 ? 6 : 4) * zScale}

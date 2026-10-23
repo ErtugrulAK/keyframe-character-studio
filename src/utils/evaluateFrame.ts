@@ -160,6 +160,7 @@ function extractContent(
     shadowOffsetX: layer.shadowOffsetX,
     shadowOffsetY: layer.shadowOffsetY,
     borderRadius: layer.borderRadius,
+    strokeLinejoin: layer.strokeLinejoin,
     trimPathEnabled: trim.isModern ? trim.enabled : undefined,
     trimPathStart: trim.isModern ? trim.start : undefined,
     trimPathEnd: trim.isModern ? trim.end : undefined,

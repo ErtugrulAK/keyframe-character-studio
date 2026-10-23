@@ -39,6 +39,7 @@ import { usePresets, type SavePresetInput, type UpdatePresetInput } from '../hoo
 import { useProjectState } from '../hooks/useProjectState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useMatteNavigation } from '../hooks/useMatteNavigation';
+import { usePathEditing, type PathVertexSelection } from '../hooks/usePathEditing';
 
 /** C2 — the transient history of an unfinished drawing that owns Undo/Redo. */
 export interface DraftHistoryOwner {
@@ -177,6 +178,13 @@ export interface AnimatorContextType {
   requestConfirmation: (request: ConfirmationRequest) => void;
   /** C4 — the lock switch of several layers at once (one undo step). */
   setLayersLocked: (partIds: readonly string[], locked: boolean) => void;
+  /** C6 — turns a basic shape into an editable path layer in place (one undo step); false when refused (toast says why). */
+  convertToEditablePath: (partId: string) => boolean;
+  /** C6 — writes a path layer's path (one undo step, or part of an open batch). */
+  setPartPath: (partId: string, path: BezierPath) => void;
+  /** C6 — the selected point of the selected path layer, shared by the canvas and the Inspector. */
+  pathVertex: PathVertexSelection | null;
+  selectPathVertex: (partId: string, index: number | null) => void;
   toggleTrackExpanded: (trackId: string) => void;
   exportProject: () => string;
   importProject: (jsonStr: string, defaultName?: string) => ImportResult;
@@ -765,6 +773,14 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     redo();
   }, [draftHistory, redo]);
 
+  const { pathVertex, selectPathVertex, convertToEditablePath, setPartPath, deleteSelectedPathVertex } = usePathEditing({
+    characterParts,
+    tracks,
+    setCharacterParts: editSetCharacterParts,
+    selectedPartId,
+    showToast,
+  });
+
   const { matteReturnTargetId, selectMatteSource, backToMatteTarget } = useMatteNavigation({
     characterParts,
     selectedPartId,
@@ -897,7 +913,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     /** Escape cancels a canvas mask gesture, or leaves mask editing (one level). */
     cancelMaskEditing: escapeMaskEditing,
     isMaskEditing: maskEditTarget !== null || maskDrawSession !== null,
-    deleteMaskSelection,
+    // A selected mask point, else a selected path point, takes Delete before the layer does.
+    deleteMaskSelection: () => deleteMaskSelection() || deleteSelectedPathVertex(),
     exitBooleanOperandEditing: () => {
       if (!booleanOperandEditingGroupId) return false;
       setBooleanOperandEditingGroupId(null);
@@ -1116,6 +1133,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         toggleTrackEditVisibility,
         toggleTrackLock,
         setLayersLocked,
+        convertToEditablePath,
+        setPartPath,
+        pathVertex,
+        selectPathVertex,
         requestConfirmation,
         toggleTrackExpanded,
         resetProject,

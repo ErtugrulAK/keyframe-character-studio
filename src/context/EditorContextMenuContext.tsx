@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { isConvertibleShapeType, shapeToPathBlockReason } from '../utils/shapeToPath';
 import { useAnimator } from './useAnimator';
 import { EditorContextMenuContext, type ContextMenuRequest } from './editorContextMenu';
 import { useBooleanAuthoring } from '../hooks/useBooleanAuthoring';
@@ -43,6 +44,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     setBooleanOperandEditingGroupId,
     setLayersLocked,
     toggleTrackEditVisibility,
+    convertToEditablePath,
   } = useAnimator();
   const { selectedBooleanGroup, dissolveBooleanGroup } = useBooleanAuthoring();
   const { selectedGroup, canGroup, groupSelection, ungroupSelection } = useLayerGrouping();
@@ -152,6 +154,12 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
         { id: 'toggle-lock', label: primaryTrack.locked ? 'Unlock' : 'Lock', shortcut: hint('lock-layers'), run: () => setLayersLocked([primaryPart.id], !primaryTrack.locked) },
       );
     }
+    // C6 — a basic shape can become an editable path; a refused case stays
+    // listed, disabled, so the reason is one hover away.
+    if (single && primaryPart && isConvertibleShapeType(primaryPart.type)) {
+      const blocked = shapeToPathBlockReason(primaryPart, tracks) ?? (primaryTrack?.locked ? 'This layer is locked.' : null);
+      layerActions.push({ id: 'convert-to-path', label: 'Convert to Editable Path', disabled: Boolean(blocked), ...(blocked ? { title: blocked } : {}), run: () => { convertToEditablePath(primaryPart.id); } });
+    }
 
     const groupActions: ContextMenuGroup = [];
     if (selectedGroup) groupActions.push({ id: 'ungroup', label: 'Ungroup', run: ungroupSelection });
@@ -169,6 +177,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     clipboardData,
     copySelectedPart,
     canGroup,
+    convertToEditablePath,
     deleteSelection,
     duplicateSelectedPart,
     groupSelection,

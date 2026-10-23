@@ -221,7 +221,7 @@ function evaluateScene(scene, frame) {
 }
 function geometry(layer, props) {
   const attributes = props || ''; const path = layer.path ? localPathD(layer.path) : layer.points && layer.points.length >= 3 ? 'M ' + layer.points.map((point) => point.x + ' ' + point.y).join(' L ') + ' Z' : '';
-  if (layer.type === 'custom_freeform') return path ? '<path d="' + escapeXml(path) + '" stroke-linejoin="round"' + attributes + ' />' : '';
+  if (layer.type === 'custom_freeform') return path ? '<path d="' + escapeXml(path) + '" stroke-linejoin="' + (layer.strokeLinejoin === 'miter' ? 'miter' : 'round') + '"' + attributes + ' />' : '';
   if (layer.type === 'custom_circle') return '<circle cx="0" cy="0" r="30"' + attributes + ' />';
   if (layer.type === 'custom_box') return '<rect x="-30" y="-30" width="60" height="60" rx="0"' + attributes + ' />';
   if (layer.type === 'custom_rect') return '<rect x="-60" y="-30" width="120" height="60" rx="' + (layer.borderRadius || 0) + '"' + attributes + ' />';

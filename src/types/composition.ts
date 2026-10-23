@@ -126,6 +126,8 @@ export interface SceneLayer {
   shadowOffsetX?: number;
   shadowOffsetY?: number;
   borderRadius?: number;
+  /** C6 — stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
+  strokeLinejoin?: 'miter' | 'round';
 
   // Content — type-dependent; only fields actually read by PartRenderer sub-renderers
   textValue?: string;
@@ -269,6 +271,8 @@ export interface LayerContent {
   shadowOffsetX?: number;
   shadowOffsetY?: number;
   borderRadius?: number;
+  /** C6 — stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
+  strokeLinejoin?: 'miter' | 'round';
   trimPathEnabled?: boolean;
   trimPathStart?: number;
   trimPathEnd?: number;

@@ -8,6 +8,7 @@ import { StyleTextFields } from './style/StyleTextFields';
 import { StyleClonerSection } from './style/StyleClonerSection';
 import { StyleParticleSection } from './style/StyleParticleSection';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
+import { PathGeometryCard } from './style/PathGeometryCard';
 import type { SceneCoordinateSystem } from '../../../types/composition';
 import { StyleMatteSection } from './style/StyleMatteSection';
 import type { MaskDrawShape } from '../../../hooks/useMaskEditing';
@@ -48,6 +49,15 @@ interface StyleTabProps {
   /** Opens/closes ONE undo entry around a completed color pointer gesture. */
   onColorInteractionStart?: () => void;
   onColorInteractionEnd?: () => void;
+  /** C6 — shape ↔ editable path: conversion, and the path's points shared with the canvas. */
+  pathEditing?: {
+    tracks: Track[];
+    readOnlyReason: string | null;
+    onConvert: (partId: string) => void;
+    onChangePath: (partId: string, path: BezierPath) => void;
+    selectedIndex: number | null;
+    onSelectIndex: (index: number | null) => void;
+  };
 }
 
 export const StyleTab: React.FC<StyleTabProps> = ({
@@ -78,6 +88,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   onUpdateTrimChannel,
   onColorInteractionStart,
   onColorInteractionEnd,
+  pathEditing,
 }) => {
   const isTextBearing =
     selectedPart.type === 'custom_card' ||
@@ -118,8 +129,27 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         onColorInteractionStart={onColorInteractionStart}
         onColorInteractionEnd={onColorInteractionEnd}
       />
+      {pathEditing && (
+        <PathGeometryCard
+          selectedPart={selectedPart}
+          tracks={pathEditing.tracks}
+          readOnlyReason={pathEditing.readOnlyReason}
+          onConvert={pathEditing.onConvert}
+          onChangePath={pathEditing.onChangePath}
+          selectedIndex={pathEditing.selectedIndex}
+          onSelectIndex={pathEditing.onSelectIndex}
+          onInteractionStart={onColorInteractionStart}
+          onInteractionEnd={onColorInteractionEnd}
+        />
+      )}
       {selectedPart.type === 'custom_freeform' && !selectedPart.booleanOperandIds?.length && transform && coordinateSystem && (
-        <TransformVertexEditor selectedPart={selectedPart} transform={transform} coordinateSystem={coordinateSystem} onPartPropChange={handlePartPropChange} />
+        <TransformVertexEditor
+          selectedPart={selectedPart}
+          transform={transform}
+          coordinateSystem={coordinateSystem}
+          onPartPropChange={handlePartPropChange}
+          onChangePath={pathEditing ? (path) => pathEditing.onChangePath(selectedPart.id, path) : undefined}
+        />
       )}
       <StyleMatteSection
         selectedPart={selectedPart}

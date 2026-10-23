@@ -2812,3 +2812,22 @@
 .tree-node .outliner-relation-badge.is-matte {
   min-width: 56px;
 }
+
+/* C6 — shape geometry: parametric shape vs editable path. */
+.path-geometry-note {
+  margin: 0 0 8px;
+  color: var(--kcs-text-secondary, var(--text-secondary));
+  font-size: var(--font-size-caption);
+  line-height: 1.4;
+}
+
+.path-geometry-convert {
+  width: 100%;
+}
+
+.path-geometry-reason {
+  margin: 6px 0 0;
+  color: var(--kcs-text-muted, var(--text-muted));
+  font-size: var(--font-size-caption);
+  line-height: 1.35;
+}

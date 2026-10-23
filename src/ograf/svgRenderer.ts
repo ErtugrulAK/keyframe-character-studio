@@ -64,7 +64,7 @@ function renderGeometry(type: string, content: LayerContent, props: SvgAttribute
         ? buildFreeformPath(content.points)
         : '';
     if (!path) return '';
-    return `<path d="${escapeXml(path)}" stroke-linejoin="round"${attributes(props)} />`;
+    return `<path d="${escapeXml(path)}" stroke-linejoin="${content.strokeLinejoin === 'miter' ? 'miter' : 'round'}"${attributes(props)} />`;
   }
   if (!geometry) return '';
   if (geometry.kind === 'circle') return `<circle cx="0" cy="0" r="${svgNumber(geometry.r)}"${attributes(props)} />`;

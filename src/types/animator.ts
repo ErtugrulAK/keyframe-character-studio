@@ -399,6 +399,8 @@ export interface CharacterPart {
   shadowOffsetX?: number;
   shadowOffsetY?: number;
   borderRadius?: number;
+  /** C6 — stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
+  strokeLinejoin?: 'miter' | 'round';
   width?: number;
   height?: number;
   /**

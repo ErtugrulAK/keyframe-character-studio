@@ -238,7 +238,7 @@ const NUMERIC_LAYER_FIELDS = [
  */
 const STRING_LAYER_FIELDS = [
   'name', 'type', 'fillColor', 'strokeColor', 'fontFamily', 'imageUrl', 'videoUrl',
-  'inAnimPreset', 'outAnimPreset', 'strokeAlignment', 'textValue',
+  'inAnimPreset', 'outAnimPreset', 'strokeAlignment', 'strokeLinejoin', 'textValue',
 ] as const;
 
 /** `{ x, y }` lists the geometry helpers read as coordinates. */

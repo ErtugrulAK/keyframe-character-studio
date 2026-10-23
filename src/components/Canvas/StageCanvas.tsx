@@ -188,7 +188,6 @@ export const StageCanvas: React.FC = () => {
     namedSequenceRuntime,
     activeTemplateId,
     tracks,
-    setCharacterParts,
     setFocusModeNodeId,
     startBatchInteraction,
     endBatchInteraction,
@@ -213,6 +212,9 @@ export const StageCanvas: React.FC = () => {
     cancelMaskDraw,
     commitMaskDraw,
     registerDraftHistory,
+    setPartPath,
+    pathVertex,
+    selectPathVertex,
     matteReturnTargetId,
     backToMatteTarget,
   } = useAnimator();
@@ -1886,13 +1888,11 @@ export const StageCanvas: React.FC = () => {
                   zScale={zScale}
                   toWorld={clientToSVG}
                   outputOrigin={EDITOR_CAMERA_CENTER}
-                  onPathChange={(nextPath) => {
-                    setCharacterParts((previous) => previous.map((part) => (
-                      part.id === selectedPart.id ? { ...part, path: nextPath } : part
-                    )));
-                  }}
+                  onPathChange={(nextPath) => setPartPath(selectedPart.id, nextPath)}
                   onBatchStart={startBatchInteraction}
                   onBatchEnd={endBatchInteraction}
+                  selectedIndex={pathVertex?.partId === selectedPart.id ? pathVertex.index : null}
+                  onSelectIndex={(index) => selectPathVertex(selectedPart.id, index)}
                 />
               )}
 

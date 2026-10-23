@@ -68,6 +68,10 @@ export const DetailsPanel: React.FC = () => {
     setMaskVertexIndex,
     setLayersLocked,
     applyMaskPathOrder,
+    convertToEditablePath,
+    setPartPath,
+    pathVertex,
+    selectPathVertex,
   } = useAnimator();
 
   const [activeTabSection, setActiveTabSection] = useState<'edit' | 'duplicate'>('edit');
@@ -321,6 +325,14 @@ export const DetailsPanel: React.FC = () => {
                 }}
                 onColorInteractionStart={startBatchInteraction}
                 onColorInteractionEnd={endBatchInteraction}
+                pathEditing={{
+                  tracks,
+                  readOnlyReason: isLocked ? 'This layer is locked.' : null,
+                  onConvert: convertToEditablePath,
+                  onChangePath: setPartPath,
+                  selectedIndex: pathVertex?.partId === selectedPart.id ? pathVertex.index : null,
+                  onSelectIndex: (index) => selectPathVertex(selectedPart.id, index),
+                }}
               />
               )}
 

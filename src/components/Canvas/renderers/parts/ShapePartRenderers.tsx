@@ -72,7 +72,7 @@ const renderModernGeometry = (
     case 'custom_freeform': {
       const path = part.path ?? legacyFreeformPointsToPath(part.points);
       const d = path ? buildBezierPathD(path) : '';
-      return d ? <path d={d} strokeLinejoin="round" {...props} /> : null;
+      return d ? <path d={d} strokeLinejoin={part.strokeLinejoin === 'miter' ? 'miter' : 'round'} {...props} /> : null;
     }
     default:
       return null;
@@ -350,7 +350,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, isGhost, trimP
       return (
         <g>
           <path d={d} fill="rgba(0,0,0,0.001)" fillRule="evenodd" />
-          <path d={d} fill={fill} fillRule="evenodd" stroke={strokeToUse} strokeWidth={isSelected ? 2 : 1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" {...getShapeDashProps(renderPart, points ? getFreeformPerimeter(points) : 0)} />
+          <path d={d} fill={fill} fillRule="evenodd" stroke={strokeToUse} strokeWidth={isSelected ? 2 : 1.5} strokeLinejoin={part.strokeLinejoin === 'miter' ? 'miter' : 'round'} vectorEffect="non-scaling-stroke" {...getShapeDashProps(renderPart, points ? getFreeformPerimeter(points) : 0)} />
         </g>
       );
     }

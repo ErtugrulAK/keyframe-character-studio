@@ -98,7 +98,7 @@ export const PathGeometryCard: React.FC<PathGeometryCardProps> = ({
         type="button"
         className="btn-secondary path-geometry-convert"
         disabled={Boolean(blocked)}
-        title={blocked ?? `Turn this ${label.toLowerCase()} into an editable path: add points, move them, make them Smooth. The look, position, size, rotation, fill, stroke, masks, parent and matte stay. Undo restores the ${label.toLowerCase()}.`}
+        title={blocked ?? `Turn this ${label.toLowerCase()} into an editable path: add points, move them, make them Smooth. The look, position, size, rotation, fill, stroke, masks, parent and matte stay. Ctrl+Z brings the ${label.toLowerCase()} back.`}
         onClick={() => onConvert(selectedPart.id)}
       >
         Convert to editable path

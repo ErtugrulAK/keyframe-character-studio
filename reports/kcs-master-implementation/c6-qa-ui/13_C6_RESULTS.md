@@ -44,13 +44,24 @@ commit's tree).
 | `npm run lint` | exit 0; 1 pre-existing warning | `logs/c6_lint.log` |
 | `npm run build` | exit 0 | `logs/c6_build.log` |
 | `npx vitest run` | 227 files, 3 186 tests passed | `logs/c6_vitest_full.log` |
-| full E2E (isolated port 5196) | E2E_RESULT | `logs/c6_e2e_full.log` |
+| full E2E (isolated port 5196) | **581 passed, 0 failed, 0 flaky** (25.8 min) | `logs/c6_e2e_full_2.log` |
 
 New tests: `c6AutosaveTiming`, `c6PenDraw`, `c6ShapeToPath`, `c6FreeformPathEditing`,
 `c6ColorCorrection`; e2e `c6-autosave-header`, `c6-pen-click-drag`, `c6-rectangle-to-path`,
 `c6-dock-visual-continuity`, `c6-inspector-relations`, `c6-color-correction`.
 Contract updates (no assertion weakened): `c2-tool-ownership-draft-undo` ("a drag adds many
 samples" → "a drag adds one smooth point, one undo removes it"), `importValidation` (unknown
-version example 3 → 4).
+version example 3 → 4), `v51-recovery` and `left-toolbar-collapse` (they required the dock's
+transform/opacity transition and the handle's `right` transition — the cause of the visual bug —
+and now require them to be absent).
+
+The first full run (`logs/c6_e2e_full.log`) had exactly those two failures (579 passed); after the
+contract update (`6c5d02e`) the second run is clean.
+
+## 4. QA candidate (not switched)
+
+`C:\Users\ertugrul.ak\Desktop\kcs-qa-artifacts\qa-20261023-2059-6c5d02e\` — production build of the
+committed tree of `6c5d02e`, read-only, smoke-tested on a temporary local port (no page errors, no
+HMR). The running QA build `qa-20261023-1553-8bc19ad` on 5310 is unchanged and kept for rollback.
 
 Evidence: `evidence/c6-inspector/before-*|after-*` (Details header, Parent row, matte cards).

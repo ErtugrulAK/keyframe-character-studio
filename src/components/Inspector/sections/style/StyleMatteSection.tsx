@@ -601,7 +601,11 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
         onSelectTarget={onSelectMatteTarget}
       />
     )}
-    <StyleCard title="TRACK MATTE" collapsible defaultOpen={false} retainKey="track-matte">
+    <StyleCard title="TRACK MATTE" collapsible defaultOpen={false} retainKey="track-matte" badge={trackMatte && !trackMatteSourceMissing ? (trackMatte.enabled !== false ? 'On' : 'Off') : undefined}>
+      <p className="matte-section-intro" data-testid="track-matte-intro">
+        Shows this layer only where another layer is (its alpha) or as bright as it is (its luminance).
+        This is the matte to use for new work.
+      </p>
       <div className="matte-control-grid">
         <div className="matte-field matte-source-field matte-span-full">
           <label className="form-label">SOURCE LAYER</label>
@@ -666,11 +670,23 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
         )}
       </div>
     </StyleCard>
-    <StyleCard title="LEGACY CLIP MATTE" collapsible defaultOpen={false} retainKey="legacy-clip-matte">
-      {trackMatte && trackMatte.enabled !== false && (
-        <div className="matte-span-full" style={{ fontSize: 11, color: '#f59e0b', marginBottom: 8 }}>
-          These legacy settings are preserved but inactive while the <strong>Track Matte</strong> above
-          is enabled. Disable or clear the Track Matte to use them.
+    <StyleCard
+      title="LEGACY CLIP MATTE"
+      collapsible
+      defaultOpen={false}
+      retainKey={matte ? 'legacy-clip-matte' : 'legacy-clip-matte-unused'}
+      badge={!matte ? 'Advanced' : trackMatte && trackMatte.enabled !== false ? 'Kept · not applied' : matte.enabled === false ? 'Off' : 'In use'}
+      tone={matte ? 'default' : 'quiet'}
+    >
+      <p className="matte-section-intro" data-testid="legacy-matte-intro">
+        The older matte: clips this layer by another layer&apos;s outline, or by its alpha/luminance with
+        feather, strength and gradient. It is kept so older projects look the same, and it is never converted
+        automatically. A Track Matte that is on always wins over it.
+      </p>
+      {matte && trackMatte && trackMatte.enabled !== false && (
+        <div className="matte-span-full matte-legacy-status" role="note" style={{ fontSize: 11, color: '#f59e0b', marginBottom: 8 }}>
+          Not applied right now: the <strong>Track Matte</strong> above is on. These settings are kept unchanged;
+          turn the Track Matte off (or clear it) to use them again.
         </div>
       )}
       <div className="matte-control-grid">
@@ -892,7 +908,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
           <button
             className="btn-icon-small danger"
             onClick={onRemove}
-            title="Remove Track Matte"
+            title="Remove the legacy clip matte (the source layer is not changed)"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11 }}
           >
             <X size={12} />

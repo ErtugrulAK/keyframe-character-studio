@@ -12,6 +12,10 @@ interface StyleCardProps {
    * layer that shows the same card. Without it the state lives per mount.
    */
   retainKey?: string;
+  /** C6 — a short status next to the title ("In use", "Advanced"); not part of the card's name. */
+  badge?: string;
+  /** C6 — 'quiet' de-emphasises a card that is kept for compatibility and unused here. */
+  tone?: 'default' | 'quiet';
   children: React.ReactNode;
 }
 
@@ -24,6 +28,8 @@ export const StyleCard: React.FC<StyleCardProps> = ({
   collapsible = false,
   defaultOpen = true,
   retainKey,
+  badge,
+  tone = 'default',
   children,
 }) => {
   const [isOpen, setIsOpen] = useRetainedUiState(retainKey ? `inspector-card:${retainKey}` : null, defaultOpen);
@@ -31,9 +37,10 @@ export const StyleCard: React.FC<StyleCardProps> = ({
   const visible = !collapsible || isOpen;
 
   return (
-    <section className={`panel-card inspector-section-card ${collapsible ? 'is-collapsible' : ''}`}>
+    <section className={`panel-card inspector-section-card ${collapsible ? 'is-collapsible' : ''}${tone === 'quiet' ? ' is-quiet' : ''}`}>
       <div className="inspector-section-header">
         <span className="inspector-section-title">{title}</span>
+        {badge && <span className="inspector-section-badge">{badge}</span>}
         {collapsible && (
           <button
             type="button"

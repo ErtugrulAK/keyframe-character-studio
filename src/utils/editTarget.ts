@@ -54,6 +54,19 @@ const SHAPE_NAMES: Partial<Record<BodyPartType, string>> = {
 
 const shapeName = (type: BodyPartType): string => SHAPE_NAMES[type] ?? type.replace(/^custom_/, '').replace(/_/g, ' ').replace(/^\w/, (letter) => letter.toUpperCase());
 
+/**
+ * C6 — the plain-language kind of a layer for the Inspector header
+ * ("Rectangle", "Path", "Image", "Group"…), never an internal type id.
+ */
+export const layerTypeLabel = (part: Pick<CharacterPart, 'type' | 'isGroup' | 'booleanOperation'>): string => {
+  if (part.isGroup) return 'Group';
+  if (part.booleanOperation) return 'Boolean group';
+  if (part.type === 'custom_freeform') return 'Path';
+  if (part.type === 'custom_image') return 'Image';
+  if (part.type === 'custom_video') return 'Video';
+  return shapeName(part.type);
+};
+
 export const resolveEditTarget = (input: EditTargetInput): EditTarget | null => {
   const partById = new Map(input.characterParts.map((part) => [part.id, part]));
   if (input.freeformPointCount !== null) {

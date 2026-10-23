@@ -9,7 +9,7 @@ import { transformMaskPathInLayerSpace } from '../../utils/maskPathCreation';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { TransformTab } from './sections/TransformTab';
 import { LayerParentField } from './LayerParentField';
-import { editTargetText, resolveEditTarget } from '../../utils/editTarget';
+import { editTargetText, layerTypeLabel, resolveEditTarget } from '../../utils/editTarget';
 import { StyleTab } from './sections/StyleTab';
 import { evaluateTrimPath } from '../../utils/trimPath';
 import { DuplicateTab } from './sections/DuplicateTab';
@@ -17,7 +17,7 @@ import {
   Sliders,
   Copy,
   Trash2,
-  CopyPlus,
+  FlipHorizontal2,
   Lock,
 } from 'lucide-react';
 
@@ -190,7 +190,7 @@ export const DetailsPanel: React.FC = () => {
         <div className="details-actor-header">
           <div className="actor-title-box">
             <span className="actor-main-name" title={selectedPart.name}>{selectedPart.name}</span>
-            <span className="actor-type-label">{selectedPart.isGroup ? 'group' : selectedPart.type.replace('custom_', '')}</span>
+            <span className="actor-type-label">{layerTypeLabel(selectedPart)}</span>
           </div>
 
           <div className="actor-action-row" role="group" aria-label="Inspector object actions">
@@ -199,20 +199,21 @@ export const DetailsPanel: React.FC = () => {
               className={`actor-context-action ${activeTabSection === 'duplicate' ? 'active' : ''}`}
               aria-expanded={activeTabSection === 'duplicate'}
               aria-label="Duplicate"
-              title="Duplicate options"
+              title="Duplicate and mirror options"
               onClick={() => setActiveTabSection((section) => section === 'duplicate' ? 'edit' : 'duplicate')}
             >
-              <CopyPlus size={13} />
+              <FlipHorizontal2 size={13} />
             </button>
             <button
               type="button"
               className="btn-icon-small"
               onClick={duplicateSelectedPart}
-              title="Duplicate Actor Instance"
+              title="Duplicate this layer now (offset copy)"
               aria-label="Duplicate Actor Instance"
             >
               <Copy size={12} />
             </button>
+            <span className="actor-action-divider" aria-hidden="true" />
             <button
               type="button"
               className="btn-icon-small danger"

@@ -2437,33 +2437,79 @@
 
 /* C2-E — Inspector Parent field (keyboard alternative to tree drag and drop). */
 .layer-parent-field {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 4px 8px;
-  padding: 6px 10px;
+  /* C6 — one aligned row (label · choice · remove) and the sentence that names
+     the relation (group membership vs transform parent). */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--border-color);
   font-size: var(--font-size-caption);
 }
 
-.layer-parent-field label {
-  color: var(--text-secondary);
-  font-weight: 600;
+.layer-parent-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) var(--kcs-control-xs, 24px);
+  align-items: center;
+  gap: 6px;
 }
 
-.layer-parent-field select {
+.layer-parent-label {
+  color: var(--kcs-text-label, var(--text-secondary));
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.layer-parent-row select {
   min-width: 0;
+  width: 100%;
+  height: var(--kcs-control-xs, 24px);
   background: var(--bg-dark);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 2px 4px;
+  border-radius: var(--kcs-radius-control, 4px);
+  padding: 0 6px;
+  text-overflow: ellipsis;
+}
+
+.details-container .layer-parent-row .btn-secondary.layer-parent-clear {
+  width: var(--kcs-control-xs, 24px);
+  min-width: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.layer-parent-relation {
+  margin: 0;
+  padding-left: 58px;
+  color: var(--kcs-text-muted, var(--text-muted));
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .layer-parent-reason {
-  grid-column: 1 / -1;
+  padding-left: 58px;
   color: #fca5a5;
   line-height: 1.35;
+}
+
+.actor-type-label {
+  flex-shrink: 0;
+}
+
+.actor-title-box {
+  min-width: 0;
+}
+
+.actor-action-divider {
+  width: 1px;
+  height: 16px;
+  margin: 0 2px;
+  background: var(--kcs-border-quiet, var(--border-color));
 }
 
 /* C4 — a locked layer is inspected, not edited. */
@@ -2832,4 +2878,40 @@
   color: var(--kcs-text-muted, var(--text-muted));
   font-size: var(--font-size-caption);
   line-height: 1.35;
+}
+
+/* C6 — a card's status next to its title, and the quiet look of a
+   compatibility card that this layer does not use. */
+.inspector-section-title {
+  flex: 0 1 auto;
+}
+
+.inspector-section-badge {
+  margin: 0 auto 0 8px;
+  padding: 1px 6px;
+  border: 1px solid var(--kcs-border-default, var(--border-color));
+  border-radius: 999px;
+  color: var(--kcs-text-muted, var(--text-muted));
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.inspector-section-card.is-quiet {
+  background: transparent;
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.inspector-section-card.is-quiet .inspector-section-title {
+  color: var(--kcs-text-muted, var(--text-muted));
+}
+
+.matte-section-intro {
+  margin: 0 0 8px;
+  color: var(--kcs-text-secondary, var(--text-secondary));
+  font-size: var(--font-size-caption);
+  line-height: 1.4;
 }

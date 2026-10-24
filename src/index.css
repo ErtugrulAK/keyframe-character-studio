@@ -570,10 +570,17 @@ input[type="number"] {
   -moz-appearance: textfield !important;
 }
 @media (prefers-reduced-motion: reduce) {
+  /* C7c — NO transition, not a 0.01 ms one. Every element's default is
+     `transition: all 0s`; forcing the duration to 0.01 ms turned that into a
+     real (tiny) transition of every property, so a changed value — e.g. the
+     stage camera's translation when a dock or the timeline toggles — kept its
+     OLD computed value for 2-3 frames. The world jumped by the dock width and
+     back (measured: 360 px on a left-dock toggle). Nothing waits for a
+     `transitionend` under reduced motion. */
   *,
   *::before,
   *::after {
-    transition-duration: 0.01ms !important;
+    transition: none !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }

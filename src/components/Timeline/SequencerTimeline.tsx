@@ -1,7 +1,7 @@
 // Keyframe Studio - 2D Motion Sequencer Timeline Component
 import React, { useRef, useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
 import { useAnimator } from '../../context/useAnimator';
-import { commitWorkspaceLayout, createFrameEase, REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, type FrameEase } from '../../utils/workspaceLayout';
+import { commitWorkspaceLayout, createFrameEase, prefersReducedMotion, REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, type FrameEase } from '../../utils/workspaceLayout';
 import { type TrackChannel, type AnimationChannel } from '../../types/animator';
 import { computeMaxFrame, resolveChannelAnimationState, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/timelineMetrics';
 import { resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../../utils/channelKeyframeGroups';
@@ -879,7 +879,7 @@ export const SequencerTimeline: React.FC = () => {
    * every frame commits through `commitWorkspaceLayout`: the size and the
    * stage's re-measure land in one task, inside the frame's callback, before
    * anything is painted. Nothing about the camera projection is animated — only
-   * chrome geometry is. The curve is monotone (ease-out cubic), so the edge never
+   * chrome geometry is. The curve is monotone (ease-in-out cubic), so the edge never
    * overshoots and never counter-moves, and the last frame writes the exact
    * target height.
    */
@@ -890,6 +890,12 @@ export const SequencerTimeline: React.FC = () => {
 
   const animateTimelineEdge = useCallback((to: number) => {
     const ease = edgeEaseRef.current ?? (edgeEaseRef.current = createFrameEase(writeEdgeHeight, writeEdgeHeight));
+    // C8 — reduced motion moves the edge in one step, like the side docks.
+    if (prefersReducedMotion()) {
+      ease.cancel();
+      writeEdgeHeight(to);
+      return;
+    }
     ease.start(edgeHeightRef.current, to, TIMELINE_EDGE_TRANSITION_MS);
   }, [writeEdgeHeight]);
 

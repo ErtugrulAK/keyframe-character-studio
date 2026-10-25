@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { flushSync } from 'react-dom';
-import { PANEL_EDGE_TRANSITION_MS, commitWorkspaceLayout, createFrameEase, type FrameEase } from '../utils/workspaceLayout';
+import { PANEL_EDGE_TRANSITION_MS, commitWorkspaceLayout, createFrameEase, prefersReducedMotion, type FrameEase } from '../utils/workspaceLayout';
 
 export type DockSide = 'left' | 'right';
 
@@ -20,10 +20,6 @@ export interface DockedPanelEdge {
   /** Sets the visibility at once, without the slide (layout decisions, not user toggles). */
   snap: (visible: boolean) => void;
 }
-
-const prefersReducedMotion = (): boolean => (
-  typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-);
 
 /** The slide offset for a panel that shows `shown` (0..1) of itself, as a CSS transform. */
 const slideTransform = (side: DockSide, shown: number): string => (

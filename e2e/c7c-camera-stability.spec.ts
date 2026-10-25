@@ -83,9 +83,13 @@ const sample = (page: Page): Promise<Sample> => page.evaluate(() => {
   const off = document.querySelector('.stage-svg g[data-part-id="off"]')!.getBoundingClientRect();
   const hx = off.left + off.width / 2;
   const hy = off.top + off.height / 2;
-  const covered = [...document.querySelectorAll('.motion-design-right-sidebar, .left-toolbar-container, [data-testid="sequencer-timeline"]')]
+  const coveredByPanel = [...document.querySelectorAll('.motion-design-right-sidebar, .left-toolbar-container, [data-testid="sequencer-timeline"]')]
     .some((node) => { const rect = node.getBoundingClientRect(); return rect.width > 0 && hx >= rect.left && hx <= rect.right && hy >= rect.top && hy <= rect.bottom; });
-  const hitNode = covered ? null : document.elementFromPoint(hx, hy);
+  const pointNode = coveredByPanel ? null : document.elementFromPoint(hx, hy);
+  // The timeline's top edge (its resize bar, whose grab zone is wider than its
+  // line) is timeline chrome too: as the timeline opens it sweeps over the stage.
+  const covered = coveredByPanel || Boolean(pointNode?.closest('.timeline-resizer-bar'));
+  const hitNode = covered ? null : pointNode;
   return {
     // The world origin (camera centre) and a point far from it.
     origin: project(300, 240),
@@ -95,7 +99,9 @@ const sample = (page: Page): Promise<Sample> => page.evaluate(() => {
     artboard: box('.stage-svg rect.canvas-bg'),
     axisY: document.querySelector('.canvas-coordinate-axis-x')?.getBoundingClientRect().top ?? null,
     axisX: document.querySelector('.canvas-coordinate-axis-y')?.getBoundingClientRect().left ?? null,
-    hit: covered ? 'covered' : hitNode?.closest('[data-part-id]')?.getAttribute('data-part-id') ?? hitNode?.tagName ?? 'none',
+    // A miss names the element that took the pointer (tag and first class).
+    hit: covered ? 'covered' : hitNode?.closest('[data-part-id]')?.getAttribute('data-part-id')
+      ?? (hitNode ? `${hitNode.tagName}${hitNode.classList[0] ? `.${hitNode.classList[0]}` : ''}` : 'none'),
   };
 });
 

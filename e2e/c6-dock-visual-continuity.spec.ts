@@ -69,8 +69,11 @@ const frame = (page: Page, side: Side) => page.evaluate(([panelSelector, handleS
 
 type Frame = Awaited<ReturnType<typeof frame>>;
 
-/** Clicks the side's handle and records `count` frames of the slide. */
-const slide = async (page: Page, side: Side, action: 'Hide' | 'Show', count = 24): Promise<Frame[]> => {
+/**
+ * Clicks the side's handle and records `count` frames of the slide. C8: the
+ * slide is 320 ms (20 frames), so 32 frames hold it and the settled tail.
+ */
+const slide = async (page: Page, side: Side, action: 'Hide' | 'Show', count = 32): Promise<Frame[]> => {
   await page.getByRole('button', { name: `${action} ${LABEL[side]}` }).click();
   const frames: Frame[] = [];
   for (let index = 0; index < count; index += 1) {
@@ -133,7 +136,8 @@ for (const side of ['right', 'left'] as const) {
 test('a reversal mid-slide continues from where the panel is (no jump) and settles open', async ({ page }) => {
   await open(page);
   await page.getByRole('button', { name: 'Hide Inspector' }).click();
-  await page.clock.runFor(FRAME_MS * 2);
+  // C8: the ease-in-out slide starts softly; six frames in it is well under way.
+  await page.clock.runFor(FRAME_MS * 6);
   const previous = await frame(page, 'right');
   await page.clock.runFor(FRAME_MS);
   const midway = await frame(page, 'right');

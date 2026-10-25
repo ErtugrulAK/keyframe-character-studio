@@ -80,9 +80,10 @@ export const shouldOpenTimelineCollapsed = (windowHeight: number): boolean => wi
 /**
  * R5-03 — how long the collapse/expand edge takes. Short enough to read as one
  * motion of the same edge, long enough that the eye follows the strip instead of
- * seeing it jump.
+ * seeing it jump. C8: 320 ms (was 180), the same soft ease-in-out as the
+ * side docks.
  */
-export const TIMELINE_EDGE_TRANSITION_MS = 180;
+export const TIMELINE_EDGE_TRANSITION_MS = 320;
 
 export const clampPanelSize = (value: number, min: number, max: number): number => (
   Math.min(max, Math.max(min, Math.round(value)))

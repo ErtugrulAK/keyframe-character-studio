@@ -34,6 +34,22 @@ describe('createFrameEase', () => {
     vi.unstubAllGlobals();
   });
 
+  it('C8: eases in and out — slow at both ends, half way at half time', () => {
+    installFrameClock();
+    const written: number[] = [];
+    const ease = createFrameEase((value) => written.push(value), () => {});
+    // advance(0) delivers the first frame, which only stamps the start time.
+    ease.start(0, 100, 320);
+    advance(0);
+    for (let frame = 0; frame < 19; frame += 1) advance(16);
+    // Frame 1 (16 ms, 5 %): the start is soft, far behind a linear ramp.
+    expect(written[1]).toBeLessThan(1);
+    // Frame 10 (160 ms): exactly half way.
+    expect(written[10]).toBeCloseTo(50, 6);
+    // Symmetric: the last step before the end is as soft as the first.
+    expect(100 - written[19]).toBeCloseTo(written[1], 6);
+  });
+
   it('writes one monotone value per frame and settles on the exact target', () => {
     installFrameClock();
     const written: number[] = [];

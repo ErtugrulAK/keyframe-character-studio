@@ -56,11 +56,11 @@ export const commitWorkspaceLayout = (apply: () => void): void => {
 };
 
 /**
- * How long a docked panel edge takes to travel. Mirrors the browser-side
- * duration this replaces (the inspector's former `transition: width 240ms`) so
- * opening and closing read exactly as they always did.
+ * How long a docked panel edge takes to travel. C8: 320 ms (was 240, the
+ * inspector's former CSS `transition: width 240ms`), with the ease-in-out
+ * curve below, so opening and closing read as one soft slide.
  */
-export const PANEL_EDGE_TRANSITION_MS = 240;
+export const PANEL_EDGE_TRANSITION_MS = 320;
 
 /**
  * How an eased docked edge is expressed while it travels: all three properties
@@ -71,6 +71,15 @@ export const PANEL_EDGE_TRANSITION_MS = 240;
  */
 export const panelEdgeStyle = (width: number | null): CSSProperties | undefined => (
   width === null ? undefined : { width: `${width}px`, minWidth: `${width}px`, flexBasis: `${width}px` }
+);
+
+/**
+ * Whether the user asked the system for reduced motion. Eased workspace edges
+ * (the side docks and the timeline) then move in one step instead of sliding.
+ */
+export const prefersReducedMotion = (): boolean => (
+  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+  && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 );
 
 export interface FrameEase {
@@ -87,7 +96,9 @@ export interface FrameEase {
 }
 
 /**
- * A monotone ease-out cubic driven one frame at a time.
+ * A monotone ease-in-out cubic driven one frame at a time (C8: was ease-out,
+ * which started at full speed and read as abrupt; this one starts and lands
+ * softly).
  *
  * `write` is called once per animation frame with the value for that frame, so
  * an app can commit the value through `commitWorkspaceLayout` and have layout and
@@ -124,7 +135,8 @@ export const createFrameEase = (
         startedAt = startedAt ?? now;
         const progress = Math.min(1, (now - startedAt) / durationMs);
         if (progress < 1) {
-          value = from + (to - from) * (1 - (1 - progress) ** 3);
+          const eased = progress < 0.5 ? 4 * progress ** 3 : 1 - ((-2 * progress + 2) ** 3) / 2;
+          value = from + (to - from) * eased;
           write(value);
           frame = requestAnimationFrame(step);
           return;

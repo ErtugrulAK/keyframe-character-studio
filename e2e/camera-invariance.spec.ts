@@ -209,9 +209,10 @@ async function dragTimelineTo(page: Page, targetPx: number) {
   const bar = page.locator('.timeline-resizer-bar');
   const box = await bar.boundingBox();
   expect(box).not.toBeNull();
-  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  // C8: grabbed a quarter of the way in; the collapse handle owns the centre.
+  await page.mouse.move(box!.x + box!.width / 4, box!.y + box!.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box!.x + box!.width / 2, targetPx, { steps: 10 });
+  await page.mouse.move(box!.x + box!.width / 4, targetPx, { steps: 10 });
   await page.mouse.up();
   await settle(page);
 }

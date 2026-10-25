@@ -132,10 +132,15 @@ function startSampling(page: Page, durationMs: number): Promise<Frame[]> {
 }
 
 /** Drags a workspace handle with real pointer input. */
+/**
+ * C8 — the timeline's collapse handle sits at the centre of its top edge, so a
+ * drag of the height edge grabs it a quarter of the way in, as a user would.
+ */
 async function dragBy(page: Page, target: Locator, delta: { x?: number; y?: number }, steps = 14): Promise<void> {
   const box = await target.boundingBox();
   if (!box) throw new Error('drag target has no box');
-  const x = box.x + box.width / 2;
+  const grabX = (await target.getAttribute('data-testid')) === 'timeline-height-resizer' ? 0.25 : 0.5;
+  const x = box.x + box.width * grabX;
   const y = box.y + box.height / 2;
   await page.mouse.move(x, y);
   await page.mouse.down();
@@ -509,8 +514,8 @@ test('R4-01 — the dock handles stay clear of the timeline at min, default and 
   }
   // Symmetric: both handles ride the same inset below the workspace top edge.
   expect(Math.abs(atDefault.left.top - atDefault.right.top)).toBeLessThanOrEqual(1);
-  expect(atDefault.left.top - atDefault.rowTop).toBeGreaterThan(0);
-  expect(atDefault.left.top - atDefault.rowTop).toBeLessThan(60);
+  // C8: the shared inset is 112 px (was 32), lower down the side edge.
+  expect(Math.abs(atDefault.left.top - atDefault.rowTop - 112)).toBeLessThanOrEqual(1);
   expectClear('default', atDefault);
 
   // Minimum height: the panel gives the stage nearly everything back.

@@ -170,11 +170,12 @@ test('R5-01 — both dock handles are anchored to the panel boundary, never to p
 
   const resizer = page.getByTestId('timeline-height-resizer');
   const timelineHeight = () => page.evaluate(() => document.querySelector('[data-testid="sequencer-timeline"]')!.getBoundingClientRect().height);
+  // C8: grabbed a quarter of the way in; the collapse handle owns the centre.
   const drag = async (deltaY: number) => {
     const box = (await resizer.boundingBox())!;
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.move(box.x + box.width / 4, box.y + box.height / 2);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + deltaY, { steps: 12 });
+    await page.mouse.move(box.x + box.width / 4, box.y + box.height / 2 + deltaY, { steps: 12 });
     await page.mouse.up();
   };
 

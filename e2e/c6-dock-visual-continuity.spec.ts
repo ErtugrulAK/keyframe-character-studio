@@ -232,14 +232,13 @@ test('C7b — the timeline collapse handle stays put and off both docks while th
     const handle = box('[data-testid="timeline-collapse-toggle"]');
     const right = box('.motion-design-right-sidebar');
     const left = box('.left-toolbar-container');
-    const pill = box('.resizer-handle-pill');
     const timeline = box('[data-testid="sequencer-timeline"]');
-    return { x: handle.left, y: handle.top, handleLeft: handle.left, handleRight: handle.right, handleCentreY: handle.top + handle.height / 2, rightLeft: Math.min(right.left, window.innerWidth), leftRight: Math.max(left.right, 0), pillRight: pill.right, timelineTop: timeline.top };
+    return { x: handle.left, y: handle.top, handleLeft: handle.left, handleRight: handle.right, handleCentreX: handle.left + handle.width / 2, handleCentreY: handle.top + handle.height / 2, rightLeft: Math.min(right.left, window.innerWidth), leftRight: Math.max(left.right, 0), timelineTop: timeline.top, timelineCentreX: timeline.left + timeline.width / 2 };
   });
   const atRest = await geometry();
-  // Still the timeline's top-edge handle (R3-01), beside the resize pill, not on it.
+  // Still the timeline's top-edge handle (R3-01), now at the centre of that edge (C8).
   expect(Math.abs(atRest.handleCentreY - atRest.timelineTop)).toBeLessThanOrEqual(2);
-  expect(atRest.handleLeft).toBeGreaterThanOrEqual(atRest.pillRight + 4);
+  expect(Math.abs(atRest.handleCentreX - atRest.timelineCentreX)).toBeLessThanOrEqual(1);
   for (const [action, label] of [['Hide', 'Inspector'], ['Show', 'Inspector'], ['Hide', 'Left Toolbar'], ['Show', 'Left Toolbar']] as const) {
     await page.getByRole('button', { name: `${action} ${label}` }).click();
     for (let index = 0; index < 24; index += 1) {

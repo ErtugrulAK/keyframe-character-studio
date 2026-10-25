@@ -225,9 +225,12 @@ body, html, #root {
      edge never moves when the timeline is resized (only its height does), so a
      handle pinned below that edge cannot be pushed onto the timeline in a short
      window, and `--kcs-panel-handle-top` states the single inset both handles
-     share. */
+     share. C8: 112px (was 32), lower down the side edge. A fixed inset keeps
+     the handles still when the timeline is resized, and the 40px handle ends
+     at 152px, inside the stage's 160px minimum, so it never reaches the
+     timeline. */
   position: relative;
-  --kcs-panel-handle-top: 32px;
+  --kcs-panel-handle-top: 112px;
 }
 
 /* Typography standardization across app UI */

@@ -45,6 +45,10 @@
 }
 .timeline-resizer-bar:hover { background: rgba(148, 163, 184, 0.08); }
 .resizer-handle-pill {
+  /* C8 — the collapse handle now sits where the grip pill sat (the centre of
+     the edge), so the pill is not painted; the whole edge stays the drag
+     target, with its row-resize cursor and hover tint. */
+  visibility: hidden;
   width: 42px; height: 3px;
   background: var(--kcs-border-default);
   border-radius: var(--radius-xs);
@@ -108,11 +112,10 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 .sidebar-handle.timeline-edge-toggle {
   position: absolute;
   top: 0;
-  /* C7b — next to the centre of the timeline's top edge (just right of the
-     resize pill): its upper half reaches over the stage's bottom-middle, never
-     over a dock (at the right end it covered the Inspector's last row), and it
-     does not move when a dock opens or closes. */
-  left: calc(50% + 56px);
+  /* C8 — at the centre of the timeline's top edge (C7b had it just right of
+     the resize pill). Its upper half reaches over the stage's bottom-middle,
+     never over a dock, and it does not move when a dock opens or closes. */
+  left: 50%;
   transform: translate(-50%, -50%);
   width: 46px;
   height: 20px;

@@ -14,11 +14,14 @@ interface TransformOpacityCardProps {
  *
  * The cell holds no keyframe action: keyframing is the timeline property row's
  * authority, and Details does not duplicate it.
+ *
+ * C8: named "Layer opacity" so it reads apart from the Fill and Stroke
+ * opacities in Appearance (those fade one paint; this fades the whole layer).
  */
 export const TransformOpacityCard: React.FC<TransformOpacityCardProps> = ({ opacity, onOpacityChange }) => (
   <div className="transform-compact-cell">
     <div className="transform-compact-head">
-      <span className="transform-property-title">Opacity</span>
+      <span className="transform-property-title">Layer opacity</span>
     </div>
     <label className="transform-field">
       <span className="transform-field-label">%</span>
@@ -29,7 +32,7 @@ export const TransformOpacityCard: React.FC<TransformOpacityCardProps> = ({ opac
         max={1}
         step={1}
         precision={0}
-        ariaLabel="Opacity"
+        ariaLabel="Layer opacity"
         onChange={onOpacityChange}
       />
     </label>

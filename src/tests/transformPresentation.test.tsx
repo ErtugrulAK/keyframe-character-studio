@@ -66,10 +66,10 @@ describe('TransformTab compact presentation', () => {
     const cells = trio!.querySelectorAll('.transform-compact-cell');
     expect(cells).toHaveLength(3);
     expect([...cells].map((cell) => cell.querySelector('.transform-property-title')?.textContent))
-      .toEqual(['Rotation', 'Scale', 'Opacity']);
+      .toEqual(['Rotation', 'Scale', 'Layer opacity']);
     expect(screen.getByLabelText('Rotation')).toHaveValue(15);
     expect(screen.getByLabelText('Scale')).toHaveValue(100);
-    expect(screen.getByLabelText('Opacity')).toHaveValue(100);
+    expect(screen.getByLabelText('Layer opacity')).toHaveValue(100);
   });
 
   it('R5-14 — Details no longer duplicates the reset, the labelled lock or keyframing', () => {

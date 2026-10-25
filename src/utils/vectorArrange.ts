@@ -256,6 +256,22 @@ export const planDistributeByGap = (targets: ArrangeTarget[], axis: DistributeAx
 };
 
 /**
+ * Move every target by the same world offset (the arrow-key nudge). The targets
+ * carry the transforms captured when the nudge started, so a held key writes
+ * start + total offset instead of adding to a value it might read stale.
+ */
+export const planTranslate = (targets: ArrangeTarget[], dx: number, dy: number): ArrangePlan => {
+  const plan: ArrangePlan = {};
+  targets.forEach(({ id, transform }) => {
+    const patch: ArrangePatch = {};
+    if (Math.abs(dx) > POSITION_EPSILON) patch.x = transform.x + dx;
+    if (Math.abs(dy) > POSITION_EPSILON) patch.y = transform.y + dy;
+    if (patch.x !== undefined || patch.y !== undefined) plan[id] = patch;
+  });
+  return plan;
+};
+
+/**
  * Turn every target ±90° about the collective selection centre, as one rigid
  * body: each target keeps its place in the arrangement because they all share
  * the same pivot.

@@ -8,6 +8,7 @@ import {
   planDistributeByGap,
   planFlip,
   planRotate,
+  planTranslate,
   type AlignEdge,
   type ArrangePlan,
   type DistributeAxis,
@@ -41,6 +42,14 @@ export interface VectorArrange {
   distributeGap: (axis: DistributeAxis) => void;
   rotate: (direction: RotateDirection) => void;
   flip: (axis: FlipAxis) => void;
+  /**
+   * Starts a held arrow-key nudge of the selection: opens ONE batch interaction
+   * and returns the mover, which takes the TOTAL offset since the start. Null
+   * when nothing can move (no selection, or a locked layer, whose reason is
+   * shown). `endNudge` closes the batch, so a held key is one undo step.
+   */
+  beginNudge: () => ((dx: number, dy: number) => void) | null;
+  endNudge: () => void;
 }
 
 /**
@@ -127,6 +136,19 @@ export const createVectorArrangeActions = ({
       planFlip(targets, axis),
       'Select a layer to flip.',
     ),
+    beginNudge: () => {
+      if (targets.length === 0) return null;
+      const lockRefusal = lockedLayersRefusal(characterParts, tracks, targets.map((target) => target.id));
+      if (lockRefusal) {
+        showToast?.(lockRefusal, 'error');
+        return null;
+      }
+      startBatchInteraction();
+      return (dx, dy) => {
+        Object.entries(planTranslate(targets, dx, dy)).forEach(([id, patch]) => updateCurrentTransform(patch, id));
+      };
+    },
+    endNudge: endBatchInteraction,
   };
 };
 

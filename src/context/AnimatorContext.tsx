@@ -823,7 +823,12 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
    * `createVectorArrangeActions`), built here from the provider's own locals
    * because a hook cannot be called from inside its own provider.
    */
-  const { rotate: rotateSelection, flip: flipSelection } = createVectorArrangeActions({
+  const {
+    rotate: rotateSelection,
+    flip: flipSelection,
+    beginNudge,
+    endNudge,
+  } = createVectorArrangeActions({
     currentFrame,
     selectedPartId,
     selectedPartIds,
@@ -883,6 +888,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useKeyboardShortcuts({
     toggleSelectionLock,
     unlockAllLayers,
+    beginNudge,
+    endNudge,
     selectedPartId,
     undo: draftAwareUndo,
     redo: draftAwareRedo,

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { AppMode, BodyPartType, ToolType } from '../types/animator';
 import { isBlockingModalOpen } from '../utils/modalBoundary';
-import { isEditableElement, ownsShortcutScope } from '../utils/keyboardFocus';
+import { focusedShortcutScope, isEditableElement, ownsShortcutScope } from '../utils/keyboardFocus';
 import {
   detectShortcutPlatform,
   resolveShortcutCommand,
@@ -68,7 +68,36 @@ export interface EditorShortcutCommands {
   toggleSelectionLock?: () => void;
   /** C4 — unlocks every layer. */
   unlockAllLayers?: () => void;
+  /**
+   * C8 — the arrow-key nudge, run through the arrange authority: `beginNudge`
+   * opens one batch and returns the mover (total offset since the start), or
+   * null when nothing can move; `endNudge` closes the batch on key release.
+   */
+  beginNudge?: () => ((dx: number, dy: number) => void) | null;
+  endNudge?: () => void;
 }
+
+const NUDGE_DIRECTIONS: Record<string, { x: number; y: number }> = {
+  ArrowLeft: { x: -1, y: 0 },
+  ArrowRight: { x: 1, y: 0 },
+  ArrowUp: { x: 0, y: -1 },
+  ArrowDown: { x: 0, y: 1 },
+};
+const NUDGE_STEP = 1;
+const NUDGE_STEP_LARGE = 10;
+
+/**
+ * Widgets whose own arrow keys move focus or a value. While one of them holds
+ * focus the arrows are theirs, never a nudge of the selected layers.
+ */
+const ARROW_OWNING_WIDGETS = '[role="toolbar"], [role="tablist"], [role="menu"], [role="menubar"], [role="radiogroup"], [role="slider"], [role="listbox"], [role="tree"], [role="grid"], [role="spinbutton"]';
+
+/** True when the canvas owns the arrow keys: no declared surface and no arrow widget has focus. */
+const canvasOwnsArrows = (): boolean => {
+  if (focusedShortcutScope() !== null) return false;
+  const active = document.activeElement;
+  return !active || active === document.body || active.closest(ARROW_OWNING_WIDGETS) === null;
+};
 
 /**
  * The editor's keyboard commands, driven by the ONE shortcut table
@@ -127,9 +156,37 @@ export const useKeyboardShortcuts = ({
   openShortcutReference,
   toggleSelectionLock,
   unlockAllLayers,
+  beginNudge,
+  endNudge,
 }: EditorShortcutCommands) => {
   // Detected once per session: the platform cannot change under a running app.
   const platformRef = useRef<ShortcutPlatform>(detectShortcutPlatform());
+
+  // C8 — a held arrow key is ONE nudge session (one batch, one undo step). The
+  // session outlives the listener re-binding below, so it lives in a ref, and
+  // the latest begin/end are read at event time.
+  const nudgeSessionRef = useRef<{ move: (dx: number, dy: number) => void; x: number; y: number } | null>(null);
+  const nudgeHandlersRef = useRef({ beginNudge, endNudge });
+  useEffect(() => {
+    nudgeHandlersRef.current = { beginNudge, endNudge };
+  });
+  useEffect(() => {
+    const finish = () => {
+      if (!nudgeSessionRef.current) return;
+      nudgeSessionRef.current = null;
+      nudgeHandlersRef.current.endNudge?.();
+    };
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (NUDGE_DIRECTIONS[event.key]) finish();
+    };
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', finish);
+    return () => {
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', finish);
+      finish();
+    };
+  }, []);
   // The drawing tool makes the chain's first decision, so it is read at event
   // time rather than captured in the listener's closure.
   const activeToolRef = useRef(activeTool);
@@ -183,6 +240,24 @@ export const useKeyboardShortcuts = ({
           event.preventDefault();
           flipSelection?.(id === 'flip-vertical' ? 'vertical' : 'horizontal');
           return;
+        case 'nudge-selection': {
+          // The mask editor nudges its own points, a drawing or creation tool
+          // owns the stage, and focused arrow widgets keep their arrows.
+          const direction = NUDGE_DIRECTIONS[event.key];
+          if (!direction || isMaskEditing || (activeToolRef.current ?? 'select') !== 'select' || !canvasOwnsArrows()) return;
+          if (!nudgeSessionRef.current) {
+            const move = nudgeHandlersRef.current.beginNudge?.() ?? null;
+            if (!move) return;
+            nudgeSessionRef.current = { move, x: 0, y: 0 };
+          }
+          event.preventDefault();
+          const step = event.shiftKey ? NUDGE_STEP_LARGE : NUDGE_STEP;
+          const session = nudgeSessionRef.current;
+          session.x += direction.x * step;
+          session.y += direction.y * step;
+          session.move(session.x, session.y);
+          return;
+        }
         case 'undo':
           event.preventDefault();
           undo();

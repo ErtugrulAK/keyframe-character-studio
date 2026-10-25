@@ -68,6 +68,13 @@
  * The rotate pair carries `mod` so it can never be confused with the timeline's
  * plain arrow walking, and no binding in this table is a prefix of another.
  *
+ * ── C8: arrow-key nudge ─────────────────────────────────────────────────────
+ * Plain arrows move the selected layers 1 project unit, Shift+arrows 10, through
+ * the arrange authority (`beginNudge`: world offset in, the one keyframe-aware
+ * transform write out). A held key is one undo step. The arrows nudge only while
+ * the canvas owns the keyboard: the layer list, the timeline, the mask editor
+ * and arrow-driven widgets (toolbars, tabs, menus) keep their own arrows.
+ *
  * Deliberately NOT adopted:
  *   - A temporary "suspend snapping" modifier for the translate drag. The snap
  *     radius and the toggle are enough, and every candidate modifier is already
@@ -90,12 +97,7 @@
  *     (and the browser's own activation key for a focused button), so a
  *     hold-to-pan would either fire playback on every pan or need a delay
  *     heuristic that makes playback feel broken. Pan keeps its own `h` tool.
- *   - Arrow-key nudging of the selected layer. There is no relative-move
- *     authority in the editor (position writes are absolute and keyframe-aware,
- *     through `usePartPropertyAuthoring`), the step size is a product decision,
- *     and the arrows already walk focus in the timeline lane and the value
- *     graph. Nudging needs an authority, not a keymap entry.
- *   - `shift+1` fit stage and `shift+2` zoom to selection. The camera authority
+ *  *   - `shift+1` fit stage and `shift+2` zoom to selection. The camera authority
  *     exposes a zoom STEP and a re-centre that keeps the zoom; it has no fit
  *     math, and inventing one would change the camera-invariance contract the
  *     stage's fit is built on.
@@ -130,7 +132,7 @@ export type ShortcutCommandId =
   | 'tool-select' | 'tool-pan'
   | 'create-rectangle' | 'create-circle' | 'create-text' | 'tool-pen'
   | 'select-all' | 'group-layers' | 'ungroup-layers'
-  | 'rotate-ccw' | 'rotate-cw' | 'flip-horizontal' | 'flip-vertical'
+  | 'rotate-ccw' | 'rotate-cw' | 'flip-horizontal' | 'flip-vertical' | 'nudge-selection'
   | 'undo' | 'redo' | 'copy' | 'paste' | 'duplicate' | 'delete-selection' | 'cancel-gesture' | 'context-menu'
   | 'keyframe-select' | 'keyframe-walk' | 'marquee-cancel'
   | 'play-pause' | 'zoom-in' | 'zoom-out'
@@ -207,6 +209,15 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
     gestures: ['shift+v'],
     scope: 'global',
     detail: 'Mirrors about the selection centre; a layer stays exactly where it was on screen.',
+  },
+
+  {
+    id: 'nudge-selection',
+    label: 'Nudge the selected layers',
+    category: 'transform',
+    gestures: ['arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'shift+arrowleft', 'shift+arrowright', 'shift+arrowup', 'shift+arrowdown'],
+    scope: 'canvas',
+    detail: '1 unit, Shift 10. A held key is one undo step. An already animated position is keyed at the current frame.',
   },
 
   // C2 — owned by the drawing tools while a Pen / Mask Pen draft is open, and

@@ -2978,6 +2978,28 @@
   min-height: 0;
 }
 
+/* C8 — a short Details pane (200 % zoom, a low window, a tall layer list) left
+   the scrolling body a ~30 px strip under the fixed header, layer name and
+   tabs. Below 180 px (a body under ~75 px) the pane scrolls as ONE column
+   instead: header, layer name, tabs and properties move together. Taller panes,
+   including the default 1440×900 layout (~215 px), are unchanged. */
+.details-dock {
+  container: details-pane / size;
+}
+
+@container details-pane (max-height: 180px) {
+  .details-container {
+    overflow-y: auto;
+  }
+
+  .details-tabs,
+  .details-body {
+    flex: none;
+    min-height: auto;
+    overflow-y: visible;
+  }
+}
+
 .details-tab-list {
   display: flex;
   flex-shrink: 0;

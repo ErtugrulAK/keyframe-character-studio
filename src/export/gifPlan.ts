@@ -23,6 +23,9 @@ import { frameToSeconds, sanitizeProjectFps, secondsToFrame } from '../utils/tim
 /** Requested sampling rates; the encoded playback plan respects GIF timing. */
 export const GIF_EXPORT_FPS_OPTIONS = [10, 12, 15, 20, 24, 25, 30, 50, 60, 120];
 
+/** The most frames a GIF shows per second: its 2-centisecond delay floor. */
+export const GIF_MAX_DISPLAY_FPS = 50;
+
 /** The raster scales the GIF panel offers. A GIF is a delivery format, not a master. */
 export const GIF_SCALE_OPTIONS = [1, 0.5, 0.25, 0.125];
 

@@ -248,6 +248,8 @@ test('exports the current sequence as an animated GIF at the stage size', async 
   await expect(panel.locator('.gif-export-summary dd').nth(1)).toHaveText('0.50 s');
   await expect(panel.locator('.gif-export-summary dd').nth(2)).toHaveText('320×180');
   await expect(panel.getByLabel('Sampling rate')).toHaveValue('24');
+  // Every requested frame is shown, so there is no rate note (C8).
+  await expect(panel.getByTestId('gif-export-rate-note')).toHaveCount(0);
   // The format's transparency rule is stated before the export, not after —
   // carried on the control the user is about to press.
   await expect(panel.getByRole('button', { name: 'Export GIF' })).toHaveAttribute('title', /one transparent colour and no partial alpha/);
@@ -379,6 +381,11 @@ for (const row of GIF_SAMPLING_ROWS) {
     // What the panel DISPLAYS is the encoded plan, not the requested grid.
     await expect(panel.locator('.gif-export-summary dd').first()).toHaveText(String(row.encodedFrames));
     await expect(panel.locator('.gif-export-summary dd').nth(1)).toHaveText(`${row.seconds.toFixed(2)} s`);
+    // C8: the panel says why 120 fps gives fewer frames, and the option says so.
+    await expect(panel.getByTestId('gif-export-rate-note')).toHaveText(
+      `GIF shows at most 50 frames a second, so 120 fps becomes ${row.encodedFrames} frames (50 fps). The full ${row.seconds.toFixed(2)} s is kept.`,
+    );
+    await expect(panel.getByLabel('Sampling rate').locator('option[value="120"]')).toHaveText('120 fps (plays at 50)');
 
     const gif = parseGif(await downloadBytes(page));
     expect(gif.frames.length).toBe(row.encodedFrames);

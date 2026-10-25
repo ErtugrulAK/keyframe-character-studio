@@ -6,6 +6,7 @@ import { useGifExport } from '../../hooks/useGifExport';
 import { useFloatingPanel } from '../../hooks/useFloatingPanel';
 import {
   GIF_EXPORT_FPS_OPTIONS,
+  GIF_MAX_DISPLAY_FPS,
   GIF_SCALE_OPTIONS,
   resolveGifDimensions,
   resolveGifExportFps,
@@ -52,6 +53,14 @@ export const GifExportPanel: React.FC<GifExportPanelProps> = ({ scene, sceneTitl
     [exportFps, scene.fps, scene.totalFrames],
   );
   const dimensions = useMemo(() => resolveGifDimensions(scene.width, scene.height, scale), [scale, scene.height, scene.width]);
+  // C8 — a 120 fps half-second gives 25 frames, not 60: GIF cannot show more
+  // than 50 a second (or more than the frame budget). Say so where the number
+  // is shown, instead of leaving the count to look like a bug.
+  const requestedFrames = Math.max(1, Math.round(plan.authoredDurationSeconds * plan.exportFps));
+  const shownFps = Math.round(plan.frameCount / Math.max(plan.durationSeconds, 0.01));
+  const rateNote = plan.frameCount < requestedFrames
+    ? `GIF shows at most ${GIF_MAX_DISPLAY_FPS} frames a second, so ${plan.exportFps} fps becomes ${plan.frameCount} frames (${shownFps} fps). The full ${plan.durationSeconds.toFixed(2)} s is kept.`
+    : null;
   // A scene the GIF renderer cannot draw is stated up front, not after a render.
   const blocking = useMemo(() => validateGifScene(scene), [scene]);
   const textLayerCount = scene.layers.filter((layer) => layer.type === 'custom_text').length;
@@ -100,6 +109,7 @@ export const GifExportPanel: React.FC<GifExportPanelProps> = ({ scene, sceneTitl
           <dd>{dimensions.width}×{dimensions.height}</dd>
         </div>
       </dl>
+      {rateNote && <p className="gif-export-note" data-testid="gif-export-rate-note">{rateNote}</p>}
 
       <div className="gif-export-controls">
         <label htmlFor="gif-export-fps">
@@ -112,7 +122,9 @@ export const GifExportPanel: React.FC<GifExportPanelProps> = ({ scene, sceneTitl
             onChange={(event) => setExportFps(Number(event.target.value))}
           >
             {GIF_EXPORT_FPS_OPTIONS.map((option) => (
-              <option key={option} value={option}>{option} fps</option>
+              <option key={option} value={option}>
+                {option > GIF_MAX_DISPLAY_FPS ? `${option} fps (plays at ${GIF_MAX_DISPLAY_FPS})` : `${option} fps`}
+              </option>
             ))}
           </select>
         </label>

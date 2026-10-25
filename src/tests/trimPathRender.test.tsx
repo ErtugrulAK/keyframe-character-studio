@@ -49,7 +49,9 @@ describe('Trim Path SVG rendering', () => {
     expect(html).toContain('mask="url(#outside-stroke-trim)"');
     expect(html).toContain('fill="#f00"');
     expect(html).toContain('stroke-dasharray="0.5 0.5"');
-    expect(html).toContain('stroke-width="4"');
+    // C8: outside masks a stroke of twice the authored 4, like inside and the
+    // OGraf renderers, so the visible half is the authored width.
+    expect(html).toContain('stroke-width="8"');
   });
 
   it('keeps outside stroke visible when fill is disabled', () => {

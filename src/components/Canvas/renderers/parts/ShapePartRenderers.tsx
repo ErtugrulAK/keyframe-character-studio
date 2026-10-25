@@ -103,17 +103,19 @@ const renderModernShape = (
     return renderModernGeometry(part, geo, common);
   }
 
-  // SVG has no reliable cross-browser stroke-alignment property. Mask the
-  // centered stroke paint against the same authored geometry: outside keeps
-  // the exterior half; inside keeps the interior half. Fill, canonical
-  // geometry, non-scaling-stroke, and Trim Path dash semantics stay shared.
+  // SVG has no reliable cross-browser stroke-alignment property. Mask a
+  // centered stroke of twice the width against the same authored geometry:
+  // outside keeps the exterior half, inside the interior half, so either one
+  // is the authored width (the OGraf renderers draw it the same way). Fill,
+  // canonical geometry, non-scaling-stroke, and Trim Path dash semantics stay
+  // shared.
   const alignment = appearance.strokeAlignment;
   const maskId = `${alignment}-stroke-${part.id.replace(/[^a-zA-Z0-9_-]/g, '_')}${isGhost ? '-ghost' : ''}`;
   const fillProps: SvgShapeProps = { ...common, stroke: 'none', strokeWidth: 0 };
   const strokeProps: SvgShapeProps = {
     ...common,
     fill: 'none',
-    strokeWidth: alignment === 'inside' ? appearance.strokeWidth * 2 : appearance.strokeWidth,
+    strokeWidth: appearance.strokeWidth * 2,
     mask: `url(#${maskId})`,
   };
   const maskGeometry = renderModernGeometry(part, geo, {

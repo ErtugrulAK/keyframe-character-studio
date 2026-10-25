@@ -59,16 +59,17 @@ const normalizeStrokeWidth = (value: number | undefined, fallback: number): numb
 const normalizeStrokeAlignment = (value: StrokeAlignment | undefined): StrokeAlignment =>
   value === 'inside' || value === 'outside' ? value : 'center';
 
-/** UI-compatible alignment values. Center remains an internal legacy value. */
-export type StrokeAlignmentControlValue = 'inside' | 'outside';
+/**
+ * The Inspector's alignment choices: the three the renderers draw. A missing
+ * value is the centred stroke every legacy scene was drawn with (C8: the
+ * control used to show that as OUTSIDE and write `center` for it, so OUTSIDE
+ * never drew outside).
+ */
+export type StrokeAlignmentControlValue = StrokeAlignment;
 
-/** Map legacy/missing center alignment to the supported Outside control. */
-export const toStrokeAlignmentControlValue = (value: StrokeAlignment | undefined): StrokeAlignmentControlValue =>
-  value === 'inside' ? 'inside' : 'outside';
+export const toStrokeAlignmentControlValue: (value: StrokeAlignment | undefined) => StrokeAlignmentControlValue = normalizeStrokeAlignment;
 
-/** Keep the existing centered stroke renderer behavior behind the Outside control. */
-export const toAuthoringStrokeAlignment = (value: StrokeAlignmentControlValue): StrokeAlignment =>
-  value === 'inside' ? 'inside' : 'center';
+export const toAuthoringStrokeAlignment = (value: StrokeAlignmentControlValue): StrokeAlignment => value;
 const hasVisibleStrokeColor = (strokeColor: string): boolean =>
   strokeColor !== 'none' && strokeColor !== 'transparent';
 

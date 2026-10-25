@@ -48,12 +48,14 @@ describe('shape appearance resolver', () => {
     expect(resolveShapeAppearance({ ...basePart(), fillEnabled: true, strokeAlignment: 'outside' })).toMatchObject({ strokeAlignment: 'outside' });
   });
 
-  it('maps legacy center alignment to the Outside control without changing renderer compatibility', () => {
-    expect(toStrokeAlignmentControlValue(undefined)).toBe('outside');
-    expect(toStrokeAlignmentControlValue('center')).toBe('outside');
+  it('shows each stored alignment as itself; a missing one is the legacy centred stroke', () => {
+    expect(toStrokeAlignmentControlValue(undefined)).toBe('center');
+    expect(toStrokeAlignmentControlValue('center')).toBe('center');
     expect(toStrokeAlignmentControlValue('outside')).toBe('outside');
     expect(toStrokeAlignmentControlValue('inside')).toBe('inside');
-    expect(toAuthoringStrokeAlignment('outside')).toBe('center');
+    // OUTSIDE writes outside: it used to write center, so it never drew outside (C8).
+    expect(toAuthoringStrokeAlignment('outside')).toBe('outside');
+    expect(toAuthoringStrokeAlignment('center')).toBe('center');
     expect(toAuthoringStrokeAlignment('inside')).toBe('inside');
   });
 

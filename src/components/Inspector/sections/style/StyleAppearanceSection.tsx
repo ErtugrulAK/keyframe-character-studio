@@ -133,6 +133,7 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
               <label className="appearance-field-label" htmlFor="stroke-alignment-select">ALIGN</label>
               <select id="stroke-alignment-select" aria-label="Stroke Alignment" value={strokeAlignment} onChange={(event) => onPartPropChange('strokeAlignment', toAuthoringStrokeAlignment(event.target.value as StrokeAlignmentControlValue))} style={{ width: '100%' }}>
                 <option value="inside">INSIDE</option>
+                <option value="center">CENTER</option>
                 <option value="outside">OUTSIDE</option>
               </select>
             </div>

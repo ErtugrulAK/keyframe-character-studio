@@ -101,6 +101,18 @@ describe('native SVG shape appearance rendering', () => {
     expect(render('custom_rect', { strokeColor: '#f00', fillEnabled: undefined, fillOpacity: undefined, strokeEnabled: undefined, strokeOpacity: undefined })).toContain('stroke="none"');
   });
 
+  it('draws inside and outside at the authored width: a masked stroke of twice the width', () => {
+    // C8: outside drew the authored width and masked half of it away.
+    for (const alignment of ['inside', 'outside'] as const) {
+      const html = render('custom_rect', { strokeWidth: 8, strokeAlignment: alignment });
+      expect(html).toContain(`mask="url(#${alignment}-stroke-`);
+      expect(html).toContain('stroke-width="16"');
+    }
+    const center = render('custom_rect', { strokeWidth: 8, strokeAlignment: 'center' });
+    expect(center).not.toContain('mask=');
+    expect(center).toContain('stroke-width="8"');
+  });
+
   it('leaves excluded banner/card rendering on the legacy path', () => {
     expect(render('custom_banner')).toContain('BANNER LABEL');
     expect(render('custom_card')).toContain('STUDIO CARD');

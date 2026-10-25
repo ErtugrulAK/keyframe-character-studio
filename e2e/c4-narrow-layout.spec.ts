@@ -83,9 +83,10 @@ test('a short window (1024×768) opens with a compact header and a shorter timel
 
   // The user makes it taller with the resizer; the opening policy never overrides that.
   const bar = await page.locator('.timeline-resizer-bar').boundingBox();
-  await page.mouse.move(bar!.x + bar!.width / 2, bar!.y + bar!.height / 2);
+  // C8: grabbed a quarter of the way in; the collapse handle owns the centre.
+  await page.mouse.move(bar!.x + bar!.width / 4, bar!.y + bar!.height / 2);
   await page.mouse.down();
-  await page.mouse.move(bar!.x + bar!.width / 2, bar!.y - 40, { steps: 5 });
+  await page.mouse.move(bar!.x + bar!.width / 4, bar!.y - 40, { steps: 5 });
   await page.mouse.up();
   const resized = await height(page, '.sequencer-timeline');
   expect(resized).toBeGreaterThan(opening + 20);

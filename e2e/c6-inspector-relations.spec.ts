@@ -53,17 +53,19 @@ test('header and Parent row: plain kind, long names contained, group vs parent s
   await select(page, 'hero');
   const header = page.locator('.details-actor-header');
   await expect(header.locator('.actor-type-label')).toHaveText('Rectangle');
-  // The long name is cut with an ellipsis inside the header; the actions stay visible.
+  // The long name is cut with an ellipsis inside the header (C8: the header
+  // carries no action buttons, so the name and kind are all it holds).
   const fit = await page.evaluate(() => {
     const row = document.querySelector('.details-actor-header')!.getBoundingClientRect();
     const name = document.querySelector('.actor-main-name') as HTMLElement;
-    const actions = document.querySelector('.actor-action-row')!.getBoundingClientRect();
-    return { nameRight: name.getBoundingClientRect().right, actionsLeft: actions.left, actionsRight: actions.right, rowRight: row.right, truncated: name.scrollWidth > name.clientWidth, title: name.title };
+    const kind = document.querySelector('.actor-type-label')!.getBoundingClientRect();
+    return { nameRight: name.getBoundingClientRect().right, kindRight: kind.right, rowRight: row.right, truncated: name.scrollWidth > name.clientWidth, title: name.title };
   });
   expect(fit.truncated).toBe(true);
   expect(fit.title).toBe(LONG);
-  expect(fit.nameRight).toBeLessThanOrEqual(fit.actionsLeft);
-  expect(fit.actionsRight).toBeLessThanOrEqual(fit.rowRight + 0.5);
+  expect(fit.nameRight).toBeLessThanOrEqual(fit.rowRight + 0.5);
+  expect(fit.kindRight).toBeLessThanOrEqual(fit.rowRight + 0.5);
+  await expect(header.locator('button')).toHaveCount(0);
 
   // C7 — the Parent row lives on the Inspector's Layer tab.
   await openDetailsTab(page, 'Layer');

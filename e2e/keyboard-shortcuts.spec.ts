@@ -72,7 +72,8 @@ test('the reference lists the bindings for this platform and closes on Escape', 
   // Every command in the table is on screen — count the rows rather than spot-check.
   // (C2 added the layer-list, drawing and mask-editing bindings: 28 → 42.)
   // C4 added five rows: lock / unlock all layers, and the mask point focus, ends and type keys.
-  await expect(dialog.locator('.shortcut-reference-row')).toHaveCount(47);
+  // C8 added the arrow-key nudge of the selected layers: 48.
+  await expect(dialog.locator('.shortcut-reference-row')).toHaveCount(48);
 
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);

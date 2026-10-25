@@ -297,7 +297,8 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           strokeWidth="1.5"
           strokeDasharray="4 3"
         />
-        <text x={svgWidth - paddingX + 6} y={topLimitP.sy + 3} fill="rgba(239, 68, 68, 0.85)" fontSize="10" fontWeight="700" fontFamily="monospace">
+        {/* C8: the limit labels sit above their line, inside the graph. */}
+        <text x={svgWidth - paddingX} y={topLimitP.sy - 5} textAnchor="end" fill="rgba(239, 68, 68, 0.85)" fontSize="10" fontWeight="700" fontFamily="monospace">
           Y = +2.0 (MAX)
         </text>
 
@@ -311,7 +312,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           strokeWidth="1.5"
           strokeDasharray="4 3"
         />
-        <text x={svgWidth - paddingX + 6} y={botLimitP.sy + 3} fill="rgba(239, 68, 68, 0.85)" fontSize="10" fontWeight="700" fontFamily="monospace">
+        <text x={svgWidth - paddingX} y={botLimitP.sy - 5} textAnchor="end" fill="rgba(239, 68, 68, 0.85)" fontSize="10" fontWeight="700" fontFamily="monospace">
           Y = -1.0 (MIN)
         </text>
 
@@ -350,7 +351,9 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
         >
           <circle r="12" fill="rgba(56, 189, 248, 0.2)" />
           <circle r="7" fill="#38bdf8" stroke="#ffffff" strokeWidth="2.5" />
-          <text x="-20" y="-12" fill="#38bdf8" fontSize="11" fontWeight="700">
+          {/* C8 — the label sits on the side of the handle away from the unit
+              box (below a low handle, above a high one), never on the curve. */}
+          <text y={p1.y <= 0.5 ? 26 : -16} textAnchor="middle" fill="#38bdf8" fontSize="11" fontWeight="700">
             P1 ({p1.x}, {p1.y})
           </text>
         </g>
@@ -363,7 +366,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
         >
           <circle r="12" fill="rgba(251, 191, 36, 0.2)" />
           <circle r="7" fill="#fbbf24" stroke="#ffffff" strokeWidth="2.5" />
-          <text x="10" y="16" fill="#fbbf24" fontSize="11" fontWeight="700">
+          <text y={p2.y <= 0.5 ? 26 : -16} textAnchor="middle" fill="#fbbf24" fontSize="11" fontWeight="700">
             P2 ({p2.x}, {p2.y})
           </text>
         </g>
@@ -490,9 +493,14 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
         <div className="bezier-modal-grid v3-graph-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, padding: '12px 28px 28px 28px' }}>
           {/* Left Column: SVG Canvas + P1/P2 Coordinates */}
           <div className="bezier-modal-column bezier-modal-main v3-graph-main" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* C8 — the graph and its two handle cards share one row, and the
+                value/speed graph takes the full width under them, so the
+                editor fits a 1440×900 window without scrolling. */}
+            <div className="bezier-graph-row" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
             {/* SVG Canvas Box with Exact Red Limit Lines */}
             <div className="bezier-graph-surface"
               style={{
+                flex: 'none',
                 background: '#090b10',
                 borderRadius: 12,
                 border: '1px solid #232838',
@@ -506,7 +514,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
             </div>
 
             {/* Direct Coordinate Inputs */}
-            <div className="bezier-handle-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="bezier-handle-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12, flex: 1, minWidth: 0 }}>
               <div className="bezier-handle-card" style={{ background: '#181d2a', padding: '12px 14px', borderRadius: 8, border: '1px solid #283044' }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', display: 'block', marginBottom: 8 }}>
                   P1 HANDLE (CYAN){segmentFrames ? ` · leaves F${segmentFrames.from}` : ''}
@@ -569,6 +577,8 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                 </div>
                   </div>
                 </div>
+              </div>
+            </div>
             {onChangeKeyframeValue && (
               <div className="bezier-value-graph-card" style={{ background: '#181d2a', borderRadius: 10, border: '1px solid #283044', padding: 14 }}>
                 <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
@@ -595,7 +605,6 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                 />
               </div>
             )}
-            </div>
           </div>
 
           {/* Right Column: Live Motion Simulation, Presets, Easing Code & Apply */}

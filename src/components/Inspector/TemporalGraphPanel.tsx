@@ -30,9 +30,16 @@ interface GraphPoint {
   value: number;
 }
 
-const WIDTH = 520;
+// C8: the Motion Curve Editor gives the graph its full width (~760 px).
+const WIDTH = 760;
 const HEIGHT = 190;
 const PAD = 24;
+/**
+ * C8 — the left gutter holds the value labels right-aligned beside the axis,
+ * so a label like "-300" no longer runs into the axis and the first point.
+ * Only x uses it; the drag maps y alone, so the drag mapping is unchanged.
+ */
+const PAD_LEFT = 44;
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 
 /** Compact number formatting for axis labels. */
@@ -112,7 +119,7 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
   const endFrame = sorted[sorted.length - 1]?.frame ?? 1;
   const frameRange = Math.max(1, endFrame - startFrame);
   const toSvg = (frame: number, value: number): { x: number; y: number } => ({
-    x: PAD + ((frame - startFrame) / frameRange) * (WIDTH - PAD * 2),
+    x: PAD_LEFT + ((frame - startFrame) / frameRange) * (WIDTH - PAD_LEFT - PAD),
     y: HEIGHT - PAD - ((value - minValue) / valueRange) * (HEIGHT - PAD * 2),
   });
   const toValue = (clientY: number, rect: DOMRect): number => {
@@ -188,17 +195,20 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
           onLostPointerCapture={endPointDrag}
           style={{ width: '100%', maxWidth: WIDTH, background: '#111827', border: '1px solid #293548', borderRadius: 4 }}
         >
-          <line x1={PAD} y1={HEIGHT - PAD} x2={WIDTH - PAD} y2={HEIGHT - PAD} stroke="#334155" aria-hidden="true" />
-          <line x1={PAD} y1={PAD} x2={PAD} y2={HEIGHT - PAD} stroke="#334155" aria-hidden="true" />
+          <line x1={PAD_LEFT} y1={HEIGHT - PAD} x2={WIDTH - PAD} y2={HEIGHT - PAD} stroke="#334155" aria-hidden="true" />
+          <line x1={PAD_LEFT} y1={PAD} x2={PAD_LEFT} y2={HEIGHT - PAD} stroke="#334155" aria-hidden="true" />
           {/* D1 Increment 1: readable axes. Decorative for AT (the helper text
            * states the interaction contract); the numbers mirror the domain
-           * the curve was drawn with. */}
-          <text className="temporal-graph-axis-label" x={4} y={16} fontSize={9} fill="#94a3b8" aria-hidden="true">{fmt(maxValue)}</text>
-          <text className="temporal-graph-axis-label" x={4} y={HEIGHT - PAD + 4} fontSize={9} fill="#94a3b8" aria-hidden="true">{fmt(minValue)}</text>
-          <text className="temporal-graph-axis-label" x={WIDTH - PAD} y={16} fontSize={9} fill="#64748b" textAnchor="end" aria-hidden="true">
+           * the curve was drawn with. C8: the value labels sit in the left
+           * gutter level with their gridline, the unit above the plot, and
+           * the segment badges on the frame row under the axis, so no label
+           * lies on a point or on the curve. */}
+          <text className="temporal-graph-axis-label" x={PAD_LEFT - 10} y={PAD + 3} fontSize={9} fill="#94a3b8" textAnchor="end" aria-hidden="true">{fmt(maxValue)}</text>
+          <text className="temporal-graph-axis-label" x={PAD_LEFT - 10} y={HEIGHT - PAD + 3} fontSize={9} fill="#94a3b8" textAnchor="end" aria-hidden="true">{fmt(minValue)}</text>
+          <text className="temporal-graph-axis-label" x={PAD_LEFT} y={12} fontSize={9} fill="#64748b" aria-hidden="true">
             {mode === 'value' ? 'value units' : 'value units / frame'}
           </text>
-          <text className="temporal-graph-axis-label" x={PAD} y={HEIGHT - 8} fontSize={8} fill="#64748b" aria-hidden="true">F{startFrame}</text>
+          <text className="temporal-graph-axis-label" x={PAD_LEFT} y={HEIGHT - 8} fontSize={8} fill="#64748b" aria-hidden="true">F{startFrame}</text>
           <text className="temporal-graph-axis-label" x={WIDTH - PAD} y={HEIGHT - 8} fontSize={8} fill="#64748b" textAnchor="end" aria-hidden="true">F{endFrame}</text>
           {/* One badge per segment, named by the branch the authority ACTUALLY
            * takes (V6 full precedence): HOLD > complete handle pair > stored
@@ -222,7 +232,7 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
                 className="temporal-graph-segment-badge"
                 data-segment-easing={badgeEasing}
                 x={toSvg((keyframe.frame + next.frame) / 2, minValue).x}
-                y={HEIGHT - PAD - 5}
+                y={HEIGHT - 8}
                 fontSize={8}
                 fill="#64748b"
                 textAnchor="middle"

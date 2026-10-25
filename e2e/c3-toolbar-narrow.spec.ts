@@ -87,8 +87,11 @@ test('1024: two menus replace the arrange bands; every command runs from them by
   await expect(menu.getByRole('menuitem', { name: 'Rotate counter-clockwise' })).toBeFocused();
   await page.keyboard.press('End');
   await expect(menu.getByRole('menuitem', { name: 'Send backward' })).toBeFocused();
+  // A is the top layer, so Bring forward is listed but disabled and the walk
+  // skips it.
+  await expect(menu.getByRole('menuitem', { name: 'Bring forward' })).toBeDisabled();
   await page.keyboard.press('ArrowUp');
-  await expect(menu.getByRole('menuitem', { name: 'Bring forward' })).toBeFocused();
+  await expect(menu.getByRole('menuitem', { name: 'Flip vertical' })).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(menu).toHaveCount(0);
   await expect(arrangeMenu).toBeFocused();

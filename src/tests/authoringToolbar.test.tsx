@@ -44,6 +44,7 @@ const animatorCtx = {
   setSelectedPartIds: vi.fn(),
   characterParts: [] as CharacterPart[],
   setCharacterParts: vi.fn(),
+  reorderParts: vi.fn(),
   setTracks: vi.fn(),
   tracks: [] as unknown[],
   currentFrame: 0,
@@ -300,20 +301,29 @@ describe('AuthoringToolbar', () => {
   });
 
 
-  it('arranges the selected layer through the shared z-index path', () => {
-    const part = shape('a');
-    animatorCtx.characterParts = [part];
-    setSelection(['a'], 'a');
-    renderToolbar();
+  it('arranges the selected layer through the shared stack reorder, disabled at either end', () => {
+    // Row 0 is the top of the stack, as in the layer list.
+    animatorCtx.characterParts = [shape('top'), shape('mid'), shape('bottom')];
+    setSelection(['mid'], 'mid');
+    const view = renderToolbar();
 
     fireEvent.click(screen.getByRole('button', { name: 'Bring forward' }));
-    expect(animatorCtx.setCharacterParts).toHaveBeenCalledTimes(1);
-    const forward = animatorCtx.setCharacterParts.mock.calls[0][0] as (parts: CharacterPart[]) => CharacterPart[];
-    expect(forward([part])[0].zIndex).toBe(part.zIndex + 1);
-
+    expect(animatorCtx.reorderParts).toHaveBeenLastCalledWith(1, 0);
     fireEvent.click(screen.getByRole('button', { name: 'Send backward' }));
-    const backward = animatorCtx.setCharacterParts.mock.calls[1][0] as (parts: CharacterPart[]) => CharacterPart[];
-    expect(backward([part])[0].zIndex).toBe(1);
+    expect(animatorCtx.reorderParts).toHaveBeenLastCalledWith(1, 2);
+    // The z-index is never written on its own: that left the list behind the canvas.
+    expect(animatorCtx.setCharacterParts).not.toHaveBeenCalled();
+
+    setSelection(['top'], 'top');
+    view.rerender(<AuthoringToolbar />);
+    expect(screen.getByRole('button', { name: 'Bring forward' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Bring forward' })).toHaveAttribute('title', 'The layer is already at the top');
+    expect(screen.getByRole('button', { name: 'Send backward' })).not.toBeDisabled();
+
+    setSelection(['bottom'], 'bottom');
+    view.rerender(<AuthoringToolbar />);
+    expect(screen.getByRole('button', { name: 'Send backward' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Bring forward' })).not.toBeDisabled();
   });
 
 

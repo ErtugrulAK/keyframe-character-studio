@@ -317,19 +317,30 @@ test('group and arrange actions stay visible and follow the selection', async ({
 
   await page.locator('.actor-node', { hasText: 'Alpha' }).first().click();
   await expect(toolbarButton(page, 'Group layers')).toBeDisabled();
-  await expect(toolbarButton(page, 'Bring forward')).toBeEnabled();
 
-  // Arrange writes the existing z-index path, so the painted stacking order
-  // follows it: lower z-index paints first.
+  // Arrange moves the layer one row in the layer list, and the painted stack
+  // follows the list (C8 #28: it used to write only the z-index, so the canvas
+  // moved and the list did not). Top row = painted last.
   const paintOrder = () => page.locator('.stage-svg [data-part-id]')
     .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-part-id')));
-  const before = await paintOrder();
-  expect(before).toEqual(['alpha', 'beta']);
+  const listOrder = () => page.locator('.actor-node')
+    .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-layer-id')));
+  // The seed gives both layers the same z-index, so the list (Alpha first) and
+  // the paint order (authored order, Alpha first = under) start out disagreeing.
+  expect(await listOrder()).toEqual(['alpha', 'beta']);
+  expect(await paintOrder()).toEqual(['alpha', 'beta']);
+
+  // Alpha is the top row: there is nothing to bring it in front of.
+  await expect(toolbarButton(page, 'Bring forward')).toBeDisabled();
+  await expect(toolbarButton(page, 'Bring forward')).toHaveAttribute('title', 'The layer is already at the top');
+  await toolbarButton(page, 'Send backward').click();
+  await expect.poll(listOrder).toEqual(['beta', 'alpha']);
+  await expect.poll(paintOrder).toEqual(['alpha', 'beta']);
+  await expect(toolbarButton(page, 'Send backward')).toBeDisabled();
 
   await toolbarButton(page, 'Bring forward').click();
+  await expect.poll(listOrder).toEqual(['alpha', 'beta']);
   await expect.poll(paintOrder).toEqual(['beta', 'alpha']);
-  await toolbarButton(page, 'Send backward').click();
-  await expect.poll(paintOrder).toEqual(before);
 
   await page.locator('.actor-node', { hasText: 'Beta' }).first().click({ modifiers: ['Control'] });
   await expect(toolbarButton(page, 'Group layers')).toBeEnabled();
@@ -370,7 +381,7 @@ test('toolbar content changes never move the authored world', async ({ page }) =
   // Selecting layers enables state-dependent actions, and the strip still keeps
   // its height, so the stage box is unchanged.
   await page.locator('.actor-node', { hasText: 'Alpha' }).first().click();
-  await expect(toolbarButton(page, 'Bring forward')).toBeEnabled();
+  await expect(toolbarButton(page, 'Send backward')).toBeEnabled();
   await page.locator('.actor-node', { hasText: 'Beta' }).first().click({ modifiers: ['Control'] });
   await expect(toolbarButton(page, 'Boolean Union')).toBeEnabled();
   await expect(toolbarButton(page, 'Group layers')).toBeEnabled();

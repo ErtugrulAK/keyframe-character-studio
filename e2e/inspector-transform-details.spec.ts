@@ -187,7 +187,8 @@ test('R5-15 — Details carries no layer index and no Arrange duplicate; the too
   // The authoring toolbar owns that write, as its own labelled group.
   const arrange = page.getByRole('group', { name: 'Arrange' });
   await expect(arrange).toBeVisible();
-  await expect(arrange.getByRole('button', { name: 'Bring forward', exact: true })).toBeEnabled();
+  // Alpha is the top layer, so only Send backward has somewhere to go.
+  await expect(arrange.getByRole('button', { name: 'Bring forward', exact: true })).toBeDisabled();
   await expect(arrange.getByRole('button', { name: 'Send backward', exact: true })).toBeEnabled();
 
   // The stage renders ascending zIndex: Beta (1) paints under Alpha (2).

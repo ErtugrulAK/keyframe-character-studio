@@ -41,7 +41,6 @@ import {
 import { useAnimator } from '../../context/useAnimator';
 import { useBooleanAuthoring } from '../../hooks/useBooleanAuthoring';
 import { useLayerGrouping } from '../../hooks/useLayerGrouping';
-import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
 import { useVectorArrangeAuthoring } from '../../hooks/useVectorArrangeAuthoring';
 import { BooleanOperationIcon } from '../Inspector/BooleanOperationIcon';
 import { ToolbarMenu, type ToolbarMenuItem } from './ToolbarMenu';
@@ -194,6 +193,7 @@ export const AuthoringToolbar: React.FC = () => {
     clearShapeCreation,
     pendingShapeType,
     addCustomPart,
+    reorderParts,
   } = useAnimator();
   const {
     booleanEligibleParts,
@@ -202,7 +202,6 @@ export const AuthoringToolbar: React.FC = () => {
     updateBooleanOperation,
     dissolveBooleanGroup,
   } = useBooleanAuthoring();
-  const { handleZIndexChange } = usePartPropertyAuthoring();
   const { selectedGroup, canGroup, groupSelection, ungroupSelection } = useLayerGrouping();
   const arrange = useVectorArrangeAuthoring();
 
@@ -214,6 +213,16 @@ export const AuthoringToolbar: React.FC = () => {
 
   const toolButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const selectedPart = characterParts.find((part) => part.id === selectedPartId);
+  // Arrange moves the layer one row in the authored stack, the same reorder the
+  // layer list and the context menu run, so the list and the paint order change
+  // together. Row 0 is the top of the stack.
+  const selectedIndex = selectedPart ? characterParts.indexOf(selectedPart) : -1;
+  const canBringForward = selectedIndex > 0;
+  const canSendBackward = selectedIndex >= 0 && selectedIndex < characterParts.length - 1;
+  const bringForward = () => { if (canBringForward) reorderParts(selectedIndex, selectedIndex - 1); };
+  const sendBackward = () => { if (canSendBackward) reorderParts(selectedIndex, selectedIndex + 1); };
+  const bringForwardTitle = !selectedPart ? 'Arrange needs a selected layer' : canBringForward ? 'Bring layer forward by one' : 'The layer is already at the top';
+  const sendBackwardTitle = !selectedPart ? 'Arrange needs a selected layer' : canSendBackward ? 'Send layer backward by one' : 'The layer is already at the bottom';
   // Creation needs two Boolean-eligible operands; an existing group switches
   // its operation instead. The group stays visible either way and only its
   // actions carry the availability.
@@ -249,8 +258,8 @@ export const AuthoringToolbar: React.FC = () => {
     { id: 'rotate-cw', label: 'Rotate clockwise', icon: RotateCw, run: () => arrange.rotate('cw'), disabled: !arrange.canTransform, keyshortcuts: ariaKeyshortcuts('rotate-cw', platform), title: arrange.canTransform ? `Rotate the selection 90° clockwise (${hint('rotate-cw')})` : 'Rotate needs a selected layer' },
     { id: 'flip-h', label: 'Flip horizontal', icon: FlipHorizontal2, run: () => arrange.flip('horizontal'), disabled: !arrange.canTransform, keyshortcuts: ariaKeyshortcuts('flip-horizontal', platform), title: arrange.canTransform ? `Mirror the selection horizontally about its centre (${hint('flip-horizontal')})` : 'Flip needs a selected layer' },
     { id: 'flip-v', label: 'Flip vertical', icon: FlipVertical2, run: () => arrange.flip('vertical'), disabled: !arrange.canTransform, keyshortcuts: ariaKeyshortcuts('flip-vertical', platform), title: arrange.canTransform ? `Mirror the selection vertically about its centre (${hint('flip-vertical')})` : 'Flip needs a selected layer' },
-    { id: 'bring-forward', label: 'Bring forward', icon: ArrowUp, run: () => { if (selectedPart) handleZIndexChange(selectedPart.zIndex + 1); }, disabled: !selectedPart, title: selectedPart ? 'Bring layer forward by one' : 'Arrange needs a selected layer' },
-    { id: 'send-backward', label: 'Send backward', icon: ArrowDown, run: () => { if (selectedPart) handleZIndexChange(Math.max(1, selectedPart.zIndex - 1)); }, disabled: !selectedPart, title: selectedPart ? 'Send layer backward by one' : 'Arrange needs a selected layer' },
+    { id: 'bring-forward', label: 'Bring forward', icon: ArrowUp, run: bringForward, disabled: !canBringForward, title: bringForwardTitle },
+    { id: 'send-backward', label: 'Send backward', icon: ArrowDown, run: sendBackward, disabled: !canSendBackward, title: sendBackwardTitle },
   ];
 
   /** One Tab stop for the tool pair; Arrow/Home/End move it like the stage did. */
@@ -576,18 +585,17 @@ export const AuthoringToolbar: React.FC = () => {
       <span className="authoring-toolbar-divider" aria-hidden="true" />
 
       {/*
-        Arrange writes the layer's z-order through the shared z-index authoring
-        path — the same write the Inspector's layer order uses. Paint order is
-        the truth here: a higher z-index paints later and ends up on top.
+        Arrange reorders the authored stack (see bringForward), so the layer
+        list and the painted order always agree.
       */}
       <div className="authoring-toolbar-group" role="group" aria-label="Arrange">
         <button
           type="button"
           className="authoring-toolbar-button"
           aria-label="Bring forward"
-          title={selectedPart ? 'Bring layer forward by one' : 'Arrange needs a selected layer'}
-          disabled={!selectedPart}
-          onClick={() => { if (selectedPart) handleZIndexChange(selectedPart.zIndex + 1); }}
+          title={bringForwardTitle}
+          disabled={!canBringForward}
+          onClick={bringForward}
         >
           <ArrowUp />
         </button>
@@ -595,9 +603,9 @@ export const AuthoringToolbar: React.FC = () => {
           type="button"
           className="authoring-toolbar-button"
           aria-label="Send backward"
-          title={selectedPart ? 'Send layer backward by one' : 'Arrange needs a selected layer'}
-          disabled={!selectedPart}
-          onClick={() => { if (selectedPart) handleZIndexChange(Math.max(1, selectedPart.zIndex - 1)); }}
+          title={sendBackwardTitle}
+          disabled={!canSendBackward}
+          onClick={sendBackward}
         >
           <ArrowDown />
         </button>

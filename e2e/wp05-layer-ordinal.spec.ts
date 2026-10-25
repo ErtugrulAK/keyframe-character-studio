@@ -6,6 +6,7 @@
  * ordinal is never written to the scene.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { deleteSelectedLayer } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -67,7 +68,7 @@ test('WP-05 — A..E, delete C, reorder, undo: gapless ordinals and stable ident
 
   // Delete C: four rows numbered 1..4, IDs and zIndex untouched.
   await page.locator('.ue-track-row', { hasText: 'Photo C' }).first().click();
-  await page.getByRole('button', { name: 'Delete Actor Instance' }).click();
+  await deleteSelectedLayer(page);
   const four = ['1 Photo A', '2 Photo B', '3 Photo D', '4 Photo E'];
   expect(await rows(page)).toEqual({ outliner: four, timeline: four });
   let scene = await savedScene(page);

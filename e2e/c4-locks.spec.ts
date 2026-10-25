@@ -12,7 +12,7 @@
  * Mask lock: only that mask's path and path transform are protected.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { openDetailsTab } from './fixtures/inspectorTabs';
+import { openDetailsTab, deleteSelectedLayer } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const EMPTY = () => ({ x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [], maskOffsetX: [], maskOffsetY: [], maskScale: [], maskRotation: [], trimPathStart: [], trimPathEnd: [], trimPathOffset: [] });
@@ -85,7 +85,9 @@ test('a locked layer is inspected, not edited — from the Inspector, the keyboa
 
   // Inspector: banner, values shown, edit controls disabled, disclosure still works.
   await expect(page.getByTestId('details-lock-banner')).toContainText('This layer is locked');
-  await expect(page.locator('button[title="A locked layer cannot be deleted"]')).toBeDisabled();
+  // C8: the Details header has no delete button any more; the keyboard
+  // Delete below is refused for the locked layer.
+  await expect(page.locator('.details-actor-header button')).toHaveCount(0);
   // Opening a card is inspection: it works on a locked layer.
   await page.locator('.details-body').getByRole('button', { name: 'Expand TRANSFORM' }).click();
   await expect(page.locator('.details-body').getByRole('button', { name: 'Collapse TRANSFORM' })).toBeEnabled();
@@ -147,7 +149,7 @@ test('a mixed selection is refused as a whole; deleting the parent of a locked c
 
   // Deleting the unlocked parent would rewrite the locked child: refused.
   await row(page, 'Parent').click();
-  await page.locator('button[title="Delete Actor Instance"]').click();
+  await deleteSelectedLayer(page);
   await expect(refusal(page, '“Child” is locked')).toBeVisible();
   await expect(row(page, 'Parent')).toBeVisible();
   await expect(row(page, 'Child')).toBeVisible();

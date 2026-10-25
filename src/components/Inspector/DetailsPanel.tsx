@@ -19,9 +19,6 @@ import { StyleCard } from './sections/style/StyleCard';
 import { useRetainedUiState } from '../../hooks/useRetainedUiState';
 import {
   Sliders,
-  Copy,
-  Trash2,
-  FlipHorizontal2,
   Lock,
 } from 'lucide-react';
 
@@ -46,12 +43,10 @@ export const DetailsPanel: React.FC = () => {
     updateCurrentTransform,
     updateCurrentPropertyChannel,
     authorMaskPath,
-    deletePart,
     customPresets,
     savePreset,
     updatePreset,
     deletePreset,
-    duplicateSelectedPart,
     importPresets,
     copySelectedPart,
     pasteAnimationOntoSelected,
@@ -81,7 +76,6 @@ export const DetailsPanel: React.FC = () => {
     selectPathVertex,
   } = useAnimator();
 
-  const [activeTabSection, setActiveTabSection] = useState<'edit' | 'duplicate'>('edit');
   // C5 — the same "what am I editing" description the canvas strip shows; the
   // Inspector names the session (mask path, mask drawing, matte source) under
   // the layer it belongs to. Its controls stay where they are (the canvas
@@ -226,38 +220,6 @@ export const DetailsPanel: React.FC = () => {
             <span className="actor-type-label">{layerTypeLabel(selectedPart)}</span>
           </div>
 
-          <div className="actor-action-row" role="group" aria-label="Inspector object actions">
-            <button
-              type="button"
-              className={`actor-context-action ${activeTabSection === 'duplicate' ? 'active' : ''}`}
-              aria-expanded={activeTabSection === 'duplicate'}
-              aria-label="Duplicate"
-              title="Duplicate and mirror options"
-              onClick={() => setActiveTabSection((section) => section === 'duplicate' ? 'edit' : 'duplicate')}
-            >
-              <FlipHorizontal2 size={13} />
-            </button>
-            <button
-              type="button"
-              className="btn-icon-small"
-              onClick={duplicateSelectedPart}
-              title="Duplicate this layer now (offset copy)"
-              aria-label="Duplicate Actor Instance"
-            >
-              <Copy size={12} />
-            </button>
-            <span className="actor-action-divider" aria-hidden="true" />
-            <button
-              type="button"
-              className="btn-icon-small danger"
-              onClick={() => deletePart(selectedPart.id)}
-              disabled={isLocked}
-              title={isLocked ? 'A locked layer cannot be deleted' : 'Delete Actor Instance'}
-              aria-label="Delete Actor Instance"
-            >
-              <Trash2 size={12} />
-            </button>
-          </div>
         </div>
       ) : (
         <div className="details-empty-state">
@@ -285,14 +247,10 @@ export const DetailsPanel: React.FC = () => {
         </div>
       )}
 
-      {/* 4. Property Section Body */}
-      {selectedPart && transform && activeTabSection === 'duplicate' && (
-        <div className="details-body" ref={bodyRef} data-locked={isLocked ? 'true' : undefined}>
-          <DuplicateTab />
-        </div>
-      )}
-
-      {selectedPart && transform && activeTabSection === 'edit' && (
+      {/* 4. Property Section Body. C8: the header carries no actions — delete,
+          duplicate and paste live in the keyboard and the context menu, and
+          the duplicate / mirror copies in the Layer tab. */}
+      {selectedPart && transform && (
         <Tabs.Root
           className="details-tabs"
           value={shownTab}
@@ -489,6 +447,9 @@ export const DetailsPanel: React.FC = () => {
                 onClearAnimation={() => setPendingClear(true)}
                 clipboardSourceId={clipboardData?.part.id ?? null}
               />
+              <StyleCard title="DUPLICATE" collapsible retainKey="layer-duplicate">
+                <DuplicateTab />
+              </StyleCard>
             </Tabs.Content>
           </div>
         </Tabs.Root>

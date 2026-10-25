@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { openDuplicateCard } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -26,8 +27,8 @@ async function seedParallelogram(page: Page) {
 test('mirror duplicate keeps the selection gizmo aligned with a parallelogram', async ({ page }) => {
   await seedParallelogram(page);
   await page.locator('.actor-node', { hasText: 'Parallelogram' }).click();
-  await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
-  await page.getByRole('button', { name: /Mirror Y/i }).click();
+  await openDuplicateCard(page);
+  await page.getByRole('button', { name: 'Mirror Y', exact: true }).click();
 
   await expect(page.locator('.ue-outliner').getByText('Parallelogram Mirror Y').first()).toBeVisible();
   const gizmo = page.locator('[data-testid="transform-gizmo"]');

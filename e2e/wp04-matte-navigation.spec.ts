@@ -5,7 +5,7 @@
  * the target; shared-source visibility conflict; delete → missing → Undo.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { openDetailsTab } from './fixtures/inspectorTabs';
+import { openDetailsTab, deleteSelectedLayer } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -102,7 +102,7 @@ test('WP-04 — select a hidden matte source, move it, return to the target; con
 
   // Delete the source → missing (reference kept) → Undo restores the same id.
   await page.locator('.ue-track-row', { hasText: 'Circle' }).first().click();
-  await page.getByRole('button', { name: 'Delete Actor Instance' }).click();
+  await deleteSelectedLayer(page);
   // C2: the source has dependents, so the delete names them before it runs.
   const confirm = page.getByTestId('delete-dependents-dialog');
   await expect(confirm.locator('[data-dependent-id="landscape"]')).toBeVisible();

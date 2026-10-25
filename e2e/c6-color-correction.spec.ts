@@ -12,7 +12,7 @@
  * - OGraf export is blocked with the reason (not flattened, not dropped).
  */
 import { expect, test, type Page } from '@playwright/test';
-import { openDetailsTab } from './fixtures/inspectorTabs';
+import { openDetailsTab, duplicateSelectedLayer } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const E = () => ({ x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [] });
@@ -251,7 +251,7 @@ test('a duplicate keeps the correction pointing at the copy’s own mask', async
   await page.mouse.up();
   await page.keyboard.press('Escape');
   await page.locator('[role="tree"] [data-layer-id="photo"]').click();
-  await page.getByRole('button', { name: 'Duplicate Actor Instance' }).click();
+  await duplicateSelectedLayer(page);
   await expect(page.locator('.tree-node.actor-node')).toHaveCount(2);
   const doc = await savedScene(page);
   const copy = doc.layers.find((layer: any) => layer.id !== 'photo');

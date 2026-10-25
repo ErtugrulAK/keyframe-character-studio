@@ -6,7 +6,7 @@
  * names its dependent layers first.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { openDetailsTab } from './fixtures/inspectorTabs';
+import { openDetailsTab, deleteSelectedLayer } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -237,9 +237,9 @@ test('deleting a Track Matte source names its dependent layers first; Cancel kee
   await expect(dialog).toHaveCount(0);
   await expect(row(page, 'logo')).toHaveCount(1);
 
-  // Confirm (from the Inspector's trash, the same guard): Caption keeps the
+  // Confirm (from the Delete key, the same guard): Caption keeps the
   // relationship and reports the missing source.
-  await page.getByRole('button', { name: 'Delete Actor Instance' }).click();
+  await deleteSelectedLayer(page);
   await dialog.getByRole('button', { name: 'Delete' }).click();
   await expect(row(page, 'logo')).toHaveCount(0);
   await expect(row(page, 'caption').getByLabel('Missing track matte source')).toBeVisible();

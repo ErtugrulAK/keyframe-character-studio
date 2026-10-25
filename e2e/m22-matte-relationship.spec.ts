@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { openDetailsTab } from './fixtures/inspectorTabs';
+import { openDetailsTab, deleteSelectedLayer } from './fixtures/inspectorTabs';
 
 /**
  * M22 STEP 8C — REAL USER E2E: outliner matte relationship visibility (8A)
@@ -101,11 +101,9 @@ test.describe('M22 — outliner matte relationship + validation (real UI)', () =
       makeLayer('logo', 'The Logo', 'custom_box', { matte: { sourcePartId: 'cow', mode: 'alpha', enabled: true } }),
     ]);
     expect(await matteIndicator(page, 'Matte source: The Cow')).toBe(true);
-    // delete the SOURCE part through the Inspector delete button (real path)
+    // delete the SOURCE part through the Delete key (real path)
     await selectPart(page, 'The Cow');
-    const del = page.locator('button[title="Delete Actor Instance"]');
-    await del.waitFor({ state: 'visible', timeout: 10000 });
-    await del.click();
+    await deleteSelectedLayer(page);
     // C2: the source has a dependent, so the delete names it before running.
     const confirm = page.getByTestId('delete-dependents-dialog');
     await expect(confirm.locator('[data-dependent-id="logo"]')).toContainText('The Logo');
@@ -219,7 +217,7 @@ test.describe('M22 — outliner matte relationship + validation (real UI)', () =
     ]);
     expect(await matteIndicator(page, 'Matte source: The Cow')).toBe(true);
     await selectPart(page, 'The Cow');
-    await page.locator('button[title="Delete Actor Instance"]').click();
+    await deleteSelectedLayer(page);
     // C2: confirm the named dependent first.
     await page.getByTestId('delete-dependents-dialog').getByRole('button', { name: 'Delete' }).click();
     await page.waitForTimeout(400);

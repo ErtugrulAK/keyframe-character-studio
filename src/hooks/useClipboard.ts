@@ -268,6 +268,11 @@ export const useClipboard = ({
    * track keeps its id + visible/locked metadata. Fresh keyframe ids are
    * generated; custom preset IDs are referenced, never duplicated.
    *
+   * C8 — the transfer is RELATIVE to the target's own base transform: the
+   * target keeps its place and proportions and performs the source's motion
+   * (see `cloneAnimationOntoTarget`). Exact values stay the job of the
+   * timeline's keyframe copy/paste.
+   *
    * setTracks + setCharacterParts are the two halves of ONE logical
    * transaction — the UI layer (26B) wraps both in a single history entry.
    */
@@ -288,6 +293,7 @@ export const useClipboard = ({
         clipboardData.part,
         targetPartId,
         targetTrack,
+        { targetBase: targetPart.baseTransform },
       );
 
       setTracks((prevTracks) => {

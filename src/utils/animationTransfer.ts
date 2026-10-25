@@ -1,4 +1,4 @@
-import type { CharacterPart, Keyframe, PropertyKeyframe, Track, TrackChannel } from '../types/animator';
+import type { CharacterPart, Keyframe, PropertyKeyframe, Track, TrackChannel, Transform } from '../types/animator';
 import { generateId } from './idGenerator';
 import { makeEmptyChannels } from './defaults';
 
@@ -18,7 +18,25 @@ import { makeEmptyChannels } from './defaults';
  *
  * M8 SAFE: copies EXISTING Track.channels/keyframes — no new channel type,
  * no evaluateFrame/playback/serialization change.
+ *
+ * C8 — RELATIVE transfer. With `options.targetBase` (the target's own base
+ * transform) the MOTION is transferred, not the source's pose: the target stays
+ * where it is and keeps its proportions.
+ *   - x, y, rotation: target base + (key − source base)
+ *   - scaleX, scaleY: target base × (key ÷ source base); a zero source base
+ *     counts as 1, so a pop-in from 0 still lands on the target's own scale
+ *   - opacity, Trim Path and the legacy mask-transform channels: copied as-is
+ * Without it the values are copied exactly (the keyframe-level copy/paste is
+ * the exact-value tool). Per-mask animation (`Track.maskChannels`) is never
+ * transferred either way: the target track keeps its own.
  */
+export interface AnimationTransferOptions {
+  targetBase?: Transform;
+}
+
+type MotionProperty = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY';
+const OFFSET_PROPERTIES = new Set<string>(['x', 'y', 'rotation']);
+const SCALE_PROPERTIES = new Set<string>(['scaleX', 'scaleY']);
 
 export interface AnimationTransferResult {
   /** Target track carrying the copied animation (existing id+metadata, or a
@@ -37,7 +55,22 @@ export function cloneAnimationOntoTarget(
   sourcePart: CharacterPart,
   targetPartId: string,
   targetTrack: Track | undefined,
+  options: AnimationTransferOptions = {},
 ): AnimationTransferResult {
+  const { targetBase } = options;
+  const sourceBase = sourcePart.baseTransform;
+  /** One transform property's value on the target (see the relative rules above). */
+  const mapValue = (property: string, value: number): number => {
+    if (!targetBase || !sourceBase) return value;
+    const key = property as MotionProperty;
+    if (OFFSET_PROPERTIES.has(property)) return targetBase[key] + (value - sourceBase[key]);
+    if (SCALE_PROPERTIES.has(property)) {
+      const reference = sourceBase[key] === 0 ? 1 : sourceBase[key];
+      return targetBase[key] * (value / reference);
+    }
+    return value;
+  };
+
   // Base track: preserve target track identity + metadata when it exists;
   // otherwise create one with the repository's default track conventions.
   const baseTrack: Track = targetTrack
@@ -69,6 +102,7 @@ export function cloneAnimationOntoTarget(
         baseTrack.channels[ch] = arr.map((pk: PropertyKeyframe) => ({
           ...pk,
           id: generateId(`pkf_${ch}`),
+          value: mapValue(ch, pk.value),
           ...(pk.bezierControlPoints ? { bezierControlPoints: [...pk.bezierControlPoints] as [number, number, number, number] } : {}),
         }));
       }
@@ -80,7 +114,14 @@ export function cloneAnimationOntoTarget(
       baseTrack.keyframes = sourceTrack.keyframes.map((k: Keyframe) => ({
         ...k,
         id: generateId('kf'),
-        transform: { ...k.transform },
+        transform: {
+          ...k.transform,
+          x: mapValue('x', k.transform.x),
+          y: mapValue('y', k.transform.y),
+          rotation: mapValue('rotation', k.transform.rotation),
+          scaleX: mapValue('scaleX', k.transform.scaleX),
+          scaleY: mapValue('scaleY', k.transform.scaleY),
+        },
         ...(k.bezierControlPoints ? { bezierControlPoints: [...k.bezierControlPoints] as [number, number, number, number] } : {}),
       }));
     }

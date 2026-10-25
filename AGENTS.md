@@ -204,6 +204,7 @@ Treat these as separate user intents.
 ### Animation Transfer
 
 - Copies channels, legacy keyframes, IN/OUT preset IDs, and durations to another existing part.
+- Transfers motion relative to the target's own base transform: position and rotation as an offset, scale as a ratio, opacity and Trim Path as-is. Per-mask animation stays the target's. Keyframe copy/paste is the exact-value tool.
 - Generates fresh keyframe IDs and replaces target animation rather than merging it.
 - Preserves target identity, base transform, matte, hierarchy, geometry, media, and z-order.
 - Does not duplicate the custom preset library.

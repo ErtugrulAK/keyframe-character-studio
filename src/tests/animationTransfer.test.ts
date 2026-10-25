@@ -103,6 +103,54 @@ describe('M26 26A — target WITH existing track', () => {
   });
 });
 
+describe('C8 — relative transfer: the target keeps its place and proportions', () => {
+  const sourceBase = { x: -500, y: 0, rotation: 10, scaleX: 2.5, scaleY: 1, opacity: 1 };
+  const targetBase = { x: 300, y: 200, rotation: 0, scaleX: 1, scaleY: 1, opacity: 0.5 };
+  const sourceTrack = (): Track => {
+    const channels = makeEmptyChannels();
+    channels.x = [
+      { id: 'x0', frame: 0, value: -500, easing: 'linear', templateId: 'Sequence' },
+      { id: 'x30', frame: 30, value: -200, easing: 'easeInOut', bezierControlPoints: [0.2, 0, 0.8, 1], templateId: 'Sequence' },
+    ];
+    channels.rotation = [{ id: 'r0', frame: 0, value: 10, easing: 'linear' }, { id: 'r30', frame: 30, value: 100, easing: 'linear' }];
+    channels.scaleX = [{ id: 'sx0', frame: 0, value: 2.5, easing: 'linear' }, { id: 'sx30', frame: 30, value: 5, easing: 'linear' }];
+    channels.scaleY = [{ id: 'sy0', frame: 0, value: 0, easing: 'linear' }, { id: 'sy30', frame: 30, value: 1, easing: 'linear' }];
+    channels.opacity = [{ id: 'o0', frame: 0, value: 0, easing: 'linear' }, { id: 'o30', frame: 30, value: 1, easing: 'linear' }];
+    channels.trimPathEnd = [{ id: 't0', frame: 0, value: 0, easing: 'linear' }, { id: 't30', frame: 30, value: 1, easing: 'linear' }];
+    return { id: 'src_track', partId: 'src', name: 'S', color: '#fff', keyframes: [], channels, visible: true, locked: false, expanded: false };
+  };
+  const values = (keys: Array<{ value: number }>) => keys.map((key) => key.value);
+
+  it('offsets position and rotation and scales by ratio from the target base', () => {
+    const res = cloneAnimationOntoTarget(sourceTrack(), makePart('src', { baseTransform: sourceBase }), 'tgt', undefined, { targetBase });
+    expect(values(res.track.channels.x)).toEqual([300, 600]);
+    expect(values(res.track.channels.rotation)).toEqual([0, 90]);
+    // 2.5 → 5 is ×1 → ×2 of the source base, so the target goes 1 → 2.
+    expect(values(res.track.channels.scaleX)).toEqual([1, 2]);
+    // A zero source base counts as 1: a pop-in 0 → 1 lands on the target's scale.
+    expect(values(res.track.channels.scaleY)).toEqual([0, 1]);
+    // Opacity and Trim Path are absolute.
+    expect(values(res.track.channels.opacity)).toEqual([0, 1]);
+    expect(values(res.track.channels.trimPathEnd)).toEqual([0, 1]);
+    // Timing and easing are untouched.
+    expect(res.track.channels.x[1]).toMatchObject({ frame: 30, easing: 'easeInOut', bezierControlPoints: [0.2, 0, 0.8, 1] });
+  });
+
+  it('maps legacy composite keyframes the same way', () => {
+    const track = { ...sourceTrack(), keyframes: [{ id: 'k', frame: 5, transform: { x: -400, y: 20, rotation: 10, scaleX: 5, scaleY: 1, opacity: 0.25 }, easing: 'linear' as const }] };
+    const res = cloneAnimationOntoTarget(track, makePart('src', { baseTransform: sourceBase }), 'tgt', undefined, { targetBase });
+    expect(res.track.keyframes[0].transform).toEqual({ x: 400, y: 220, rotation: 0, scaleX: 2, scaleY: 1, opacity: 0.25 });
+  });
+
+  it('keeps the per-mask animation of the target track', () => {
+    const maskChannels = { 'm1:opacity': [{ id: 'mo', frame: 0, value: 0.5, easing: 'linear' as const }] };
+    const target: Track = { id: 'tgt_track', partId: 'tgt', name: 'T', color: '#0f0', keyframes: [], channels: makeEmptyChannels(), maskChannels, visible: true, locked: false, expanded: false };
+    const source = { ...sourceTrack(), maskChannels: { 'other:opacity': [{ id: 'so', frame: 0, value: 1, easing: 'linear' as const }] } };
+    const res = cloneAnimationOntoTarget(source, makePart('src', { baseTransform: sourceBase }), 'tgt', target, { targetBase });
+    expect(res.track.maskChannels).toEqual(maskChannels);
+  });
+});
+
 describe('M26 26A — part animation fields (IN/OUT)', () => {
   it('copies inAnimPreset/outAnimPreset/durations from source', () => {
     const src = makePart('src', { inAnimPreset: 'slide-left', outAnimPreset: 'user-1', inAnimDuration: 15, outAnimDuration: 20 });

@@ -61,7 +61,9 @@ test.describe('KCS V5.1 manual QA gates', () => {
     await page.getByRole('button', { name: 'Dissolve Boolean' }).click();
     await expect(page.locator('.actor-node', { hasText: 'Operand A' })).toHaveCount(1);
     await expect(page.locator('.actor-node', { hasText: 'Operand B' })).toHaveCount(1);
-    await expect(page.getByText('Boolean dissolved; operands preserved.', { exact: true })).toBeVisible();
+    // C8: the operands back at the top level are the confirmation (no toast).
+    await expect(page.locator('.nested-node.actor-node', { hasText: 'Operand A' })).toHaveCount(0);
+    await expect(page.getByText('Boolean dissolved', { exact: false })).toHaveCount(0);
   });
 
   test('resets pan while preserving zoom, grid, and active tool', async ({ page }) => {

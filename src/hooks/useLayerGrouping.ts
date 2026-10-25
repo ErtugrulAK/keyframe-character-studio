@@ -98,7 +98,6 @@ export const createLayerGroupingActions = ({
     endBatchInteraction();
     setSelectedPartIds([outcome.groupId]);
     setSelectedPartId(outcome.groupId);
-    showToast(`Grouped ${outcome.childIds.length} layers`, 'success');
   };
 
   const ungroupSelection = () => {
@@ -123,7 +122,6 @@ export const createLayerGroupingActions = ({
     endBatchInteraction();
     setSelectedPartIds(outcome.childIds);
     setSelectedPartId(outcome.childIds[0] ?? null);
-    showToast(`Ungrouped ${outcome.childIds.length} layers; positions kept.`, 'success');
   };
 
   return {

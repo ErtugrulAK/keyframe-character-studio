@@ -318,8 +318,11 @@ test('a cancelled export writes nothing', async ({ page }) => {
   await expect(cancel).toBeVisible();
   await cancel.click();
 
-  await expect(page.getByText('GIF export cancelled. Nothing was written.')).toBeVisible();
+  // C8: the panel returning to its idle state is the feedback (no toast), and
+  // no result is reported because nothing was written.
   await expect(page.getByRole('button', { name: 'Export GIF', exact: true })).toBeVisible();
+  await expect(page.locator('.gif-export-done')).toHaveCount(0);
+  await expect(page.getByText('GIF export cancelled', { exact: false })).toHaveCount(0);
 });
 
 test('a scene the frames cannot draw is refused before anything is rendered', async ({ page }) => {

@@ -304,7 +304,6 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    if (showToast) showToast(`Exported ${payload.presets.length} presets`, 'success');
   };
 
   // M30 — import: hidden file input → whole-file validation (30A) → merge
@@ -321,7 +320,6 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
       }
       const merged = mergeImportedPresets(customPresets, validated.presets);
       if (onImportPresets) onImportPresets(merged);
-      if (showToast) showToast(`Imported ${validated.presets.length} presets`, 'success');
     } catch {
       if (showToast) showToast('Could not import presets: invalid JSON file', 'error');
     }

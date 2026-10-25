@@ -106,7 +106,8 @@ describe('M30 30B — export', () => {
     const anchor = appendSpy.mock.calls.at(-1)![0] as HTMLAnchorElement;
     expect(anchor.download).toBe('kcs-custom-presets.json');
     expect(anchor.href).toBe('blob:mock');
-    expect(showToast).toHaveBeenCalledWith('Exported 2 presets', 'success');
+    // C8: the download is the confirmation; no success toast.
+    expect(showToast).not.toHaveBeenCalled();
     appendSpy.mockRestore();
   });
 
@@ -126,7 +127,7 @@ describe('M30 30B — export', () => {
     expect(payload.version).toBe(1);
     expect(payload.presets).toHaveLength(1); // only the user preset — defaults filtered
     expect(payload.presets[0].id).toBe('user-in-1');
-    expect(showToast).toHaveBeenCalledWith('Exported 1 presets', 'success');
+    expect(showToast).not.toHaveBeenCalled();
   });
 });
 
@@ -148,7 +149,8 @@ describe('M30 30B — import', () => {
     await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
     const merged = onImport.mock.calls[0][0] as CustomMotionPreset[];
     expect(merged.map((p) => p.id)).toEqual(['user-in-1', 'user-out-1', 'user-in-2']); // existing + imported
-    expect(showToast).toHaveBeenCalledWith('Imported 1 presets', 'success');
+    // C8: the library list is the confirmation; no success toast.
+    expect(showToast).not.toHaveBeenCalled();
   });
 
   it('11. invalid JSON → error toast, library untouched', async () => {
@@ -218,13 +220,14 @@ describe('M30 30B — import', () => {
     expect(fake.id).not.toBe(defaultPreset.id); // default id collision remapped
   });
 
-  it('20+21. success and error toasts emitted', async () => {
+  it('20+21. a bad file raises an error toast; a good one imports without a toast (C8)', async () => {
     const onImport = vi.fn();
     const showToast = vi.fn();
     renderCard({ onImport, showToast });
     const input = screen.getByLabelText('Import custom animation presets file');
     pickFile(input as HTMLElement, makeJsonFile(JSON.stringify({ version: 1, presets: [CUSTOM_IN] })));
-    await waitFor(() => expect(showToast).toHaveBeenCalledWith('Imported 1 presets', 'success'));
+    await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
+    expect(showToast).not.toHaveBeenCalled();
     pickFile(input as HTMLElement, makeJsonFile('garbage'));
     await waitFor(() => expect(showToast.mock.calls.at(-1)![1]).toBe('error'));
   });
@@ -249,7 +252,7 @@ describe('M30 30B — import', () => {
     await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
     const merged = onImport.mock.calls[0][0] as CustomMotionPreset[];
     expect(merged.map((p) => p.id)).toEqual(['user-in-1']);
-    expect(showToast).toHaveBeenCalledWith('Imported 0 presets', 'success'); // success no-op
+    expect(showToast).not.toHaveBeenCalled(); // a safe no-op, no toast (C8)
   });
 
   it('15+16. imported presets flow into Custom group with IN/OUT filtering (runtime collection)', async () => {

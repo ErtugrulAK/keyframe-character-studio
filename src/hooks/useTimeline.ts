@@ -462,7 +462,6 @@ export const useTimeline = ({
     setTracks((prev) =>
       prev.map((t) => (t.partId === partId ? { ...t, name: trimmed } : t))
     );
-    showToast(`Renamed layer to "${trimmed}"`, 'success');
   }, [characterParts, setCharacterParts, setTracks, showToast, tracks]);
 
   const reorderParts = useCallback((dragIndex: number, hoverIndex: number) => {

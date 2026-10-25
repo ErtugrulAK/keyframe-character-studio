@@ -76,17 +76,11 @@ export const useGifExport = ({ sceneTitle, showToast, onBlocked }: UseGifExportO
         onProgress: (next) => setProgress(next),
         shouldCancel: () => cancelledRef.current,
       });
-      if (!result) {
-        showToast('GIF export cancelled. Nothing was written.', 'info');
-        return;
-      }
+      if (!result) return;
       const fileName = `${sanitizeFilenameComponent(sceneTitle || 'Template', 'Template')}.gif`;
       downloadBlob(result.bytes, fileName, 'image/gif');
+      // The panel's "Last export" line reports the result (C8: no toast).
       setLastResult(result);
-      showToast(
-        `Exported "${fileName}" · ${result.frameCount} frames · ${result.durationSeconds.toFixed(2)} s · ${result.width}×${result.height}`,
-        'success',
-      );
       const missingFonts = result.sceneFontFamilies.filter((family) => !result.embeddedFontFamilies.includes(family));
       if (missingFonts.length > 0) {
         showToast(

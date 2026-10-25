@@ -262,7 +262,6 @@ export const HeaderBar: React.FC = () => {
     const json = exportProject();
     const cleanFileName = `${sanitizeFilenameComponent(sceneTitle || 'Template', 'Template')}.json`;
     downloadBlob(new TextEncoder().encode(json), cleanFileName, 'application/json');
-    showToast(`Exported "${cleanFileName}"`, 'success');
   };
 
 
@@ -306,7 +305,6 @@ export const HeaderBar: React.FC = () => {
       const { createOGrafBrowserZip } = await import('../../ograf/browserZip');
       const archive = await createOGrafBrowserZip(plan);
       downloadBlob(archive.bytes, archive.fileName, 'application/zip');
-      showToast(`Exported "${archive.fileName}"`, 'success');
     } catch (error) {
       const remediation = describeOGrafPackageWriteFailure(error);
       if (remediation) {
@@ -390,10 +388,10 @@ export const HeaderBar: React.FC = () => {
         default: {
           const result = importProject(text, fileNameWithoutExt);
           if (result.ok) {
-            // A successful import can still carry warnings (for example the legacy
-            // migration notice): show them instead of reporting a silent success.
+            // A successful import shows as its new Template tab; it can still
+            // carry warnings (for example the legacy migration notice), and
+            // those are shown.
             const [notice] = result.diagnostics;
-            showToast(`Imported "${fileNameWithoutExt}" as a new Template tab!`, 'success');
             if (notice) showToast(notice.message, 'info', { title: notice.code, action: notice.action });
             return;
           }
@@ -430,7 +428,6 @@ export const HeaderBar: React.FC = () => {
       return;
     }
     const warningCount = result.diagnostics.filter((entry) => entry.severity === 'warning').length;
-    showToast(`Imported "${name}" from Lottie.`, 'success');
     if (warningCount > 0) {
       const [firstWarning] = result.diagnostics.filter((entry) => entry.severity === 'warning');
       showToast(`${warningCount} report entr${warningCount === 1 ? 'y' : 'ies'} from the import.`, 'info', {
@@ -457,7 +454,6 @@ export const HeaderBar: React.FC = () => {
       return;
     }
     const warningCount = result.diagnostics.filter((entry) => entry.severity === 'warning').length;
-    showToast(`Imported "${name}" from an OGraf package.`, 'success');
     if (warningCount > 0) {
       const [firstWarning] = result.diagnostics.filter((entry) => entry.severity === 'warning');
       showToast(`${warningCount} report entr${warningCount === 1 ? 'y' : 'ies'} from the import.`, 'info', {

@@ -206,7 +206,6 @@ export const DetailsPanel: React.FC = () => {
       ),
     );
     endBatchInteraction();
-    showToast('Animation cleared', 'success');
   };
 
   return (

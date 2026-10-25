@@ -523,19 +523,18 @@ export const StageCanvas: React.FC = () => {
         // A finished drawing hands the stage back to Select; a tool switch
         // keeps the tool the user just chose.
         if (reason === 'finish') setActiveTool('select');
-        showToast(reason === 'finish' ? 'Freeform shape created' : 'Freeform shape finished when you switched tools', 'success');
+        // C8 — no confirmation for a finish the user asked for; a tool switch
+        // finishing it implicitly is still said.
+        else showToast('Freeform shape finished when you switched tools', 'info');
       },
       [addCustomPart, setActiveTool, showToast]
     ),
     onCancel: useCallback((hadDraft: boolean) => {
       // Escape is one level: it discards a draft and keeps the Pen; with no
       // draft it leaves the tool so clicks select again.
-      if (hadDraft) {
-        showToast('Drawing cancelled', 'info');
-        return;
-      }
+      if (hadDraft) return;
       setActiveTool('select');
-    }, [setActiveTool, showToast]),
+    }, [setActiveTool]),
     onDiscard: useCallback(() => {
       showToast('Drawing discarded: a shape needs at least three points', 'info');
     }, [showToast]),
@@ -2019,7 +2018,6 @@ export const StageCanvas: React.FC = () => {
                   onDegenerate={(message) => showToast(message, 'info')}
                   registerDraftHistory={registerDraftHistory}
                   onPenDraftChange={setMaskPenDraft}
-                  onDiscardDraft={(count) => showToast(`Mask drawing cancelled — ${count} point${count === 1 ? '' : 's'} discarded`, 'info')}
                 />
               )}
             </>

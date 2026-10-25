@@ -169,14 +169,12 @@ export const useBroadcast = ({
             ...prev,
             [partId]: { state: 'animating_out', progress: 0 }
           }));
-          showToast(`Triggered exit preset "${cp.name}"`, 'info');
           return;
         } else if (isEntrance) {
           setBroadcastState(prev => ({
             ...prev,
             [partId]: { state: 'animating_in', progress: 0 }
           }));
-          showToast(`Triggered entrance preset "${cp.name}"`, 'success');
           return;
         }
       }
@@ -186,8 +184,7 @@ export const useBroadcast = ({
       ...prev,
       [partId]: { stunt, progress: 0, loop, customPresetId }
     }));
-    showToast(`Triggered live stunt "${stunt.toUpperCase()}"${loop ? ' (LOOPING)' : ''}!`, 'success');
-  }, [customPresetsRef, showToast]);
+  }, [customPresetsRef]);
 
   const stopLiveStunt = useCallback((partId: string) => {
     setLiveStuntsState(prev => {
@@ -195,8 +192,7 @@ export const useBroadcast = ({
       delete next[partId];
       return next;
     });
-    showToast('Stopped live stunt', 'info');
-  }, [showToast]);
+  }, []);
 
   const setStuntLoopState = useCallback((loop: boolean) => {
     setLiveStuntsState(prev => {
@@ -206,13 +202,11 @@ export const useBroadcast = ({
       });
       return next;
     });
-    showToast(`Live stunt loop set to ${loop ? 'ON' : 'OFF'}`, 'info');
-  }, [showToast]);
+  }, []);
 
   const stopAllLiveStunts = useCallback(() => {
     setLiveStuntsState({});
-    showToast('Stopped all live stunts', 'info');
-  }, [showToast]);
+  }, []);
 
   // Broadcast Loop
   const broadcastLastTimeRef = useRef<number>(0);

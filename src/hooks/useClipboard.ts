@@ -36,8 +36,7 @@ export const useClipboard = ({
       part: structuredClone(part),
       track: track ? structuredClone(track) : undefined,
     });
-    showToast(`Copied "${part.name}" to clipboard`, 'info');
-  }, [selectedPartId, characterParts, tracks, showToast]);
+  }, [selectedPartId, characterParts, tracks]);
 
   const pasteCopiedPart = useCallback(() => {
     if (!clipboardData) {
@@ -97,7 +96,6 @@ export const useClipboard = ({
     setTracks((prevTracks) => [newTrack, ...prevTracks]);
     setCharacterParts((prevParts) => [newPart, ...prevParts]);
     setSelectedPartId(newPartId);
-    showToast(`Pasted "${newPart.name}"`, 'success');
   }, [clipboardData, characterParts, setTracks, setCharacterParts, setSelectedPartId, showToast]);
 
   const duplicateSelectedPart = useCallback(() => {
@@ -172,11 +170,7 @@ export const useClipboard = ({
     setTracks((prevTracks) => [...newTracks, ...prevTracks]);
     setCharacterParts((prevParts) => [...newParts, ...prevParts]);
     setSelectedPartId(newPartId);
-    showToast(
-      part.isGroup ? `Duplicated "${part.name}" with ${sources.length - 1} layers` : `Duplicated "${part.name}"`,
-      'success',
-    );
-  }, [selectedPartId, characterParts, tracks, setTracks, setCharacterParts, setSelectedPartId, showToast]);
+  }, [selectedPartId, characterParts, tracks, setTracks, setCharacterParts, setSelectedPartId]);
 
   /**
    * Duplicate the selected part as a MIRROR copy: across the Y axis
@@ -255,9 +249,8 @@ export const useClipboard = ({
       setTracks((prevTracks) => [newTrack, ...prevTracks]);
       setCharacterParts((prevParts) => [newPart, ...prevParts]);
       setSelectedPartId(newPartId);
-      showToast(`Created "${newPart.name}"`, 'success');
     },
-    [selectedPartId, characterParts, tracks, setTracks, setCharacterParts, setSelectedPartId, showToast]
+    [selectedPartId, characterParts, tracks, setTracks, setCharacterParts, setSelectedPartId]
   );
 
   /**
@@ -305,7 +298,6 @@ export const useClipboard = ({
       setCharacterParts((prevParts) =>
         prevParts.map((p) => (p.id === targetPartId ? { ...p, ...result.animationFields } : p)),
       );
-      showToast(`Pasted animation onto "${targetPart.name}"`, 'success');
     },
     [clipboardData, characterParts, tracks, setTracks, setCharacterParts, showToast]
   );

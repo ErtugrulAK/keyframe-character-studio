@@ -117,8 +117,7 @@ export const createLayerParentingActions = ({
     if (outcome.unchanged) return true;
     const nextParentId = position === 'nest' ? targetId : (relationshipParentId(characterParts.find((part) => part.id === targetId)) ?? null);
     confirmRebase(outcome.rebased, nextParentId ? `inside “${nameOf(nextParentId)}”` : 'at the top level', () => {
-      if (!write(outcome.parts, outcome.tracks === tracks ? null : outcome.tracks)) return;
-      if (position === 'nest') showToast(`“${nameOf(id)}” is now a child of “${nameOf(targetId)}”`, 'success');
+      write(outcome.parts, outcome.tracks === tracks ? null : outcome.tracks);
     });
     return true;
   };
@@ -131,8 +130,7 @@ export const createLayerParentingActions = ({
     }
     if (outcome.unchanged) return true;
     confirmRebase(outcome.rebased, parentId ? `inside “${nameOf(parentId)}”` : 'at the top level', () => {
-      if (!write(outcome.parts, outcome.tracks ?? null)) return;
-      showToast(parentId ? `“${nameOf(id)}” is now a child of “${nameOf(parentId)}”` : `“${nameOf(id)}” has no parent now`, 'success');
+      write(outcome.parts, outcome.tracks ?? null);
     });
     return true;
   };

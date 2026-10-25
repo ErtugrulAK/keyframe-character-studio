@@ -876,14 +876,12 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const locked = lockedLayerIds(tracks);
     const lock = lockSelectionIds.some((id) => !locked.has(id));
     setLayersLocked(lockSelectionIds, lock);
-    showToast(`${lock ? 'Locked' : 'Unlocked'} ${lockSelectionIds.length} layer${lockSelectionIds.length === 1 ? '' : 's'}`, 'success');
   }, [lockSelectionIds, setLayersLocked, showToast, tracks]);
   const unlockAllLayers = useCallback(() => {
     const locked = [...lockedLayerIds(tracks)];
     if (locked.length === 0) return;
     setLayersLocked(locked, false);
-    showToast(`Unlocked ${locked.length} layer${locked.length === 1 ? '' : 's'}`, 'success');
-  }, [setLayersLocked, showToast, tracks]);
+  }, [setLayersLocked, tracks]);
 
   useKeyboardShortcuts({
     toggleSelectionLock,

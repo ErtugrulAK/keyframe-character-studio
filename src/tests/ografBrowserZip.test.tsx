@@ -215,7 +215,8 @@ describe('HeaderBar OGraf export integration', () => {
     expect(warningCall?.[0]).toContain('Clip matte approximated [Target]');
     expect(warningCall?.[2].title).toBe('Export warnings (1)');
     expect(warningCall?.[2].action).toContain('warnings do not block');
-    expect(context.showToast).toHaveBeenCalledWith('Exported "my-project-demo-ograf.zip"', 'success');
+    // C8: the download is the confirmation; the warning is the only toast.
+    expect(context.showToast.mock.calls.map(([, type]) => type)).toEqual(['info']);
   });
 
   it('aggregates duplicate missing-font diagnostics by font root cause', async () => {
@@ -293,7 +294,8 @@ describe('HeaderBar OGraf export integration', () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [new File(['{"version":1}'], 'scene.kcs', { type: 'application/json' })] } });
     await waitFor(() => expect(context.importProject).toHaveBeenCalledWith('{"version":1}', 'scene'));
-    expect(context.showToast).toHaveBeenCalledWith('Imported "scene" as a new Template tab!', 'success');
+    // C8: the new Template tab is the confirmation; no success toast.
+    expect(context.showToast).not.toHaveBeenCalled();
   });
 
   it('refuses an unreadable OGraf package with a report instead of applying it', async () => {

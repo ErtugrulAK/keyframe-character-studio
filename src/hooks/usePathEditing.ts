@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { BezierPath, CharacterPart, Track } from '../types/animator';
 import type { ToastOptions } from './useToast';
-import { convertShapeToEditablePath, convertibleShapeLabel } from '../utils/shapeToPath';
+import { convertShapeToEditablePath } from '../utils/shapeToPath';
 import { deleteMaskVertex } from '../utils/maskPathCreation';
 import { resolveFreeformPath } from '../utils/freeform';
 
@@ -48,7 +48,6 @@ export const usePathEditing = ({ characterParts, tracks, setCharacterParts, sele
       return false;
     }
     setCharacterParts((previous) => previous.map((candidate) => (candidate.id === partId ? result.part : candidate)));
-    showToast(`${convertibleShapeLabel(part.type)} converted to an editable path${result.precision === 'bezier-arc' ? ' (curves as Bézier arcs)' : ''}. Undo restores the ${convertibleShapeLabel(part.type).toLowerCase()}.`, 'success');
     return true;
   }, [characterParts, tracks, setCharacterParts, showToast]);
 

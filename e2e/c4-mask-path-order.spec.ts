@@ -58,7 +58,8 @@ const ids = (path: { points: { id: string }[] }) => path.points.map((point) => p
 const maskOf = (scene: Record<string, any>) => scene.layers[0].masks[0];
 const layerBox = (page: Page) => page.locator('.stage-svg g[data-part-id="img"]').first().boundingBox();
 
-test('Reverse direction, Make first point and the order moves: named, undoable, selection kept, layer unmoved', async ({ page }) => {
+// C10: the Earlier/Later point-order buttons are gone; Reverse and Make first point stay.
+test('Reverse direction and Make first point: named, undoable, selection kept, layer unmoved', async ({ page }) => {
   await seed(page);
   const editor = page.getByTestId('bezier-path-editor');
   const box = await layerBox(page);
@@ -76,15 +77,12 @@ test('Reverse direction, Make first point and the order moves: named, undoable, 
   expect(ids(mask.path)).toEqual(['b', 'a', 'd', 'c']);
   await expect(editor).toContainText('Point 1 of 4');
 
-  await editor.getByRole('button', { name: 'Move point later in the path order' }).click();
-  mask = maskOf(await savedScene(page));
-  expect(ids(mask.path)).toEqual(['a', 'b', 'd', 'c']);
-  await expect(editor).toContainText('Point 2 of 4');
+  await expect(editor.getByRole('button', { name: 'Move point later in the path order' })).toHaveCount(0);
 
   // The owner layer never moved; each command was one undo step.
   const after = await layerBox(page);
   expect(Math.abs(after!.x - box!.x)).toBeLessThan(0.5);
-  for (const expected of [['b', 'a', 'd', 'c'], ['a', 'd', 'c', 'b'], ['a', 'b', 'c', 'd']]) {
+  for (const expected of [['a', 'd', 'c', 'b'], ['a', 'b', 'c', 'd']]) {
     await page.keyboard.press('Escape'); // leave mask editing so Undo reaches the scene
     await page.keyboard.press('Control+z');
     expect(ids(maskOf(await savedScene(page)).path)).toEqual(expected);

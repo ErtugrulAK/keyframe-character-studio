@@ -21,8 +21,6 @@ interface TransformInOutPresetCardProps {
   // M30 — custom preset library export/import (30A pure helpers + 30B UI)
   onImportPresets?: (presets: CustomMotionPreset[]) => void;
   showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
-  /** C9 — inside a titled Inspector card: no own panel frame or heading. */
-  embedded?: boolean;
 }
 
 /**
@@ -92,7 +90,6 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
   clipboardSourceId,
   onImportPresets,
   showToast,
-  embedded = false,
 }) => {
   // derive directly from the selected part — no local state mirror
   const inPreset = selectedPart.inAnimPreset ?? 'none';
@@ -498,13 +495,11 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
   };
 
   return (
-    <div className={embedded ? undefined : 'panel-card'} style={embedded ? undefined : { marginBottom: 10 }}>
+    <div className="panel-card" style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {!embedded && (
-          <div style={{ fontSize: 9, fontWeight: 700, color: '#64748b', letterSpacing: '0.6px', marginBottom: 2 }}>
-            ANIMATION IN / OUT
-          </div>
-        )}
+        <div style={{ fontSize: 9, fontWeight: 700, color: '#64748b', letterSpacing: '0.6px', marginBottom: 2 }}>
+          ANIMATION IN / OUT
+        </div>
 
         {renderPresetRow('in')}
         {renderPresetRow('out')}

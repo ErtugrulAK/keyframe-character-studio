@@ -76,13 +76,16 @@ describe('C7 Details tabs', () => {
     expect(properties).not.toContain('HIERARCHY');
     expect(properties).not.toContain('ANIMATION DATA');
     expect(properties).not.toContain('DUPLICATE');
+    expect(properties).not.toContain('ANIMATION IN / OUT');
 
     act(() => { fireEvent.mouseDown(tab(/^Masks/)); });
     expect(cardTitles()).toEqual(['LAYER MASKS', 'TRACK MATTE', 'LEGACY CLIP MATTE']);
 
     act(() => { fireEvent.mouseDown(tab(/^Layer/)); });
     // C8: the duplicate / mirror copies moved here from the Details header.
-    expect(cardTitles()).toEqual(['HIERARCHY', 'ANIMATION DATA', 'DUPLICATE']);
+    // C9: the IN/OUT preset card is back, next to the animation data.
+    expect(cardTitles()).toEqual(['HIERARCHY', 'ANIMATION DATA', 'ANIMATION IN / OUT', 'DUPLICATE']);
+    expect(screen.getByLabelText('Animation In Preset')).toBeTruthy();
     expect(screen.getByLabelText('Parent')).toBeTruthy();
   });
 

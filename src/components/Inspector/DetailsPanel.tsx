@@ -16,6 +16,7 @@ import { evaluateTrimPath } from '../../utils/trimPath';
 import { DuplicateTab } from './sections/DuplicateTab';
 import { AnimationDataCard } from './sections/AnimationDataCard';
 import { StyleCard } from './sections/style/StyleCard';
+import { TransformInOutPresetCard } from './sections/transform/TransformInOutPresetCard';
 import { useRetainedUiState } from '../../hooks/useRetainedUiState';
 import {
   Sliders,
@@ -447,6 +448,22 @@ export const DetailsPanel: React.FC = () => {
                 onClearAnimation={() => setPendingClear(true)}
                 clipboardSourceId={clipboardData?.part.id ?? null}
               />
+              {/* C9 — the IN/OUT preset card, unmounted since V5.1, is back. Its
+                  writes are plain part-property edits (one undo each); the
+                  preset library actions stay outside scene history. */}
+              <StyleCard title="ANIMATION IN / OUT" collapsible retainKey="layer-in-out">
+                <TransformInOutPresetCard
+                  embedded
+                  selectedPart={selectedPart}
+                  onPartPropChange={handleDisplayedPartPropChange}
+                  customPresets={customPresets}
+                  onSavePreset={savePreset}
+                  onUpdatePreset={updatePreset}
+                  onDeletePreset={deletePreset}
+                  onImportPresets={importPresets}
+                  showToast={showToast}
+                />
+              </StyleCard>
               <StyleCard title="DUPLICATE" collapsible retainKey="layer-duplicate">
                 <DuplicateTab />
               </StyleCard>

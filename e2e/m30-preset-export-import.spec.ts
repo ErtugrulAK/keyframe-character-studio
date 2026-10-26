@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 const PRESET_KEY = 'keyframe_custom_motion_presets';
 
-test('M30 — preset data survives startup while obsolete Transform import/export controls stay absent', async ({ page }) => {
+test('M30 — preset data survives startup; with no layer selected the library controls are not shown', async ({ page }) => {
   await page.goto('/');
   await page.evaluate((key) => {
     localStorage.clear();

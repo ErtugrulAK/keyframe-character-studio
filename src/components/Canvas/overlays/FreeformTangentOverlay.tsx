@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { BezierPath, CharacterPart, Transform } from '../../../types/animator';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
 import { getFreeformVertexWorldPositions, resolveFreeformPath } from '../../../utils/freeform';
-import { buildBezierPathD, initializeSmoothHandles, moveVertexHandle, type BezierHandleKind } from '../../../utils/bezierPath';
+import { buildBezierPathD, moveBrokenVertexHandle, moveVertexHandle, pullVertexHandles, toggleVertexKind, type BezierHandleKind } from '../../../utils/bezierPath';
+import { isEditableElement, ownsShortcutScope } from '../../../utils/keyboardFocus';
+import { isBlockingModalOpen } from '../../../utils/modalBoundary';
 import { insertMaskVertex, nearestMaskPathSegment } from '../../../utils/maskPathCreation';
 import { worldAffineOf } from '../../../utils/containerMath';
 import { worldToLocal } from '../../../utils/matte';
@@ -35,6 +37,8 @@ interface DragState {
   startClient: { x: number; y: number };
   /** False until the gesture changes something: a plain click on a point opens no history batch. */
   started: boolean;
+  /** C10 — Alt held at the press: a handle moves alone, a point pulls out new handles. */
+  alt: boolean;
 }
 
 /** Pointer travel (CSS px) before a press on a point becomes a drag of that point. */
@@ -134,6 +138,27 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     onBatchEnd();
   }, [pendingCancel, onBatchEnd]);
 
+  // C10 — C switches the selected point between Corner and Smooth, as in mask
+  // editing (one write, one undo step).
+  const latestKey = useRef({ path, selectedIndex, onPathChange });
+  useEffect(() => {
+    latestKey.current = { path, selectedIndex, onPathChange };
+  });
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'c' && event.key !== 'C') return;
+      if (event.altKey || event.ctrlKey || event.metaKey || dragRef.current) return;
+      const { path: current, selectedIndex: index, onPathChange: write } = latestKey.current;
+      if (!current || index === null || index >= current.points.length) return;
+      if (isBlockingModalOpen() || isEditableElement(document.activeElement) || ownsShortcutScope('timeline')) return;
+      event.preventDefault();
+      event.stopPropagation();
+      write(toggleVertexKind(current, index));
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   // Latest batch-ender, so the unmount cleanup below is bound to unmount only:
   // a re-created callback identity mid-drag must not close the open batch early.
   const onBatchEndRef = useRef(onBatchEnd);
@@ -166,7 +191,7 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     event.preventDefault();
     const { svgX, svgY } = toWorld(event.clientX, event.clientY);
     const started = handle !== 'vertex';
-    dragRef.current = { handle, index, initialPath: path, startLocal: toLocal({ x: svgX, y: svgY }), startClient: { x: event.clientX, y: event.clientY }, started };
+    dragRef.current = { handle, index, initialPath: path, startLocal: toLocal({ x: svgX, y: svgY }), startClient: { x: event.clientX, y: event.clientY }, started, alt: event.altKey };
     (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
     setSelectedIndex(index);
     setSelectedHandle(handle === 'vertex' ? null : handle);
@@ -187,6 +212,15 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     }
     const { svgX, svgY } = toWorld(event.clientX, event.clientY);
     const currentLocal = toLocal({ x: svgX, y: svgY });
+    if (active.handle === 'vertex' && active.alt) {
+      // C10 — Alt-drag from a point pulls out new mirrored handles; the point stays.
+      const offset = { x: currentLocal.x - active.startLocal.x, y: currentLocal.y - active.startLocal.y };
+      onPathChange({
+        ...active.initialPath,
+        points: active.initialPath.points.map((vertex, index) => (index === active.index ? pullVertexHandles(vertex, offset) : vertex)),
+      });
+      return;
+    }
     if (active.handle === 'vertex') {
       // The point moves and carries its own handles with it (the curve keeps its shape).
       const dx = currentLocal.x - active.startLocal.x;
@@ -213,7 +247,7 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     onPathChange({
       ...active.initialPath,
       points: active.initialPath.points.map((vertex, index) => (
-        index === active.index ? withMovedHandle(vertex, handle, next) : vertex
+        index === active.index ? (active.alt ? moveBrokenVertexHandle(vertex, handle, next) : withMovedHandle(vertex, handle, next)) : vertex
       )),
     });
   };
@@ -231,16 +265,7 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
 
   const toggleKind = (event: React.MouseEvent<SVGElement>, index: number) => {
     event.stopPropagation();
-    if (path.points[index]?.kind === 'smooth') {
-      onPathChange({
-        ...path,
-        points: path.points.map((vertex, vertexIndex) => (
-          vertexIndex === index ? { ...vertex, kind: 'corner' } : vertex
-        )),
-      });
-      return;
-    }
-    onPathChange(initializeSmoothHandles(path, index));
+    onPathChange(toggleVertexKind(path, index));
   };
 
   const selectVertex = (index: number) => setSelectedIndex((current) => (current === index ? current : index));

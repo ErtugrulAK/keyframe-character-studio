@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { BezierPath, CharacterPart, Transform } from '../../../types/animator';
 import type { WorldAffine } from '../../../utils/containerMath';
-import { initializeSmoothHandles, type BezierHandleKind, type PathPoint } from '../../../utils/bezierPath';
+import { moveBrokenVertexHandle, pullVertexHandles, toggleVertexKind, type BezierHandleKind, type PathPoint } from '../../../utils/bezierPath';
 import { buildLayerMaskPathD } from '../../../utils/layerMasks';
 import {
   maskPathDeltaFromWorld,
@@ -17,6 +17,25 @@ import { isEditableElement, ownsShortcutScope } from '../../../utils/keyboardFoc
 import { isBlockingModalOpen } from '../../../utils/modalBoundary';
 import { EDITOR_CAMERA_CENTER } from '../../../utils/projectCoordinates';
 import { consumeMaskPointsFocusRequest } from '../../../utils/maskPointFocus';
+
+/** C10 — Alt-drag from a vertex: new mirrored handles, the out handle at the pointer. */
+const pullMaskHandles = (initialPath: BezierPath, index: number, delta: PathPoint): BezierPath => ({
+  ...initialPath,
+  points: initialPath.points.map((vertex, at) => (at === index ? pullVertexHandles(vertex, delta) : vertex)),
+});
+
+/** C10 — Alt-drag of a handle: the vertex turns corner, so the handle moves alone. */
+const moveBrokenMaskHandle = (initialPath: BezierPath, index: number, handle: BezierHandleKind, delta: PathPoint): BezierPath => {
+  const vertex = initialPath.points[index];
+  const start = vertex?.[handle === 'in' ? 'handleIn' : 'handleOut'];
+  if (!vertex || !start || !Number.isFinite(delta.x) || !Number.isFinite(delta.y)) return initialPath;
+  return {
+    ...initialPath,
+    points: initialPath.points.map((candidate, at) => (at === index
+      ? moveBrokenVertexHandle(candidate, handle, { x: start.x + delta.x, y: start.y + delta.y })
+      : candidate)),
+  };
+};
 
 /** Marker sizes in CSS pixels; multiplied by the canvas zScale so they stay screen-constant. */
 const VERTEX_RADIUS = 5;
@@ -37,7 +56,7 @@ const NUDGE_KEYS: Record<string, { x: number; y: number }> = {
   ArrowDown: { x: 0, y: 1 },
 };
 /** The keyboard model of the point list, read by screen readers with every point. */
-const POINT_LIST_HELP = '] and [ go to the next and previous point, Home and End to the first and last. Arrow keys move the point (Shift: 10 units). C switches Corner and Smooth. Delete removes the point. Escape leaves mask editing.';
+const POINT_LIST_HELP = '] and [ go to the next and previous point, Home and End to the first and last. Arrow keys move the point (Shift: 10 units). C or a double-click switches Corner and Smooth; Alt-drag a handle moves it alone, Alt-drag a point pulls out new handles. Delete removes the point. Escape leaves mask editing.';
 const OUTLINE_COLOR = '#22d3ee';
 const OUTLINE_SHADOW = 'rgba(2, 6, 23, 0.85)';
 const VERTEX_FILL = '#0f172a';
@@ -58,6 +77,8 @@ interface Gesture {
   pointerId: number;
   /** True once the pointer crossed the drag threshold and the history batch opened. */
   started: boolean;
+  /** C10 — Alt held at the press: a handle moves alone, a vertex pulls out new handles. */
+  alt: boolean;
 }
 
 export interface MaskPathOverlayProps {
@@ -198,27 +219,27 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
         current.onSelectIndex(index === null ? (step > 0 ? 0 : count - 1) : (index + step + count) % count);
         return;
       }
-      // C4 — with a point FOCUSED (keyboard model): Home/End reach the first and
-      // last point, C switches the point between Corner and Smooth (one undo step).
+      // C10 — C switches the SELECTED point between Corner and Smooth (one undo
+      // step). A mouse click selects a point without focusing it, so this no
+      // longer waits for keyboard focus inside the point list.
+      if ((event.key === 'c' || event.key === 'C') && current.interactive && !gestureRef.current
+        && !event.altKey && !event.ctrlKey && !event.metaKey
+        && current.selectedIndex !== null && current.selectedIndex < current.path.points.length
+        && !isBlockingModalOpen() && !isEditableElement(document.activeElement) && !ownsShortcutScope('timeline')) {
+        event.preventDefault();
+        event.stopPropagation();
+        current.onBatchStart();
+        current.onPathChange(toggleVertexKind(current.path, current.selectedIndex));
+        current.onBatchEnd();
+        return;
+      }
+      // C4 — with a point FOCUSED (keyboard model): Home/End reach the first and last point.
       const focusedInside = overlayRef.current?.contains(document.activeElement) ?? false;
       if (focusedInside && current.interactive && !gestureRef.current && !event.altKey && !event.ctrlKey && !event.metaKey) {
         const count = current.path.points.length;
         if ((event.key === 'Home' || event.key === 'End') && count > 0) {
           event.preventDefault();
           current.onSelectIndex(event.key === 'Home' ? 0 : count - 1);
-          return;
-        }
-        if ((event.key === 'c' || event.key === 'C') && current.selectedIndex !== null && current.selectedIndex < count) {
-          event.preventDefault();
-          event.stopPropagation();
-          const index = current.selectedIndex;
-          const point = current.path.points[index];
-          const next = point.kind === 'smooth'
-            ? { ...current.path, points: current.path.points.map((candidate, at) => (at === index ? { ...candidate, kind: 'corner' as const } : candidate)) }
-            : initializeSmoothHandles(current.path, index);
-          current.onBatchStart();
-          current.onPathChange(next);
-          current.onBatchEnd();
           return;
         }
       }
@@ -326,6 +347,7 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
       snapshot: captureSnapshot(),
       pointerId: event.pointerId,
       started: false,
+      alt: event.altKey,
     };
     registerGestureCancel(() => finishGestureRef.current(true));
     setIsDragging(true);
@@ -345,8 +367,10 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
     const next = gesture.kind === 'path'
       ? translateMaskPath(gesture.initialPath, delta)
       : gesture.kind === 'vertex'
-        ? moveMaskVertex(gesture.initialPath, gesture.index, delta)
-        : moveMaskHandle(gesture.initialPath, gesture.index, gesture.handle ?? 'out', delta);
+        ? (gesture.alt ? pullMaskHandles(gesture.initialPath, gesture.index, delta) : moveMaskVertex(gesture.initialPath, gesture.index, delta))
+        : gesture.alt
+          ? moveBrokenMaskHandle(gesture.initialPath, gesture.index, gesture.handle ?? 'out', delta)
+          : moveMaskHandle(gesture.initialPath, gesture.index, gesture.handle ?? 'out', delta);
     onPathChange(next);
   };
 
@@ -529,6 +553,14 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
                   if (!selected) onSelectIndex(index);
                 }}
                 onPointerDown={(event) => begin(event, 'vertex', index)}
+                onDoubleClick={(event) => {
+                  // C10 — double-click a point: Corner ↔ Smooth (one undo step).
+                  event.stopPropagation();
+                  if (gestureRef.current) return;
+                  onBatchStart();
+                  onPathChange(toggleVertexKind(path, index));
+                  onBatchEnd();
+                }}
                 {...gestureHandlers}
               />
             )}

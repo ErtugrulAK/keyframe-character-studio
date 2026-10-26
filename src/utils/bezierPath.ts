@@ -342,6 +342,43 @@ export const moveVertexHandle = (
   return { ...vertex, [key]: next, [counterpartKey]: mirrored };
 };
 
+/**
+ * C10 — Alt-drag of a tangent handle: the vertex becomes a corner first, so
+ * only the dragged handle moves and its counterpart stays where it is.
+ */
+export const moveBrokenVertexHandle = (
+  vertex: BezierVertex,
+  handle: BezierHandleKind,
+  next: PathPoint,
+): BezierVertex => moveVertexHandle({ ...vertex, kind: 'corner' }, handle, next);
+
+/**
+ * C10 — Alt-drag from a vertex pulls out new handles, as in After Effects:
+ * the out handle follows the pointer (`offset` from the vertex) and the in
+ * handle mirrors it, so the vertex becomes smooth. A zero or non-finite offset
+ * leaves the vertex unchanged.
+ */
+export const pullVertexHandles = (vertex: BezierVertex, offset: PathPoint): BezierVertex => {
+  const length = Math.hypot(offset.x, offset.y);
+  if (!Number.isFinite(length) || length <= HANDLE_VECTOR_EPSILON) return vertex;
+  return {
+    ...vertex,
+    kind: 'smooth',
+    handleOut: { x: vertex.x + offset.x, y: vertex.y + offset.y },
+    handleIn: { x: vertex.x - offset.x, y: vertex.y - offset.y },
+  };
+};
+
+/** C10 — Corner ↔ Smooth for one vertex (double-click or C on the canvas). */
+export const toggleVertexKind = (path: BezierPath, index: number): BezierPath => {
+  const vertex = path.points[index];
+  if (!vertex) return path;
+  if (vertex.kind === 'smooth') {
+    return { ...path, points: path.points.map((candidate, at) => (at === index ? { ...candidate, kind: 'corner' as const } : candidate)) };
+  }
+  return initializeSmoothHandles(path, index);
+};
+
 export const sampleBezierPath = (path: BezierPath | undefined, samplesPerSegment = 16): PathPoint[] => {
   if (!path || path.points.length < 2) return [];
   const samples: PathPoint[] = [];

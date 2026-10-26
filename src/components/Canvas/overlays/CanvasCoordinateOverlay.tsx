@@ -32,8 +32,9 @@ export const CanvasCoordinateOverlay: React.FC<CanvasCoordinateOverlayProps> = (
   zScale,
   selectedTransform,
 }) => {
-  const arrowLength = 44 * zScale;
   const arrowWing = 4 * zScale;
+  const xEnd = artX + width;
+  const yEnd = artY;
   const selectedAffine = selectedTransform ? worldAffineOf(selectedTransform) : null;
   const selectedX = selectedAffine ? origin.x + selectedAffine.e : 0;
   const selectedY = selectedAffine ? origin.y + selectedAffine.f : 0;
@@ -96,25 +97,27 @@ export const CanvasCoordinateOverlay: React.FC<CanvasCoordinateOverlayProps> = (
         vectorEffect="non-scaling-stroke"
       />
 
-      {/* Positive directions: X right, Y up to match the Inspector's inverted Y. */}
+      {/* Positive directions: X right, Y up to match the Inspector's inverted Y.
+          C10 — the arrowheads and letters sit at the artboard's edges, where
+          the axes end, instead of on top of the artwork at the centre. */}
       <path
-        d={`M ${origin.x + arrowLength} ${origin.y - arrowWing} L ${origin.x + arrowLength + arrowWing * 1.6} ${origin.y} L ${origin.x + arrowLength} ${origin.y + arrowWing} Z`}
+        d={`M ${xEnd - arrowWing * 1.6} ${origin.y - arrowWing} L ${xEnd} ${origin.y} L ${xEnd - arrowWing * 1.6} ${origin.y + arrowWing} Z`}
         fill="var(--accent-red)"
         fillOpacity={0.9}
       />
       <path
-        d={`M ${origin.x - arrowWing} ${origin.y - arrowLength} L ${origin.x} ${origin.y - arrowLength - arrowWing * 1.6} L ${origin.x + arrowWing} ${origin.y - arrowLength} Z`}
+        d={`M ${origin.x - arrowWing} ${yEnd + arrowWing * 1.6} L ${origin.x} ${yEnd} L ${origin.x + arrowWing} ${yEnd + arrowWing * 1.6} Z`}
         fill="var(--accent-green)"
         fillOpacity={0.9}
       />
       <text
         className="canvas-coordinate-label canvas-coordinate-label-x"
-        x={origin.x + arrowLength + 16 * zScale}
-        y={origin.y - 7 * zScale}
+        x={xEnd - 4 * zScale}
+        y={origin.y - 9 * zScale}
         fill="var(--accent-red)"
         fontSize={11 * zScale}
         fontWeight={800}
-        textAnchor="middle"
+        textAnchor="end"
         stroke="rgba(4, 9, 16, 0.9)"
         strokeWidth={3 * zScale}
         paintOrder="stroke"
@@ -124,7 +127,7 @@ export const CanvasCoordinateOverlay: React.FC<CanvasCoordinateOverlayProps> = (
       <text
         className="canvas-coordinate-label canvas-coordinate-label-y"
         x={origin.x + 9 * zScale}
-        y={origin.y - arrowLength - 9 * zScale}
+        y={yEnd + 14 * zScale}
         fill="var(--accent-green)"
         fontSize={11 * zScale}
         fontWeight={800}
@@ -136,7 +139,7 @@ export const CanvasCoordinateOverlay: React.FC<CanvasCoordinateOverlayProps> = (
         Y
       </text>
 
-      {/* Origin crosshair and label. */}
+      {/* Origin crosshair (C10: no "0,0" caption over the artwork). */}
       <g data-testid="coordinate-origin">
         <line
           x1={origin.x - 8 * zScale}
@@ -165,20 +168,6 @@ export const CanvasCoordinateOverlay: React.FC<CanvasCoordinateOverlayProps> = (
           strokeWidth={1.2}
           vectorEffect="non-scaling-stroke"
         />
-        <text
-          className="canvas-coordinate-label"
-          x={origin.x - 10 * zScale}
-          y={origin.y + 16 * zScale}
-          fill="rgba(226, 232, 240, 0.72)"
-          fontSize={9 * zScale}
-          fontWeight={600}
-          textAnchor="end"
-          stroke="rgba(4, 9, 16, 0.9)"
-          strokeWidth={2.5 * zScale}
-          paintOrder="stroke"
-        >
-          0,0
-        </text>
       </g>
 
       {hasSelectedMarker && (

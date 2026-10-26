@@ -973,7 +973,8 @@ export const SequencerTimeline: React.FC = () => {
   };
 
   /**
-   * K1 (D2) — the stopwatch press. Reading the state decides the flow:
+   * K1 (D2) — arm / disarm a property (C10: the "+" of an unanimated row, or
+   * the row's "Remove all keyframes"). Reading the state decides the flow:
    * unanimated arms directly; animated asks first, and only the confirmed
    * dialog mutates (cancel leaves even the state object identity untouched).
    */
@@ -1467,8 +1468,9 @@ export const SequencerTimeline: React.FC = () => {
                   // any legacy composite animation instead of hiding it.
                   onAddKeyframe={rowActions.onAddKeyframe}
                   onAddChannelKeyframe={rowActions.onAddChannelKeyframe}
-                  // K1 (D2) — stopwatch: arms an unanimated channel, or asks
-                  // before removing the animation of an animated one.
+                  // K1 (D2) — arms an unanimated channel (C10: its "+"), or asks
+                  // before removing the animation of an animated one (C10: the
+                  // row's "Remove all keyframes").
                   onToggleChannelAnimation={rowActions.onToggleChannelAnimation}
                   isGroupExpanded={isGroupExpanded}
                   onToggleSubGroup={rowActions.onToggleSubGroup}

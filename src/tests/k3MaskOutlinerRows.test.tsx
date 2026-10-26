@@ -32,7 +32,10 @@ interface Harness {
   rows: () => string[];
   headers: () => string[];
   groupHeader: (label: string) => HTMLElement;
-  stopwatch: (channel: string) => HTMLElement;
+  /** C10 — the property row (it carries the animation state; no stopwatch). */
+  channelRow: (channel: string) => HTMLElement;
+  /** C10 — the arm / disarm request: the row's "+" when off, its menu when animated. */
+  toggleAnimation: (channel: string) => void;
 }
 
 const renderHarness = (): Harness => {
@@ -53,10 +56,21 @@ const renderHarness = (): Harness => {
     if (!element) throw new Error(`no group header for ${label}`);
     return element as HTMLElement;
   };
-  const stopwatch = (channel: string): HTMLElement => {
-    const element = container.querySelector(`button.ue-channel-stopwatch[data-property-channel="${channel}"]`);
-    if (!element) throw new Error(`no stopwatch for ${channel}`);
+  const channelRow = (channel: string): HTMLElement => {
+    const element = container.querySelector(`.ue-channel-row[data-property-channel="${channel}"]`);
+    if (!element) throw new Error(`no property row for ${channel}`);
     return element as HTMLElement;
+  };
+  const toggleAnimation = (channel: string) => {
+    const row = channelRow(channel);
+    if (row.getAttribute('data-animation-state') === 'off') {
+      fireEvent.click(row.querySelector('button.track-add-kf-btn') as HTMLElement);
+      return;
+    }
+    fireEvent.contextMenu(row);
+    const item = [...document.querySelectorAll('[role="menuitem"]')].find((node) => node.textContent === 'Remove all keyframes');
+    if (!item) throw new Error('no "Remove all keyframes" menu item');
+    fireEvent.click(item);
   };
   return {
     container,
@@ -65,7 +79,8 @@ const renderHarness = (): Harness => {
     rows: () => [...container.querySelectorAll('.ue-channel-row')].map((node) => node.getAttribute('data-property-channel') ?? ''),
     headers: () => [...container.querySelectorAll('.ue-subgroup-header')].map((node) => node.textContent ?? ''),
     groupHeader,
-    stopwatch,
+    channelRow,
+    toggleAnimation,
   };
 };
 
@@ -132,35 +147,46 @@ describe('K3 — Mask group in the outliner', () => {
     expect(labels).toEqual(['Path', 'Feather', 'Opacity', 'Expansion']);
   });
 
-  it('arms a mask scalar through the stopwatch, recording its current value', () => {
+  it('arms a mask scalar through its "+", recording its current value', () => {
     const h = renderHarness();
     seedMaskedLayer(h);
     act(() => { fireEvent.click(h.groupHeader('M1')); });
 
-    const stopwatch = h.stopwatch('m1:feather');
-    expect(stopwatch.getAttribute('data-animation-state')).toBe('off');
-    act(() => { fireEvent.click(stopwatch); });
+    expect(h.channelRow('m1:feather').getAttribute('data-animation-state')).toBe('off');
+    h.toggleAnimation('m1:feather');
 
     const keys = h.ctx().tracks[0].maskChannels?.['m1:feather'] ?? [];
     expect(keys).toHaveLength(1);
     expect(keys[0].frame).toBe(h.ctx().currentFrame);
-    expect(h.stopwatch('m1:feather').getAttribute('data-animation-state')).toBe('keyed');
+    expect(h.channelRow('m1:feather').getAttribute('data-animation-state')).toBe('keyed');
+  });
+
+  it('C10: the "+" of a mask PATH row arms the path; once animated it is inert (path keys come from editing)', () => {
+    const h = renderHarness();
+    seedMaskedLayer(h);
+    act(() => { fireEvent.click(h.groupHeader('M1')); });
+    const plus = () => h.channelRow('m1:path').querySelector('button.track-add-kf-btn') as HTMLButtonElement;
+    expect(plus().disabled).toBe(false);
+    act(() => { fireEvent.click(plus()); });
+    expect(h.ctx().tracks[0].maskPathChannels?.['m1:path']).toHaveLength(1);
+    expect(h.channelRow('m1:path').getAttribute('data-animation-state')).toBe('keyed');
+    expect(plus().disabled).toBe(true);
   });
 
   it('disarming a mask channel confirms once and clears the keys (D2 parity)', () => {
     const h = renderHarness();
     seedMaskedLayer(h);
     act(() => { fireEvent.click(h.groupHeader('M2')); });
-    act(() => { fireEvent.click(h.stopwatch('m2:opacity')); });
+    h.toggleAnimation('m2:opacity');
     expect(h.maskKeys()).toContain('m2:opacity');
 
-    act(() => { fireEvent.click(h.stopwatch('m2:opacity')); });
+    h.toggleAnimation('m2:opacity');
     const dialog = document.querySelector('.confirmation-dialog');
     expect(dialog).not.toBeNull();
     expect(dialog?.textContent).toContain('M2');
     act(() => { fireEvent.click(document.querySelector('.confirmation-dialog-confirm') as HTMLElement); });
     expect(h.ctx().tracks[0].maskChannels?.['m2:opacity'] ?? []).toHaveLength(0);
-    expect(h.stopwatch('m2:opacity').getAttribute('data-animation-state')).toBe('off');
+    expect(h.channelRow('m2:opacity').getAttribute('data-animation-state')).toBe('off');
   });
 
   it('the lane band mirrors the tree row for row: mask lanes sit after the trim lanes', () => {

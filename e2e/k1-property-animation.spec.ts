@@ -1,11 +1,13 @@
 /**
- * K1 (contract D2) — the stopwatch, end to end: animate a property at the
+ * K1 (contract D2; C10: no stopwatch — the "+" arms, the row menu disarms), end
+ * to end: animate a property at the
  * playhead, stop with confirmation, and prove what the user sees at every
  * step — the lane key count, the dialog word, the static value that survives
  * disarm (read from the autosave bytes the app itself restores from),
  * one-undo atomicity and persistence after reload.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { armProperty, propertyRow, requestRemoveAllKeyframes } from './fixtures/propertyAnimation';
 import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
@@ -84,8 +86,8 @@ async function persistedLayerValue(page: Page, field: 'x' | 'y'): Promise<number
   }, field);
 }
 
-const stopwatchX = (page: Page) => page.locator('button.ue-channel-stopwatch[data-property-channel="x"]');
-const stopwatchY = (page: Page) => page.locator('button.ue-channel-stopwatch[data-property-channel="y"]');
+const rowX = (page: Page) => propertyRow(page, 'x');
+const rowY = (page: Page) => propertyRow(page, 'y');
 
 async function openAnimationDataCard(page: Page): Promise<void> {
   await openDetailsTab(page, 'Layer');
@@ -94,20 +96,20 @@ async function openAnimationDataCard(page: Page): Promise<void> {
   if (await card.getAttribute('aria-expanded') === 'false') await card.click();
 }
 
-test.describe('K1 — stopwatch journey (D2)', () => {
+test.describe('K1 — property animation journey (D2; C10: "+" and the row menu)', () => {
   test('animated at 15 -> confirm stop -> static evaluated value, one undo, persistence', async ({ page }) => {
     await seed(page);
 
     // The seeded X animation has a key exactly at the playhead: keyed.
-    await expect(stopwatchX(page)).toHaveAttribute('data-animation-state', 'keyed');
-    await expect(stopwatchX(page)).toHaveAttribute('aria-pressed', 'true');
+    await expect(rowX(page)).toHaveAttribute('data-animation-state', 'keyed');
+    await expect(page.locator('.ue-channel-stopwatch')).toHaveCount(0);
 
     // Move to frame 15: animated, no key here.
     await setFrame(page, 15);
-    await expect(stopwatchX(page)).toHaveAttribute('data-animation-state', 'animated');
+    await expect(rowX(page)).toHaveAttribute('data-animation-state', 'animated');
 
     // Stop animating: the dialog names the property BEFORE anything mutates.
-    await stopwatchX(page).click();
+    await requestRemoveAllKeyframes(page, 'x');
     const dialog = page.locator('.confirmation-dialog');
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText('Location X');
@@ -117,14 +119,14 @@ test.describe('K1 — stopwatch journey (D2)', () => {
     // Cancel: zero mutation.
     await dialog.locator('.confirmation-dialog-cancel').click();
     await expect(page.locator('.keyframe-diamond')).toHaveCount(2);
-    await expect(stopwatchX(page)).toHaveAttribute('data-animation-state', 'animated');
+    await expect(rowX(page)).toHaveAttribute('data-animation-state', 'animated');
 
     // Confirm: keys gone; the evaluated value at 15 (linear 100→700 = 400) is
     // the static Location X now — read from the persisted document itself.
-    await stopwatchX(page).click();
+    await requestRemoveAllKeyframes(page, 'x');
     await page.locator('.confirmation-dialog-confirm').click();
     await expect(page.locator('.keyframe-diamond')).toHaveCount(0);
-    await expect(stopwatchX(page)).toHaveAttribute('data-animation-state', 'off');
+    await expect(rowX(page)).toHaveAttribute('data-animation-state', 'off');
     await flushSave(page);
     await expect.poll(() => persistedLayerValue(page, 'x')).toBe(400);
 
@@ -135,14 +137,14 @@ test.describe('K1 — stopwatch journey (D2)', () => {
     await expect.poll(() => persistedLayerValue(page, 'x')).toBe(100);
 
     // Confirm again and reload: the decision survives the session.
-    await stopwatchX(page).click();
+    await requestRemoveAllKeyframes(page, 'x');
     await page.locator('.confirmation-dialog-confirm').click();
     await expect(page.locator('.keyframe-diamond')).toHaveCount(0);
     await flushSave(page);
     await page.reload();
     await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
     await page.locator('.ue-expand-btn').first().click();
-    await expect(stopwatchX(page)).toHaveAttribute('data-animation-state', 'off');
+    await expect(rowX(page)).toHaveAttribute('data-animation-state', 'off');
     await expect.poll(() => persistedLayerValue(page, 'x')).toBe(400);
   });
 
@@ -150,17 +152,14 @@ test.describe('K1 — stopwatch journey (D2)', () => {
     await seed(page);
     await setFrame(page, 20);
 
-    // Y is not animated: the stopwatch offers "Animate".
-    await expect(stopwatchY(page)).toHaveAttribute('data-animation-state', 'off');
-    await expect(stopwatchY(page)).toHaveAttribute('aria-pressed', 'false');
-
-    await stopwatchY(page).click();
-    await expect(stopwatchY(page)).toHaveAttribute('data-animation-state', 'keyed');
+    // Y is not animated: its "+" starts the animation.
+    await expect(rowY(page).locator('button.track-add-kf-btn')).toHaveAttribute('title', 'Animate Location Y: add its first keyframe here');
+    await armProperty(page, 'y');
+    await expect(rowY(page)).toHaveAttribute('data-animation-state', 'keyed');
     // The Y key joins the aggregate frame set {0, 20, 30}: three layer-row
     // diamonds, and the authored Y (40) is untouched — arming records the
     // current value, never rewrites it.
     await expect(page.locator('.keyframe-diamond')).toHaveCount(3);
-    await expect(stopwatchY(page)).toHaveAttribute('title', /Stop animating Location Y of Alpha \(1 keyframe in this sequence\)/);
     await flushSave(page);
     await expect.poll(() => persistedLayerValue(page, 'y')).toBe(40);
   });

@@ -6,6 +6,7 @@
  * animated path; a path key lands at the playhead.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { armProperty, propertyRow } from './fixtures/propertyAnimation';
 import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
@@ -156,7 +157,7 @@ test.describe('WP-03 — mask creation and path edits', () => {
     expect(lines.overlay).toBe(lines.clip);
   });
 
-  test('circle → move → path key at frame 20 (stopwatch), and topology is locked once animated', async ({ page }) => {
+  test('circle → move → path key at frame 20 (armed by the path row\'s "+"), and topology is locked once animated', async ({ page }) => {
     await seed(page);
     const c = await stageCenter(page);
     await page.getByRole('button', { name: 'Draw ellipse mask' }).click();
@@ -166,12 +167,12 @@ test.describe('WP-03 — mask creation and path edits', () => {
     await page.mouse.up();
     await expect(page.getByTestId('mask-path-overlay')).toBeVisible();
 
-    // Arm the mask path stopwatch at frame 0 from the outliner's group for this mask (C7).
+    // Arm the mask path at frame 0 from the outliner's group for this mask (C7;
+    // C10: the path row's "+").
     await page.locator('.ue-expand-btn').first().click();
     await page.locator('.ue-subgroup-header[data-property-group$="_mask:mask-1"]').click();
-    const stopwatch = page.locator('button.ue-channel-stopwatch[data-property-channel="mask-1:path"]');
-    await stopwatch.click();
-    await expect(stopwatch).toHaveAttribute('data-animation-state', 'keyed');
+    await armProperty(page, 'mask-1:path');
+    await expect(propertyRow(page, 'mask-1:path')).toHaveAttribute('data-animation-state', 'keyed');
 
     const ruler = page.getByRole('slider', { name: 'Playhead position' });
     await ruler.focus();

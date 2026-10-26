@@ -9,6 +9,7 @@
  * `test-results/f-*.png` as visual evidence.
  */
 import { expect, test } from '@playwright/test';
+import { armProperty, propertyRow } from './fixtures/propertyAnimation';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -67,13 +68,12 @@ test.describe('F — mask/matte workflow', () => {
     //    because the seeded track carries one key at frame 0.
     await maskHeader.click();
     await expect(maskHeader).toHaveAttribute('aria-expanded', 'true');
-    const opacityStopwatch = page.locator('button.ue-channel-stopwatch[data-property-channel="m1:opacity"]');
-    await expect(opacityStopwatch).toHaveAttribute('data-animation-state', 'keyed');
+    await expect(propertyRow(page, 'm1:opacity')).toHaveAttribute('data-animation-state', 'keyed');
     await page.screenshot({ path: 'test-results/f-02-mask-rows-keyed.png' });
 
     // 3. Arm feather at frame 0: a second channel starts animating.
-    await page.locator('button.ue-channel-stopwatch[data-property-channel="m1:feather"]').click();
-    await expect(page.locator('button.ue-channel-stopwatch[data-property-channel="m1:feather"]')).toHaveAttribute('data-animation-state', 'keyed');
+    await armProperty(page, 'm1:feather');
+    await expect(propertyRow(page, 'm1:feather')).toHaveAttribute('data-animation-state', 'keyed');
     await page.screenshot({ path: 'test-results/f-03-two-mask-channels.png' });
 
     // 4. The matte target reports the switched-off source honestly.

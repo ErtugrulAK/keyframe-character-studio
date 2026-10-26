@@ -1,5 +1,8 @@
 /**
- * K1 — per-property animation (stopwatch) controls, user-approved contract D2.
+ * K1 — per-property animation controls, user-approved contract D2. C10: there
+ * is no stopwatch any more — an unanimated property's "+" arms it, and the
+ * row's right-click "Remove all keyframes" asks to disarm it. The row carries
+ * the three states as `data-animation-state`.
  *
  * States: not animated / animated without a key at the playhead / animated with
  * a key at the playhead. Activation writes the FIRST key at the current
@@ -40,10 +43,25 @@ const trackRow = (container: HTMLElement, name: string): HTMLElement => {
   return row as HTMLElement;
 };
 
-const stopwatch = (container: HTMLElement, name: string, channel: TrackChannel): HTMLButtonElement => {
-  const button = trackRow(container, name).querySelector(`button.ue-channel-stopwatch[data-property-channel="${channel}"]`);
-  if (!button) throw new Error(`no stopwatch for ${channel} on ${name}`);
-  return button as HTMLButtonElement;
+const channelRow = (container: HTMLElement, name: string, channel: TrackChannel): HTMLElement => {
+  const row = trackRow(container, name).querySelector(`.ue-channel-row[data-property-channel="${channel}"]`);
+  if (!row) throw new Error(`no property row for ${channel} on ${name}`);
+  return row as HTMLElement;
+};
+const addButton = (container: HTMLElement, name: string, channel: TrackChannel): HTMLButtonElement =>
+  channelRow(container, name, channel).querySelector('button.track-add-kf-btn') as HTMLButtonElement;
+const stateOf = (container: HTMLElement, name: string, channel: TrackChannel) =>
+  channelRow(container, name, channel).getAttribute('data-animation-state');
+/** The arm / disarm request the stopwatch used to make: "+" when off, the row menu when animated. */
+const toggleAnimation = (container: HTMLElement, name: string, channel: TrackChannel) => {
+  if (stateOf(container, name, channel) === 'off') {
+    fireEvent.click(addButton(container, name, channel));
+    return;
+  }
+  fireEvent.contextMenu(channelRow(container, name, channel));
+  const item = Array.from(document.querySelectorAll('[role="menuitem"]')).find((node) => node.textContent === 'Remove all keyframes');
+  if (!item) throw new Error('no "Remove all keyframes" menu item');
+  fireEvent.click(item);
 };
 
 const expand = (container: HTMLElement, name: string) => {
@@ -83,15 +101,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('K1 — stopwatch states and activation (D2)', () => {
-  it('renders an unanimated stopwatch for every channel row with a discoverable name', () => {
+describe('K1 — property animation states and activation (D2)', () => {
+  it('an unanimated property row has no stopwatch; its "+" says it starts the animation', () => {
     const { container } = renderEditor();
     addRect('Box', 120, 40);
     expand(container, 'Box');
-    const button = stopwatch(container, 'Box', 'x');
-    expect(button.getAttribute('data-animation-state')).toBe('off');
-    expect(button.getAttribute('aria-pressed')).toBe('false');
-    expect(`${button.getAttribute('aria-label')}`.toLowerCase()).toContain('animate');
+    expect(stateOf(container, 'Box', 'x')).toBe('off');
+    expect(container.querySelector('.ue-channel-stopwatch')).toBeNull();
+    expect(`${addButton(container, 'Box', 'x').getAttribute('title')}`.toLowerCase()).toContain('animate');
   });
 
   it('activating at the playhead writes the evaluated current value as the first key', () => {
@@ -99,12 +116,12 @@ describe('K1 — stopwatch states and activation (D2)', () => {
     const partId = addRect('Box', 120, 40);
     act(() => { ctx().setCurrentFrame(24); });
     expand(container, 'Box');
-    fireEvent.click(stopwatch(container, 'Box', 'x'));
+    toggleAnimation(container, 'Box', 'x');
     const keys = keysOf(partId, 'x');
     expect(keys).toHaveLength(1);
     expect(keys[0].frame).toBe(24);
     expect(keys[0].value).toBeCloseTo(120, 9);
-    expect(stopwatch(container, 'Box', 'x').getAttribute('data-animation-state')).toBe('keyed');
+    expect(stateOf(container, 'Box', 'x')).toBe('keyed');
     // Siblings were NOT armed.
     expect(keysOf(partId, 'y')).toHaveLength(0);
   });
@@ -118,8 +135,8 @@ describe('K1 — stopwatch states and activation (D2)', () => {
         ? { ...t, channels: { ...t.channels, x: [{ id: 'other-seq-key', frame: 10, value: 55, easing: 'linear', templateId: 'Other' }] } }
         : t)) as Track[]);
     });
-    expect(stopwatch(container, 'Box', 'x').getAttribute('data-animation-state')).toBe('off');
-    fireEvent.click(stopwatch(container, 'Box', 'x'));
+    expect(stateOf(container, 'Box', 'x')).toBe('off');
+    toggleAnimation(container, 'Box', 'x');
     const keys = keysOf(partId, 'x');
     expect(keys.find((k) => k.id === 'other-seq-key')).toBeDefined(); // preserved
     expect(keys.filter((k) => (k.templateId || 'Sequence') === 'Sequence')).toHaveLength(1);
@@ -130,10 +147,9 @@ describe('K1 — stopwatch states and activation (D2)', () => {
     addRect('Box', 30, 30);
     act(() => { ctx().setCurrentFrame(24); });
     expand(container, 'Box');
-    fireEvent.click(stopwatch(container, 'Box', 'x'));
+    toggleAnimation(container, 'Box', 'x');
     act(() => { ctx().setCurrentFrame(10); });
-    expect(stopwatch(container, 'Box', 'x').getAttribute('data-animation-state')).toBe('animated');
-    expect(stopwatch(container, 'Box', 'x').getAttribute('aria-pressed')).toBe('true');
+    expect(stateOf(container, 'Box', 'x')).toBe('animated');
   });
 
   it('activating twice at the same frame never duplicates the key', () => {
@@ -141,8 +157,8 @@ describe('K1 — stopwatch states and activation (D2)', () => {
     const partId = addRect('Box', 12, 5);
     act(() => { ctx().setCurrentFrame(12); });
     expand(container, 'Box');
-    fireEvent.click(stopwatch(container, 'Box', 'x'));
-    fireEvent.click(stopwatch(container, 'Box', 'x')); // already keyed here -> disarm asked, no second key
+    fireEvent.click(addButton(container, 'Box', 'x'));
+    fireEvent.click(addButton(container, 'Box', 'x')); // already keyed here -> the key is updated, not doubled
     expect(keysOf(partId, 'x')).toHaveLength(1);
   });
 });
@@ -171,7 +187,7 @@ describe('K1 — deactivation asks, cancels clean, confirms atomic (D2)', () => 
     const partId = addRect('Box', 7, 7);
     armThenMove(partId);
     expand(container, 'Box');
-    fireEvent.click(stopwatch(container, 'Box', 'x'));
+    toggleAnimation(container, 'Box', 'x');
     expect(keysOf(partId, 'x')).toHaveLength(2);
     const dialog = document.querySelector('.confirmation-dialog');
     expect(dialog).not.toBeNull();
@@ -184,7 +200,7 @@ describe('K1 — deactivation asks, cancels clean, confirms atomic (D2)', () => 
     const partId = addRect('Box', 7, 7);
     armThenMove(partId);
     expand(container, 'Box');
-    fireEvent.click(stopwatch(container, 'Box', 'x'));
+    toggleAnimation(container, 'Box', 'x');
     const tracksBefore = ctx().tracks;
     fireEvent.click(document.querySelector('.confirmation-dialog-cancel') as HTMLElement);
     expect(ctx().tracks).toBe(tracksBefore); // identity: zero state update
@@ -197,7 +213,7 @@ describe('K1 — deactivation asks, cancels clean, confirms atomic (D2)', () => 
     armThenMove(partId);
     const baseBefore = ctx().characterParts.find((p) => p.id === partId)?.baseTransform.x;
     expand(container, 'Box');
-    fireEvent.click(stopwatch(container, 'Box', 'x'));
+    toggleAnimation(container, 'Box', 'x');
     fireEvent.click(document.querySelector('.confirmation-dialog-confirm') as HTMLElement);
     expect(keysOf(partId, 'x')).toHaveLength(0);
     expect(ctx().characterParts.find((p) => p.id === partId)?.baseTransform.x).toBeCloseTo(50, 9);
@@ -210,12 +226,12 @@ describe('K1 — deactivation asks, cancels clean, confirms atomic (D2)', () => 
     expect(ctx().characterParts.find((p) => p.id === partId)?.baseTransform.x).toBeCloseTo(50, 9);
   });
 
-  it('stopwatch is keyboard reachable and Enter activates the same flow', async () => {
+  it('the "+" is keyboard reachable and Enter starts the same flow', async () => {
     const user = userEvent.setup();
     const { container } = renderEditor();
     const partId = addRect('Box', 3, 4);
     expand(container, 'Box');
-    const button = stopwatch(container, 'Box', 'x');
+    const button = addButton(container, 'Box', 'x');
     button.focus();
     await user.keyboard('{Enter}');
     expect(keysOf(partId, 'x')).toHaveLength(1);
@@ -231,7 +247,7 @@ describe('K1 — other property families', () => {
       ctx().setCurrentFrame(6);
     });
     expand(container, 'Box');
-    fireEvent.click(stopwatch(container, 'Box', 'trimPathEnd'));
+    toggleAnimation(container, 'Box', 'trimPathEnd');
     const keys = keysOf(partId, 'trimPathEnd');
     expect(keys).toHaveLength(1);
     expect(keys[0].frame).toBe(6);
@@ -252,7 +268,7 @@ describe('K1 — other property families', () => {
       ctx().setCurrentFrame(12);
     });
     expand(container, 'Box');
-    fireEvent.click(stopwatch(container, 'Box', 'trimPathEnd'));
+    toggleAnimation(container, 'Box', 'trimPathEnd');
     fireEvent.click(document.querySelector('.confirmation-dialog-confirm') as HTMLElement);
     expect(keysOf(partId, 'trimPathEnd')).toHaveLength(0);
     expect(ctx().characterParts.find((p) => p.id === partId)?.trimPathEnd).toBeCloseTo(0.25, 9);
@@ -269,7 +285,7 @@ describe('K1 — other property families', () => {
     );
     const partId = addRect('Box', 9, 1);
     expand(container, 'Box');
-    fireEvent.click(stopwatch(container, 'Box', 'x'));
+    toggleAnimation(container, 'Box', 'x');
     expect(keysOf(partId, 'x')).toHaveLength(1);
   });
 
@@ -278,7 +294,7 @@ describe('K1 — other property families', () => {
     const partId = addRect('Box', 4, 4);
     act(() => { ctx().setCurrentFrame(ctx().totalFrames - 1); });
     expand(container, 'Box');
-    fireEvent.click(stopwatch(container, 'Box', 'x'));
+    toggleAnimation(container, 'Box', 'x');
     expect(keysOf(partId, 'x')[0].frame).toBe(ctx().totalFrames - 1);
   });
 });
@@ -299,7 +315,7 @@ describe('K1 — arm captures the authored-local pose under a transformed parent
     expect(captured.x).not.toBeCloseTo(worldBefore.x, 4);
 
     expand(container, 'Child');
-    fireEvent.click(stopwatch(container, 'Child', 'x'));
+    toggleAnimation(container, 'Child', 'x');
 
     const keys = keysOf(childId, 'x');
     expect(keys).toHaveLength(1);

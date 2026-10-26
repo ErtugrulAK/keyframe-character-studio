@@ -126,7 +126,7 @@ describe('WP-03 mask creation flow', () => {
     expect(owner(h, partId)).toBeDefined();
   });
 
-  it('arms a mask path at the playhead and disarms it keeping the displayed path (stopwatch parity)', () => {
+  it('arms a mask path at the playhead and disarms it keeping the displayed path (arm/disarm parity)', () => {
     const h = renderEditor();
     const partId = seed(h, [mask()]);
     const channel = layerMaskPathChannel('mask-2');

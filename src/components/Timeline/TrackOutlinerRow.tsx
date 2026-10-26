@@ -1,5 +1,6 @@
-import React from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Lock, Plus, Tv, Unlock } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Lock, Plus, Tv, Unlock } from 'lucide-react';
 import type { AnimationChannel, CharacterPart, LayerMaskChannel, LayerMaskPathChannel, Track, TrackChannel } from '../../types/animator';
 import { laneContextOf, resolveLaneRows } from './timelineLaneLayout';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
@@ -33,7 +34,7 @@ interface TrackOutlinerRowProps {
   onToggleLock: (trackId: string) => void;
   onAddKeyframe: (trackId: string, frame: number) => void;
   onAddChannelKeyframe: (trackId: string, channel: AnimationChannel, partId: string) => void;
-  /** K1 (D2) — stopwatch press: arm when off, request disarm when on. */
+  /** K1 (D2) — arm an unanimated property (C10: its "+"), or ask to remove all its keys (C10: the row's menu). */
   onToggleChannelAnimation: (trackId: string, channel: AnimationChannel) => void;
   /** R3-07 — moves the playhead to a frame. Navigation only: never a document write. */
   onJumpToFrame: (frame: number) => void;
@@ -125,6 +126,23 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
   // `resolveTrackChannels`). Navigation reads exactly what the rows draw.
   const basePose = resolveAuthoredBasePose(parts, track.partId);
   const isTrackExpanded = track.expanded === true;
+  // C10 — a property row's right-click menu (only for an animated property).
+  const [channelMenu, setChannelMenu] = useState<{ channel: AnimationChannel; label: string; x: number; y: number } | null>(null);
+  const channelMenuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!channelMenu) return undefined;
+    const close = (event: MouseEvent | KeyboardEvent) => {
+      if (event instanceof KeyboardEvent && event.key !== 'Escape') return;
+      if (event instanceof MouseEvent && channelMenuRef.current?.contains(event.target as Node)) return;
+      setChannelMenu(null);
+    };
+    window.addEventListener('mousedown', close);
+    window.addEventListener('keydown', close);
+    return () => {
+      window.removeEventListener('mousedown', close);
+      window.removeEventListener('keydown', close);
+    };
+  }, [channelMenu]);
   // K3 / C7 — the layer's masks name their property groups.
   const owningPart = parts.find((p) => p.id === track.partId);
   const partMasks = owningPart?.masks ?? [];
@@ -178,7 +196,14 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
         className="ue-channel-row"
         data-owner-part-id={track.partId}
         data-property-channel={ch}
+        data-animation-state={animationState}
         style={{ height: CHANNEL_ROW_HEIGHT }}
+        onContextMenu={(event) => {
+          // C10 — "Remove all keyframes" replaces the stopwatch's disarm.
+          event.preventDefault();
+          event.stopPropagation();
+          setChannelMenu(animationState === 'off' ? null : { channel: ch, label: meta.label, x: event.clientX, y: event.clientY });
+        }}
       >
         <span className={indentClass} />
         {/* R3-06 — the row states the property, not how many keys it holds: the
@@ -195,30 +220,12 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
               level down: the row states its property, its nav strip states the
               property's keys. The strip is neutral (R5-06/R5-07): a plain plus
               adds the key, a greyed pair means that side has nothing. */}
-          {/* K1 (D2) — the stopwatch owns the property's animation state; the
-              plus below stays the "add a key here" action it has always been.
-              K3: a mask PATH row shows its geometry keyframes and navigates
-              them. WP-03: its stopwatch arms the path at the playhead (the
-              shape shown there becomes the first key) and disarms it with the
-              same confirmation; new path keys come from editing the path on
-              the canvas or in the Inspector, so the plus stays inert. */}
-          {(
-          <button
-            className="btn-icon ue-channel-stopwatch"
-            data-property-channel={ch}
-            data-animation-state={animationState}
-            aria-pressed={animationState !== 'off'}
-            onClick={(e) => { e.stopPropagation(); onToggleChannelAnimation(track.id, ch); }}
-            title={animationState === 'off'
-              ? `Animate ${meta.label} of ${displayName}`
-              : `Stop animating ${meta.label} of ${displayName} (${chKfs.length} keyframe${chKfs.length === 1 ? '' : 's'} in this sequence)`}
-            aria-label={animationState === 'off'
-              ? `Animate ${meta.label} of ${displayName}`
-              : `Stop animating ${meta.label} of ${displayName}`}
-          >
-            <Clock size={12} aria-hidden="true" />
-          </button>
-          )}
+          {/* C10 — no stopwatch (QA: it confused more than it helped). The plus
+              starts a property's animation with its first key, like any later
+              key; removing all of a property's keys is the row's right-click
+              menu. A mask PATH row's plus arms the path at the playhead (the
+              shape shown there becomes the first key); later path keys come
+              from editing the path on the canvas or in the Inspector. */}
           <button
             className="btn-icon track-icon-btn"
             onClick={(e) => { e.stopPropagation(); if (previousChannelFrame !== null) onJumpToFrame(previousChannelFrame); }}
@@ -234,10 +241,19 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
           </button>
           <button
             className="btn-icon track-add-kf-btn"
-            onClick={(e) => { e.stopPropagation(); onAddChannelKeyframe(track.id, ch, track.partId); }}
-            disabled={isPathChannel}
-            title={isPathChannel ? `${meta.label} geometry is authored on the path lane` : `Add ${meta.label} keyframe`}
-            aria-label={isPathChannel ? `${meta.label} keyframes are authored on the path lane` : `Add ${meta.label} keyframe`}
+            data-property-channel={ch}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (animationState === 'off') onToggleChannelAnimation(track.id, ch);
+              else onAddChannelKeyframe(track.id, ch, track.partId);
+            }}
+            disabled={isPathChannel && animationState !== 'off'}
+            title={isPathChannel && animationState !== 'off'
+              ? `${meta.label} geometry is authored on the path lane`
+              : animationState === 'off' ? `Animate ${meta.label}: add its first keyframe here` : `Add ${meta.label} keyframe`}
+            aria-label={isPathChannel && animationState !== 'off'
+              ? `${meta.label} keyframes are authored on the path lane`
+              : `Add ${meta.label} keyframe`}
           >
             <Plus size={12} aria-hidden="true" />
           </button>
@@ -443,6 +459,35 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
             return renderChannelRow(row.channel, row.depth === 2 ? 'ue-channel-indent-deep' : 'ue-channel-indent', true);
           })}
         </div>
+      )}
+      {channelMenu && createPortal(
+        <div
+          ref={channelMenuRef}
+          role="menu"
+          aria-label={`${channelMenu.label} of ${displayName}`}
+          className="timeline-channel-menu"
+          style={{
+            position: 'fixed', left: channelMenu.x, top: channelMenu.y, zIndex: 1000, minWidth: 180,
+            background: '#1e2430', border: '1px solid #39415a', borderRadius: 6, boxShadow: '0 4px 16px rgba(0,0,0,0.5)', padding: '4px 0',
+          }}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="timeline-menu-item"
+            autoFocus
+            title={`Delete every ${channelMenu.label} keyframe of ${displayName} in this sequence (asks first)`}
+            style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#dbe3f0', fontSize: 11, fontWeight: 600, padding: '6px 12px', cursor: 'pointer' }}
+            onClick={() => {
+              const { channel } = channelMenu;
+              setChannelMenu(null);
+              onToggleChannelAnimation(track.id, channel);
+            }}
+          >
+            Remove all keyframes
+          </button>
+        </div>,
+        document.body,
       )}
     </div>
   );

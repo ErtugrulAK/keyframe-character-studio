@@ -55,7 +55,7 @@ const trackRow = (container: HTMLElement, name: string): HTMLElement => {
 
 /** The per-property keyframe action of one channel row. */
 const clickChannelKeyframe = (container: HTMLElement, name: string, label: string) => {
-  const button = trackRow(container, name).querySelector(`button[title="Add ${label} keyframe"]`);
+  const button = trackRow(container, name).querySelector(`button[aria-label="Add ${label} keyframe"]`);
   if (!button) throw new Error(`no ${label} keyframe button for ${name}`);
   fireEvent.click(button);
 };
@@ -181,8 +181,8 @@ const channelNav = (container: HTMLElement, name: string, label: string): { prev
   const row = Array.from(trackRow(container, name).querySelectorAll('.ue-channel-row'))
     .find((candidate) => candidate.getAttribute('data-property-channel') === label);
   if (!row) throw new Error(`no ${label} property row for ${name}`);
-  // Select by the nav buttons' accessible names, not by child index: K1's
-  // stopwatch is a new button in the same control strip, and the contract
+  // Select by the nav buttons' accessible names, not by child index: other
+  // buttons share the same control strip, and the contract
   // under test is the prev/next ENABLED STATE, not button order.
   const previous = row.querySelector('button[aria-label^="Previous "]') as HTMLButtonElement;
   const next = row.querySelector('button[aria-label^="Next "]') as HTMLButtonElement;

@@ -1,5 +1,6 @@
 // Keyframe Studio - 2D Motion Sequencer Timeline Component
 import React, { useRef, useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
+import type { KeyframeStretchSession } from '../../hooks/useTimeline';
 import { NumberField } from '../Inspector/inputs/NumberField';
 import { useAnimator } from '../../context/useAnimator';
 import { commitWorkspaceLayout, createFrameEase, prefersReducedMotion, REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, type FrameEase } from '../../utils/workspaceLayout';
@@ -87,8 +88,11 @@ interface KeyframeDrag {
   expandFrameGroups: boolean;
   /** The pointer that owns the drag; -1 when the event carried no identity. */
   pointerId: number;
-  /** K2: 'duplicate' copies the source group to `appliedFrame`; source unmoved. */
-  mode: 'move' | 'duplicate';
+  /** K2: 'duplicate' copies the source group to `appliedFrame`; source unmoved.
+   *  C10: 'stretch' rescales the selection in time about its other end. */
+  mode: 'move' | 'duplicate' | 'stretch';
+  /** C10 — the stretch session ('stretch' mode only). */
+  stretch?: KeyframeStretchSession;
   /** The track the copy lands on (duplicate) — the pressed diamond's owner. */
   trackId: string;
 }
@@ -115,6 +119,7 @@ export const SequencerTimeline: React.FC = () => {
     addKeyframeToTrack,
     deleteKeyframeFrameGroup,
     moveSelectedKeyframes,
+    beginKeyframeStretch,
     startBatchInteraction,
     endBatchInteraction,
     toggleTrackVisibility,
@@ -637,6 +642,18 @@ export const SequencerTimeline: React.FC = () => {
 
     const drag = keyframeDragRef.current;
     if (drag) {
+      if (drag.mode === 'stretch' && drag.stretch) {
+        if (drag.pointerId >= 0 && e.pointerId !== undefined && e.pointerId !== drag.pointerId) return;
+        if (e.buttons === 0) {
+          endTimelineGesture();
+          return;
+        }
+        const target = getFrameFromMouse(e.clientX);
+        if (target !== drag.appliedFrame && drag.stretch.stretchTo(target)) {
+          keyframeDragRef.current = { ...drag, appliedFrame: target };
+        }
+        return;
+      }
       if (drag.mode === 'duplicate') {
         // A duplicate drag mutates nothing in flight: it only moves the
         // previewed drop target. The commit (or refusal) happens on release.
@@ -680,6 +697,25 @@ export const SequencerTimeline: React.FC = () => {
     // travel commits as ONE history entry.
     startBatchInteraction();
     if (press.pointerId >= 0) press.captureTarget?.setPointerCapture?.(press.pointerId);
+    // C10 — Alt on the first or last key of a multi-frame selection stretches
+    // the selection in time (After Effects); Alt anywhere else duplicates (K2).
+    const stretch = press.altKey && press.ids.length > 1
+      ? beginKeyframeStretch(press.ids, press.expandFrameGroups, press.anchorFrame)
+      : null;
+    if (stretch) {
+      const target = getFrameFromMouse(e.clientX);
+      keyframeDragRef.current = {
+        ids: press.ids,
+        anchorFrame: press.anchorFrame,
+        appliedFrame: stretch.stretchTo(target) ? target : press.anchorFrame,
+        expandFrameGroups: press.expandFrameGroups,
+        pointerId: press.pointerId,
+        mode: 'stretch',
+        stretch,
+        trackId: press.trackId,
+      };
+      return;
+    }
     if (press.altKey) {
       // K2: the travel arms a duplicate, never a move — the source stays.
       const target = getDuplicateDropFrame(e.clientX);
@@ -709,7 +745,7 @@ export const SequencerTimeline: React.FC = () => {
       mode: 'move',
       trackId: press.trackId,
     };
-  }, [endTimelineGesture, getFrameFromMouse, getDuplicateDropFrame, canDropDuplicate, moveSelectedKeyframes, setCurrentFrame, setDuplicatePreview, startBatchInteraction]);
+  }, [endTimelineGesture, getFrameFromMouse, getDuplicateDropFrame, canDropDuplicate, moveSelectedKeyframes, beginKeyframeStretch, setCurrentFrame, setDuplicatePreview, startBatchInteraction]);
 
   const gestureMoveRef = useRef(handleGestureMove);
   const gestureEndRef = useRef(endTimelineGesture);

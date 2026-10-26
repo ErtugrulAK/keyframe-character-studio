@@ -670,6 +670,76 @@ export const moveKeyframesMutator = (
 };
 
 /**
+ * C10 — proportional time-stretch of a keyframe selection (After Effects'
+ * Alt-drag of the first or last selected key). The key at the OTHER end is the
+ * pivot and stays; the dragged edge goes to `toEdge`, and every target lands at
+ * `pivot + round((frame - pivot) * scale)`. Computed from the gesture's BASE
+ * tracks every time, so a drag never accumulates rounding.
+ *
+ * Refused (`null`, the caller keeps the last valid state) when the edge would
+ * reach or cross the pivot, leave [0, totalFrames], put two moving keys of one
+ * channel on one frame, or land on a key of the same channel that is not part
+ * of the stretch. Only `frame` changes; ids, values, easing and handles stay.
+ */
+export const stretchKeyframesMutator = (
+  baseTracks: Track[],
+  targets: KeyframeMoveTarget[],
+  pivotFrame: number,
+  edgeFrame: number,
+  toEdge: number,
+  totalFrames: number,
+): Track[] | null => {
+  const span = edgeFrame - pivotFrame;
+  const reach = toEdge - pivotFrame;
+  if (span === 0 || targets.length === 0 || Math.sign(reach) !== Math.sign(span) || reach === 0) return null;
+  if (toEdge < 0 || toEdge > totalFrames) return null;
+  const factor = reach / span;
+  const landing = (frame: number) => pivotFrame + Math.round((frame - pivotFrame) * factor);
+
+  const byId = new Map(baseTracks.map((track) => [track.id, track]));
+  const movingKeys = new Set(targets.map((target) => `${target.trackId}|${target.store}|${target.channel}|${target.keyframeId}`));
+  const occupied = new Set<string>();
+  for (const target of targets) {
+    const frame = landing(target.frame);
+    if (frame < 0 || frame > totalFrames) return null;
+    const slot = `${target.trackId}|${target.store}|${target.channel}|${frame}`;
+    if (occupied.has(slot)) return null;
+    occupied.add(slot);
+    const track = byId.get(target.trackId);
+    if (track && keyframesOf(track, target.store, target.channel).some((keyframe) => (
+      keyframe.frame === frame && !movingKeys.has(`${target.trackId}|${target.store}|${target.channel}|${keyframe.id}`)
+    ))) return null;
+  }
+
+  return baseTracks.map((track) => {
+    const moved = targets.filter((target) => target.trackId === track.id);
+    if (moved.length === 0) return track;
+    const newFrame = new Map(moved.map((target) => [`${target.store}|${target.channel}|${target.keyframeId}`, landing(target.frame)]));
+    const retime = <T extends { id: string; frame: number }>(store: KeyframeStore, channel: AnimationChannel | '', keyframes: T[] | undefined) => {
+      if (keyframes === undefined) return undefined;
+      if (!keyframes.some((keyframe) => newFrame.has(`${store}|${channel}|${keyframe.id}`))) return keyframes;
+      return keyframes
+        .map((keyframe) => {
+          const frame = newFrame.get(`${store}|${channel}|${keyframe.id}`);
+          return frame === undefined ? keyframe : { ...keyframe, frame };
+        })
+        .sort((a, b) => a.frame - b.frame);
+    };
+    const retimeAll = <T extends { id: string; frame: number }>(store: KeyframeStore, entries: Record<string, T[]> | undefined) =>
+      entries === undefined
+        ? undefined
+        : Object.fromEntries(Object.entries(entries).map(([channel, keyframes]) => [channel, retime(store, channel as AnimationChannel, keyframes)])) as Record<string, T[]>;
+    return {
+      ...track,
+      ...(track.keyframes ? { keyframes: retime('keyframes', '', track.keyframes) } : {}),
+      ...(track.channels ? { channels: retimeAll('channels', track.channels) as Track['channels'] } : {}),
+      ...(track.maskChannels ? { maskChannels: retimeAll('maskChannels', track.maskChannels) as Track['maskChannels'] } : {}),
+      ...(track.maskPathChannels ? { maskPathChannels: retimeAll('maskPathChannels', track.maskPathChannels) as Track['maskPathChannels'] } : {}),
+    };
+  });
+};
+
+/**
  * Delete the timeline's logical keyframe selection: the whole frame group of
  * every track that holds one of the selected keyframes (canonical channels, mask
  * channels and the legacy composite list alike), resolved in ONE pass and

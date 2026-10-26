@@ -32,7 +32,7 @@ import { useBroadcast } from '../hooks/useBroadcast';
 import type { NamedSequenceRuntimeState } from '../utils/broadcastEngine';
 import { useToolbar } from '../hooks/useToolbar';
 import { useInspector } from '../hooks/useInspector';
-import { useTimeline } from '../hooks/useTimeline';
+import { useTimeline, type KeyframeStretchSession } from '../hooks/useTimeline';
 import { useTemplates } from '../hooks/useTemplates';
 import { useMath } from '../hooks/useMath';
 import { useSerialization, type AutosavePersistenceError, type PersistenceSafety } from '../hooks/useSerialization';
@@ -172,6 +172,8 @@ export interface AnimatorContextType {
   deleteKeyframeFrameGroup: (trackId: string, frame: number) => void;
   /** Move the whole selected keyframe set by a frame delta (one gesture = one entry). */
   moveSelectedKeyframes: (selectedIds: string[], delta: number, expandFrameGroups: boolean) => number;
+  /** C10 — Alt-drag of the selection's first/last key: a proportional time-stretch session, or null. */
+  beginKeyframeStretch: (selectedIds: string[], expandFrameGroups: boolean, pressedFrame: number) => KeyframeStretchSession | null;
   updateKeyframeFrame: (trackId: string, keyframeId: string, newFrame: number) => void;
   updateKeyframeBezierPoints: (trackId: string, keyframeId: string, points: [number, number, number, number]) => void;
   updateCurrentTransform: (newTransform: Partial<Transform>, partIdOverride?: string) => void;
@@ -558,6 +560,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     armChannel,
         disableChannelAnimation,
     moveSelectedKeyframes,
+    beginKeyframeStretch,
     deleteKeyframeFrameGroup,
     updatePropertyKeyframeValue,
     updatePropertyKeyframeTemporalHandles,
@@ -1164,6 +1167,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         deleteKeyframe,
         deleteKeyframeFrameGroup,
         moveSelectedKeyframes,
+        beginKeyframeStretch,
         deletePart: requestDeletePart,
         updateKeyframeFrame,
         updateKeyframeBezierPoints,

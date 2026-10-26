@@ -12,6 +12,7 @@ import {
   migrateTrackLegacyKeyframes,
   resolveKeyframeMoveTargets,
   moveKeyframesMutator,
+  stretchKeyframesMutator,
   deleteFrameGroupsMutator,
   updatePropertyKeyframeValueMutator,
   updatePropertyKeyframeTemporalHandlesMutator,
@@ -55,6 +56,14 @@ interface UseTimelineOptions {
   activeTemplateId: string;
   getComputedTransform: (partId: string, frame: number) => Transform;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+}
+
+/** C10 — one proportional keyframe-stretch gesture (see `beginKeyframeStretch`). */
+export interface KeyframeStretchSession {
+  /** The frame that stays put: the other end of the selection. */
+  pivotFrame: number;
+  /** Put the dragged end at `toEdge`; false (and no change) when refused. */
+  stretchTo: (toEdge: number) => boolean;
 }
 
 export const useTimeline = ({
@@ -287,6 +296,35 @@ export const useTimeline = ({
     tracksRef.current = outcome.tracks;
     setTracks(outcome.tracks);
     return outcome.appliedDelta;
+  };
+
+  /**
+   * C10 — a proportional time-stretch gesture of the selection (Alt-drag of its
+   * first or last key). Returns null when the pressed key is not an END of a
+   * selection that spans at least two frames. The session keeps the gesture's
+   * base tracks, so every `stretchTo` is computed from the same start (no
+   * rounding drift); a refused frame keeps the last valid state.
+   */
+  const beginKeyframeStretch = (selectedIds: string[], expandFrameGroups: boolean, pressedFrame: number): KeyframeStretchSession | null => {
+    const templateId = activeTemplateId || 'Sequence';
+    const base = tracksRef.current;
+    const targets = resolveKeyframeMoveTargets(base, selectedIds, templateId, expandFrameGroups);
+    const frames = targets.map((target) => target.frame);
+    if (frames.length === 0) return null;
+    const first = Math.min(...frames);
+    const last = Math.max(...frames);
+    if (first === last || (pressedFrame !== first && pressedFrame !== last)) return null;
+    const pivot = pressedFrame === last ? first : last;
+    return {
+      pivotFrame: pivot,
+      stretchTo: (toEdge: number) => {
+        const next = stretchKeyframesMutator(base, targets, pivot, pressedFrame, toEdge, totalFrames);
+        if (!next) return false;
+        tracksRef.current = next;
+        setTracks(next);
+        return true;
+      },
+    };
   };
 
   /** Delete every frame group at one frame of one track (all stores). */
@@ -596,6 +634,7 @@ export const useTimeline = ({
     toggleTrackExpanded,
     addPropertyKeyframe,
     moveSelectedKeyframes,
+    beginKeyframeStretch,
     deleteKeyframeFrameGroup,
     updatePropertyKeyframeValue,
     updatePropertyKeyframeTemporalHandles,

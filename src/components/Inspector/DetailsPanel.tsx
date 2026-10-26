@@ -13,7 +13,6 @@ import { LayerParentField } from './LayerParentField';
 import { editTargetText, layerTypeLabel, resolveEditTarget } from '../../utils/editTarget';
 import { StyleTab } from './sections/StyleTab';
 import { evaluateTrimPath } from '../../utils/trimPath';
-import { DuplicateTab } from './sections/DuplicateTab';
 import { AnimationDataCard } from './sections/AnimationDataCard';
 import { StyleCard } from './sections/style/StyleCard';
 import { useRetainedUiState } from '../../hooks/useRetainedUiState';
@@ -447,9 +446,6 @@ export const DetailsPanel: React.FC = () => {
                 onClearAnimation={() => setPendingClear(true)}
                 clipboardSourceId={clipboardData?.part.id ?? null}
               />
-              <StyleCard title="DUPLICATE" collapsible retainKey="layer-duplicate">
-                <DuplicateTab />
-              </StyleCard>
             </Tabs.Content>
           </div>
         </Tabs.Root>

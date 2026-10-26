@@ -1,5 +1,4 @@
 import { test, expect, type Page } from '@playwright/test';
-import { openDuplicateCard } from './fixtures/inspectorTabs';
 
 test.describe('Phase 6.4 E2E Workflows', () => {
   test.beforeEach(async ({ page }) => {
@@ -65,11 +64,6 @@ async function clickStagePoint(page: Page, offsetX: number, offsetY: number): Pr
     await expect(page.locator('.ue-outliner').getByText('Rectangle').first()).toBeVisible();
     await page.keyboard.press('Control+Y');
     await expect(page.locator('.ue-outliner').getByText('Circle').first()).toBeVisible();
-
-    // Mirror duplicate: the selected part (Circle) gets a Y-axis mirror copy
-    await openDuplicateCard(page);
-    await page.getByRole('button', { name: 'Mirror Y', exact: true }).click();
-    await expect(page.locator('.ue-outliner').getByText('Circle Mirror Y').first()).toBeVisible();
 
     // Play the sequence, then pause it (the transport button toggles its title).
     // The transport is asserted into its PLAYING state and back instead of waiting

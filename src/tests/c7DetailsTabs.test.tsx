@@ -75,14 +75,13 @@ describe('C7 Details tabs', () => {
     expect(properties).not.toContain('TRACK MATTE');
     expect(properties).not.toContain('HIERARCHY');
     expect(properties).not.toContain('ANIMATION DATA');
-    expect(properties).not.toContain('DUPLICATE');
 
     act(() => { fireEvent.mouseDown(tab(/^Masks/)); });
     expect(cardTitles()).toEqual(['LAYER MASKS', 'TRACK MATTE', 'LEGACY CLIP MATTE']);
 
     act(() => { fireEvent.mouseDown(tab(/^Layer/)); });
-    // C8: the duplicate / mirror copies moved here from the Details header.
-    expect(cardTitles()).toEqual(['HIERARCHY', 'ANIMATION DATA', 'DUPLICATE']);
+    // C10: no DUPLICATE card (duplicate is Ctrl+D; flipping is the toolbar's).
+    expect(cardTitles()).toEqual(['HIERARCHY', 'ANIMATION DATA']);
     expect(screen.getByLabelText('Parent')).toBeTruthy();
   });
 

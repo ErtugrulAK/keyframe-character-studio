@@ -16,8 +16,7 @@ export async function openDetailsTab(page: Page, name: 'Properties' | 'Masks' | 
  * C8 — the Details header has no Delete / Duplicate buttons any more. These
  * run the same commands the way a user now does: the keyboard for delete and
  * duplicate (focus released first, so a focused timeline row cannot take
- * Delete as "delete keyframes"), and the Layer tab's DUPLICATE card for the
- * mirror copies.
+ * Delete as "delete keyframes").
  */
 export async function deleteSelectedLayer(page: Page): Promise<void> {
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
@@ -27,11 +26,4 @@ export async function deleteSelectedLayer(page: Page): Promise<void> {
 export async function duplicateSelectedLayer(page: Page): Promise<void> {
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await page.keyboard.press('Control+d');
-}
-
-export async function openDuplicateCard(page: Page): Promise<void> {
-  await openDetailsTab(page, 'Layer');
-  const disclosure = page.getByRole('button', { name: /(?:Expand|Collapse) DUPLICATE/ });
-  if (await disclosure.getAttribute('aria-expanded') === 'false') await disclosure.click();
-  await expect(page.getByRole('button', { name: 'Mirror Y', exact: true })).toBeVisible();
 }

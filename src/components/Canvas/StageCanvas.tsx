@@ -2106,9 +2106,10 @@ export const StageCanvas: React.FC = () => {
           );
         }
         if (editTarget.kind === 'matte-source') {
+          // C10 — only the way back: no "Matte source · matte of …" caption.
           const returnTarget = characterParts.find((part) => part.id === matteReturnTargetId);
           return (
-            <EditTargetStrip target={editTarget} testId="edit-target-strip" hint="You are editing the layer another layer uses as its Track Matte.">
+            <EditTargetStrip target={editTarget} testId="edit-target-strip" bare>
               <button type="button" className="mask-edit-banner-exit" title="Select the layer this matte belongs to" onClick={backToMatteTarget}>
                 Back to {returnTarget?.name ?? 'layer'}
               </button>

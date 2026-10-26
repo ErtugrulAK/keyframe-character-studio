@@ -226,7 +226,8 @@ export const DetailsPanel: React.FC = () => {
         </div>
       )}
 
-      {selectedPart && sessionTarget && (
+      {/* C10 — selecting a matte source needs no caption here either. */}
+      {selectedPart && sessionTarget && sessionTarget.kind !== 'matte-source' && (
         <div className="details-edit-target" role="status" data-testid="inspector-edit-target" data-edit-target={sessionTarget.kind}>
           <span className="edit-target-mode">{sessionTarget.mode}</span>
           <span className="details-edit-target-path" title={editTargetText(sessionTarget)}>

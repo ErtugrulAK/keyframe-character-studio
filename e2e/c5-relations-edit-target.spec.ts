@@ -205,7 +205,8 @@ test('the strip and the Inspector name the same target; the strip never takes a 
   await expect(strip).toContainText('Rectangle');
 });
 
-test('matte source: the strip says whose matte it is and goes back to that layer', async ({ page }) => {
+// C10: the strip shows only the way back — no "Matte source · matte of …" caption.
+test('matte source: the strip offers the way back to the target layer and nothing else', async ({ page }) => {
   await seed(page, [
     layer('photo', 'Photo', 0, 0, { width: 300, height: 200, trackMatte: { sourceLayerId: 'circle', mode: 'alpha', sourceVisible: false } }),
     layer('circle', 'Circle', 0, 0, { type: 'custom_circle', zIndex: 2 }),
@@ -215,9 +216,8 @@ test('matte source: the strip says whose matte it is and goes back to that layer
   await page.getByRole('button', { name: 'Select Source' }).click();
   const strip = page.locator('.edit-target-strip');
   await expect(strip).toHaveAttribute('data-edit-target', 'matte-source');
-  await expect(strip).toContainText('Circle');
-  await expect(strip).toContainText('matte of Photo');
-  await expect(page.getByTestId('inspector-edit-target')).toContainText('Matte source');
+  await expect(strip).toHaveText('Back to Photo');
+  await expect(page.getByTestId('inspector-edit-target')).toHaveCount(0);
   await strip.getByRole('button', { name: 'Back to Photo' }).click();
   await expect(row(page, 'photo')).toHaveAttribute('aria-selected', 'true');
   await expect(strip).toHaveAttribute('data-edit-target', 'layer');

@@ -11,6 +11,8 @@ interface EditTargetStripProps {
   blocked?: boolean;
   /** The mode's own controls (Finish, Cancel, Back to …). */
   children?: React.ReactNode;
+  /** C10 — the controls only, without the mode and path caption. */
+  bare?: boolean;
 }
 
 /**
@@ -22,7 +24,7 @@ interface EditTargetStripProps {
  * stage gesture: the text lets presses through to the drawing tool or the pan,
  * and only its buttons take the pointer.
  */
-export const EditTargetStrip: React.FC<EditTargetStripProps> = ({ target, testId, hint, hintTestId, blocked = false, children }) => (
+export const EditTargetStrip: React.FC<EditTargetStripProps> = ({ target, testId, hint, hintTestId, blocked = false, children, bare = false }) => (
   <div
     className="mask-edit-banner edit-target-strip"
     data-testid={testId}
@@ -30,7 +32,8 @@ export const EditTargetStrip: React.FC<EditTargetStripProps> = ({ target, testId
     data-stage-chrome=""
     title={hint}
   >
-    <span className="edit-target-mode">{target.mode}</span>
+    {!bare && <span className="edit-target-mode">{target.mode}</span>}
+    {!bare && (
     <span className="mask-edit-banner-path" role="status" aria-live="polite">
       {target.path.map((segment, index) => (
         <React.Fragment key={`${segment}-${index}`}>
@@ -40,6 +43,7 @@ export const EditTargetStrip: React.FC<EditTargetStripProps> = ({ target, testId
       ))}
       {target.detail && <span className="edit-target-detail"> · {target.detail}</span>}
     </span>
+    )}
     {hint && (
       <span className={`mask-edit-banner-hint${blocked ? ' is-blocked' : ''}`} data-testid={hintTestId}>
         {blocked && <span aria-hidden="true">⚠ </span>}

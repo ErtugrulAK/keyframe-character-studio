@@ -3,8 +3,7 @@ import { Eye, EyeOff, Lock, PenLine, Unlock, X } from 'lucide-react';
 import type { BezierPath, CharacterPart, LayerMask, MatteMode, PartMatte, Track } from '../../../../types/animator';
 import { maskPathTopologyLockReason } from '../../../../utils/maskPathCreation';
 import { BezierPathEditor } from '../../BezierPathEditor';
-import { TrackMattePickWhip } from './TrackMattePickWhip';
-import { pickedTrackMatte } from '../../../../utils/trackMattePick';
+import { pickedTrackMatte, trackMattePickVerdict } from '../../../../utils/trackMattePick';
 import { requestMaskPointsFocus } from '../../../../utils/maskPointFocus';
 import type { PathOrderCommand } from '../../../../utils/maskPathOrder';
 import { createBezierPath } from '../../../../utils/bezierPath';
@@ -37,7 +36,7 @@ interface StyleMatteSectionProps {
   matteReturnTargetId?: string | null;
   onSelectMatteSource?: (targetId: string, sourceId: string) => void;
   onBackToMatteTarget?: () => void;
-  /** C4 — tells why a pick-whip drop on a layer was refused. */
+  /** Tells why a Track Matte source choice was refused (C10: from the source list). */
   onPickRefused?: (reason: string) => void;
   /** C4 — a mask path structure command; returns the selected point's new index, undefined when refused. */
   onMaskPathOrder?: (maskId: string, command: PathOrderCommand, selectedIndex: number | null) => number | null | undefined;
@@ -383,7 +382,6 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   // switched-off matte source — never the candidate's own relationship flag.
   const suppressedSourceIds = suppressedMatteSourceIds(characterParts);
   const setTrackMatte = (next: CharacterPart['trackMatte'] | undefined) => onPartPropChange('trackMatte', next);
-  const trackMatteSourceRef = useRef<HTMLSelectElement | null>(null);
 
   // WP-04: the effective relationship (and the layers this one is the matte
   // of) is always visible above the settings, so the user never has to know
@@ -622,36 +620,30 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
       <div className="matte-control-grid">
         <div className="matte-field matte-source-field matte-span-full">
           <label className="form-label">SOURCE LAYER</label>
-          <div className="track-matte-source-row">
-          {/* C4 — the pick-whip: drag to a layer; Enter goes to the list below. */}
-          <TrackMattePickWhip
-            target={selectedPart}
-            characterParts={characterParts}
-            onPick={(sourceLayerId) => setTrackMatte(pickedTrackMatte(trackMatte, sourceLayerId))}
-            onKeyboardActivate={() => trackMatteSourceRef.current?.focus()}
-            onRefused={(reason) => onPickRefused?.(reason)}
-          />
+          {/* C10 — the list is the one way to pick a source (the canvas
+              pick-whip is gone); a choice the validator refuses says why. */}
           <select
-            ref={trackMatteSourceRef}
             className="select-control"
             style={selectStyle}
             aria-label="Track matte source"
             value={trackMatte && !trackMatteSourceMissing ? trackMatte.sourceLayerId : ''}
             onChange={(event) => {
               const sourceLayerId = event.target.value;
-              setTrackMatte(sourceLayerId ? {
-                sourceLayerId,
-                mode: trackMatte?.mode ?? 'alpha',
-                enabled: trackMatte?.enabled !== false,
-                inverted: trackMatte?.inverted === true,
-                sourceVisible: trackMatte?.sourceVisible !== false,
-              } : undefined);
+              if (!sourceLayerId) {
+                setTrackMatte(undefined);
+                return;
+              }
+              const verdict = trackMattePickVerdict(characterParts, selectedPart.id, sourceLayerId);
+              if (!verdict.ok) {
+                onPickRefused?.(verdict.reason);
+                return;
+              }
+              setTrackMatte(pickedTrackMatte(trackMatte, sourceLayerId));
             }}
           >
             <option value="">None</option>
             {trackMatteSources.map((part) => <option key={part.id} value={part.id}>{`${part.name || part.id}${suppressedSourceIds.has(part.id) ? ' (hidden)' : ''}`}</option>)}
           </select>
-          </div>
         </div>
         {trackMatteSourceMissing && (
           <div className="matte-span-full" style={{ fontSize: 11, color: '#f59e0b' }}>

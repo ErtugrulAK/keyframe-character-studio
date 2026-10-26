@@ -2,8 +2,9 @@ import type { CharacterPart, TrackMatteV2 } from '../types/animator';
 import { validateCritical, type LayerRef } from './validateScene';
 
 /**
- * C4 — Track Matte pick-whip: may the layer under the pointer become the
- * target's matte source? The answer comes from the EXISTING scene validator
+ * Track Matte source choice: may this layer become the target's matte source?
+ * (C4 asked it for the canvas pick-whip; since C10 the Inspector's source list
+ * asks it.) The answer comes from the EXISTING scene validator
  * (`validateCritical`: self reference, cycles, missing layers), applied to the
  * scene as it would be after the pick — no second relationship rule set. The
  * relationship itself stays where it always lives: `target.trackMatte`.
@@ -12,13 +13,18 @@ export type TrackMattePickVerdict =
   | { ok: true; sourceName: string }
   | { ok: false; reason: string };
 
-/** The relationship the pick writes — the same shape the Inspector's source list writes. */
+/**
+ * The relationship the Inspector's source list writes. C10 — a NEW matte hides
+ * its source, as in After Effects: the source shapes the target and is not
+ * painted itself ("Show source" turns it back on). Changing the source of an
+ * existing matte keeps that matte's own setting.
+ */
 export const pickedTrackMatte = (current: TrackMatteV2 | undefined, sourceLayerId: string): TrackMatteV2 => ({
   sourceLayerId,
   mode: current?.mode ?? 'alpha',
   enabled: current?.enabled !== false,
   inverted: current?.inverted === true,
-  sourceVisible: current?.sourceVisible !== false,
+  sourceVisible: current ? current.sourceVisible !== false : false,
 });
 
 export const trackMattePickVerdict = (

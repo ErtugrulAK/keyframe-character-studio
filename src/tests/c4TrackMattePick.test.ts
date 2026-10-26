@@ -33,9 +33,11 @@ describe('C4 Track Matte pick-whip verdict (through the scene validator)', () =>
     expect(trackMattePickVerdict(elsewhere, 't', 's')).toMatchObject({ ok: true });
   });
 
-  it('the written relationship keeps the current settings and never hides the source', () => {
-    expect(pickedTrackMatte(undefined, 's')).toEqual({ sourceLayerId: 's', mode: 'alpha', enabled: true, inverted: false, sourceVisible: true });
+  it('a new matte hides its source (C10); a changed source keeps the current settings', () => {
+    expect(pickedTrackMatte(undefined, 's')).toEqual({ sourceLayerId: 's', mode: 'alpha', enabled: true, inverted: false, sourceVisible: false });
     expect(pickedTrackMatte({ sourceLayerId: 'old', mode: 'luminance', inverted: true, enabled: false, sourceVisible: false }, 's'))
       .toEqual({ sourceLayerId: 's', mode: 'luminance', enabled: false, inverted: true, sourceVisible: false });
+    expect(pickedTrackMatte({ sourceLayerId: 'old', mode: 'alpha', sourceVisible: true }, 's'))
+      .toMatchObject({ sourceLayerId: 's', sourceVisible: true });
   });
 });

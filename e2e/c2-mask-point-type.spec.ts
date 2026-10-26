@@ -1,9 +1,10 @@
 /**
  * C2 — the Inspector mask path editor as a support surface for canvas
- * editing: the point picked on the canvas is the Inspector's selected point,
- * its real Corner/Smooth type is shown and changed in place (neighbours, owner
- * and key metadata untouched), and topology edits on an animated path are
- * refused with the reason.
+ * editing: the point picked on the canvas is the Inspector's selected point;
+ * C10 — its Corner/Smooth type is changed on the canvas (C, double-click,
+ * Alt-drag of a handle), changing that point only (neighbours, owner and key
+ * metadata untouched), and topology edits on an animated path are refused with
+ * the reason.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { openDetailsTab } from './fixtures/inspectorTabs';
@@ -54,17 +55,18 @@ async function savedScene(page: Page): Promise<Record<string, any>> {
   return page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '{}'), STORAGE_KEY);
 }
 
-test('canvas point selection drives the Inspector; Corner → Smooth changes only that point', async ({ page }) => {
+// C10 — the point type changes on the canvas: C on a CLICKED point (it used to
+// need keyboard focus), a double-click, and Alt-drag breaks a handle pair.
+test('a clicked point turns Smooth with C, back to Corner with a double-click; only that point changes', async ({ page }) => {
   await seed(page);
   const before = await savedScene(page);
   await page.getByTestId('mask-vertex').nth(1).click();
   const editor = page.getByTestId('bezier-path-editor');
   await expect(editor).toContainText('Point 2 of 4');
-  await expect(editor.getByRole('radio', { name: 'Corner' })).toHaveAttribute('aria-checked', 'true');
-  await editor.getByRole('radio', { name: 'Smooth' }).click();
-  await expect(editor.getByRole('radio', { name: 'Smooth' })).toHaveAttribute('aria-checked', 'true');
+  await page.keyboard.press('c');
   // The canvas shows the new tangent handles of that point.
   await expect(page.getByTestId('mask-tangent-handle-out')).toHaveCount(1);
+  await expect(page.getByTestId('mask-vertex').nth(1)).toHaveAttribute('aria-label', /smooth/);
 
   const after = await savedScene(page);
   const points = after.layers[0].masks[0].path.points;
@@ -74,12 +76,35 @@ test('canvas point selection drives the Inspector; Corner → Smooth changes onl
   const pose = (layer: Record<string, any>) => [layer.x, layer.y, layer.rotation, layer.scaleX, layer.scaleY];
   expect(pose(after.layers[0])).toEqual(pose(before.layers[0]));
 
-  // Expand gives a larger editing view.
-  const compact = await editor.locator('svg').boundingBox();
-  await editor.getByRole('button', { name: 'Expand' }).click();
-  const large = await editor.locator('svg').boundingBox();
-  expect(large!.height).toBeGreaterThanOrEqual(compact!.height);
-  expect(large!.width).toBeGreaterThan(250);
+  await page.getByTestId('mask-vertex').nth(1).dblclick();
+  await expect(page.getByTestId('mask-vertex').nth(1)).toHaveAttribute('aria-label', /corner/);
+  expect((await savedScene(page)).layers[0].masks[0].path.points[1].kind).toBe('corner');
+  await expect(editor.getByRole('radio', { name: 'Smooth' })).toHaveCount(0);
+});
+
+test('Alt-drag moves one handle of a smooth point alone; a plain drag keeps the pair aligned', async ({ page }) => {
+  await seed(page);
+  await page.getByTestId('mask-vertex').nth(1).click();
+  await page.keyboard.press('c');
+  const handleIn = page.getByTestId('mask-tangent-handle-in');
+  const handleOut = page.getByTestId('mask-tangent-handle-out');
+  const inBefore = (await handleIn.boundingBox())!;
+  const outBox = (await handleOut.boundingBox())!;
+  const ox = outBox.x + outBox.width / 2;
+  const oy = outBox.y + outBox.height / 2;
+
+  await page.keyboard.down('Alt');
+  await page.mouse.move(ox, oy);
+  await page.mouse.down();
+  await page.mouse.move(ox + 10, oy + 40, { steps: 6 });
+  await page.mouse.up();
+  await page.keyboard.up('Alt');
+
+  const inAfter = (await handleIn.boundingBox())!;
+  expect(Math.abs(inAfter.x - inBefore.x)).toBeLessThan(0.5);
+  expect(Math.abs(inAfter.y - inBefore.y)).toBeLessThan(0.5);
+  const point = (await savedScene(page)).layers[0].masks[0].path.points[1];
+  expect(point.kind).toBe('corner');
 });
 
 test('an animated mask path refuses topology edits with the reason; a Smooth change becomes a key at the playhead keeping metadata', async ({ page }) => {
@@ -96,7 +121,7 @@ test('an animated mask path refuses topology edits with the reason; a Smooth cha
   await expect(editor.getByRole('switch', { name: 'Closed path' })).toBeEnabled();
   await expect(editor).toContainText('The mask path is animated');
   await page.getByTestId('mask-vertex').nth(2).click();
-  await editor.getByRole('radio', { name: 'Smooth' }).click();
+  await page.keyboard.press('c');
   const keys = (await savedScene(page)).tracks[0].maskPathChannels['m1:path'];
   expect(keys.map((key: any) => key.frame)).toEqual([0, 20]);
   expect(keys[0]).toMatchObject({ id: 'k0', easing: 'easeIn', templateId: 'Sequence' });

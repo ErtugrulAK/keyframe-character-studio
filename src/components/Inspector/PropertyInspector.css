@@ -2326,10 +2326,6 @@
   touch-action: none;
 }
 
-.bezier-path-editor.is-expanded .bezier-path-editor__canvas {
-  max-height: 460px;
-}
-
 /* C5 — the focused vertex is also the selected one (white fill), so its ring
    uses the focus token, not white. */
 .bezier-path-editor__canvas circle[role="button"]:focus-visible {

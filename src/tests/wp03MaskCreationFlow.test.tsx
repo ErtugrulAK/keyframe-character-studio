@@ -150,31 +150,4 @@ describe('WP-03 mask creation flow', () => {
     expect(pathTrack().maskPathChannels![channel]).toEqual([]);
     expect(owner(h, partId)!.masks![0].path).toEqual(moved);
   });
-
-  it('rotates the displayed path through the path writer: a key at the playhead when animated', () => {
-    const h = renderEditor();
-    const partId = seed(h, [mask()]);
-    const channel = layerMaskPathChannel('mask-2');
-    act(() => {
-      h.ctx().setTracks((prev: Track[]) => prev.map((track) => track.partId === partId
-        ? { ...track, maskPathChannels: { [channel]: [
-          { id: 'k0', frame: 0, value: rect, easing: 'linear', templateId: 'Sequence' },
-          { id: 'k20', frame: 20, value: rect, easing: 'linear', templateId: 'Sequence' },
-        ] } }
-        : track));
-    });
-    act(() => { h.ctx().setCurrentFrame(10); });
-    const baseBefore = structuredClone(owner(h, partId)!.masks);
-    const transformBefore = structuredClone(owner(h, partId)!.baseTransform);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Rotate mask path 15 degrees clockwise' }));
-
-    const keys = h.ctx().tracks.find((track) => track.partId === partId)!.maskPathChannels![channel];
-    expect(keys.map((candidate) => candidate.frame)).toEqual([0, 10, 20]);
-    expect(keys[1].value).not.toEqual(rect);
-    expect(owner(h, partId)!.masks).toEqual(baseBefore);
-    expect(owner(h, partId)!.baseTransform).toEqual(transformBefore);
-    act(() => { h.ctx().undo(); });
-    expect(h.ctx().tracks.find((track) => track.partId === partId)!.maskPathChannels![channel].map((candidate) => candidate.frame)).toEqual([0, 20]);
-  });
 });

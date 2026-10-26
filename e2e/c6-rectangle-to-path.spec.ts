@@ -136,10 +136,9 @@ test('Rectangle → path keeps the picture and every relation; add a point, make
   expect(withPoint.path.points[1].x).toBeCloseTo(0, 0);
   expect(withPoint.path.points[1].y).toBeCloseTo(-30, 1);
 
-  // The new point is the selected one: make it Smooth in the Inspector.
-  const pointType = page.getByRole('radiogroup', { name: 'Selected point type' });
-  await expect(pointType.getByRole('radio', { name: 'Corner' })).toHaveAttribute('aria-checked', 'true');
-  await pointType.getByRole('radio', { name: 'Smooth' }).click();
+  // The new point is the selected one: C makes it Smooth (C10: on the canvas).
+  await expect(page.locator('[data-testid="freeform-vertex-marker"][data-vertex-index="1"]')).toHaveAttribute('data-point-kind', 'corner');
+  await page.keyboard.press('c');
   await expect(page.locator('[data-testid="freeform-vertex-marker"][data-vertex-index="1"]')).toHaveAttribute('data-point-kind', 'smooth');
 
   // Drag that point up on the canvas: the rectangle becomes a custom shape.

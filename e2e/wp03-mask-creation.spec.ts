@@ -112,7 +112,7 @@ test.describe('WP-03 — mask creation and path edits', () => {
     expect((await savedScene(page)).layers[0].masks ?? []).toEqual([]);
   });
 
-  test('draws a pen mask, adds and removes points on the static path, and rotates it as a path edit', async ({ page }) => {
+  test('draws a pen mask and adds and removes points on the static path', async ({ page }) => {
     await seed(page);
     const before = await savedScene(page);
     const c = await stageCenter(page);
@@ -150,13 +150,8 @@ test.describe('WP-03 — mask creation and path edits', () => {
     scene = await savedScene(page);
     expect(scene.layers).toHaveLength(1);
     expect(layerPose(scene)).toEqual(layerPose(before));
-
-    // Whole-path rotate: the path changes, the layer does not.
-    const pathBefore = scene.layers[0].masks[0].path;
-    await page.getByRole('button', { name: 'Rotate mask path 15 degrees clockwise' }).click();
-    scene = await savedScene(page);
-    expect(scene.layers[0].masks[0].path).not.toEqual(pathBefore);
-    expect(layerPose(scene)).toEqual(layerPose(before));
+    // C10: the Inspector's path rotate/scale buttons are gone; the canvas
+    // outline still matches the clip after the point edits.
     const lines = await contours(page, 'mask-1');
     expect(lines.overlay).toBe(lines.clip);
   });

@@ -5,8 +5,6 @@ import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
 import { useLockedRegion } from '../../hooks/useLockedRegion';
 import { makeEmptyChannels } from '../../utils/defaults';
 import { evaluateLayerMasks } from '../../utils/evaluateLayerMasks';
-import { layerMaskIdsReferencedByTrack } from '../../utils/layerMasks';
-import { transformMaskPathInLayerSpace } from '../../utils/maskPathCreation';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { TransformTab } from './sections/TransformTab';
 import { LayerParentField } from './LayerParentField';
@@ -304,7 +302,6 @@ export const DetailsPanel: React.FC = () => {
               onChangeMaskPath={(maskId, path) => {
                 if (selectedPartId) authorMaskPath(selectedPartId, maskId, path);
               }}
-              reservedMaskIds={layerMaskIdsReferencedByTrack(selectedTrack)}
               maskEditTargetId={maskEditTarget?.ownerPartId === selectedPart.id ? maskEditTarget.maskId : null}
               onEditMaskOnCanvas={(maskId) => {
                 const refusal = enterMaskEditing(selectedPart.id, maskId);
@@ -330,13 +327,6 @@ export const DetailsPanel: React.FC = () => {
                 return outcome.selectedIndex;
               }}
               onSelectMatteTarget={(targetId) => handleSelectPart(targetId)}
-              onTransformMaskPath={(maskId, change) => {
-                // The DISPLAYED (active-sequence, current-frame) path is the
-                // one transformed, and the existing writer decides base vs key.
-                const displayed = evaluatedMasks?.find((mask) => mask.id === maskId) ?? selectedPart.masks?.find((mask) => mask.id === maskId);
-                if (!displayed) return;
-                authorMaskPath(selectedPart.id, maskId, transformMaskPathInLayerSpace(displayed.path, selectedPart, change));
-              }}
               onColorInteractionStart={startBatchInteraction}
               onColorInteractionEnd={endBatchInteraction}
               colorCorrection={{
@@ -376,7 +366,6 @@ export const DetailsPanel: React.FC = () => {
               onChangeMaskPath={(maskId, path) => {
                 if (selectedPartId) authorMaskPath(selectedPartId, maskId, path);
               }}
-              reservedMaskIds={layerMaskIdsReferencedByTrack(selectedTrack)}
               maskEditTargetId={maskEditTarget?.ownerPartId === selectedPart.id ? maskEditTarget.maskId : null}
               onEditMaskOnCanvas={(maskId) => {
                 const refusal = enterMaskEditing(selectedPart.id, maskId);
@@ -402,13 +391,6 @@ export const DetailsPanel: React.FC = () => {
                 return outcome.selectedIndex;
               }}
               onSelectMatteTarget={(targetId) => handleSelectPart(targetId)}
-              onTransformMaskPath={(maskId, change) => {
-                // The DISPLAYED (active-sequence, current-frame) path is the
-                // one transformed, and the existing writer decides base vs key.
-                const displayed = evaluatedMasks?.find((mask) => mask.id === maskId) ?? selectedPart.masks?.find((mask) => mask.id === maskId);
-                if (!displayed) return;
-                authorMaskPath(selectedPart.id, maskId, transformMaskPathInLayerSpace(displayed.path, selectedPart, change));
-              }}
               onColorInteractionStart={startBatchInteraction}
               onColorInteractionEnd={endBatchInteraction}
               colorCorrection={{

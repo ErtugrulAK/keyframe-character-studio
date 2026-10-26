@@ -1,13 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Eye, EyeOff, Lock, PenLine, Unlock, X } from 'lucide-react';
+import { Eye, EyeOff, Lock, PenLine, X } from 'lucide-react';
 import type { BezierPath, CharacterPart, LayerMask, MatteMode, PartMatte, Track } from '../../../../types/animator';
 import { maskPathTopologyLockReason } from '../../../../utils/maskPathCreation';
 import { BezierPathEditor } from '../../BezierPathEditor';
 import { pickedTrackMatte, trackMattePickVerdict } from '../../../../utils/trackMattePick';
 import { requestMaskPointsFocus } from '../../../../utils/maskPointFocus';
 import type { PathOrderCommand } from '../../../../utils/maskPathOrder';
-import { createBezierPath } from '../../../../utils/bezierPath';
-import { nextLayerMaskId } from '../../../../utils/layerMasks';
 import type { MaskDrawShape } from '../../../../hooks/useMaskEditing';
 import { resolveMatteSource, resolveMatteMode, normalizeFeather, isMatteEligible, suppressedMatteSourceIds, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/matte';
 import type { MatteGradientStop } from '../../../../utils/matte';
@@ -21,8 +19,6 @@ interface StyleMatteSectionProps {
   characterParts: CharacterPart[];
   onPartPropChange: (key: keyof CharacterPart, value: any) => void;
   onChangeMaskPath?: (maskId: string, path: BezierPath) => void;
-  /** Mask IDs the layer's track still animates; a new mask never reuses one. */
-  reservedMaskIds?: readonly string[];
   /** WP-02: the mask of THIS layer edited on the canvas, if any. */
   maskEditTargetId?: string | null;
   onEditMaskOnCanvas?: (maskId: string) => void;
@@ -31,7 +27,6 @@ interface StyleMatteSectionProps {
   maskDrawShape?: MaskDrawShape | null;
   onStartMaskDraw?: (shape: MaskDrawShape) => void;
   /** WP-03: rotates/scales the active mask path about its own centre (layer pivot untouched). */
-  onTransformMaskPath?: (maskId: string, change: { rotation?: number; scaleX?: number; scaleY?: number }) => void;
   /** WP-04: transient Track Matte navigation (selection only). */
   matteReturnTargetId?: string | null;
   onSelectMatteSource?: (targetId: string, sourceId: string) => void;
@@ -53,13 +48,18 @@ const MASK_DRAW_SHAPES: { shape: MaskDrawShape; label: string }[] = [
   { shape: 'pen', label: 'Pen' },
 ];
 
-/** The mask list row's mode tag — the same words as the MODE select. */
+/**
+ * C10 — a mask either shows the layer inside it or cuts a hole ("Cut a hole":
+ * subtract). Intersect and Difference are kept for older projects: they render
+ * as before and are named here, but are no longer offered.
+ */
 const LAYER_MASK_MODE_LABEL: Record<LayerMask['mode'], string> = {
-  add: 'Add',
-  subtract: 'Subtract',
+  add: '',
+  subtract: 'Hole',
   intersect: 'Intersect',
   difference: 'Difference',
 };
+const isLegacyMaskMode = (mode: LayerMask['mode']) => mode === 'intersect' || mode === 'difference';
 
 const selectStyle: React.CSSProperties = {
   width: '100%',
@@ -96,13 +96,11 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   onInteractionStart,
   onInteractionEnd,
   onChangeMaskPath,
-  reservedMaskIds = [],
   maskEditTargetId = null,
   onEditMaskOnCanvas,
   onExitMaskEditing,
   maskDrawShape = null,
   onStartMaskDraw,
-  onTransformMaskPath,
   matteReturnTargetId = null,
   onSelectMatteSource,
   onBackToMatteTarget,
@@ -345,28 +343,6 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   const activeLayerMask = layerMasks.find((layerMask) => layerMask.id === (maskEditTargetId ?? selectedLayerMaskId)) ?? layerMasks[0];
   const isEditingActiveMaskOnCanvas = !!maskEditTargetId && activeLayerMask?.id === maskEditTargetId;
   const setLayerMasks = (next: LayerMask[]) => onPartPropChange('masks', next);
-  const addLayerMask = () => {
-    const id = nextLayerMaskId(layerMasks, reservedMaskIds);
-    setLayerMasks([
-      ...layerMasks,
-      {
-        id,
-        name: `Mask ${layerMasks.length + 1}`,
-        path: createBezierPath([
-          { x: 0.2, y: 0.2 },
-          { x: 0.8, y: 0.2 },
-          { x: 0.8, y: 0.8 },
-          { x: 0.2, y: 0.8 },
-        ], 'normalized'),
-        mode: 'add',
-        enabled: true,
-        opacity: 1,
-        feather: 0,
-        expansion: 0,
-      },
-    ]);
-    setSelectedLayerMaskId(id);
-  };
   const updateLayerMask = (maskId: string, patch: Partial<LayerMask>) => {
     setLayerMasks(layerMasks.map((layerMask) => layerMask.id === maskId ? { ...layerMask, ...patch } : layerMask));
   };
@@ -394,9 +370,10 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
     <StyleCard title="LAYER MASKS" collapsible defaultOpen={false} retainKey="layer-masks">
       <div className="matte-control-grid">
         {/* C3 — one compact row per mask (order, name, mode, off state); the
-            selected row is the mask the settings below edit. C5 — each row also
-            carries its own aligned actions: Enabled, Lock path, Edit on canvas
-            (the same settings the controls below write, for that mask). */}
+            selected row is the mask the settings below edit. C5/C10 — each row
+            also carries its own actions: on/off and Edit on canvas. A path lock
+            from an older project shows its unlock button; new locks are not
+            offered. */}
         <div className="matte-span-full layer-mask-list" role="group" aria-label="Layer masks of this layer">
           {layerMasks.map((layerMask, index) => {
             const isOn = layerMask.enabled !== false;
@@ -411,7 +388,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
               data-lock-exempt
               aria-pressed={layerMask.id === activeLayerMask?.id}
               aria-label={`${index + 1}. ${layerMask.name}${layerMask.locked ? ' (locked)' : ''}`}
-              title={`${layerMask.name} — ${LAYER_MASK_MODE_LABEL[layerMask.mode] ?? layerMask.mode}${layerMask.enabled === false ? ', disabled' : ''}${layerMask.locked ? ', path locked' : ''}`}
+              title={`${layerMask.name}${LAYER_MASK_MODE_LABEL[layerMask.mode] ? ` — ${LAYER_MASK_MODE_LABEL[layerMask.mode]}` : ''}${layerMask.enabled === false ? ', disabled' : ''}${layerMask.locked ? ', path locked' : ''}`}
               onClick={() => {
                 setSelectedLayerMaskId(layerMask.id);
                 if (maskEditTargetId && layerMask.id !== maskEditTargetId) onEditMaskOnCanvas?.(layerMask.id);
@@ -419,7 +396,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             >
               <span className="layer-mask-row-index" aria-hidden="true">{index + 1}</span>
               <span className="layer-mask-row-name">{layerMask.name}</span>
-              <span className="layer-mask-row-mode" aria-hidden="true">{LAYER_MASK_MODE_LABEL[layerMask.mode] ?? layerMask.mode}</span>
+              {LAYER_MASK_MODE_LABEL[layerMask.mode] && <span className="layer-mask-row-mode" aria-hidden="true">{LAYER_MASK_MODE_LABEL[layerMask.mode]}</span>}
               {layerMask.affectsAlpha === false && <span className="layer-mask-row-effect" title="Effect-only: scopes an effect, does not cut the layer">Effect</span>}
               {layerMask.enabled === false && <span className="layer-mask-row-off" aria-hidden="true">Off</span>}
               {layerMask.locked && <Lock size={10} className="layer-mask-row-lock" aria-hidden="true" />}
@@ -434,16 +411,17 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             >
               {isOn ? <Eye size={12} aria-hidden="true" /> : <EyeOff size={12} aria-hidden="true" />}
             </button>
-            <button
-              type="button"
-              className={`layer-mask-row-action${isLockedMask ? ' is-locked' : ''}`}
-              aria-label={`Lock path of ${layerMask.name}`}
-              aria-pressed={isLockedMask}
-              title={isLockedMask ? 'Path locked — click to unlock' : 'Lock this mask path against accidental edits'}
-              onClick={() => updateLayerMask(layerMask.id, { locked: !isLockedMask })}
-            >
-              {isLockedMask ? <Lock size={12} aria-hidden="true" /> : <Unlock size={12} aria-hidden="true" />}
-            </button>
+            {isLockedMask && (
+              <button
+                type="button"
+                className="layer-mask-row-action is-locked"
+                aria-label={`Unlock path of ${layerMask.name}`}
+                title="Path locked (older project) — click to unlock"
+                onClick={() => updateLayerMask(layerMask.id, { locked: false })}
+              >
+                <Lock size={12} aria-hidden="true" />
+              </button>
+            )}
             {onEditMaskOnCanvas && (
               <button
                 type="button"
@@ -467,7 +445,6 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             </div>
             );
           })}
-          <button type="button" className="btn-secondary layer-mask-add" onClick={addLayerMask}>Add mask</button>
         </div>
         {onStartMaskDraw && (
           <div className="matte-span-full" role="group" aria-label="Draw a new mask on the canvas" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -517,52 +494,21 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
                 </button>
               </div>
             )}
-            {/* C4 — the mask lock protects this mask's path and its path transform. */}
-            <label className="matte-toggle-field matte-span-full">
-              <input
-                type="checkbox"
-                checked={activeLayerMask.locked === true}
-                aria-describedby="layer-mask-lock-hint"
-                onChange={(event) => updateActiveLayerMask({ locked: event.target.checked })}
-              />
-              Lock path
-              <span id="layer-mask-lock-hint" className="matte-field-hint">
-                {activeLayerMask.locked ? 'The path and its transform cannot change; mode, feather and opacity still can.' : 'Protects the path from accidental edits.'}
-              </span>
-            </label>
-            {onTransformMaskPath && (
-              <div className="matte-span-full" role="group" aria-label="Transform the mask path" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                <span className="form-label" style={{ margin: 0 }}>PATH</span>
-                <button type="button" className="btn-secondary" aria-label="Rotate mask path 15 degrees counter-clockwise" disabled={activeLayerMask.locked === true} title="Rotate the path −15° about its centre" onClick={() => onTransformMaskPath(activeLayerMask.id, { rotation: -15 })}>⟲ 15°</button>
-                <button type="button" className="btn-secondary" aria-label="Rotate mask path 15 degrees clockwise" disabled={activeLayerMask.locked === true} title="Rotate the path +15° about its centre" onClick={() => onTransformMaskPath(activeLayerMask.id, { rotation: 15 })}>⟳ 15°</button>
-                <button type="button" className="btn-secondary" aria-label="Scale mask path down 10 percent" disabled={activeLayerMask.locked === true} title="Scale the path to 90% about its centre" onClick={() => onTransformMaskPath(activeLayerMask.id, { scaleX: 0.9, scaleY: 0.9 })}>90%</button>
-                <button type="button" className="btn-secondary" aria-label="Scale mask path up 10 percent" disabled={activeLayerMask.locked === true} title="Scale the path to 110% about its centre" onClick={() => onTransformMaskPath(activeLayerMask.id, { scaleX: 1.1, scaleY: 1.1 })}>110%</button>
-              </div>
-            )}
-            <div className="matte-field matte-compact-field">
-              <label className="form-label">MODE</label>
-              <select className="select-control" style={compactSelectStyle} value={activeLayerMask.mode} onChange={(event) => updateActiveLayerMask({ mode: event.target.value as LayerMask['mode'] })}>
-                <option value="add">Add</option>
-                <option value="subtract">Subtract</option>
-                <option value="intersect">Intersect</option>
-                <option value="difference">Difference</option>
-              </select>
-            </div>
-            <label className="matte-toggle-field matte-compact-field">
-              <input type="checkbox" checked={activeLayerMask.enabled !== false} onChange={(event) => updateActiveLayerMask({ enabled: event.target.checked })} />
-              Enabled
-            </label>
             <label
-              className="matte-toggle-field matte-compact-field"
-              title="On: the mask cuts the layer (hides what is outside it). Off: an effect-only mask - it only limits an effect such as Color Correction."
+              className="matte-toggle-field matte-span-full"
+              title="Off: the layer shows only inside the mask. On: the mask cuts a hole and the layer shows outside it."
             >
               <input
                 type="checkbox"
-                aria-label="Mask cuts the layer"
-                checked={activeLayerMask.affectsAlpha !== false}
-                onChange={(event) => updateActiveLayerMask(event.target.checked ? { affectsAlpha: undefined } : { affectsAlpha: false })}
+                checked={activeLayerMask.mode === 'subtract'}
+                onChange={(event) => updateActiveLayerMask({ mode: event.target.checked ? 'subtract' : 'add' })}
               />
-              Cuts layer
+              Cut a hole
+              {isLegacyMaskMode(activeLayerMask.mode) && (
+                <span className="matte-field-hint">
+                  From an older project: {LAYER_MASK_MODE_LABEL[activeLayerMask.mode]}. Ticking or clearing the box replaces it.
+                </span>
+              )}
             </label>
             <div className="matte-field matte-compact-field">
               <label className="form-label">FEATHER</label>

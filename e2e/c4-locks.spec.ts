@@ -194,26 +194,26 @@ test('the lock is one undo step, has keyboard commands, and is saved', async ({ 
   await expect(lockButton(page, 'Top')).toHaveAttribute('aria-pressed', 'false');
 });
 
-test('a mask lock protects only that mask path and its transform', async ({ page }) => {
+// C10: new path locks are not offered; a lock saved by an older project still
+// protects the path and its row offers the unlock.
+test('a saved mask lock protects only that mask path; its row unlocks it', async ({ page }) => {
   const IMAGE = `data:image/svg+xml;base64,${Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#3b82f6"/></svg>').toString('base64')}`;
   const path = { version: 1, coordinateSpace: 'normalized', closed: true, points: [{ id: 'a', x: 0.1, y: 0.1 }, { id: 'b', x: 0.9, y: 0.1 }, { id: 'c', x: 0.9, y: 0.9 }, { id: 'd', x: 0.1, y: 0.9 }] };
   await open(page, [{ id: 'img', name: 'Photo', type: 'custom_image', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, fillColor: '#fff', strokeColor: '#000', width: 600, height: 400, imageUrl: IMAGE,
-    masks: [{ id: 'm1', name: 'Window', mode: 'add', enabled: true, path }] }]);
+    masks: [{ id: 'm1', name: 'Window', mode: 'add', enabled: true, locked: true, path }] }]);
   await row(page, 'Photo').click();
   await openDetailsTab(page, 'Masks');
   await page.getByRole('button', { name: 'Expand LAYER MASKS' }).click();
-  const lock = page.getByRole('checkbox', { name: /Lock path/ });
-  await lock.check();
+  await expect(page.getByRole('checkbox', { name: /Lock path/ })).toHaveCount(0);
   const editOnCanvas = page.getByRole('button', { name: 'Edit on Canvas' });
   await expect(editOnCanvas).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Rotate mask path 15 degrees clockwise' })).toBeDisabled();
   await expect(page.getByRole('switch', { name: 'Closed path' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Reverse direction' })).toBeDisabled();
   await expect(page.getByRole('button', { name: '1. Window (locked)' })).toBeVisible();
   // The rest of the mask is not locked.
-  const mode = page.locator('.matte-compact-field select').first();
-  await mode.selectOption('subtract');
-  await expect(mode).toHaveValue('subtract');
+  const hole = page.getByRole('checkbox', { name: 'Cut a hole' });
+  await hole.check();
+  await expect(hole).toBeChecked();
   // And the layer itself is not locked.
   await openDetailsTab(page, 'Properties');
   await page.locator('.details-body').getByRole('button', { name: 'Expand TRANSFORM' }).click();
@@ -221,6 +221,7 @@ test('a mask lock protects only that mask path and its transform', async ({ page
   const saved = await savedScene(page);
   expect(saved.layers.find((layer: { id: string }) => layer.id === 'img').masks[0]).toMatchObject({ locked: true, mode: 'subtract', path: { closed: true } });
   await openDetailsTab(page, 'Masks');
-  await lock.uncheck();
+  await page.getByRole('button', { name: 'Unlock path of Window' }).click();
   await expect(editOnCanvas).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Unlock path of Window' })).toHaveCount(0);
 });

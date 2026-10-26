@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import type { BezierPath, BezierVertex } from '../../types/animator';
-import { buildBezierPathD, initializeSmoothHandles } from '../../utils/bezierPath';
+import { buildBezierPathD } from '../../utils/bezierPath';
 import { generateId } from '../../utils/idGenerator';
 import { MIN_CLOSED_MASK_POINTS, MIN_OPEN_MASK_POINTS } from '../../utils/maskPathCreation';
 import { applyPathOrderEdit, planPathOrderEdit, type PathOrderCommand } from '../../utils/maskPathOrder';
@@ -47,9 +47,9 @@ const clampToView = (value: number): number => Math.max(-VIEW_MARGIN, Math.min(1
 
 /**
  * Numeric/visual support surface for a mask path (the canvas is the primary
- * editor). The view keeps the owner's proportions, can be expanded, and shows
- * the selected point's real type. Point-type changes reuse the canvas rule
- * (`initializeSmoothHandles`), so the two editors never disagree.
+ * editor). The view keeps the owner's proportions. C10 — Corner/Smooth and the
+ * point order are not repeated here: a point's type changes on the canvas
+ * (double-click or C, Alt-drag a handle to break it).
  */
 export const BezierPathEditor: React.FC<BezierPathEditorProps> = ({
   path,
@@ -65,7 +65,6 @@ export const BezierPathEditor: React.FC<BezierPathEditorProps> = ({
 }) => {
   const [dragTarget, setDragTarget] = useState<DragTarget | null>(null);
   const [localIndex, setLocalIndex] = useState<number | null>(0);
-  const [expanded, setExpanded] = useState(false);
   const rawIndex = controlledIndex !== undefined ? controlledIndex : localIndex;
   const selectedIndex = rawIndex !== null && rawIndex < path.points.length ? rawIndex : null;
   const selectIndex = (index: number | null) => {
@@ -188,19 +187,6 @@ export const BezierPathEditor: React.FC<BezierPathEditorProps> = ({
     ? 'An open path starts at one of its two ends: reverse its direction to start at the other end'
     : selectedIndex === null ? noSelectionReasonText : selectedIndex === 0 ? 'This point is already the first point' : null;
 
-  const selectedKind = selectedIndex !== null ? (path.points[selectedIndex].kind === 'smooth' ? 'smooth' : 'corner') : null;
-  const setPointKind = (kind: 'corner' | 'smooth') => {
-    if (selectedIndex === null || selectedKind === kind) return;
-    if (kind === 'smooth') {
-      // The canvas rule: handles from the neighbours' chord; existing handles kept.
-      onChange(initializeSmoothHandles(path, selectedIndex));
-      return;
-    }
-    onChange({
-      ...path,
-      points: path.points.map((candidate, pointIndex) => (pointIndex === selectedIndex ? { ...candidate, kind: 'corner' } : candidate)),
-    });
-  };
 
   /**
    * A dragged vertex or handle is one continuous gesture: the transaction opens on
@@ -216,20 +202,11 @@ export const BezierPathEditor: React.FC<BezierPathEditorProps> = ({
   const noSelectionReason = noSelectionReasonText;
 
   return (
-    <div className={`bezier-path-editor${expanded ? ' is-expanded' : ''}`} data-testid="bezier-path-editor">
+    <div className="bezier-path-editor" data-testid="bezier-path-editor">
       <div className="bezier-path-editor__header">
         <span className="bezier-path-editor__status" aria-live="polite">
           {selectedIndex !== null ? `Point ${selectedIndex + 1} of ${path.points.length}` : `${path.points.length} points — select one to edit`}
         </span>
-        <button
-          type="button"
-          className="btn-secondary"
-          aria-pressed={expanded}
-          onClick={() => setExpanded((value) => !value)}
-          title={expanded ? 'Show the editor at its compact size' : 'Show the editor larger'}
-        >
-          {expanded ? 'Collapse' : 'Expand'}
-        </button>
       </div>
       <svg
         className="bezier-path-editor__canvas"
@@ -292,23 +269,6 @@ export const BezierPathEditor: React.FC<BezierPathEditorProps> = ({
           );
         })}
       </svg>
-      <div className="bezier-path-editor__row" role="radiogroup" aria-label="Selected point type">
-        <span className="form-label">POINT TYPE</span>
-        {(['corner', 'smooth'] as const).map((kind) => (
-          <button
-            key={kind}
-            type="button"
-            role="radio"
-            aria-checked={selectedKind === kind}
-            className={selectedKind === kind ? 'btn-primary' : 'btn-secondary'}
-            disabled={readOnly || selectedIndex === null}
-            title={readOnlyReason ?? (selectedIndex === null ? noSelectionReason : kind === 'smooth' ? 'Smooth: the two handles stay aligned' : 'Corner: the handles move independently')}
-            onClick={() => setPointKind(kind)}
-          >
-            {kind === 'corner' ? 'Corner' : 'Smooth'}
-          </button>
-        ))}
-      </div>
       <div className="bezier-path-editor__row bezier-path-editor__controls" role="group" aria-label="Path shape">
         <button
           type="button"
@@ -328,11 +288,6 @@ export const BezierPathEditor: React.FC<BezierPathEditorProps> = ({
           Make first point
         </button>
       </div>
-      <div className="bezier-path-editor__row bezier-path-editor__controls" role="group" aria-label="Point order in the path">
-        <span className="form-label">POINT ORDER</span>
-        <button type="button" className="btn-secondary" aria-label="Move point earlier in the path order" onClick={() => runOrder('earlier')} disabled={orderLocked || selectedIndex === null || selectedIndex <= 0} title={orderReason ?? 'Swap the selected point with the previous one in the path order: the outline changes (not the layer order)'}>◀ Earlier</button>
-        <button type="button" className="btn-secondary" aria-label="Move point later in the path order" onClick={() => runOrder('later')} disabled={orderLocked || selectedIndex === null || selectedIndex >= path.points.length - 1} title={orderReason ?? 'Swap the selected point with the next one in the path order: the outline changes (not the layer order)'}>Later ▶</button>
-      </div>
       <div className="bezier-path-editor__row bezier-path-editor__controls" role="group" aria-label="Path points">
         <button type="button" className="btn-secondary" onClick={addVertex} disabled={topologyLocked} title={structureReason ?? 'Add a point between the last and the first'}>Add vertex</button>
         <button
@@ -347,7 +302,7 @@ export const BezierPathEditor: React.FC<BezierPathEditorProps> = ({
       </div>
       {readOnlyReason
         ? <p className="bezier-path-editor__note">{readOnlyReason}</p>
-        : topologyLockReason && <p className="bezier-path-editor__note">{topologyLockReason} {onOrderCommand ? 'Moving points and handles, the point order and opening/closing still work.' : 'Moving points and handles still works.'}</p>}
+        : topologyLockReason && <p className="bezier-path-editor__note">{topologyLockReason} {onOrderCommand ? 'Moving points and handles and opening/closing still work.' : 'Moving points and handles still works.'}</p>}
       {!path.closed && !readOnlyReason && (
         <p className="bezier-path-editor__note" data-testid="open-path-note">Open path: the mask still fills, as if a straight line joined the last point to the first.</p>
       )}

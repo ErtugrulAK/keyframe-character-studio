@@ -305,22 +305,4 @@ describe('WP-01 Inspector integration', () => {
     const track = h.ctx().tracks.find((candidate) => candidate.partId === partId)!;
     expect(track.maskChannels?.[featherChannel]?.find((candidate) => candidate.id === 'seq0')?.value).toBe(5);
   });
-
-  it('adds a mask with a fresh ID next to an imported mask-2', () => {
-    const h = renderInspector();
-    act(() => { h.ctx().addCustomPart('custom_rect', 'Imported'); });
-    const partId = h.ctx().characterParts[h.ctx().characterParts.length - 1].id;
-    act(() => {
-      h.ctx().setCharacterParts((prev: CharacterPart[]) => prev.map((part) => part.id === partId ? { ...part, masks: [mask({ id: 'mask-2', name: 'Imported' })] } : part));
-    });
-    act(() => { h.ctx().setSelectedPartId(partId); });
-    // C7 — masks and mattes live on the Inspector's Masks tab (Radix activates on mouse-down).
-    fireEvent.mouseDown(screen.getByRole('tab', { name: /^Masks/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Expand LAYER MASKS' }));
-
-    fireEvent.click(screen.getByRole('button', { name: 'Add mask' }));
-
-    const ids = h.ctx().characterParts.find((part) => part.id === partId)!.masks!.map((candidate) => candidate.id);
-    expect(ids).toEqual(['mask-2', 'mask-3']);
-  });
 });

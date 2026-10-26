@@ -25,8 +25,6 @@ interface StyleTabProps {
   transform?: Transform;
   coordinateSystem?: SceneCoordinateSystem;
   onChangeMaskPath?: (maskId: string, path: BezierPath) => void;
-  /** Mask IDs the layer's track still animates; a new mask never reuses one. */
-  reservedMaskIds?: readonly string[];
   /** WP-02: canvas mask editing of this layer. */
   maskEditTargetId?: string | null;
   onEditMaskOnCanvas?: (maskId: string) => void;
@@ -34,7 +32,6 @@ interface StyleTabProps {
   /** WP-03: drawing new masks and whole-path transforms. */
   maskDrawShape?: MaskDrawShape | null;
   onStartMaskDraw?: (shape: MaskDrawShape) => void;
-  onTransformMaskPath?: (maskId: string, change: { rotation?: number; scaleX?: number; scaleY?: number }) => void;
   /** WP-04: Track Matte target/source navigation. */
   matteReturnTargetId?: string | null;
   onSelectMatteSource?: (targetId: string, sourceId: string) => void;
@@ -84,13 +81,11 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   transform,
   coordinateSystem,
   onChangeMaskPath,
-  reservedMaskIds,
   maskEditTargetId,
   onEditMaskOnCanvas,
   onExitMaskEditing,
   maskDrawShape,
   onStartMaskDraw,
-  onTransformMaskPath,
   matteReturnTargetId,
   onSelectMatteSource,
   onBackToMatteTarget,
@@ -197,13 +192,11 @@ export const StyleTab: React.FC<StyleTabProps> = ({
       onInteractionStart={onColorInteractionStart}
       onInteractionEnd={onColorInteractionEnd}
       onChangeMaskPath={onChangeMaskPath}
-      reservedMaskIds={reservedMaskIds}
       maskEditTargetId={maskEditTargetId}
       onEditMaskOnCanvas={onEditMaskOnCanvas}
       onExitMaskEditing={onExitMaskEditing}
       maskDrawShape={maskDrawShape}
       onStartMaskDraw={onStartMaskDraw}
-      onTransformMaskPath={onTransformMaskPath}
       matteReturnTargetId={matteReturnTargetId}
       onSelectMatteSource={onSelectMatteSource}
       onBackToMatteTarget={onBackToMatteTarget}

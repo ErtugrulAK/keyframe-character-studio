@@ -270,7 +270,7 @@ function renderShape(layer, attrs) {
   const base = geometry(layer, '');
   const stroke = layer.strokeEnabled === false ? 'none' : layer.strokeColor || 'none';
   const strokeWidth = layer.strokeWidth === undefined ? 1.5 : layer.strokeWidth;
-  const common = attrs + ' vector-effect="non-scaling-stroke"';
+  const common = attrs;
   const id = runtimeId(layer.strokeAlignment + '-stroke', layer.id);
   const maskBase = layer.strokeAlignment === 'inside' ? 'black' : 'white';
   const maskShape = geometry(layer, ' fill="' + (layer.strokeAlignment === 'inside' ? 'white' : 'black') + '" stroke="none"');

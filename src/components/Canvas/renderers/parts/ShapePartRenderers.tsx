@@ -94,8 +94,10 @@ const renderModernShape = (
     fillOpacity: appearance.fillOpacity,
     stroke,
     strokeOpacity: appearance.strokeOpacity,
+    // C10 — the authored stroke scales with the layer and the view, as in
+    // After Effects (it used to be non-scaling: a 10-unit border stayed 10
+    // screen px on a shrunken layer or a zoomed-out stage).
     strokeWidth: appearance.strokeWidth,
-    vectorEffect: 'non-scaling-stroke' as const,
     ...dashProps,
   };
 
@@ -107,7 +109,7 @@ const renderModernShape = (
   // centered stroke of twice the width against the same authored geometry:
   // outside keeps the exterior half, inside the interior half, so either one
   // is the authored width (the OGraf renderers draw it the same way). Fill,
-  // canonical geometry, non-scaling-stroke, and Trim Path dash semantics stay
+  // canonical geometry, stroke scaling, and Trim Path dash semantics stay
   // shared.
   const alignment = appearance.strokeAlignment;
   const maskId = `${alignment}-stroke-${part.id.replace(/[^a-zA-Z0-9_-]/g, '_')}${isGhost ? '-ghost' : ''}`;

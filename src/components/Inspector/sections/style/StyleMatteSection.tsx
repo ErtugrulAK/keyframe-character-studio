@@ -3,6 +3,7 @@ import { Eye, EyeOff, Lock, PenLine, X } from 'lucide-react';
 import type { BezierPath, CharacterPart, LayerMask, MatteMode, PartMatte, Track } from '../../../../types/animator';
 import { maskPathTopologyLockReason } from '../../../../utils/maskPathCreation';
 import { BezierPathEditor } from '../../BezierPathEditor';
+import { NumberField } from '../../inputs/NumberField';
 import { pickedTrackMatte, trackMattePickVerdict } from '../../../../utils/trackMattePick';
 import { requestMaskPointsFocus } from '../../../../utils/maskPointFocus';
 import type { PathOrderCommand } from '../../../../utils/maskPathOrder';
@@ -512,15 +513,15 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             </label>
             <div className="matte-field matte-compact-field">
               <label className="form-label">FEATHER</label>
-              <input className="input-control" type="number" aria-label="Mask feather" min={0} step={0.5} value={activeLayerMask.feather ?? 0} onChange={(event) => updateActiveLayerMask({ feather: Number(event.target.value) })} />
+              <NumberField className="input-control" aria-label="Mask feather" min={0} step={0.5} value={activeLayerMask.feather ?? 0} onValue={(feather) => updateActiveLayerMask({ feather })} />
             </div>
             <div className="matte-field matte-compact-field">
               <label className="form-label">OPACITY</label>
-              <input className="input-control" type="number" aria-label="Mask opacity" min={0} max={1} step={0.05} value={activeLayerMask.opacity ?? 1} onChange={(event) => updateActiveLayerMask({ opacity: Number(event.target.value) })} />
+              <NumberField className="input-control" aria-label="Mask opacity" min={0} max={1} step={0.05} value={activeLayerMask.opacity ?? 1} onValue={(opacity) => updateActiveLayerMask({ opacity })} />
             </div>
             <div className="matte-field matte-compact-field">
               <label className="form-label">EXPANSION</label>
-              <input className="input-control" type="number" aria-label="Mask expansion" step={1} value={activeLayerMask.expansion ?? 0} onChange={(event) => updateActiveLayerMask({ expansion: Number(event.target.value) })} />
+              <NumberField className="input-control" aria-label="Mask expansion" step={1} value={activeLayerMask.expansion ?? 0} onValue={(expansion) => updateActiveLayerMask({ expansion })} />
             </div>
             <div className="matte-span-full">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -579,8 +580,10 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
                 setTrackMatte(undefined);
                 return;
               }
-              const verdict = trackMattePickVerdict(characterParts, selectedPart.id, sourceLayerId);
-              if (!verdict.ok) {
+              const verdict = sourceLayerId === trackMatte?.sourceLayerId
+                ? null
+                : trackMattePickVerdict(characterParts, selectedPart.id, sourceLayerId);
+              if (verdict && !verdict.ok) {
                 onPickRefused?.(verdict.reason);
                 return;
               }
@@ -804,26 +807,24 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
                       onChange={(e) => onChangeStop(i, { color: e.target.value })}
                       style={{ width: 26, height: 22, padding: 0, border: '1px solid var(--border-color)', background: 'transparent', cursor: gradientDisabled ? 'not-allowed' : 'pointer' }}
                     />
-                    <input
-                      type="number"
+                    <NumberField
                       aria-label={`Gradient stop ${i} offset`}
                       min={0}
                       max={1}
                       step={0.05}
                       value={Math.round(stop.offset * 100) / 100}
                       disabled={gradientDisabled}
-                      onChange={(e) => onChangeStop(i, { offset: parseFloat(e.target.value) })}
+                      onValue={(offset) => onChangeStop(i, { offset })}
                       style={{ width: 52, height: 22, background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: 4, color: '#fff', fontSize: 11, padding: '0 4px' }}
                     />
-                    <input
-                      type="number"
+                    <NumberField
                       aria-label={`Gradient stop ${i} opacity`}
                       min={0}
                       max={1}
                       step={0.05}
                       value={stop.opacity}
                       disabled={gradientDisabled}
-                      onChange={(e) => onChangeStop(i, { opacity: parseFloat(e.target.value) })}
+                      onValue={(opacity) => onChangeStop(i, { opacity })}
                       style={{ width: 52, height: 22, background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: 4, color: '#fff', fontSize: 11, padding: '0 4px' }}
                     />
                     <button

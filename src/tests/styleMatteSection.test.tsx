@@ -1257,14 +1257,14 @@ describe('StyleMatteSection — Track Matte V2 source affordance', () => {
     });
   });
 
-  it('3. selecting the first source builds the canonical Track Matte V2 record', () => {
+  it('3. selecting the first source builds the canonical Track Matte V2 record (C10: the source is hidden)', () => {
     const target = makeV2Part('tgt', 'custom_box', 'Box');
     const { onPartPropChange } = renderTrackMatte(target, [target, STAR]);
 
     fireEvent.change(screen.getByLabelText('Track matte source'), { target: { value: 'src' } });
 
     expect(onPartPropChange).toHaveBeenCalledWith('trackMatte', {
-      sourceLayerId: 'src', mode: 'alpha', enabled: true, inverted: false, sourceVisible: true,
+      sourceLayerId: 'src', mode: 'alpha', enabled: true, inverted: false, sourceVisible: false,
     });
   });
 

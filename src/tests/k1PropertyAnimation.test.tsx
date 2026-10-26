@@ -102,13 +102,13 @@ afterEach(() => {
 });
 
 describe('K1 — property animation states and activation (D2)', () => {
-  it('an unanimated property row has no stopwatch; its "+" says it starts the animation', () => {
+  it('an unanimated property row has no stopwatch; its "+" adds the first key', () => {
     const { container } = renderEditor();
     addRect('Box', 120, 40);
     expand(container, 'Box');
     expect(stateOf(container, 'Box', 'x')).toBe('off');
     expect(container.querySelector('.ue-channel-stopwatch')).toBeNull();
-    expect(`${addButton(container, 'Box', 'x').getAttribute('title')}`.toLowerCase()).toContain('animate');
+    expect(addButton(container, 'Box', 'x').getAttribute('aria-label')).toBe('Add Location X keyframe');
   });
 
   it('activating at the playhead writes the evaluated current value as the first key', () => {

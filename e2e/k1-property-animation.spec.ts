@@ -153,7 +153,7 @@ test.describe('K1 — property animation journey (D2; C10: "+" and the row menu)
     await setFrame(page, 20);
 
     // Y is not animated: its "+" starts the animation.
-    await expect(rowY(page).locator('button.track-add-kf-btn')).toHaveAttribute('title', 'Animate Location Y: add its first keyframe here');
+    await expect(rowY(page).locator('button.track-add-kf-btn')).toHaveAttribute('title', 'Add Location Y keyframe');
     await armProperty(page, 'y');
     await expect(rowY(page)).toHaveAttribute('data-animation-state', 'keyed');
     // The Y key joins the aggregate frame set {0, 20, 30}: three layer-row

@@ -250,7 +250,7 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
             disabled={isPathChannel && animationState !== 'off'}
             title={isPathChannel && animationState !== 'off'
               ? `${meta.label} geometry is authored on the path lane`
-              : animationState === 'off' ? `Animate ${meta.label}: add its first keyframe here` : `Add ${meta.label} keyframe`}
+              : `Add ${meta.label} keyframe`}
             aria-label={isPathChannel && animationState !== 'off'
               ? `${meta.label} keyframes are authored on the path lane`
               : `Add ${meta.label} keyframe`}

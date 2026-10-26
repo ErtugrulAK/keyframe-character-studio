@@ -117,7 +117,7 @@ export const HeaderBar: React.FC = () => {
     renameProjectTemplate,
     deleteProjectTemplate,
     fps,
-    setFps,
+    changeFps,
     openShortcutReference,
     characterParts,
     tracks,
@@ -586,7 +586,7 @@ export const HeaderBar: React.FC = () => {
           {/* FPS Control */}
           <select className="select-control"
             value={fps}
-            onChange={(e) => setFps(Number(e.target.value))}
+            onChange={(e) => changeFps(Number(e.target.value))}
             style={{
               width: '82px',
               background: 'var(--bg-input)',

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NumberField } from './inputs/NumberField';
+import { parseCubicBezierText } from '../../utils/cubicBezierText';
 import ReactDOM from 'react-dom';
 import { Copy, Check, X, Play, Pause, Sparkles } from 'lucide-react';
 import type { PropertyKeyframe, TemporalHandle } from '../../types/animator';
@@ -158,6 +159,21 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
     setP2(newP2);
     onChange([newP1.x, newP1.y, newP2.x, newP2.y]);
   }, [onChange]);
+
+  // C10 — paste easing code from elsewhere (CSS cubic-bezier, an array, four
+  // numbers or a CSS keyword); a value the curve cannot take says why.
+  const [pasteText, setPasteText] = useState('');
+  const [pasteError, setPasteError] = useState<string | null>(null);
+  const applyPastedEasing = () => {
+    const points = parseCubicBezierText(pasteText);
+    if (!points) {
+      setPasteError('Not a curve: use cubic-bezier(x1, y1, x2, y2) with x1 and x2 between 0 and 1.');
+      return;
+    }
+    setPasteError(null);
+    setPasteText('');
+    updatePoints({ x: points[0], y: points[1] }, { x: points[2], y: points[3] });
+  };
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(cssString);
@@ -693,6 +709,23 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                   {copied ? <Check size={13} className="text-green" /> : <Copy size={13} />}
                 </button>
               </div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                <input
+                  className="input-control"
+                  aria-label="Paste easing code"
+                  placeholder="Paste cubic-bezier(…) or 4 numbers"
+                  value={pasteText}
+                  onChange={(event) => { setPasteText(event.target.value); setPasteError(null); }}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter') return;
+                    event.preventDefault();
+                    applyPastedEasing();
+                  }}
+                  style={{ flex: 1, minWidth: 0, fontFamily: 'monospace', fontSize: 11 }}
+                />
+                <button type="button" className="btn-secondary" disabled={pasteText.trim() === ''} onClick={applyPastedEasing}>Use</button>
+              </div>
+              {pasteError && <p role="alert" style={{ margin: '6px 0 0', fontSize: 11, color: '#f87171' }}>{pasteError}</p>}
             </div>
 
             {/* Apply Button */}

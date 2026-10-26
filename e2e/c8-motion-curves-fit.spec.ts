@@ -78,3 +78,22 @@ test('no value-graph label lies on a keyframe point, and the curve labels stay i
     for (const handle of handles) expect(overlaps(label, handle), `"${label.text}" over a handle`).toBe(false);
   }
 });
+
+// C10 — easing code copied from elsewhere goes straight into the curve.
+test('pasted easing code sets the curve; code it cannot use says why and changes nothing', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openCurves(page);
+  const field = page.getByLabel('Paste easing code');
+  await field.fill('cubic-bezier(1.5, 0, 0.5, 1)');
+  await field.press('Enter');
+  await expect(page.getByRole('alert')).toContainText('Not a curve');
+  const x1Before = await page.locator('#bezier-p1-x').inputValue();
+
+  await field.fill('cubic-bezier(0.68, -0.55, 0.27, 1.55)');
+  await page.getByRole('button', { name: 'Use', exact: true }).click();
+  await expect(page.locator('#bezier-p1-x')).toHaveValue('0.68');
+  await expect(page.locator('#bezier-p1-y')).toHaveValue('-0.55');
+  await expect(page.locator('#bezier-p2-y')).toHaveValue('1.55');
+  expect(x1Before).not.toBe('0.68');
+  await expect(page.getByText('cubic-bezier(0.68, -0.55, 0.27, 1.55)')).toBeVisible();
+});

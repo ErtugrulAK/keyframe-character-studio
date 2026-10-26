@@ -1,4 +1,5 @@
 import React from 'react';
+import { NumberField } from '../../Inspector/inputs/NumberField';
 import { useAnimator } from '../../../context/useAnimator';
 
 export const ProjectDrawer: React.FC = () => {
@@ -41,18 +42,22 @@ export const ProjectDrawer: React.FC = () => {
       <div className="project-field-row">
         <div className="project-field">
           <label className="form-label project-field-label">Width (px)</label>
-          <input className="input-control project-num-input"
-                type="number"
+          <NumberField className="input-control project-num-input"
+            commit="blur"
+            min={1}
+            step={1}
             value={projectResolution.width}
-            onChange={(e) => setProjectResolution((p) => ({ ...p, width: parseInt(e.target.value) || 1920 }))}
+            onValue={(width) => { if (width >= 1) setProjectResolution((p) => ({ ...p, width: Math.round(width) })); }}
           />
         </div>
         <div className="project-field">
           <label className="form-label project-field-label">Height (px)</label>
-          <input className="input-control project-num-input"
-                type="number"
+          <NumberField className="input-control project-num-input"
+            commit="blur"
+            min={1}
+            step={1}
             value={projectResolution.height}
-            onChange={(e) => setProjectResolution((p) => ({ ...p, height: parseInt(e.target.value) || 1080 }))}
+            onValue={(height) => { if (height >= 1) setProjectResolution((p) => ({ ...p, height: Math.round(height) })); }}
           />
         </div>
       </div>

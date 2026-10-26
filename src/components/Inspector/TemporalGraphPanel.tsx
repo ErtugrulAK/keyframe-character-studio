@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
+import { NumberField } from './inputs/NumberField';
 import type { PropertyKeyframe, TemporalHandle } from '../../types/animator';
 import { effectiveSegmentAuthority, interpolateChannel } from '../../utils/defaults';
 import { PRESET_BEZIERS } from './easingPresets';
@@ -274,17 +275,16 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
         <div key={`${keyframe.id}-handles`} style={{ display: 'grid', gridTemplateColumns: 'auto repeat(4, 1fr) minmax(96px, 1.3fr)', gap: 4, alignItems: 'center', marginTop: 4 }}>
           <span style={{ fontSize: 10, color: '#94a3b8' }}>F{keyframe.frame}</span>
           {(['bezierIn', 'bezierOut'] as const).flatMap((handleName) => (['x', 'y'] as const).map((axis) => (
-            <input
+            <NumberField
               key={`${keyframe.id}-${handleName}-${axis}`}
               className="input-control"
-              type="number"
               step={0.05}
               aria-label={`Keyframe ${keyframe.frame} ${handleName} ${axis}`}
               value={keyframe[handleName]?.[axis] ?? (axis === 'x' ? 0.33 : 0)}
-              onChange={(event) => onChangeKeyframeHandles(keyframe.id, {
+              onValue={(next) => onChangeKeyframeHandles(keyframe.id, {
                 [handleName]: {
                   ...(keyframe[handleName] ?? { x: 0.33, y: 0 }),
-                  [axis]: Number(event.target.value),
+                  [axis]: next,
                 },
               })}
             />

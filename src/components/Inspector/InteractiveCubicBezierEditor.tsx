@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { NumberField } from './inputs/NumberField';
 import ReactDOM from 'react-dom';
 import { Copy, Check, X, Play, Pause, Sparkles } from 'lucide-react';
 import type { PropertyKeyframe, TemporalHandle } from '../../types/animator';
@@ -522,25 +523,23 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
                     <label className="form-label" htmlFor="bezier-p1-x" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>X1 (0..1)</label>
-                    <input id="bezier-p1-x" className="input-control"
-                type="number"
+                    <NumberField id="bezier-p1-x" className="input-control"
                       min={0}
                       max={1}
                       step={0.05}
                       value={p1.x}
                       style={{ width: '100%', background: '#0e1118', border: '1px solid #2a3348', color: '#fff', borderRadius: 5, padding: '6px 8px', fontSize: 12, fontWeight: 600 }}
-                      onChange={(e) => updatePoints({ x: clampControlPoint(parseFloat(e.target.value) || 0, 0, 1), y: p1.y }, p2)}
+                      onValue={(next) => updatePoints({ x: clampControlPoint(next, 0, 1), y: p1.y }, p2)}
                     />
                   </div>
                   <div style={{ flex: 1 }}>
                     <label className="form-label" htmlFor="bezier-p1-y" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Y1 (-1.0..2.0)</label>
-                    <input id="bezier-p1-y" className="input-control"
-                type="number"
+                    <NumberField id="bezier-p1-y" className="input-control"
                       min={-1}
                       max={2}
                       step={0.05}
                       value={p1.y}
-                      onChange={(e) => updatePoints({ x: p1.x, y: clampControlPoint(parseFloat(e.target.value) || 0, -1, 2) }, p2)}
+                      onValue={(next) => updatePoints({ x: p1.x, y: clampControlPoint(next, -1, 2) }, p2)}
                     />
                   </div>
                 </div>
@@ -553,26 +552,24 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
                     <label className="form-label" htmlFor="bezier-p2-x" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>X2 (0..1)</label>
-                    <input id="bezier-p2-x" className="input-control"
-                      type="number"
+                    <NumberField id="bezier-p2-x" className="input-control"
                       min={0}
                       max={1}
                       step={0.05}
                       value={p2.x}
                       style={{ width: '100%', background: '#0e1118', border: '1px solid #2a3348', color: '#fff', borderRadius: 5, padding: '6px 8px', fontSize: 12, fontWeight: 600 }}
-                      onChange={(e) => updatePoints(p1, { x: clampControlPoint(parseFloat(e.target.value) || 0, 0, 1), y: p2.y })}
+                      onValue={(next) => updatePoints(p1, { x: clampControlPoint(next, 0, 1), y: p2.y })}
                     />
                   </div>
                   <div style={{ flex: 1 }}>
                     <label className="form-label" htmlFor="bezier-p2-y" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Y2 (-1.0..2.0)</label>
-                    <input id="bezier-p2-y" className="input-control"
-                      type="number"
+                    <NumberField id="bezier-p2-y" className="input-control"
                       min={-1}
                       max={2}
                       step={0.05}
                       value={p2.y}
                       style={{ width: '100%', background: '#0e1118', border: '1px solid #2a3348', color: '#fff', borderRadius: 5, padding: '6px 8px', fontSize: 12, fontWeight: 600 }}
-                      onChange={(e) => updatePoints(p1, { x: p2.x, y: clampControlPoint(parseFloat(e.target.value) || 0, -1, 2) })}
+                      onValue={(next) => updatePoints(p1, { x: p2.x, y: clampControlPoint(next, -1, 2) })}
                     />
                 </div>
                   </div>

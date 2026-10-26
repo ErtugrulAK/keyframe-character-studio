@@ -1,5 +1,6 @@
 // Keyframe Studio - 2D Motion Sequencer Timeline Component
 import React, { useRef, useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
+import { NumberField } from '../Inspector/inputs/NumberField';
 import { useAnimator } from '../../context/useAnimator';
 import { commitWorkspaceLayout, createFrameEase, prefersReducedMotion, REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, type FrameEase } from '../../utils/workspaceLayout';
 import { type TrackChannel, type AnimationChannel } from '../../types/animator';
@@ -1327,18 +1328,17 @@ export const SequencerTimeline: React.FC = () => {
           <div className="duration-control-box">
             <label className="duration-label" htmlFor="sequence-duration-input">DURATION</label>
             <span className="duration-input-group">
-              <input
+              <NumberField
                 id="sequence-duration-input"
                 className="duration-input"
-                type="number"
+                commit="blur"
                 step={0.5}
                 min={0.5}
                 max={40}
                 value={Number(frameToSeconds(activeSequenceDurationFrames, fps).toFixed(1))}
                 onFocus={(e) => e.target.select()}
-                onChange={(e) => {
-                  const sec = parseFloat(e.target.value);
-                  if (!isNaN(sec) && sec > 0) {
+                onValue={(sec) => {
+                  if (sec > 0) {
                     const durationFrames = Math.round(secondsToFrame(sec, fps));
                     updateMotionTemplateDuration(activeTemplateId, durationFrames);
                     setTotalFrames(durationFrames);

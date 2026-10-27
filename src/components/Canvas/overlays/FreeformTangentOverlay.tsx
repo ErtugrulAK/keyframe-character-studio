@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { BezierPath, CharacterPart, Transform } from '../../../types/animator';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
 import { getFreeformVertexWorldPositions, resolveFreeformPath } from '../../../utils/freeform';
-import { buildBezierPathD, moveBrokenVertexHandle, moveVertexHandle, pullVertexHandles, toggleVertexKind, type BezierHandleKind } from '../../../utils/bezierPath';
+import { buildBezierPathD, altMoveVertexHandle, moveVertexHandle, pullVertexHandles, toggleVertexKind, type BezierHandleKind } from '../../../utils/bezierPath';
 import { isEditableElement, ownsShortcutScope } from '../../../utils/keyboardFocus';
 import { isBlockingModalOpen } from '../../../utils/modalBoundary';
 import { insertMaskVertex, nearestMaskPathSegment } from '../../../utils/maskPathCreation';
@@ -37,7 +37,7 @@ interface DragState {
   startClient: { x: number; y: number };
   /** False until the gesture changes something: a plain click on a point opens no history batch. */
   started: boolean;
-  /** C10 — Alt held at the press: a handle moves alone, a point pulls out new handles. */
+  /** C10 — Alt held at the press: a handle breaks or relinks, a point pulls out new handles. */
   alt: boolean;
 }
 
@@ -247,7 +247,7 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     onPathChange({
       ...active.initialPath,
       points: active.initialPath.points.map((vertex, index) => (
-        index === active.index ? (active.alt ? moveBrokenVertexHandle(vertex, handle, next) : withMovedHandle(vertex, handle, next)) : vertex
+        index === active.index ? (active.alt ? altMoveVertexHandle(vertex, handle, next) : withMovedHandle(vertex, handle, next)) : vertex
       )),
     });
   };

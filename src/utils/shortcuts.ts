@@ -231,7 +231,7 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
   // C4 — the canvas point list is one Tab stop; these keys act on the FOCUSED point.
   { id: 'mask-point-focus', label: 'Move keyboard focus into / out of the mask points', category: 'transform', gestures: ['tab', 'shift+tab'], scope: 'mask-edit', detail: 'The points are one Tab stop; focus follows the selected point. Tab again leaves them.' },
   { id: 'mask-point-ends', label: 'Go to the first / last mask point', category: 'transform', gestures: ['home', 'end'], scope: 'mask-edit', detail: 'With a mask point focused.' },
-  { id: 'mask-point-type', label: 'Switch the selected point between Corner and Smooth', category: 'transform', gestures: ['c'], scope: 'mask-edit', detail: 'Mask and path points. A double-click on the point does the same; Alt-drag a handle to move it alone, Alt-drag a point to pull out new handles. One undo step.' },
+  { id: 'mask-point-type', label: 'Switch the selected point between Corner and Smooth', category: 'transform', gestures: ['c'], scope: 'mask-edit', detail: 'Mask and path points. A double-click on the point does the same (again: the handles retract); Alt-drag a handle to break the two handles apart or link them again, Alt-drag a point to pull out new handles. One undo step.' },
   { id: 'mask-point-nudge', label: 'Nudge the selected mask point', category: 'transform', gestures: ['arrowleft', 'arrowright', 'arrowup', 'arrowdown'], scope: 'mask-edit', detail: 'Shift moves 10 units. With no point selected the whole path moves. A held key is one undo step.' },
 
   // C2-E — owned by the focused layer tree (its rows are focusable treeitems).

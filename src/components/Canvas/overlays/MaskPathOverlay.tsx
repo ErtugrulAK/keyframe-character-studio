@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { BezierPath, CharacterPart, Transform } from '../../../types/animator';
 import type { WorldAffine } from '../../../utils/containerMath';
-import { moveBrokenVertexHandle, pullVertexHandles, toggleVertexKind, type BezierHandleKind, type PathPoint } from '../../../utils/bezierPath';
+import { altMoveVertexHandle, pullVertexHandles, toggleVertexKind, type BezierHandleKind, type PathPoint } from '../../../utils/bezierPath';
 import { buildLayerMaskPathD } from '../../../utils/layerMasks';
 import {
   maskPathDeltaFromWorld,
@@ -24,15 +24,15 @@ const pullMaskHandles = (initialPath: BezierPath, index: number, delta: PathPoin
   points: initialPath.points.map((vertex, at) => (at === index ? pullVertexHandles(vertex, delta) : vertex)),
 });
 
-/** C10 — Alt-drag of a handle: the vertex turns corner, so the handle moves alone. */
-const moveBrokenMaskHandle = (initialPath: BezierPath, index: number, handle: BezierHandleKind, delta: PathPoint): BezierPath => {
+/** Alt-drag of a handle: breaks a smooth point's handles apart, or links broken ones again (C10/C12). */
+const altMoveMaskHandle = (initialPath: BezierPath, index: number, handle: BezierHandleKind, delta: PathPoint): BezierPath => {
   const vertex = initialPath.points[index];
   const start = vertex?.[handle === 'in' ? 'handleIn' : 'handleOut'];
   if (!vertex || !start || !Number.isFinite(delta.x) || !Number.isFinite(delta.y)) return initialPath;
   return {
     ...initialPath,
     points: initialPath.points.map((candidate, at) => (at === index
-      ? moveBrokenVertexHandle(candidate, handle, { x: start.x + delta.x, y: start.y + delta.y })
+      ? altMoveVertexHandle(candidate, handle, { x: start.x + delta.x, y: start.y + delta.y })
       : candidate)),
   };
 };
@@ -56,7 +56,7 @@ const NUDGE_KEYS: Record<string, { x: number; y: number }> = {
   ArrowDown: { x: 0, y: 1 },
 };
 /** The keyboard model of the point list, read by screen readers with every point. */
-const POINT_LIST_HELP = '] and [ go to the next and previous point, Home and End to the first and last. Arrow keys move the point (Shift: 10 units). C or a double-click switches Corner and Smooth; Alt-drag a handle moves it alone, Alt-drag a point pulls out new handles. Delete removes the point. Escape leaves mask editing.';
+const POINT_LIST_HELP = '] and [ go to the next and previous point, Home and End to the first and last. Arrow keys move the point (Shift: 10 units). C or a double-click adds handles to a point or retracts them; Alt-drag a handle breaks the two handles apart or links them again, Alt-drag a point pulls out new handles. Delete removes the point. Escape leaves mask editing.';
 const OUTLINE_COLOR = '#22d3ee';
 const OUTLINE_SHADOW = 'rgba(2, 6, 23, 0.85)';
 const VERTEX_FILL = '#0f172a';
@@ -77,7 +77,7 @@ interface Gesture {
   pointerId: number;
   /** True once the pointer crossed the drag threshold and the history batch opened. */
   started: boolean;
-  /** C10 — Alt held at the press: a handle moves alone, a vertex pulls out new handles. */
+  /** C10 — Alt held at the press: a handle breaks or relinks, a vertex pulls out new handles. */
   alt: boolean;
 }
 
@@ -369,7 +369,7 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
       : gesture.kind === 'vertex'
         ? (gesture.alt ? pullMaskHandles(gesture.initialPath, gesture.index, delta) : moveMaskVertex(gesture.initialPath, gesture.index, delta))
         : gesture.alt
-          ? moveBrokenMaskHandle(gesture.initialPath, gesture.index, gesture.handle ?? 'out', delta)
+          ? altMoveMaskHandle(gesture.initialPath, gesture.index, gesture.handle ?? 'out', delta)
           : moveMaskHandle(gesture.initialPath, gesture.index, gesture.handle ?? 'out', delta);
     onPathChange(next);
   };
@@ -554,7 +554,7 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
                 }}
                 onPointerDown={(event) => begin(event, 'vertex', index)}
                 onDoubleClick={(event) => {
-                  // C10 — double-click a point: Corner ↔ Smooth (one undo step).
+                  // C10/C12 — double-click a point: handles out, or retracted (one undo step).
                   event.stopPropagation();
                   if (gestureRef.current) return;
                   onBatchStart();

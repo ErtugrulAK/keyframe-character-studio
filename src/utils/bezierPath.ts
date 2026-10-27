@@ -343,14 +343,17 @@ export const moveVertexHandle = (
 };
 
 /**
- * C10 — Alt-drag of a tangent handle: the vertex becomes a corner first, so
- * only the dragged handle moves and its counterpart stays where it is.
+ * Alt-drag of a tangent handle switches the link, as in After Effects. C10:
+ * on a smooth vertex the vertex becomes a corner, so only the dragged handle
+ * moves and its counterpart stays where it is. C12: on a corner (handles
+ * already broken) the vertex becomes smooth again, so the counterpart turns
+ * to mirror the dragged handle and keeps its own length.
  */
-export const moveBrokenVertexHandle = (
+export const altMoveVertexHandle = (
   vertex: BezierVertex,
   handle: BezierHandleKind,
   next: PathPoint,
-): BezierVertex => moveVertexHandle({ ...vertex, kind: 'corner' }, handle, next);
+): BezierVertex => moveVertexHandle({ ...vertex, kind: vertex.kind === 'smooth' ? 'corner' : 'smooth' }, handle, next);
 
 /**
  * C10 — Alt-drag from a vertex pulls out new handles, as in After Effects:
@@ -369,12 +372,24 @@ export const pullVertexHandles = (vertex: BezierVertex, offset: PathPoint): Bezi
   };
 };
 
-/** C10 — Corner ↔ Smooth for one vertex (double-click or C on the canvas). */
+/**
+ * Double-click or C on a canvas point (C10). C12: a point WITH handles
+ * (smooth, or a corner whose handles were broken apart) becomes a sharp
+ * corner with its handles retracted; a point without handles becomes smooth
+ * with fresh mirrored handles. So a second double-click undoes the first.
+ */
 export const toggleVertexKind = (path: BezierPath, index: number): BezierPath => {
   const vertex = path.points[index];
   if (!vertex) return path;
-  if (vertex.kind === 'smooth') {
-    return { ...path, points: path.points.map((candidate, at) => (at === index ? { ...candidate, kind: 'corner' as const } : candidate)) };
+  if (vertex.handleIn || vertex.handleOut) {
+    return {
+      ...path,
+      points: path.points.map((candidate, at) => {
+        if (at !== index) return candidate;
+        const { handleIn: _in, handleOut: _out, ...rest } = candidate;
+        return { ...rest, kind: 'corner' as const };
+      }),
+    };
   }
   return initializeSmoothHandles(path, index);
 };

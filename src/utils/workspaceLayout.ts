@@ -50,6 +50,38 @@ export const shouldOpenWithLeftDockClosed = (stageWidth: number): boolean => (
   Number.isFinite(stageWidth) && stageWidth > 0 && stageWidth < MIN_OPENING_STAGE_WIDTH
 );
 
+/**
+ * C11 — phone-width windows, where the docks open over the stage instead of
+ * beside it (kcsEditorTheme.css uses the same 600 px breakpoint). Only there
+ * does the inspector also open closed: it would cover the stage entirely.
+ */
+export const PHONE_LAYOUT_QUERY = '(max-width: 600px)';
+
+export const isPhoneLayout = (): boolean => (
+  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+  && window.matchMedia(PHONE_LAYOUT_QUERY).matches
+);
+
+/**
+ * C11 — closes the docks, left first, while the stage is narrower than
+ * MIN_OPENING_STAGE_WIDTH. Used at mount and when the window is made narrower
+ * (a phone, a tablet, a browser snapped to half the screen); never on the
+ * user's own toggles, so a dock the user reopens stays open. `closers` must
+ * re-layout synchronously (`snap` does), so the stage is re-measured between
+ * them. Returns whether the stage was narrow at all.
+ */
+export const closeDocksForNarrowStage = (
+  measureStageWidth: () => number,
+  closers: ReadonlyArray<() => void>,
+): boolean => {
+  if (!shouldOpenWithLeftDockClosed(measureStageWidth())) return false;
+  for (const close of closers) {
+    close();
+    if (!shouldOpenWithLeftDockClosed(measureStageWidth())) break;
+  }
+  return true;
+};
+
 export const commitWorkspaceLayout = (apply: () => void): void => {
   flushSync(apply);
   window.dispatchEvent(new CustomEvent(WORKSPACE_LAYOUT_COMMAND_EVENT, { detail: { type: REMEASURE_STAGE_BOX_COMMAND } }));

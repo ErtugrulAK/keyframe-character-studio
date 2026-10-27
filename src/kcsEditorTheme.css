@@ -1331,3 +1331,91 @@ button:disabled {
 @media (max-height: 820px) {
   .header-bar { height: auto; min-height: 48px; padding-block: 4px; }
 }
+
+/*
+ * C11 — phone-width windows (≤ 600 px: a phone, or a browser squeezed to a
+ * third of the screen). Nothing may be cut off or push the page sideways.
+ * - The docks open OVER the stage instead of beside it: two docks plus a stage
+ *   do not fit 390 px, and squeezing the stage to 0 px left nothing to edit.
+ *   (They open closed here; see `closeDocksForNarrowStage`.)
+ * - The authoring strip tightens its spacing so its commands fit without
+ *   scrolling; its height stays fixed (camera invariance).
+ */
+@media (max-width: 600px) {
+  .main-layout > .left-toolbar-container,
+  .main-layout > .motion-design-right-sidebar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 6;
+  }
+  .main-layout > .left-toolbar-container { left: 0; }
+  .main-layout > .motion-design-right-sidebar { right: 0; }
+
+  .authoring-toolbar { gap: 2px; padding: 0 6px; }
+  .authoring-toolbar .authoring-toolbar-button { width: 24px; }
+}
+
+/* C11 — below 700 px (phones, a third of a 1920 px screen) the header puts its
+   actions on a row of its own: in one row the mode switch painted over the
+   template tabs (390 px) or clipped their "+" (601–699 px). */
+@media (max-width: 699px) {
+  .header-bar { flex-wrap: wrap; row-gap: 4px; }
+  .header-brand { flex: 1 1 0; }
+  .header-bar .header-center-controls { flex: 0 0 auto; }
+  .header-bar .header-actions { order: 3; flex: 1 0 100%; justify-content: flex-end; padding-left: 0; border-left: 0; }
+}
+
+/* C11 — below 720 px the timing band (time, duration, presets, Crop) and the
+   transport no longer fit one row; measured at 640 px the transport painted
+   over Crop. The header becomes: time + transport, duration, actions. */
+@media (max-width: 719px) {
+  .timeline-header { display: flex; flex-wrap: wrap; align-items: center; height: auto; row-gap: 6px; }
+  .timeline-header .timeline-header-left { display: contents; }
+  .timeline-header .timeline-header-left > .divider-v { display: none; }
+  .timeline-header .timeline-timing-group { order: 1; }
+  .timeline-header .timeline-transport-band { order: 2; margin-left: auto; }
+  .timeline-header .duration-control-box { order: 3; flex: 1 1 100%; min-width: 0; }
+  .timeline-header .timeline-actions-band { order: 4; flex: 1 1 100%; }
+}
+
+/* C11 — 700–960 px: the header stays one row; the mode switch gives up its
+   88 px minimum and the dividers some padding so the template tabs' "+" is not
+   clipped (measured: 2–10 px short at 640–720 px and 861–900 px, where the
+   autosave label still showed). */
+@media (max-width: 960px) {
+  .header-bar { column-gap: 4px; }
+  .header-center-controls .header-mode-button { min-width: 0; padding: 0 6px !important; }
+  .header-bar .header-brand { padding-right: 6px; }
+  /* the autosave label goes icon-only here too (was ≤ 860 px); its text stays
+     the accessible name, the badge keeps its tooltip */
+  .header-bar .autosave-text { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .header-bar .header-actions { padding-left: 6px; }
+}
+
+/* C11 — the narrowest phones (≤ 380 px, e.g. 360 px): the band dividers drop
+   their side margins so the last command (View) is not 7 px past the edge.
+   At 320 px the commands are narrower still and the duration row wraps its
+   presets and Crop under the input. */
+@media (max-width: 380px) {
+  .authoring-toolbar .authoring-toolbar-divider { margin-inline: 0; }
+}
+@media (max-width: 359px) {
+  .authoring-toolbar .authoring-toolbar-button { width: 21px; }
+  .timeline-header .duration-control-box { flex-wrap: wrap; row-gap: 6px; }
+}
+
+/* C11 — the FPS select and the duration field keep their widths: squeezed
+   by their rows, the select cut its own label ("60 FP", 65–79 px of 82 px at
+   861–1366 px) and the duration field hid its digits (34 of 58 px at
+   1181–1200 px). */
+.header-actions > .select-control,
+.timeline-header .duration-input-group { flex-shrink: 0; }
+
+/* C11 — the actions band takes its own row up to 1220 px (was 1180): with the
+   duration field at full width the timing band no longer fits beside the
+   transport and the actions at 1181–1220 px. */
+@media (max-width: 1220px) {
+  .timeline-header { grid-template-columns: 1fr auto; height: auto; row-gap: 6px; }
+  .timeline-actions-band { grid-column: 1 / -1; justify-content: flex-start; }
+}

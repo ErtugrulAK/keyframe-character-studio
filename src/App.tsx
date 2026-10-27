@@ -11,7 +11,7 @@ import { PropertyInspector } from './components/Inspector/PropertyInspector';
 import { SequencerTimeline } from './components/Timeline/SequencerTimeline';
 import { LiveDirectorPanel } from './components/Broadcast/LiveDirectorPanel';
 import { useDockedPanelEdge } from './hooks/useDockedPanelEdge';
-import { REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, shouldOpenWithLeftDockClosed } from './utils/workspaceLayout';
+import { REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, closeDocksForNarrowStage, isPhoneLayout } from './utils/workspaceLayout';
 
 import './kcsEditorTheme.css';
 
@@ -45,17 +45,33 @@ const MainAppContent: React.FC = () => {
   // when the stage would otherwise be narrower than MIN_OPENING_STAGE_WIDTH.
   // Measured once from the real first layout, before the first paint (the
   // microtask runs before the browser paints, outside React's commit), then the
-  // untouched opening camera is re-fitted to the wider stage. Never re-applied:
-  // after this the dock opens and closes only when the user says so.
+  // untouched opening camera is re-fitted to the wider stage. After this the
+  // dock opens and closes only when the user says so, or (C11, below) when the
+  // window itself is made narrower.
+  // C11: on a phone-width window the docks open OVER the stage
+  // (kcsEditorTheme.css), so they never squeeze it to nothing, and the
+  // inspector opens closed too — open, it would cover the whole stage.
   const snapLeftDock = leftToolbar.snap;
+  const snapInspector = inspector.snap;
+  const closeDocksIfStageNarrow = useCallback((): boolean => {
+    const stage = document.querySelector('.stage-canvas-container');
+    if (!stage) return false;
+    if (isPhoneLayout()) {
+      // The docks would cover the stage: both start (or become) closed.
+      snapLeftDock(false);
+      snapInspector(false);
+      return true;
+    }
+    return closeDocksForNarrowStage(
+      () => stage.getBoundingClientRect().width,
+      [() => snapLeftDock(false)],
+    );
+  }, [snapLeftDock, snapInspector]);
   useLayoutEffect(() => {
     if (appMode !== 'edit') return;
     let cancelled = false;
     queueMicrotask(() => {
-      if (cancelled) return;
-      const stage = document.querySelector('.stage-canvas-container');
-      if (!stage || !shouldOpenWithLeftDockClosed(stage.getBoundingClientRect().width)) return;
-      snapLeftDock(false);
+      if (cancelled || !closeDocksIfStageNarrow()) return;
       window.dispatchEvent(new CustomEvent(WORKSPACE_LAYOUT_COMMAND_EVENT, { detail: { type: REFIT_UNTOUCHED_CAMERA_COMMAND } }));
     });
     return () => {
@@ -64,6 +80,30 @@ const MainAppContent: React.FC = () => {
     // Mount only, by design.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // C11 — the same rule when the WINDOW is made narrower (resizing, snapping
+  // the browser to half the screen, rotating a tablet). Only a shrink acts, so
+  // a dock the user reopens in a narrow window is never closed again under them.
+  useEffect(() => {
+    if (appMode !== 'edit') return;
+    let lastWidth = window.innerWidth;
+    let frame: number | null = null;
+    const onResize = () => {
+      if (frame !== null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        const width = window.innerWidth;
+        const shrank = width < lastWidth;
+        lastWidth = width;
+        if (shrank) closeDocksIfStageNarrow();
+      });
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
+  }, [appMode, closeDocksIfStageNarrow]);
 
   // R2-07 — the browser's native context menu is suppressed for the whole
   // editor: canvas, layer list, sequence tabs, toolbar, timeline, Details and

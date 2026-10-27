@@ -204,6 +204,12 @@ test('R5-01 — both dock handles are anchored to the panel boundary, never to p
   await drag(2000);
   await page.setViewportSize({ width: 1120, height: 620 });
   await expect.poll(timelineHeight).toBeGreaterThan(0);
+  // C11: shrinking to 1120 px left a 388 px stage, so the left dock closed
+  // itself (the narrow-window rule); the user reopens it and the handle
+  // contract is checked with both docks open, as before.
+  await expect(page.locator('.left-toolbar-toggle')).toHaveAttribute('aria-expanded', 'false');
+  await page.getByRole('button', { name: 'Show Left Toolbar' }).click();
+  await expect.poll(() => page.locator('#left-toolbar-panel').evaluate((node) => (node as HTMLElement).style.width)).toBe('');
   const shortReport = await dockBoundaryReport(page);
   expectHandleBoundary('short viewport', shortReport, 'left', true);
   expectHandleBoundary('short viewport', shortReport, 'right', true);

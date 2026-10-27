@@ -23,13 +23,13 @@ async function seedParallelogram(page: Page) {
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 }
 
-test('mirror duplicate keeps the selection gizmo aligned with a parallelogram', async ({ page }) => {
+// C10: the mirror-copy card is gone; a horizontal flip gives the same
+// negative-scale parallelogram the gizmo must stay aligned with.
+test('a horizontal flip keeps the selection gizmo aligned with a parallelogram', async ({ page }) => {
   await seedParallelogram(page);
   await page.locator('.actor-node', { hasText: 'Parallelogram' }).click();
-  await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
-  await page.getByRole('button', { name: /Mirror Y/i }).click();
+  await page.getByRole('button', { name: 'Flip horizontal', exact: true }).click();
 
-  await expect(page.locator('.ue-outliner').getByText('Parallelogram Mirror Y').first()).toBeVisible();
   const gizmo = page.locator('[data-testid="transform-gizmo"]');
   await expect(gizmo).toBeVisible();
   await expect(gizmo.locator(':scope > g')).toHaveAttribute('transform', 'scale(-1, 1)');

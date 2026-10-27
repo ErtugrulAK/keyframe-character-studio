@@ -26,7 +26,9 @@ export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, current
       stroke: textStroke,
       strokeOpacity: appearance.strokeOpacity,
       strokeWidth: appearance.strokeWidth,
-      vectorEffect: 'non-scaling-stroke' as const,
+      // C10 — an authored outline scales with the layer and the view; only the
+      // selection highlight (outline switched off) stays screen-constant.
+      ...(appearance.strokeEnabled ? {} : { vectorEffect: 'non-scaling-stroke' as const }),
     };
 
     if (isStaggered) {

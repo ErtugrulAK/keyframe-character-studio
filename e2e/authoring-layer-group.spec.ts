@@ -188,6 +188,18 @@ test('deleting a group deletes the layers it owns', async ({ page }) => {
   await page.locator('.actor-node[data-group-container="true"]').first().click();
   await page.keyboard.press('Delete');
 
+  // C5 — a group is a container: the delete names the layers it takes BEFORE
+  // anything changes (Cancel keeps all of them).
+  const dialog = page.getByTestId('delete-dependents-dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByTestId('delete-owned-list')).toContainText('Alpha');
+  await expect(dialog.getByTestId('delete-owned-list')).toContainText('Beta');
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.locator('.actor-node')).toHaveCount(4);
+  await page.locator('.actor-node[data-group-container="true"]').first().click();
+  await page.keyboard.press('Delete');
+  await dialog.getByRole('button', { name: 'Delete 3 layers' }).click();
+
   await expect(page.locator('.actor-node')).toHaveCount(1);
   await expect(page.locator('.actor-node', { hasText: 'Gamma' })).toHaveCount(1);
   await expect(page.locator('[data-part-id="a"]')).toHaveCount(0);

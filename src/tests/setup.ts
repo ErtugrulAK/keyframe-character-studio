@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
+import { resetRetainedUiState } from '../hooks/useRetainedUiState';
 
 // Polyfill WebIDL for Undici / JSDOM compatibility in Node environments
 if (typeof (globalThis as any).webidl === 'object') {
@@ -32,6 +33,8 @@ if (typeof window !== 'undefined') {
 
 afterEach(() => {
   cleanup();
+  // Session-retained panel UI state (C2-G) must not leak between tests.
+  resetRetainedUiState();
 });
 
 /**

@@ -9,6 +9,7 @@ import {
   planDistributeByGap,
   planFlip,
   planRotate,
+  planTranslate,
   type ArrangePlan,
 } from '../utils/vectorArrange';
 
@@ -305,6 +306,22 @@ describe('planFlip', () => {
     expect(after!.maxX).toBeCloseTo(before!.maxX, 6);
     expect(after!.minY).toBeCloseTo(before!.minY, 6);
     expect(after!.maxY).toBeCloseTo(before!.maxY, 6);
+  });
+});
+
+describe('planTranslate (arrow-key nudge)', () => {
+  it('moves every target by the same world offset from its captured position', () => {
+    const parts = [rect('a', 10, 5), rect('b', -40, 20)];
+    const targets = targetsOf(parts, ['a', 'b']);
+    expect(planTranslate(targets, 3, -10)).toEqual({ a: { x: 13, y: -5 }, b: { x: -37, y: 10 } });
+    // The offset is the TOTAL since the start: a held key never compounds.
+    expect(planTranslate(targets, 6, -10)).toEqual({ a: { x: 16, y: -5 }, b: { x: -34, y: 10 } });
+  });
+
+  it('writes only the axis that moves, and nothing for a zero offset', () => {
+    const targets = targetsOf([rect('a', 10, 5)], ['a']);
+    expect(planTranslate(targets, 1, 0)).toEqual({ a: { x: 11 } });
+    expect(planTranslate(targets, 0, 0)).toEqual({});
   });
 });
 

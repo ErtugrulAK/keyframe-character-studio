@@ -4,6 +4,7 @@ import type { EvaluatedLayer, LayerContent } from '../types/composition';
 import { buildBezierPathD } from '../utils/bezierPath';
 import { buildFreeformPath } from '../utils/freeform';
 import { buildLayerMaskDefinition, layerMaskFilterId } from '../utils/layerMasks';
+import { alphaMasks, colorCorrectionFilter, colorCorrectionIds, resolveColorCorrection, resolvedParameters } from '../utils/colorCorrection';
 import { resolveMatteSource } from '../utils/matte';
 import { stackingOrder } from '../utils/stackingOrder';
 import { getShapeGeometry, polygonPointsToString } from '../utils/shapeGeometry';
@@ -64,7 +65,7 @@ function renderGeometry(type: string, content: LayerContent, props: SvgAttribute
         ? buildFreeformPath(content.points)
         : '';
     if (!path) return '';
-    return `<path d="${escapeXml(path)}" stroke-linejoin="round"${attributes(props)} />`;
+    return `<path d="${escapeXml(path)}" stroke-linejoin="${content.strokeLinejoin === 'miter' ? 'miter' : 'round'}"${attributes(props)} />`;
   }
   if (!geometry) return '';
   if (geometry.kind === 'circle') return `<circle cx="0" cy="0" r="${svgNumber(geometry.r)}"${attributes(props)} />`;
@@ -99,7 +100,7 @@ function renderText(layer: EvaluatedLayer, props: SvgAttributes = {}): string {
   const strokeColor = stroke === undefined ? authoredStroke : String(stroke);
   const fillColor = fill === undefined ? (appearance.fillEnabled ? appearance.fillColor : 'none') : String(fill);
   const resolvedFillOpacity = fillOpacity === undefined ? appearance.fillOpacity : Number(fillOpacity);
-  return `<text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${escapeXml(fillColor || 'none')}" fill-opacity="${svgNumber(resolvedFillOpacity ?? 1)}" stroke="${escapeXml(strokeColor || 'none')}" stroke-opacity="${svgNumber(appearance.strokeOpacity)}" stroke-width="${svgNumber(appearance.strokeWidth)}" font-size="${svgNumber(content.fontSize || 24)}" font-weight="bold" font-family="${escapeXml(content.fontFamily || 'Outfit')}" vector-effect="non-scaling-stroke"${attributes(rest)}>${escapeXml(text)}</text>`;
+  return `<text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${escapeXml(fillColor || 'none')}" fill-opacity="${svgNumber(resolvedFillOpacity ?? 1)}" stroke="${escapeXml(strokeColor || 'none')}" stroke-opacity="${svgNumber(appearance.strokeOpacity)}" stroke-width="${svgNumber(appearance.strokeWidth)}" font-size="${svgNumber(content.fontSize || 24)}" font-weight="bold" font-family="${escapeXml(content.fontFamily || 'Outfit')}"${attributes(rest)}>${escapeXml(text)}</text>`;
 }
 
 function renderImage(layer: EvaluatedLayer, options: OGrafSvgRenderOptions, props: SvgAttributes = {}): string {
@@ -168,6 +169,9 @@ function renderShape(layer: EvaluatedLayer): string {
     stroke: appearance.strokeEnabled ? appearance.strokeColor : 'none',
     'stroke-opacity': appearance.strokeOpacity,
     'stroke-width': appearance.strokeWidth,
+    // C12 — as in the editor, the stroke is in scene units whatever the
+    // layer's own scale (the document is drawn at one unit per pixel).
+    'vector-effect': 'non-scaling-stroke',
     ...renderTrim(content),
   };
   const geometry = renderGeometry(layer.type, content, common);
@@ -204,7 +208,8 @@ function asCharacterPart(layer: EvaluatedLayer): CharacterPart {
 }
 
 function renderLayerMaskDefinitions(scene: OGrafEvaluatedScene, target: EvaluatedLayer): { defs: string; ids: string[] } {
-  const masks = target.content.masks || [];
+  // WP-08 — effect-only masks scope an effect; they never cut the layer.
+  const masks = alphaMasks(target.content.masks);
   if (masks.length === 0) return { defs: '', ids: [] };
   const part = asCharacterPart(target);
   const region = `M 0 0 H ${scene.width} V ${scene.height} H 0 Z`;
@@ -239,7 +244,7 @@ function renderLayerMaskDefinitions(scene: OGrafEvaluatedScene, target: Evaluate
         ? `<path d="${escapeXml(definition.pathD)}" fill="white" fill-opacity="${svgNumber(definition.opacity)}" mask="url(#${escapeXml(previousId)})"${filterAttribute} />`
         : `<rect x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" fill="white" mask="url(#${escapeXml(previousId)})" /><path d="${escapeXml(definition.pathD)}" fill="black" fill-opacity="${svgNumber(definition.opacity)}"${filterAttribute} />`;
     }
-    definitions.push(`${filter}<mask id="${escapeXml(id)}" x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="alpha" data-mask-operation="${escapeXml(effectiveMode)}">${body}</mask>`);
+    definitions.push(`${filter}<mask id="${escapeXml(id)}" x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="luminance" data-mask-operation="${escapeXml(effectiveMode)}">${body}</mask>`);
     previousId = id;
   });
   return { defs: definitions.join(''), ids: previousId ? [previousId] : [] };
@@ -329,7 +334,56 @@ function renderClipDefs(scene: OGrafEvaluatedScene, options: OGrafSvgRenderOptio
   return defs.join('');
 }
 
-function renderLayer(scene: OGrafEvaluatedScene, layer: EvaluatedLayer, options: OGrafSvgRenderOptions, maskIds: string[], matteId?: string, hidden = false): string {
+/** WP-08 — how one layer's colour correction is drawn in this renderer. */
+interface ColorCorrectionMarkup {
+  filterId: string;
+  coverageId?: string;
+  inverseId?: string;
+  amount: number;
+}
+
+/**
+ * WP-08 — the same correction the editor draws (`PartRenderer`): one sRGB
+ * filter F and, for a mask scope, a coverage luminance mask w and its inverse
+ * (1 - w) built from the layer's evaluated mask. Anything but an 'applied'
+ * correction (off, neutral, missing or disabled mask) produces nothing.
+ */
+function renderColorCorrectionDefinitions(scene: OGrafEvaluatedScene, target: EvaluatedLayer): { defs: string; markup?: ColorCorrectionMarkup } {
+  const status = resolveColorCorrection({ effects: target.content.effects }, target.content.masks);
+  if (status.kind !== 'applied') return { defs: '' };
+  const ids = colorCorrectionIds(target.id, status.effect.id);
+  const { amount } = resolvedParameters(status.effect);
+  const { slope, intercept, matrix } = colorCorrectionFilter(status.effect);
+  const funcs = ['R', 'G', 'B'].map((channel) => `<feFunc${channel} type="linear" slope="${svgNumber(slope)}" intercept="${svgNumber(intercept)}" />`).join('');
+  const filter = `<filter id="${escapeXml(ids.filter)}" color-interpolation-filters="sRGB"><feComponentTransfer>${funcs}</feComponentTransfer><feColorMatrix type="matrix" values="${escapeXml(matrix)}" /></filter>`;
+  if (!status.mask) return { defs: filter, markup: { filterId: ids.filter, amount } };
+  const definition = buildLayerMaskDefinition(asCharacterPart(target), status.mask, target.transform, { x: scene.width / 2, y: scene.height / 2 });
+  if (!definition) return { defs: '' };
+  const region = `M 0 0 H ${scene.width} V ${scene.height} H 0 Z`;
+  const shapeD = definition.inverted ? `${region} ${definition.pathD}` : definition.pathD;
+  const fillRule = definition.inverted ? ' fill-rule="evenodd"' : '';
+  const weight = svgNumber(definition.opacity * amount);
+  const blurred = definition.feather > 0 || definition.expansion !== 0;
+  const coverageFilterId = safeSvgId(layerMaskFilterId(ids.coverage));
+  const coverageFilter = blurred
+    ? `<filter id="${coverageFilterId}" filterUnits="userSpaceOnUse">${definition.expansion !== 0 ? `<feMorphology operator="${definition.expansion > 0 ? 'dilate' : 'erode'}" radius="${Math.abs(definition.expansion)}" />` : ''}${definition.feather > 0 ? `<feGaussianBlur stdDeviation="${definition.feather / 2}" />` : ''}</filter>`
+    : '';
+  const filterAttribute = blurred ? ` filter="url(#${coverageFilterId})"` : '';
+  const box = `x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="luminance"`;
+  const coverage = `<mask id="${escapeXml(ids.coverage)}" ${box}><path d="${escapeXml(shapeD)}"${fillRule} fill="white" fill-opacity="${weight}"${filterAttribute} /></mask>`;
+  const inverse = `<mask id="${escapeXml(ids.inverse)}" ${box}><rect x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" fill="white" /><path d="${escapeXml(shapeD)}"${fillRule} fill="black" fill-opacity="${weight}"${filterAttribute} /></mask>`;
+  return { defs: `${filter}${coverageFilter}${coverage}${inverse}`, markup: { filterId: ids.filter, coverageId: ids.coverage, inverseId: ids.inverse, amount } };
+}
+
+/** WP-08 — C_out = (1 - w)*C + w*F(C), A_out = A: two copies in an isolated group, the second added with plus-lighter. */
+function mixColorCorrection(body: string, correction: ColorCorrectionMarkup | undefined): string {
+  if (!correction) return body;
+  const original = correction.inverseId ? ` mask="url(#${escapeXml(correction.inverseId)})"` : ` opacity="${svgNumber(1 - correction.amount)}"`;
+  const corrected = correction.coverageId ? ` mask="url(#${escapeXml(correction.coverageId)})"` : ` opacity="${svgNumber(correction.amount)}"`;
+  return `<g style="isolation:isolate" data-color-correction="applied"><g${original}>${body}</g><g${corrected} filter="url(#${escapeXml(correction.filterId)})" style="mix-blend-mode:plus-lighter">${body}</g></g>`;
+}
+
+function renderLayer(scene: OGrafEvaluatedScene, layer: EvaluatedLayer, options: OGrafSvgRenderOptions, maskIds: string[], matteId?: string, hidden = false, correction?: ColorCorrectionMarkup): string {
   if (hidden || !layer.visible || layer.opacity <= 0) return '';
   const body = layer.type === 'custom_text' || layer.type === 'custom_image' ? renderLayerContent(layer, options) : renderShape(layer);
   const legacyMatte = layer.content.matte;
@@ -338,7 +392,7 @@ function renderLayer(scene: OGrafEvaluatedScene, layer: EvaluatedLayer, options:
   const clip = clipSourceId && (relationship?.mode === undefined && (legacyMatte?.mode === 'clip' || (!relationship && Boolean(legacyMatte))))
     ? ` clip-path="url(#kcs-clip-${safeSvgId(clipSourceId)})"` : '';
   const allMaskIds = [...maskIds, ...(matteId ? [matteId] : [])];
-  const transformedBody = `<g transform="${layerTransform(scene, layer)}">${body}</g>`;
+  const transformedBody = mixColorCorrection(`<g transform="${layerTransform(scene, layer)}">${body}</g>`, correction);
   const maskedBody = allMaskIds.reduceRight(
     (content, id) => `<g mask="url(#${escapeXml(id)})">${content}</g>`,
     transformedBody,
@@ -350,17 +404,21 @@ export function renderOGrafSvg(scene: OGrafEvaluatedScene, options: OGrafSvgRend
   const defs: string[] = [renderClipDefs(scene, options)];
   const maskIds = new Map<string, string[]>();
   const matteIds = new Map<string, string>();
+  const corrections = new Map<string, ColorCorrectionMarkup>();
   const hiddenSources = new Set<string>();
   for (const target of scene.layers) {
     const layerMasks = renderLayerMaskDefinitions(scene, target);
     defs.push(layerMasks.defs);
     maskIds.set(target.id, layerMasks.ids);
+    const correction = renderColorCorrectionDefinitions(scene, target);
+    defs.push(correction.defs);
+    if (correction.markup) corrections.set(target.id, correction.markup);
     const matte = renderTrackMatteDefinition(scene, target, options);
     defs.push(matte.defs);
     if (matte.id) matteIds.set(target.id, matte.id);
     if (matte.relationship && !matte.relationship.sourceVisible) hiddenSources.add(matte.relationship.sourceLayerId);
   }
   // The paint order is the stacking order, never the authored array order.
-  const layers = stackingOrder(scene.layers).map((layer) => renderLayer(scene, layer, options, maskIds.get(layer.id) || [], matteIds.get(layer.id), hiddenSources.has(layer.id))).join('');
+  const layers = stackingOrder(scene.layers).map((layer) => renderLayer(scene, layer, options, maskIds.get(layer.id) || [], matteIds.get(layer.id), hiddenSources.has(layer.id), corrections.get(layer.id))).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${scene.width}" height="${scene.height}" viewBox="0 0 ${scene.width} ${scene.height}"><defs>${defs.join('')}</defs>${layers}</svg>`;
 }

@@ -60,7 +60,7 @@ describe('OutlinerPanel — M22 matte relationship indicator', () => {
     renderPanel();
     expect(screen.getByLabelText('Matte source: The Cow')).toBeTruthy();
     // the name appears both as the source row label AND the matte indicator
-    expect(screen.getByText('Mask → The Cow')).toBeTruthy();
+    expect(screen.getByText('Clip · The Cow')).toBeTruthy();
   });
 
   it('4. source name uses CharacterPart.name (never track.name)', () => {
@@ -81,7 +81,7 @@ describe('OutlinerPanel — M22 matte relationship indicator', () => {
     ];
     renderPanel();
     expect(screen.getByLabelText('Missing matte source')).toBeTruthy();
-    expect(screen.getByText('Mask → Missing')).toBeTruthy();
+    expect(screen.getByText('Clip · missing')).toBeTruthy();
   });
 
   it('7. indicator carries an accessible label/title', () => {
@@ -250,7 +250,7 @@ describe('OutlinerPanel — Track Matte V2 relationship indicator', () => {
     renderPanel();
 
     expect(screen.getByLabelText('Track matte source: The Cow')).toBeTruthy();
-    expect(screen.getByText('Mask → The Cow')).toBeTruthy();
+    expect(screen.getByText('Matte · The Cow')).toBeTruthy();
   });
 
   it('2. a missing Track Matte V2 source reports missing instead of crashing', () => {
@@ -260,7 +260,7 @@ describe('OutlinerPanel — Track Matte V2 relationship indicator', () => {
     renderPanel();
 
     expect(screen.getByLabelText('Missing track matte source')).toBeTruthy();
-    expect(screen.getByText('Mask → Missing')).toBeTruthy();
+    expect(screen.getByText('Matte · missing')).toBeTruthy();
   });
 
   it('3. Track Matte V2 wins when an enabled legacy matte is also present', () => {
@@ -295,7 +295,24 @@ describe('OutlinerPanel — Track Matte V2 relationship indicator', () => {
     renderPanel();
 
     expect(screen.queryByLabelText(/Matte source/)).toBeNull();
-    expect(screen.queryByText('Mask → Src')).toBeNull();
+    expect(screen.queryByText(/· Src$/)).toBeNull();
+  });
+
+  it('5b. C3 — a layer with masks shows a mask badge, separate from its matte badge', () => {
+    const path = { version: 1, coordinateSpace: 'normalized', closed: true, points: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }] };
+    animatorCtx.characterParts = [
+      part('src', 'Src', 'custom_circle'),
+      { id: 'tgt', name: 'Box', type: 'custom_box', trackMatte: { sourceLayerId: 'src', mode: 'alpha' }, masks: [
+        { id: 'm1', name: 'A', mode: 'add', enabled: true, path },
+        { id: 'm2', name: 'B', mode: 'add', enabled: true, path },
+      ] },
+    ];
+    renderPanel();
+
+    expect(screen.getByLabelText('2 layer masks')).toBeTruthy();
+    expect(screen.getByLabelText('Track matte source: Src')).toBeTruthy();
+    expect(screen.getByText('Matte · Src')).toBeTruthy();
+    expect(screen.getAllByLabelText(/layer mask/)).toHaveLength(1);
   });
 
   it('6. an unnamed Track Matte V2 source falls back to its id', () => {

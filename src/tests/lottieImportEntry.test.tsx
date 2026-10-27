@@ -121,7 +121,8 @@ describe('Lottie import entry point', () => {
 
     await screen.findByRole('dialog', { name: 'Lottie import report' }).catch(() => null);
     expect(reportDialog()).toBeNull();
-    expect(context.showToast).toHaveBeenCalledWith('Imported "scene" from Lottie.', 'success');
+    // C8: the new Template tab is the confirmation; no success toast.
+    expect(context.showToast).not.toHaveBeenCalled();
   });
 
   it('refuses a file it cannot classify without applying anything', async () => {
@@ -288,7 +289,11 @@ describe('Lottie import entry point', () => {
 
     expect(context.importProject).toHaveBeenCalledTimes(1);
     expect(context.importProject).toHaveBeenCalledWith(scene, 'Demo Graphic');
-    expect(context.showToast).toHaveBeenCalledWith('Imported "Demo Graphic" from an OGraf package.', 'success');
+    // C8: the new Template tab is the confirmation; no success toast. The
+    // import's own report (assets left out) is still shown.
+    expect(context.showToast.mock.calls.map(([, type, options]) => [type, options?.title])).toEqual([
+      ['info', 'OGRAF_PACKAGE_ASSETS_OMITTED'],
+    ]);
   });
 
   it('reports a package refusal from the project authority instead of a success', async () => {
@@ -310,7 +315,8 @@ describe('Lottie import entry point', () => {
     chooseFile(IMPORT_INPUT, 'project.kcs', JSON.stringify({ version: 1, width: 320, height: 180, fps: 24, totalFrames: 24, layers: [], tracks: [] }));
 
     await waitFor(() => expect(context.importProject).toHaveBeenCalledTimes(1));
-    expect(context.showToast).toHaveBeenCalledWith('Imported "project" as a new Template tab!', 'success');
+    // C8: the new Template tab is the confirmation; no success toast.
+    expect(context.showToast).not.toHaveBeenCalled();
     expect(reportDialog()).toBeNull();
   });
 

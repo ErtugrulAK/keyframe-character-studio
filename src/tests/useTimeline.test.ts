@@ -42,6 +42,7 @@ describe('useTimeline Hook', () => {
 
     expect(result.current.timelineZoom).toBe(18);
     expect(result.current.showGrid).toBe(true);
+    expect(result.current.showCoordinateOverlay).toBe(true);
   });
 
   it('deletes a part and associated track', () => {

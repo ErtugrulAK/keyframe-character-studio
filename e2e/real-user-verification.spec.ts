@@ -87,21 +87,21 @@ test('BUG 3 — layer order (Bring Forward / Send Backward) preserves keyframes'
   expect(beforeTimeline.length).toBeGreaterThanOrEqual(3); // cow frames 0/20/40
 
   // Select "The Cow" in the outliner (Template Elements).
-  await page.getByText('The Cow', { exact: true }).first().click();
+  await page.locator('[role="tree"] .actor-name', { hasText: 'The Cow' }).first().click(); // C5: the outliner row (the stage strip also shows the name)
   await expect(page.locator('.details-container .section-block')).toHaveCount(0);
   await openTransformSection(page);
   const framesBefore = await timelineKeyframeFrameValues(page);
   expect(framesBefore).toEqual([0, 20, 40]);
 
-  // Layer order changes: Bring Forward ×2, Send Backward ×1. R5-15 — Arrange is
-  // the authoring toolbar's own group; it writes the same z-index path the
-  // inspector used to duplicate.
-  await page.getByRole('button', { name: 'Bring forward', exact: true }).click();
-  await page.getByRole('button', { name: 'Bring forward', exact: true }).click();
+  // Layer order changes: Send Backward ×2, Bring Forward ×1. The Cow starts as
+  // the top layer, where Bring Forward is disabled (C8: arrange reorders the
+  // layer stack, the same as the layer list).
   await page.getByRole('button', { name: 'Send backward', exact: true }).click();
+  await page.getByRole('button', { name: 'Send backward', exact: true }).click();
+  await page.getByRole('button', { name: 'Bring forward', exact: true }).click();
 
   // Re-select The Cow; the consolidated surface keeps keyframes reachable.
-  await page.getByText('The Cow', { exact: true }).first().click();
+  await page.locator('[role="tree"] .actor-name', { hasText: 'The Cow' }).first().click(); // C5: the outliner row (the stage strip also shows the name)
   await expect(page.locator('.details-container .section-block')).toHaveCount(0);
   await openTransformSection(page);
   const framesAfter = await timelineKeyframeFrameValues(page);
@@ -202,17 +202,20 @@ test('BUG 5 — broadcast starts FIT, does not inherit edit zoom/pan (real UI)',
   await seed(page, cowLionTigerScene());
 
   // 1. EDIT: zoom in hard (5 toolbar steps on the shared camera command
-  // channel, x1.1 each) — the svg transform reflects the zoom
+  // channel, x1.1 each). C7 — the edit camera lives in the viewBox, so the
+  // zoom is read as the camera's zoom and as the rendered world scale.
+  const worldScale = () => page.evaluate(() => {
+    const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
+    return svg.getScreenCTM()!.a;
+  });
+  const fittedScale = await worldScale();
   for (let i = 0; i < 5; i++) {
     await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Zoom in' }).click();
     await page.waitForTimeout(80);
   }
-  const editZoom = await page.evaluate(() => {
-    const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
-    return svg.getAttribute('style');
-  });
-  const zoomedScale = Number(/scale\(([\d.]+)\)/.exec(editZoom ?? '')?.[1] ?? '0');
+  const zoomedScale = Number(await page.locator('.stage-canvas-container').getAttribute('data-camera-zoom'));
   expect(zoomedScale).toBeCloseTo(1.1 ** 5, 6); // zoomed in
+  expect((await worldScale()) / fittedScale).toBeCloseTo(1.1 ** 5, 4);
 
   // 2. BROADCAST: fit/contain — zoom reset to 1, pan 0
   await page.getByText('BROADCAST', { exact: true }).click();
@@ -221,7 +224,7 @@ test('BUG 5 — broadcast starts FIT, does not inherit edit zoom/pan (real UI)',
     const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
     return { style: svg.getAttribute('style'), viewBox: svg.getAttribute('viewBox') };
   });
-  expect(broadcastZoom.style).toContain('scale(1)');          // no inherited zoom
+  expect(broadcastZoom.style).not.toMatch(/scale\((?!1\))/); // no inherited zoom
   expect(broadcastZoom.style).toContain('translate(0px, 0px)'); // no inherited pan
   expect(broadcastZoom.viewBox).toBe('0 0 1920 1080');
 

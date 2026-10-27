@@ -2,6 +2,7 @@ import type { CharacterPart, Track } from '../types/animator';
 import type { SceneData } from '../types/composition';
 import { isPrototypeSensitiveKey } from './pathSafety';
 import { isSceneCoordinateSystem } from './coordinateMigration';
+import { effectsValidationError } from './colorCorrection';
 
 /**
  * Validated parse for imported project documents.
@@ -170,8 +171,12 @@ interface SceneProblem {
 
 const REIMPORT_ACTION = 'Re-export the project from Keyframe Studio and import the new file.';
 
-/** Scene versions this build can apply; a higher one is a file from a newer build. */
-const SUPPORTED_SCENE_VERSIONS: readonly number[] = [1, 2];
+/**
+ * Scene versions this build can apply; a higher one is a file from a newer
+ * build. 3 (WP-08) = a scene that uses layer effects or effect-only masks;
+ * builds before it refuse such a file instead of drawing it wrongly.
+ */
+const SUPPORTED_SCENE_VERSIONS: readonly number[] = [1, 2, 3];
 
 /**
  * N3 PR-1 — bounded numeric acceptance. These limits mirror the editor's own
@@ -238,7 +243,7 @@ const NUMERIC_LAYER_FIELDS = [
  */
 const STRING_LAYER_FIELDS = [
   'name', 'type', 'fillColor', 'strokeColor', 'fontFamily', 'imageUrl', 'videoUrl',
-  'inAnimPreset', 'outAnimPreset', 'strokeAlignment', 'textValue',
+  'inAnimPreset', 'outAnimPreset', 'strokeAlignment', 'strokeLinejoin', 'textValue',
 ] as const;
 
 /** `{ x, y }` lists the geometry helpers read as coordinates. */
@@ -304,6 +309,9 @@ const masksProblem = (value: unknown, path: string, owner: string): SceneProblem
         return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${maskPath}.${field}`, `${owner} has a mask with a non-numeric ${field}.`);
       }
     }
+    if (record.affectsAlpha !== undefined && typeof record.affectsAlpha !== 'boolean') {
+      return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${maskPath}.affectsAlpha`, `${owner} has a mask whose affectsAlpha is not true or false.`);
+    }
   }
   return undefined;
 };
@@ -325,6 +333,13 @@ const sharedLayerValueProblem = (record: Record<string, unknown>, path: string, 
   if (record.masks !== undefined) {
     const masks = masksProblem(record.masks, `${path}.masks`, owner);
     if (masks) return masks;
+  }
+  if (record.effects !== undefined) {
+    const maskIds = Array.isArray(record.masks)
+      ? (record.masks as unknown[]).map((mask) => asRecord(mask)?.id).filter((id): id is string => typeof id === 'string')
+      : [];
+    const effectError = effectsValidationError(record.effects, owner, maskIds);
+    if (effectError) return sceneProblem('KCS_IMPORT_INVALID_EFFECT', `${path}.effects`, effectError, REIMPORT_ACTION);
   }
   for (const field of ['matte', 'trackMatte'] as const) {
     if (record[field] !== undefined && !asRecord(record[field])) {

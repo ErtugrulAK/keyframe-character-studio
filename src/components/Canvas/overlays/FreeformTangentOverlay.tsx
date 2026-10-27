@@ -1,8 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
-import type { BezierPath, BezierVertex, CharacterPart, Transform } from '../../../types/animator';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import type { BezierPath, CharacterPart, Transform } from '../../../types/animator';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
 import { getFreeformVertexWorldPositions, resolveFreeformPath } from '../../../utils/freeform';
-import { initializeSmoothHandles } from '../../../utils/bezierPath';
+import { buildBezierPathD, altMoveVertexHandle, moveVertexHandle, pullVertexHandles, toggleVertexKind, type BezierHandleKind } from '../../../utils/bezierPath';
+import { isEditableElement, ownsShortcutScope } from '../../../utils/keyboardFocus';
+import { isBlockingModalOpen } from '../../../utils/modalBoundary';
+import { insertMaskVertex, nearestMaskPathSegment } from '../../../utils/maskPathCreation';
+import { worldAffineOf } from '../../../utils/containerMath';
 import { worldToLocal } from '../../../utils/matte';
 import type { WorldAffine } from '../../../utils/containerMath';
 
@@ -20,15 +24,25 @@ const VERTEX_SELECTED_LABEL_FILL = '#0f172a';
 const HANDLE_FILL = '#facc15';
 const HANDLE_SELECTED_FILL = '#f97316';
 
-type HandleKind = 'in' | 'out';
+type HandleKind = BezierHandleKind;
 const HANDLE_KEY: Record<HandleKind, 'handleIn' | 'handleOut'> = { in: 'handleIn', out: 'handleOut' };
 
 interface DragState {
-  handle: HandleKind;
+  /** A tangent handle, or the point itself (which carries its handles along). */
+  handle: HandleKind | 'vertex';
   index: number;
   initialPath: BezierPath;
   startLocal: { x: number; y: number };
+  /** The press position on screen; a point drag starts only after a real move. */
+  startClient: { x: number; y: number };
+  /** False until the gesture changes something: a plain click on a point opens no history batch. */
+  started: boolean;
+  /** C10 — Alt held at the press: a handle breaks or relinks, a point pulls out new handles. */
+  alt: boolean;
 }
+
+/** Pointer travel (CSS px) before a press on a point becomes a drag of that point. */
+const VERTEX_DRAG_THRESHOLD_PX = 3;
 
 export interface FreeformTangentOverlayProps {
   part: CharacterPart;
@@ -41,46 +55,13 @@ export interface FreeformTangentOverlayProps {
   onBatchStart: () => void;
   onBatchEnd: () => void;
   outputOrigin?: CoordinatePoint;
+  /** C6 — the selected point, shared with the Inspector (controlled when given). */
+  selectedIndex?: number | null;
+  onSelectIndex?: (index: number | null) => void;
 }
 
-/** Below this length a dragged handle vector is treated as zero. */
-const HANDLE_VECTOR_EPSILON = 1e-6;
-
 /** Moves one handle, keeping the counterpart mirrored for smooth vertices. */
-const withMovedHandle = (
-  vertex: BezierVertex,
-  handle: HandleKind,
-  next: { x: number; y: number },
-): BezierVertex => {
-  const key = HANDLE_KEY[handle];
-  // A non-finite pointer result is never written into the path.
-  if (!Number.isFinite(next.x) || !Number.isFinite(next.y)) return vertex;
-  if (vertex.kind !== 'smooth') return { ...vertex, [key]: next };
-
-  const counterpartKey = HANDLE_KEY[handle === 'out' ? 'in' : 'out'];
-  const counterpart = vertex[counterpartKey];
-  if (!counterpart) return { ...vertex, [key]: next };
-
-  const dx = handle === 'out' ? next.x - vertex.x : vertex.x - next.x;
-  const dy = handle === 'out' ? next.y - vertex.y : vertex.y - next.y;
-  const length = Math.hypot(dx, dy);
-  // A handle dragged exactly onto its anchor carries no direction, so the
-  // counterpart keeps its own length and direction instead of collapsing.
-  if (length <= HANDLE_VECTOR_EPSILON) return { ...vertex, [key]: next };
-  // An overflowing (Infinity) length would normalize to a zero direction and
-  // collapse the counterpart onto the anchor, so the drag only writes itself.
-  if (!Number.isFinite(length)) return { ...vertex, [key]: next };
-
-  const counterpartLength = Math.hypot(counterpart.x - vertex.x, counterpart.y - vertex.y);
-  const mirrored = handle === 'out'
-    ? { x: vertex.x - (dx / length) * counterpartLength, y: vertex.y - (dy / length) * counterpartLength }
-    : { x: vertex.x + (dx / length) * counterpartLength, y: vertex.y + (dy / length) * counterpartLength };
-  // Imported coordinates may be finite yet overflow the mirror arithmetic
-  // (for example a counterpart at ±1.7e308 makes the hypot infinite). The
-  // counterpart then keeps its previous value instead of gaining NaN/Infinity.
-  if (!Number.isFinite(mirrored.x) || !Number.isFinite(mirrored.y)) return { ...vertex, [key]: next };
-  return { ...vertex, [key]: next, [counterpartKey]: mirrored };
-};
+const withMovedHandle = moveVertexHandle;
 
 /**
  * Direct tangent-handle authoring for the selected freeform layer.
@@ -98,9 +79,17 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
   onBatchStart,
   onBatchEnd,
   outputOrigin = EDITOR_CAMERA_CENTER,
+  selectedIndex: controlledIndex,
+  onSelectIndex,
 }) => {
   const path = resolveFreeformPath(part);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [localIndex, setLocalIndex] = useState<number | null>(null);
+  const selectedIndex = controlledIndex !== undefined ? controlledIndex : localIndex;
+  const setSelectedIndex = useCallback((next: number | null | ((current: number | null) => number | null)) => {
+    const value = typeof next === 'function' ? next(selectedIndex) : next;
+    if (onSelectIndex) onSelectIndex(value);
+    else setLocalIndex(value);
+  }, [onSelectIndex, selectedIndex]);
   const [selectedHandle, setSelectedHandle] = useState<HandleKind | null>(null);
   const [isDraggingHandle, setIsDraggingHandle] = useState<boolean>(false);
   const [pendingCancel, setPendingCancel] = useState<boolean>(false);
@@ -121,7 +110,7 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
       setSelectedIndex(null);
       setSelectedHandle(null);
     }
-  }, [part.id, selectedIndex, vertexCount]);
+  }, [part.id, selectedIndex, setSelectedIndex, vertexCount]);
 
   // Escape cancels an in-flight drag. The rollback is written first and the batch
   // is closed by the effect below once the write has committed, so history never
@@ -149,6 +138,27 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     onBatchEnd();
   }, [pendingCancel, onBatchEnd]);
 
+  // C10 — C switches the selected point between Corner and Smooth, as in mask
+  // editing (one write, one undo step).
+  const latestKey = useRef({ path, selectedIndex, onPathChange });
+  useEffect(() => {
+    latestKey.current = { path, selectedIndex, onPathChange };
+  });
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'c' && event.key !== 'C') return;
+      if (event.altKey || event.ctrlKey || event.metaKey || dragRef.current) return;
+      const { path: current, selectedIndex: index, onPathChange: write } = latestKey.current;
+      if (!current || index === null || index >= current.points.length) return;
+      if (isBlockingModalOpen() || isEditableElement(document.activeElement) || ownsShortcutScope('timeline')) return;
+      event.preventDefault();
+      event.stopPropagation();
+      write(toggleVertexKind(current, index));
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   // Latest batch-ender, so the unmount cleanup below is bound to unmount only:
   // a re-created callback identity mid-drag must not close the open batch early.
   const onBatchEndRef = useRef(onBatchEnd);
@@ -157,7 +167,7 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
   }, [onBatchEnd]);
 
   useEffect(() => () => {
-    if (!dragRef.current) return;
+    if (!dragRef.current?.started) return;
     dragRef.current = null;
     onBatchEndRef.current();
   }, []);
@@ -176,14 +186,16 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
   if (!path || path.points.length < 2) return null;
 
   const vertices = worldOf(path.points);
-  const drag = (event: React.PointerEvent<SVGElement>, index: number, handle: HandleKind) => {
+  const drag = (event: React.PointerEvent<SVGElement>, index: number, handle: HandleKind | 'vertex') => {
     event.stopPropagation();
     event.preventDefault();
     const { svgX, svgY } = toWorld(event.clientX, event.clientY);
-    dragRef.current = { handle, index, initialPath: path, startLocal: toLocal({ x: svgX, y: svgY }) };
+    const started = handle !== 'vertex';
+    dragRef.current = { handle, index, initialPath: path, startLocal: toLocal({ x: svgX, y: svgY }), startClient: { x: event.clientX, y: event.clientY }, started, alt: event.altKey };
     (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
     setSelectedIndex(index);
-    setSelectedHandle(handle);
+    setSelectedHandle(handle === 'vertex' ? null : handle);
+    if (!started) return;
     setIsDraggingHandle(true);
     onBatchStart();
   };
@@ -192,10 +204,42 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     const active = dragRef.current;
     if (!active) return;
     event.stopPropagation();
-    const startHandle = active.initialPath.points[active.index][HANDLE_KEY[active.handle]];
-    if (!startHandle) return;
+    if (!active.started) {
+      if (Math.hypot(event.clientX - active.startClient.x, event.clientY - active.startClient.y) < VERTEX_DRAG_THRESHOLD_PX) return;
+      active.started = true;
+      setIsDraggingHandle(true);
+      onBatchStart();
+    }
     const { svgX, svgY } = toWorld(event.clientX, event.clientY);
     const currentLocal = toLocal({ x: svgX, y: svgY });
+    if (active.handle === 'vertex' && active.alt) {
+      // C10 — Alt-drag from a point pulls out new mirrored handles; the point stays.
+      const offset = { x: currentLocal.x - active.startLocal.x, y: currentLocal.y - active.startLocal.y };
+      onPathChange({
+        ...active.initialPath,
+        points: active.initialPath.points.map((vertex, index) => (index === active.index ? pullVertexHandles(vertex, offset) : vertex)),
+      });
+      return;
+    }
+    if (active.handle === 'vertex') {
+      // The point moves and carries its own handles with it (the curve keeps its shape).
+      const dx = currentLocal.x - active.startLocal.x;
+      const dy = currentLocal.y - active.startLocal.y;
+      onPathChange({
+        ...active.initialPath,
+        points: active.initialPath.points.map((vertex, index) => (index !== active.index ? vertex : {
+          ...vertex,
+          x: vertex.x + dx,
+          y: vertex.y + dy,
+          ...(vertex.handleIn ? { handleIn: { x: vertex.handleIn.x + dx, y: vertex.handleIn.y + dy } } : {}),
+          ...(vertex.handleOut ? { handleOut: { x: vertex.handleOut.x + dx, y: vertex.handleOut.y + dy } } : {}),
+        })),
+      });
+      return;
+    }
+    const handle = active.handle;
+    const startHandle = active.initialPath.points[active.index][HANDLE_KEY[handle]];
+    if (!startHandle) return;
     const next = {
       x: startHandle.x + (currentLocal.x - active.startLocal.x),
       y: startHandle.y + (currentLocal.y - active.startLocal.y),
@@ -203,7 +247,7 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     onPathChange({
       ...active.initialPath,
       points: active.initialPath.points.map((vertex, index) => (
-        index === active.index ? withMovedHandle(vertex, active.handle, next) : vertex
+        index === active.index ? (active.alt ? altMoveVertexHandle(vertex, handle, next) : withMovedHandle(vertex, handle, next)) : vertex
       )),
     });
   };
@@ -212,23 +256,16 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     if (!dragRef.current) return;
     event.stopPropagation();
     (event.currentTarget as Element).releasePointerCapture?.(event.pointerId);
+    const { started } = dragRef.current;
     dragRef.current = null;
+    if (!started) return;
     setIsDraggingHandle(false);
     onBatchEnd();
   };
 
   const toggleKind = (event: React.MouseEvent<SVGElement>, index: number) => {
     event.stopPropagation();
-    if (path.points[index]?.kind === 'smooth') {
-      onPathChange({
-        ...path,
-        points: path.points.map((vertex, vertexIndex) => (
-          vertexIndex === index ? { ...vertex, kind: 'corner' } : vertex
-        )),
-      });
-      return;
-    }
-    onPathChange(initializeSmoothHandles(path, index));
+    onPathChange(toggleVertexKind(path, index));
   };
 
   const selectVertex = (index: number) => setSelectedIndex((current) => (current === index ? current : index));
@@ -277,8 +314,37 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     );
   };
 
+  // The outline in world space: a double-click on it inserts a point there
+  // without changing the drawn curve (De Casteljau split).
+  const worldPoint = (point: { x: number; y: number }) => worldOf([point])[0] ?? point;
+  const contourD = buildBezierPathD(path, worldPoint);
+  const insertAt = (event: React.MouseEvent<SVGElement>) => {
+    event.stopPropagation();
+    const { svgX, svgY } = toWorld(event.clientX, event.clientY);
+    const frame = { toWorld: { ...worldAffineOf(worldTransform), e: worldAffineOf(worldTransform).e + outputOrigin.x, f: worldAffineOf(worldTransform).f + outputOrigin.y }, toPath: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 } };
+    const nearest = nearestMaskPathSegment(path, frame, { x: svgX, y: svgY });
+    if (!nearest) return;
+    const next = insertMaskVertex(path, nearest.segmentIndex, nearest.t);
+    if (!next) return;
+    onPathChange(next);
+    setSelectedIndex(nearest.segmentIndex + 1);
+    setSelectedHandle(null);
+  };
+
   return (
     <g data-testid="freeform-tangent-overlay">
+      <path
+        data-testid="freeform-path-hit-area"
+        d={contourD}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={10 * zScale}
+        style={{ cursor: 'copy' }}
+        onPointerDown={(event) => event.stopPropagation()}
+        onDoubleClick={insertAt}
+      >
+        <title>Double-click to add a point here</title>
+      </path>
       {selectedIndex !== null && selectedIndex < path.points.length && (
         <>
           {renderHandle(selectedIndex, 'in')}
@@ -294,11 +360,16 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
               r={VERTEX_HIT_RADIUS * zScale}
               fill="transparent"
               style={{ cursor: 'pointer' }}
+              data-vertex-index={index}
+              data-point-kind={path.points[index].kind === 'smooth' ? 'smooth' : 'corner'}
               onPointerDown={(event) => {
-                event.stopPropagation();
-                setSelectedHandle(null);
+                if (event.button !== 0) return;
                 selectVertex(index);
+                drag(event, index, 'vertex');
               }}
+              onPointerMove={move}
+              onPointerUp={end}
+              onPointerCancel={end}
               onDoubleClick={(event) => toggleKind(event, index)}
             />
             <circle

@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Transform } from '../../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../../types/composition';
+import { getPositionDisplayScale } from '../../../../utils/coordinateDisplay';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 
 interface TransformPositionCardProps {
@@ -15,8 +16,7 @@ interface TransformPositionCardProps {
  * current frame and every edit goes through the canonical transform path.
  */
 export const TransformPositionCard: React.FC<TransformPositionCardProps> = ({ transform, coordinateSystem, onUpdate }) => {
-  const usesRawProjectUnits = coordinateSystem === 'project-unit-center-v1';
-  const positionDisplayScale = usesRawProjectUnits ? undefined : 0.01;
+  const positionDisplayScale = getPositionDisplayScale(coordinateSystem);
 
   return (
     <div className="transform-property-group">

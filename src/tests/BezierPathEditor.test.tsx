@@ -32,7 +32,9 @@ describe('BezierPathEditor', () => {
 
   it('keeps vertex ids unique after deleting an interior vertex and adding again', () => {
     const onChange = vi.fn();
-    const { rerender } = render(<BezierPathEditor path={makePath()} onChange={onChange} />);
+    // Four points: a closed path keeps at least three, so the delete is allowed.
+    const four: BezierPath = { ...makePath(), points: [...makePath().points, { id: 'd', x: 0.1, y: 0.9, kind: 'corner' }] };
+    const { rerender } = render(<BezierPathEditor path={four} onChange={onChange} />);
 
     fireEvent.mouseDown(screen.getByLabelText('Vertex 2'));
     fireEvent.click(screen.getByRole('button', { name: 'Delete vertex' }));
@@ -44,31 +46,70 @@ describe('BezierPathEditor', () => {
     expect(new Set(afterAdd.points.map((point) => point.id)).size).toBe(afterAdd.points.length);
   });
 
-  it('keeps vertex selection after mouseup and applies one smooth toggle update', () => {
+  it('toggles open/closed state', () => {
     const onChange = vi.fn();
     render(<BezierPathEditor path={makePath()} onChange={onChange} />);
 
-    fireEvent.mouseDown(screen.getByLabelText('Vertex 2'));
-    fireEvent.mouseUp(screen.getByRole('application'));
-    fireEvent.click(screen.getByRole('button', { name: 'Toggle corner/smooth' }));
-
-    expect(onChange).toHaveBeenCalledTimes(1);
-    const nextPath = onChange.mock.lastCall?.[0] as BezierPath;
-    expect(nextPath.points[1].kind).toBe('smooth');
-    expect(nextPath.points[1].handleIn).toBeTruthy();
-    expect(nextPath.points[1].handleOut).toBeTruthy();
+    const closed = screen.getByRole('switch', { name: 'Closed path' });
+    expect(closed.getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(closed);
+    expect(onChange.mock.lastCall?.[0].closed).toBe(false);
+    // Opening changes only the flag: points and handles stay as they were.
+    expect(onChange.mock.lastCall?.[0].points).toEqual(makePath().points);
   });
 
-  it('reorders vertices and toggles open/closed state', () => {
+  it('refuses topology edits with a visible reason while the path is animated, but still moves points', () => {
     const onChange = vi.fn();
-    render(<BezierPathEditor path={makePath()} onChange={onChange} />);
+    render(<BezierPathEditor path={makePath()} onChange={onChange} topologyLockReason="The mask path is animated." />);
+    for (const name of ['Add vertex', 'Delete vertex', 'Reverse direction']) {
+      expect((screen.getByRole('button', { name }) as HTMLButtonElement).disabled).toBe(true);
+    }
+    expect((screen.getByRole('switch', { name: 'Closed path' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/Moving points and handles still works/)).toBeTruthy();
+    fireEvent.keyDown(screen.getByLabelText('Vertex 1'), { key: 'ArrowRight' });
+    const last = onChange.mock.lastCall;
+    expect(last).toBeDefined();
+    expect((last![0] as BezierPath).points[0].x).toBeCloseTo(0.11, 9);
+  });
 
+  it('disables delete without a selection', () => {
+    const onChange = vi.fn();
+    render(<BezierPathEditor path={makePath()} onChange={onChange} selectedIndex={null} onSelectIndex={() => undefined} />);
+    expect((screen.getByRole('button', { name: 'Delete vertex' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('C10: offers no point-type, point-order or expand controls (those live on the canvas)', () => {
+    render(<BezierPathEditor path={makePath()} onChange={vi.fn()} selectedIndex={1} onSelectIndex={() => undefined} />);
+    expect(screen.queryByRole('radiogroup', { name: 'Selected point type' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Point order in the path' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Expand' })).toBeNull();
+  });
+
+  it('C4: with an order authority, an animated path keeps its order commands; they go through the authority', () => {
+    const onChange = vi.fn();
+    const onOrderCommand = vi.fn(() => 2);
+    render(<BezierPathEditor path={makePath()} onChange={onChange} topologyLockReason="The mask path is animated." onOrderCommand={onOrderCommand} selectedIndex={1} onSelectIndex={() => undefined} />);
+    expect((screen.getByRole('button', { name: 'Add vertex' }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Make first point' }));
+    fireEvent.click(screen.getByRole('switch', { name: 'Closed path' }));
+    expect(onOrderCommand.mock.calls.map((call) => call[0])).toEqual(['first', 'open']);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('C4: a read-only (locked) path selects points but changes nothing', () => {
+    const onChange = vi.fn();
+    render(<BezierPathEditor path={makePath()} onChange={onChange} readOnlyReason="This mask is locked." />);
     fireEvent.mouseDown(screen.getByLabelText('Vertex 2'));
-    fireEvent.click(screen.getByRole('button', { name: 'Move left' }));
-    const reordered = onChange.mock.lastCall?.[0] as BezierPath;
-    expect(reordered.points.map((point) => point.id)).toEqual(['b', 'a', 'c']);
+    fireEvent.mouseMove(screen.getByRole('application'), { clientX: 50, clientY: 50 });
+    fireEvent.keyDown(screen.getByLabelText('Vertex 2'), { key: 'ArrowRight' });
+    expect(screen.getByLabelText('Vertex 2').getAttribute('aria-pressed')).toBe('true');
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByText('This mask is locked.')).toBeTruthy();
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open path' }));
-    expect(onChange.mock.lastCall?.[0].closed).toBe(false);
+  it('C4: an open path states that it still fills', () => {
+    render(<BezierPathEditor path={{ ...makePath(), closed: false }} onChange={vi.fn()} />);
+    expect(screen.getByTestId('open-path-note').textContent).toMatch(/still fills/);
+    expect(screen.getByRole('switch', { name: 'Closed path' }).getAttribute('aria-checked')).toBe('false');
   });
 });

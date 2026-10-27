@@ -76,8 +76,15 @@ const seed = async (
   });
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
+  // Seed ONCE per tab: an init script runs on every navigation, so an
+  // unguarded one re-seeded the scene on the editor's own reload and wiped the
+  // very save a reload test is about. sessionStorage survives the reload.
   await page.addInitScript(
-    (payload: { key: string; value: string }) => localStorage.setItem(payload.key, payload.value),
+    (payload: { key: string; value: string }) => {
+      if (sessionStorage.getItem('__kcs_e2e_seeded') === '1') return;
+      localStorage.setItem(payload.key, payload.value);
+      sessionStorage.setItem('__kcs_e2e_seeded', '1');
+    },
     { key: STORAGE_KEY, value: scene },
   );
   await page.goto('/');
@@ -241,6 +248,8 @@ test('exports the current sequence as an animated GIF at the stage size', async 
   await expect(panel.locator('.gif-export-summary dd').nth(1)).toHaveText('0.50 s');
   await expect(panel.locator('.gif-export-summary dd').nth(2)).toHaveText('320×180');
   await expect(panel.getByLabel('Sampling rate')).toHaveValue('24');
+  // Every requested frame is shown, so there is no rate note (C8).
+  await expect(panel.getByTestId('gif-export-rate-note')).toHaveCount(0);
   // The format's transparency rule is stated before the export, not after —
   // carried on the control the user is about to press.
   await expect(panel.getByRole('button', { name: 'Export GIF' })).toHaveAttribute('title', /one transparent colour and no partial alpha/);
@@ -309,8 +318,11 @@ test('a cancelled export writes nothing', async ({ page }) => {
   await expect(cancel).toBeVisible();
   await cancel.click();
 
-  await expect(page.getByText('GIF export cancelled. Nothing was written.')).toBeVisible();
+  // C8: the panel returning to its idle state is the feedback (no toast), and
+  // no result is reported because nothing was written.
   await expect(page.getByRole('button', { name: 'Export GIF', exact: true })).toBeVisible();
+  await expect(page.locator('.gif-export-done')).toHaveCount(0);
+  await expect(page.getByText('GIF export cancelled', { exact: false })).toHaveCount(0);
 });
 
 test('a scene the frames cannot draw is refused before anything is rendered', async ({ page }) => {
@@ -372,6 +384,11 @@ for (const row of GIF_SAMPLING_ROWS) {
     // What the panel DISPLAYS is the encoded plan, not the requested grid.
     await expect(panel.locator('.gif-export-summary dd').first()).toHaveText(String(row.encodedFrames));
     await expect(panel.locator('.gif-export-summary dd').nth(1)).toHaveText(`${row.seconds.toFixed(2)} s`);
+    // C8: the panel says why 120 fps gives fewer frames, and the option says so.
+    await expect(panel.getByTestId('gif-export-rate-note')).toHaveText(
+      `GIF shows at most 50 frames a second, so 120 fps becomes ${row.encodedFrames} frames (50 fps). The full ${row.seconds.toFixed(2)} s is kept.`,
+    );
+    await expect(panel.getByLabel('Sampling rate').locator('option[value="120"]')).toHaveText('120 fps (plays at 50)');
 
     const gif = parseGif(await downloadBytes(page));
     expect(gif.frames.length).toBe(row.encodedFrames);
@@ -451,7 +468,10 @@ test('A1 guard: an unsaved edit stops the reload at the informed choice and Save
   const group = page.getByRole('group', { name: 'Reload confirmation' });
   await expect(group).toBeVisible();
   await expect(group).toContainText(/unsaved/i);
+  // Wait for the real document reload, not for the old page's DOM.
+  const reloaded = page.waitForEvent('load');
   await group.getByRole('button', { name: 'Save and reload' }).click();
+  await reloaded;
 
   // The reload landed; the changed value itself proves the write survived.
   await expect(page.locator('.app-container')).toBeVisible();

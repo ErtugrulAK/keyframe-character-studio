@@ -66,8 +66,13 @@ test('BROADCAST-1 — first entry fits the FULL artboard (no crop) at any edit z
     await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Zoom in' }).click();
     await page.waitForTimeout(60);
   }
+  // C7: the edit camera now lives in the viewBox (it spans the stage at the
+  // camera scale), so the contract checked here is the edit USER space: the
+  // artboard is still drawn around the editor camera centre (300, 240).
+  const editArtboardX = await page.evaluate(() => [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!.querySelector('rect[stroke="rgba(255, 255, 255, 0.15)"]')!.getAttribute('x'));
+  expect(editArtboardX).toBe(String(300 - 1920 / 2));
   const editViewBox = await page.evaluate(() => [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!.getAttribute('viewBox'));
-  expect(editViewBox).toBe('0 0 600 480'); // edit space untouched
+  expect(editViewBox).not.toBe('0 0 1920 1080'); // edit space, not the broadcast project box
 
   // EDIT → BROADCAST
   await page.getByText('BROADCAST', { exact: true }).click();
@@ -133,8 +138,13 @@ test('BROADCAST-4 — BROADCAST→EDIT→BROADCAST: fit is re-applied identicall
 
   await page.getByText('EDIT MODE', { exact: true }).click();
   await page.waitForTimeout(500);
+  // C7: the edit camera now lives in the viewBox (it spans the stage at the
+  // camera scale), so the contract checked here is the edit USER space: the
+  // artboard is still drawn around the editor camera centre (300, 240).
+  const editArtboardX = await page.evaluate(() => [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!.querySelector('rect[stroke="rgba(255, 255, 255, 0.15)"]')!.getAttribute('x'));
+  expect(editArtboardX).toBe(String(300 - 1920 / 2));
   const editViewBox = await page.evaluate(() => [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!.getAttribute('viewBox'));
-  expect(editViewBox).toBe('0 0 600 480'); // edit view restored
+  expect(editViewBox).not.toBe('0 0 1920 1080'); // edit view restored, not the broadcast box
 
   await page.getByText('BROADCAST', { exact: true }).click();
   await page.waitForTimeout(700);

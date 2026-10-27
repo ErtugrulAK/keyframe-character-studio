@@ -16,6 +16,7 @@ import { AnimatorProvider, type AnimatorContextType } from '../context/AnimatorC
 import { useAnimator } from '../context/useAnimator';
 import { DetailsPanel } from '../components/Inspector/DetailsPanel';
 import { SequencerTimeline } from '../components/Timeline/SequencerTimeline';
+import { resolveOpeningTimelineHeight } from '../components/Timeline/timelineConstants';
 import { InteractiveCubicBezierEditor } from '../components/Inspector/InteractiveCubicBezierEditor';
 import { TemporalGraphPanel } from '../components/Inspector/TemporalGraphPanel';
 import { BezierPathEditor } from '../components/Inspector/BezierPathEditor';
@@ -216,8 +217,9 @@ describe('R4-14 — continuous gestures coalesce into one history entry', () => 
 
     // The workspace resized (UI state) and the document did not move.
     const timeline = h.container.querySelector('.sequencer-timeline') as HTMLElement;
-    // Dragged 100px up from the authored 320px default.
-    expect(timeline.style.height).toBe('420px');
+    // Dragged 100px up from the height the timeline OPENED with (C4: the
+    // opening height follows the window — 320 px on a tall one).
+    expect(timeline.style.height).toBe(`${resolveOpeningTimelineHeight(window.innerHeight) + 100}px`);
     expect(h.document()).toBe(documentBefore);
 
     // A discrete edit AFTER the resize undoes straight back to the same document:

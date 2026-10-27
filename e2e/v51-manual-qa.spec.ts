@@ -61,13 +61,23 @@ test.describe('KCS V5.1 manual QA gates', () => {
     await page.getByRole('button', { name: 'Dissolve Boolean' }).click();
     await expect(page.locator('.actor-node', { hasText: 'Operand A' })).toHaveCount(1);
     await expect(page.locator('.actor-node', { hasText: 'Operand B' })).toHaveCount(1);
-    await expect(page.getByText('Boolean dissolved; operands preserved.', { exact: true })).toBeVisible();
+    // C8: the operands back at the top level are the confirmation (no toast).
+    await expect(page.locator('.nested-node.actor-node', { hasText: 'Operand A' })).toHaveCount(0);
+    await expect(page.getByText('Boolean dissolved', { exact: false })).toHaveCount(0);
   });
 
   test('resets pan while preserving zoom, grid, and active tool', async ({ page }) => {
     await seed(page, [layer('a', 'Shape', 'custom_rect', 0)]);
     await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Zoom out' }).click();
     await expect(page.locator('.stage-canvas-container')).toHaveAttribute('data-camera-zoom', '0.9');
+    // C7: the camera lives in the viewBox; pan/zoom are read from where the
+    // world origin is drawn and how large one world unit is on screen.
+    const camera = () => page.locator('.stage-svg').evaluate((svg) => {
+      const m = (svg as SVGSVGElement).getScreenCTM()!;
+      const origin = new DOMPoint(300, 240).matrixTransform(m);
+      return { x: origin.x, y: origin.y, scale: m.a };
+    });
+    const zoomedOut = await camera();
     await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Pan' }).click();
     await page.getByRole('button', { name: 'Toggle grid' }).click();
     const canvas = page.locator('.stage-canvas-container');
@@ -77,17 +87,21 @@ test.describe('KCS V5.1 manual QA gates', () => {
     await page.mouse.down();
     await page.mouse.move(box!.x + box!.width / 2 + 80, box!.y + box!.height / 2 + 40);
     await page.mouse.up();
-    await expect(page.locator('.stage-svg')).toHaveCSS('transform', /matrix/);
+    const panned = await camera();
+    expect(Math.hypot(panned.x - zoomedOut.x, panned.y - zoomedOut.y)).toBeGreaterThan(40);
+    expect(panned.scale).toBeCloseTo(zoomedOut.scale, 6);
     await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Reset view' }).click();
     await expect(page.locator('.stage-canvas-container')).toHaveAttribute('data-camera-zoom', '0.9');
     await expect(page.getByRole('button', { name: 'Toggle grid' })).toHaveAttribute('aria-pressed', 'false');
     await expect(page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Pan' })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('.stage-svg')).toHaveCSS('transform', 'matrix(0.9, 0, 0, 0.9, 0, 0)');
+    // Pan reset, zoom kept: the origin is back where the 0.9 view put it, at the same scale.
+    await expect.poll(async () => { const now = await camera(); return Math.round(Math.hypot(now.x - zoomedOut.x, now.y - zoomedOut.y)) + (Math.abs(now.scale - zoomedOut.scale) < 1e-6 ? 0 : 1000); }).toBe(0);
     await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Reset view' }).click();
     await expect(page.locator('.stage-canvas-container')).toHaveAttribute('data-camera-zoom', '0.9');
     await expect(page.getByRole('button', { name: 'Toggle grid' })).toHaveAttribute('aria-pressed', 'false');
     await expect(page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Pan' })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('.stage-svg')).toHaveCSS('transform', 'matrix(0.9, 0, 0, 0.9, 0, 0)');
+    // Pan reset, zoom kept: the origin is back where the 0.9 view put it, at the same scale.
+    await expect.poll(async () => { const now = await camera(); return Math.round(Math.hypot(now.x - zoomedOut.x, now.y - zoomedOut.y)) + (Math.abs(now.scale - zoomedOut.scale) < 1e-6 ? 0 : 1000); }).toBe(0);
   });
 
   test('supports arbitrary pointer drag without alignment snapping', async ({ page }) => {

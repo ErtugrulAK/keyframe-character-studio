@@ -169,7 +169,9 @@ test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reach
   // R4-01 — the compact edge-handle family: a thin vertical pill, chevron only.
   expect(expandedLayout.leftHandleWidth).toBe(20);
   expect(expandedLayout.rightHandleWidth).toBe(20);
-  expect(expandedLayout.rightHandleTransition).toContain('right');
+  // C6 — the handles ride the sliding edge through the dock's own frame ease;
+  // a CSS `right`/`left` transition lagged behind the panel and nudged after it stopped.
+  expect(expandedLayout.rightHandleTransition).not.toMatch(/(^|[ ,])(right|left) /);
   expect(expandedLayout.rightWidth).toBeGreaterThan(0);
 
   // Collapse the contextual drawer; the in-flow rail expands the canvas footprint.

@@ -9,6 +9,7 @@
  * `test-results/f-*.png` as visual evidence.
  */
 import { expect, test } from '@playwright/test';
+import { armProperty, propertyRow } from './fixtures/propertyAnimation';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -55,24 +56,24 @@ test.describe('F — mask/matte workflow', () => {
     await page.reload();
     await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 
-    // 1. The outliner lists the layer and its (collapsed) Mask group.
+    // 1. The outliner lists the layer and its (collapsed) mask group, named by the mask.
     await page.locator('.ue-track-row', { hasText: 'Alpha' }).first().click();
     await page.locator('.ue-expand-btn').first().click();
-    const maskHeader = page.locator('.ue-subgroup-header', { hasText: 'Mask' });
+    const maskHeader = page.locator('.ue-subgroup-header[data-property-group$="_mask:m1"]');
     await expect(maskHeader).toBeVisible();
+    await expect(maskHeader).toHaveText('M1');
     await page.screenshot({ path: 'test-results/f-01-mask-group-collapsed.png' });
 
     // 2. Expanded: the mask property rows, and a keyed scalar already lit
     //    because the seeded track carries one key at frame 0.
     await maskHeader.click();
     await expect(maskHeader).toHaveAttribute('aria-expanded', 'true');
-    const opacityStopwatch = page.locator('button.ue-channel-stopwatch[data-property-channel="m1:opacity"]');
-    await expect(opacityStopwatch).toHaveAttribute('data-animation-state', 'keyed');
+    await expect(propertyRow(page, 'm1:opacity')).toHaveAttribute('data-animation-state', 'keyed');
     await page.screenshot({ path: 'test-results/f-02-mask-rows-keyed.png' });
 
     // 3. Arm feather at frame 0: a second channel starts animating.
-    await page.locator('button.ue-channel-stopwatch[data-property-channel="m1:feather"]').click();
-    await expect(page.locator('button.ue-channel-stopwatch[data-property-channel="m1:feather"]')).toHaveAttribute('data-animation-state', 'keyed');
+    await armProperty(page, 'm1:feather');
+    await expect(propertyRow(page, 'm1:feather')).toHaveAttribute('data-animation-state', 'keyed');
     await page.screenshot({ path: 'test-results/f-03-two-mask-channels.png' });
 
     // 4. The matte target reports the switched-off source honestly.

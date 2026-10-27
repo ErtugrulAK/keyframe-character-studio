@@ -41,6 +41,20 @@ async function seed(page: Page, layers: Record<string, unknown>[]): Promise<void
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 }
 
+/**
+ * C4 — the 1280×720 stage opens taller (compact header, shorter opening
+ * timeline), so the camera frames its 600×480 view larger and layers placed
+ * beyond it (±400–500 units in the tests that call this) would sit off the
+ * stage. Two zoom-out steps keep them on it; the assertions read the live scale.
+ */
+async function keepWideLayoutOnStage(page: Page): Promise<void> {
+  const zoomBefore = await page.locator('.stage-canvas-container').getAttribute('data-camera-zoom');
+  for (let step = 0; step < 2; step += 1) {
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent('canvas-viewport-command', { detail: { type: 'zoom-out' } })));
+  }
+  await expect(page.locator('.stage-canvas-container')).not.toHaveAttribute('data-camera-zoom', zoomBefore ?? '');
+}
+
 async function saveNow(page: Page): Promise<void> {
   const badge = page.locator('.autosave-status-badge');
   const __before = await badge.getAttribute('data-last-saved-at');
@@ -148,6 +162,7 @@ test('a parented bonded layer drags by the same world delta as a free layer', as
     layer('child', 'Child', 'custom_box', 100, 0, { parentId: 'p', boundPartIds: ['buddy'] }),
     layer('buddy', 'Buddy', 'custom_box', 500, 0, { boundPartIds: ['child'] }),
   ]);
+  await keepWideLayoutOnStage(page);
 
   // 1. Calibrate the world delta with a parentless drag.
   await page.locator('.actor-node', { hasText: 'Ref1' }).first().click();

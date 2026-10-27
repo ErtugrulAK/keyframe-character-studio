@@ -17,7 +17,7 @@ export const StyleClonerSection: React.FC<StyleClonerSectionProps> = ({ selected
   };
 
   return (
-    <StyleCard title="CLONER" collapsible defaultOpen={false}>
+    <StyleCard title="CLONER" collapsible defaultOpen={false} retainKey="cloner">
       <div className="form-field-group">
         <label className="form-label">CLONER LAYOUT MODE</label>
         <select className="select-control"

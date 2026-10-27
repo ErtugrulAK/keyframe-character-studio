@@ -18,7 +18,6 @@ import {
   Plus,
   ChevronDown,
   Keyboard,
-  HardDriveDownload,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
@@ -34,12 +33,15 @@ import {
   type OGrafDiagnosticRemediation,
 } from '../../ograf/diagnostics';
 import type { OGrafExportDiagnostic } from '../../ograf/types';
+import { buildOGrafCapabilityReport, type OGrafCapabilityReport } from '../../ograf/capabilityReport';
+import { OGrafCapabilityDialog } from './OGrafCapabilityDialog';
 import type { ToastOptions } from '../../hooks/useToast';
 import { ImportReportDialog } from '../Modal/ImportReportDialog';
 import { classifyImport } from '../../utils/importDispatch';
 import { readOGrafPackage, type OGrafPackageReadResult } from '../../ograf/packageImport';
 import { importLottieDocument, type LottieImportResult } from '../../interop/lottie/mapDocument';
 import type { SceneData } from '../../types/composition';
+import { describeSaveStatus } from '../../utils/saveStatus';
 import './HeaderBar.css';
 
 type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
@@ -99,6 +101,8 @@ export const HeaderBar: React.FC = () => {
     autosaveConflict,
     manualSaveRejectedAt,
     autosaveError,
+    hasUnsavedChanges,
+    isSaving,
     triggerManualSave,
     getPersistenceSafety,
     forceSaveNow,
@@ -176,6 +180,25 @@ export const HeaderBar: React.FC = () => {
     return compileOGrafPackage(prepared.sceneData, prepared.options);
   };
 
+  /**
+   * WP-07 — the pre-export check: the SAME compile the OGraf export runs, read
+   * per layer. Opening it never writes or downloads anything.
+   */
+  const [ografCheck, setOgrafCheck] = useState<{ report: OGrafCapabilityReport | null } | null>(null);
+  const handleOpenOGrafCheck = async () => {
+    setIsExportMenuOpen(false);
+    setOgrafCheck({ report: null });
+    try {
+      const layers = (JSON.parse(exportProject()) as SceneData).layers ?? [];
+      const plan = await compileOGrafPlan();
+      setOgrafCheck({ report: buildOGrafCapabilityReport(layers, plan.diagnostics) });
+    } catch (error) {
+      setOgrafCheck(null);
+      const message = error instanceof Error ? error.message : 'Unexpected failure.';
+      showToast(`Could not check the scene for OGraf: ${sanitizeOGrafDiagnosticText(message)}`, 'error');
+    }
+  };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   /**
    * A parsed Lottie document waiting for the user to accept its report. It is
@@ -201,23 +224,24 @@ export const HeaderBar: React.FC = () => {
    * report the reader produced. Selecting a package changes nothing on its own.
    */
   const [pendingPackageImport, setPendingPackageImport] = useState<{ fileName: string; result: OGrafPackageReadResult } | null>(null);
-  const [timeAgoStr, setTimeAgoStr] = useState<string>('Not saved yet');
-
+  // The badge clock: "Saved 12s ago" counts from the last SUCCESSFUL save.
+  const [clockNow, setClockNow] = useState<number>(() => Date.now());
   useEffect(() => {
-    const updateLabel = () => {
-      if (!lastSavedAt) {
-        setTimeAgoStr('Not saved yet');
-        return;
-      }
-      const seconds = Math.floor((Date.now() - lastSavedAt.getTime()) / 1000);
-      if (seconds < 5) setTimeAgoStr('Just saved');
-      else if (seconds < 60) setTimeAgoStr(`${seconds}s ago`);
-      else setTimeAgoStr(`${Math.floor(seconds / 60)}m ago`);
-    };
-    updateLabel();
-    const interval = setInterval(updateLabel, 5000);
+    if (!lastSavedAt) return undefined;
+    // The label is re-read against the save time that just changed.
+    // oxlint-disable-next-line react/set-state-in-effect
+    setClockNow(Date.now());
+    const interval = setInterval(() => setClockNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, [lastSavedAt]);
+  const saveStatus = describeSaveStatus({
+    conflict: autosaveConflict,
+    error: autosaveError?.kind ?? null,
+    saving: isSaving,
+    unsaved: hasUnsavedChanges,
+    lastSavedAt: lastSavedAt?.getTime() ?? null,
+    now: clockNow,
+  });
 
   /**
    * SAFE-01: a conflict pause must be noticed, not discovered. One toast per
@@ -238,7 +262,6 @@ export const HeaderBar: React.FC = () => {
     const json = exportProject();
     const cleanFileName = `${sanitizeFilenameComponent(sceneTitle || 'Template', 'Template')}.json`;
     downloadBlob(new TextEncoder().encode(json), cleanFileName, 'application/json');
-    showToast(`Exported "${cleanFileName}"`, 'success');
   };
 
 
@@ -282,7 +305,6 @@ export const HeaderBar: React.FC = () => {
       const { createOGrafBrowserZip } = await import('../../ograf/browserZip');
       const archive = await createOGrafBrowserZip(plan);
       downloadBlob(archive.bytes, archive.fileName, 'application/zip');
-      showToast(`Exported "${archive.fileName}"`, 'success');
     } catch (error) {
       const remediation = describeOGrafPackageWriteFailure(error);
       if (remediation) {
@@ -366,10 +388,10 @@ export const HeaderBar: React.FC = () => {
         default: {
           const result = importProject(text, fileNameWithoutExt);
           if (result.ok) {
-            // A successful import can still carry warnings (for example the legacy
-            // migration notice): show them instead of reporting a silent success.
+            // A successful import shows as its new Template tab; it can still
+            // carry warnings (for example the legacy migration notice), and
+            // those are shown.
             const [notice] = result.diagnostics;
-            showToast(`Imported "${fileNameWithoutExt}" as a new Template tab!`, 'success');
             if (notice) showToast(notice.message, 'info', { title: notice.code, action: notice.action });
             return;
           }
@@ -406,7 +428,6 @@ export const HeaderBar: React.FC = () => {
       return;
     }
     const warningCount = result.diagnostics.filter((entry) => entry.severity === 'warning').length;
-    showToast(`Imported "${name}" from Lottie.`, 'success');
     if (warningCount > 0) {
       const [firstWarning] = result.diagnostics.filter((entry) => entry.severity === 'warning');
       showToast(`${warningCount} report entr${warningCount === 1 ? 'y' : 'ies'} from the import.`, 'info', {
@@ -433,7 +454,6 @@ export const HeaderBar: React.FC = () => {
       return;
     }
     const warningCount = result.diagnostics.filter((entry) => entry.severity === 'warning').length;
-    showToast(`Imported "${name}" from an OGraf package.`, 'success');
     if (warningCount > 0) {
       const [firstWarning] = result.diagnostics.filter((entry) => entry.severity === 'warning');
       showToast(`${warningCount} report entr${warningCount === 1 ? 'y' : 'ies'} from the import.`, 'info', {
@@ -548,38 +568,20 @@ export const HeaderBar: React.FC = () => {
         <div className="header-actions">
           {/* Auto-Save */}
           <div
-            className={`autosave-status-badge${autosaveConflict ? ' autosave-status-badge--paused' : autosaveError ? ' autosave-status-badge--error' : ''}`}
+            className={`autosave-status-badge autosave-status-badge--${saveStatus.state}${autosaveConflict ? ' autosave-status-badge--paused' : autosaveError ? ' autosave-status-badge--error' : ''}`}
             onClick={triggerManualSave}
             data-last-saved-at={lastSavedAt ? String(lastSavedAt.getTime()) : ''}
-            title={autosaveConflict
-              ? 'Autosave paused: another tab changed the shared project. Reload to adopt it, or export this tab\u2019s work — nothing here will be overwritten.'
-              : autosaveError
-                ? `Auto-save failed: browser storage ${autosaveError.kind === 'quota' ? 'is full' : 'is unavailable'}. Your changes are kept in memory — export the project to keep them. Autosave retries every 10 seconds; clicking saves now.`
-                : 'Auto-saved every 10 seconds. Click to save manually.'}
+            data-save-state={saveStatus.state}
+            // C7 — restore provenance (this browser's autosave vs a shared
+            // file; autosave is per origin, so a LAN visitor may see another
+            // project) is stated here instead of a header chip.
+            title={restoredFromLocalStorage ? `${saveStatus.detail} This project was restored from this browser's autosave, not from a shared project file; use Import to open another machine's document.` : saveStatus.detail}
+            data-restored-from-local={restoredFromLocalStorage ? 'true' : undefined}
           >
-            <div className={autosaveConflict ? 'pulse-amber-dot' : autosaveError ? 'pulse-red-dot' : 'pulse-green-dot'} />
+            <div className={autosaveConflict ? 'pulse-amber-dot' : autosaveError ? 'pulse-red-dot' : saveStatus.state === 'unsaved' || saveStatus.state === 'saving' ? 'pulse-pending-dot' : 'pulse-green-dot'} />
             {autosaveConflict || autosaveError ? <AlertTriangle size={13} /> : <CheckCircle2 size={13} className="text-green" />}
-            <span className="autosave-text">{autosaveConflict || autosaveError ? 'Not saved' : timeAgoStr}</span>
+            <span className="autosave-text">{saveStatus.label}</span>
           </div>
-
-          {/*
-            Restore provenance. The same browser profile serves localhost and
-            the LAN address, and autosave is keyed per origin — a machine that
-            reaches the editor over the LAN can therefore open with a DIFFERENT
-            (or empty) project than the machine that authored it, silently.
-            This chip states where the document currently on screen came from,
-            and it disappears the moment an import or a reset replaces it.
-          */}
-          {restoredFromLocalStorage && (
-            <div
-              className="restored-from-local-badge"
-              role="status"
-              title="This project was restored from this browser's autosave, not from a shared project file. Use Import project to open the other machine's document."
-            >
-              <HardDriveDownload size={13} aria-hidden="true" />
-              <span>Restored from this browser&#39;s autosave</span>
-            </div>
-          )}
 
           {/* FPS Control */}
           <select className="select-control"
@@ -675,8 +677,27 @@ export const HeaderBar: React.FC = () => {
                 >
                   Animated GIF
                 </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="header-action-btn"
+                  style={{ width: '100%', justifyContent: 'flex-start' }}
+                  title="See, per layer, what an OGraf export supports, exports with warnings, or blocks — before exporting"
+                  onClick={() => { void handleOpenOGrafCheck(); }}
+                >
+                  Check OGraf Export…
+                </button>
               </div>
             )}
+            <OGrafCapabilityDialog
+              isOpen={ografCheck !== null}
+              report={ografCheck?.report ?? null}
+              onClose={() => setOgrafCheck(null)}
+              onExport={() => {
+                setOgrafCheck(null);
+                void handleOGrafExport();
+              }}
+            />
             {gifExportScene && (
               <GifPanelGate
                 scene={gifExportScene}

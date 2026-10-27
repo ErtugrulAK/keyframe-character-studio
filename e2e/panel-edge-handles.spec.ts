@@ -69,7 +69,7 @@ export interface DockBoundaryReport {
 }
 
 /**
- * The handle's centre is the dock boundary; no text-bearing leaf is covered.
+ * The handle's centre is the dock boundary; no text-bearing leaf or control is covered.
  */
 async function dockBoundaryReport(page: Page): Promise<DockBoundaryReport> {
   return page.evaluate(() => {
@@ -84,8 +84,11 @@ async function dockBoundaryReport(page: Page): Promise<DockBoundaryReport> {
       if (!root) return [];
       const out: { cls: string; text: string; x: number; y: number; right: number; bottom: number }[] = [];
       for (const node of Array.from(root.querySelectorAll('*'))) {
-        if (node.children.length > 0) continue;
-        const text = (node.textContent ?? '').trim();
+        // C7 — a control (a disclosure chevron, an icon button, a field) is
+        // content too, even when it paints no text of its own.
+        const control = node.matches('button, [role="button"], input, select, textarea');
+        if (node.children.length > 0 && !control) continue;
+        const text = (node.textContent ?? '').trim() || (control ? node.getAttribute('aria-label') ?? node.tagName : '');
         if (!text) continue;
         const rect = node.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) continue;
@@ -167,11 +170,12 @@ test('R5-01 — both dock handles are anchored to the panel boundary, never to p
 
   const resizer = page.getByTestId('timeline-height-resizer');
   const timelineHeight = () => page.evaluate(() => document.querySelector('[data-testid="sequencer-timeline"]')!.getBoundingClientRect().height);
+  // C8: grabbed a quarter of the way in; the collapse handle owns the centre.
   const drag = async (deltaY: number) => {
     const box = (await resizer.boundingBox())!;
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.move(box.x + box.width / 4, box.y + box.height / 2);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + deltaY, { steps: 12 });
+    await page.mouse.move(box.x + box.width / 4, box.y + box.height / 2 + deltaY, { steps: 12 });
     await page.mouse.up();
   };
 
@@ -200,6 +204,12 @@ test('R5-01 — both dock handles are anchored to the panel boundary, never to p
   await drag(2000);
   await page.setViewportSize({ width: 1120, height: 620 });
   await expect.poll(timelineHeight).toBeGreaterThan(0);
+  // C11: shrinking to 1120 px left a 388 px stage, so the left dock closed
+  // itself (the narrow-window rule); the user reopens it and the handle
+  // contract is checked with both docks open, as before.
+  await expect(page.locator('.left-toolbar-toggle')).toHaveAttribute('aria-expanded', 'false');
+  await page.getByRole('button', { name: 'Show Left Toolbar' }).click();
+  await expect.poll(() => page.locator('#left-toolbar-panel').evaluate((node) => (node as HTMLElement).style.width)).toBe('');
   const shortReport = await dockBoundaryReport(page);
   expectHandleBoundary('short viewport', shortReport, 'left', true);
   expectHandleBoundary('short viewport', shortReport, 'right', true);
@@ -240,6 +250,10 @@ test('R5-01 — both dock handles are anchored to the panel boundary, never to p
 test('R5-01 — the dock handles keep their accessible names and a visible keyboard focus ring', async ({ page }) => {
   await seed(page);
   await page.setViewportSize({ width: 1440, height: 900 });
+  // C2: the seed's mouse click now focuses the (focusable) layer-tree row, so the
+  // browser's last input modality is "pointer". A keyboard user reaches these
+  // handles with the keyboard: establish that modality before focusing them.
+  await page.keyboard.press('Shift');
 
   for (const selector of ['.left-toolbar-toggle', '.inspector-dock-toggle']) {
     const state = await page.evaluate((sel) => {

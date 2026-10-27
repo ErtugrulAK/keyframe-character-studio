@@ -38,7 +38,19 @@ const getShapeDashProps = (part: CharacterPart, totalPerimeter: number) => {
   return getStrokeDashProps(part, totalPerimeter);
 };
 
-type SvgShapeProps = Record<string, string | number | undefined>;
+type SvgShapeProps = Record<string, unknown>;
+
+/**
+ * C12 — an authored stroke width in stage units, independent of the layer's
+ * own scale: non-scaling, times the stage's screen pixels per unit (the
+ * `--kcs-stroke-scale` StageCanvas sets), so it still zooms with the view.
+ */
+const authoredStrokeWidth = (width: number): SvgShapeProps => ({
+  // The attribute keeps the authored value readable; the style is what paints.
+  strokeWidth: width,
+  vectorEffect: 'non-scaling-stroke',
+  style: { strokeWidth: `calc(${width}px * var(--kcs-stroke-scale, 1))` },
+});
 
 const renderModernGeometry = (
   part: CharacterPart,
@@ -72,7 +84,7 @@ const renderModernGeometry = (
     case 'custom_freeform': {
       const path = part.path ?? legacyFreeformPointsToPath(part.points);
       const d = path ? buildBezierPathD(path) : '';
-      return d ? <path d={d} strokeLinejoin="round" {...props} /> : null;
+      return d ? <path d={d} strokeLinejoin={part.strokeLinejoin === 'miter' ? 'miter' : 'round'} {...props} /> : null;
     }
     default:
       return null;
@@ -94,8 +106,11 @@ const renderModernShape = (
     fillOpacity: appearance.fillOpacity,
     stroke,
     strokeOpacity: appearance.strokeOpacity,
-    strokeWidth: appearance.strokeWidth,
-    vectorEffect: 'non-scaling-stroke' as const,
+    // C10 made the stroke zoom with the view (it used to stay N screen px).
+    // C12 — but not with the layer's scale: a shape drawn by dragging is a
+    // scaled canonical shape, so its 1.5-unit border painted 6 px thick (and
+    // thicker on two sides when the drag was not square).
+    ...authoredStrokeWidth(appearance.strokeWidth),
     ...dashProps,
   };
 
@@ -103,17 +118,19 @@ const renderModernShape = (
     return renderModernGeometry(part, geo, common);
   }
 
-  // SVG has no reliable cross-browser stroke-alignment property. Mask the
-  // centered stroke paint against the same authored geometry: outside keeps
-  // the exterior half; inside keeps the interior half. Fill, canonical
-  // geometry, non-scaling-stroke, and Trim Path dash semantics stay shared.
+  // SVG has no reliable cross-browser stroke-alignment property. Mask a
+  // centered stroke of twice the width against the same authored geometry:
+  // outside keeps the exterior half, inside the interior half, so either one
+  // is the authored width (the OGraf renderers draw it the same way). Fill,
+  // canonical geometry, stroke scaling, and Trim Path dash semantics stay
+  // shared.
   const alignment = appearance.strokeAlignment;
   const maskId = `${alignment}-stroke-${part.id.replace(/[^a-zA-Z0-9_-]/g, '_')}${isGhost ? '-ghost' : ''}`;
-  const fillProps: SvgShapeProps = { ...common, stroke: 'none', strokeWidth: 0 };
+  const fillProps: SvgShapeProps = { ...common, stroke: 'none', style: undefined, vectorEffect: undefined, strokeWidth: 0 };
   const strokeProps: SvgShapeProps = {
     ...common,
     fill: 'none',
-    strokeWidth: alignment === 'inside' ? appearance.strokeWidth * 2 : appearance.strokeWidth,
+    ...authoredStrokeWidth(appearance.strokeWidth * 2),
     mask: `url(#${maskId})`,
   };
   const maskGeometry = renderModernGeometry(part, geo, {
@@ -350,7 +367,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, isGhost, trimP
       return (
         <g>
           <path d={d} fill="rgba(0,0,0,0.001)" fillRule="evenodd" />
-          <path d={d} fill={fill} fillRule="evenodd" stroke={strokeToUse} strokeWidth={isSelected ? 2 : 1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" {...getShapeDashProps(renderPart, points ? getFreeformPerimeter(points) : 0)} />
+          <path d={d} fill={fill} fillRule="evenodd" stroke={strokeToUse} strokeWidth={isSelected ? 2 : 1.5} strokeLinejoin={part.strokeLinejoin === 'miter' ? 'miter' : 'round'} vectorEffect="non-scaling-stroke" {...getShapeDashProps(renderPart, points ? getFreeformPerimeter(points) : 0)} />
         </g>
       );
     }

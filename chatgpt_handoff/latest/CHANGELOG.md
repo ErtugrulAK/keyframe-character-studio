@@ -4,8 +4,47 @@ All notable changes to **Keyframe Character Studio** will be documented in this 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## [Unreleased]
+
+## [1.1.0-rc.3] - 2026-10-27
+
+The third release candidate of 1.1.0: the `feature/motion/kcs-master-implementation`
+work (the master-review work packages and manual QA rounds C1–C12) on top of the
+V7.2 integration (`15f3be1`). The package metadata now reads `1.1.0-rc.3`.
+
+### Added
+- Masks you draw and edit on the canvas: Rectangle, Ellipse and Pen masks on any layer, point and handle editing, keyboard nudging, and per-mask animation of the path and its properties.
+- A layer tree with parenting, locks and a deletion review; Track Matte relationships with source navigation ("Select Source" / "Back to …"); mask-constrained colour correction for images (scene v3).
+- Basic shapes convert to editable paths; the Pen places a corner on click and a smooth point on drag; C, a double-click and Alt-drag switch point types and link or break handles.
+- The X/Y coordinate overlay and readout, with axis badges at the visible end of each axis.
+- Alt-drag of the first or last selected keyframe stretches the selection in time; easing code can be pasted into the Motion Curve Editor.
+- OGraf export capability report per layer before exporting.
+
+### Changed
+- The Inspector is split into Properties, Masks and Layer tabs; the timeline property tree follows motion-tool order with per-mask groups; the property stopwatch is replaced by the row's "+".
+- Docks, the timeline and the stage: one clean slide per panel toggle, a fixed-size drawing surface (no redraw or shimmer when panels move), and reduced motion honoured everywhere.
+- Phones, tablets and resized or half-screen windows: the docks close (and open over the stage on a phone) when the stage has no room, and the header, toolbar and timeline rearrange instead of clipping.
+- A shape's border keeps its authored width whatever the layer's scale and zooms with the view (OGraf output alike); the editor chrome (artboard border, selection frame) stays thin at every zoom.
+- The Motion Curve Editor is redesigned: no captions on the graph, the handle numbers in one row, icon presets, a compact preview and code row; it fits a phone.
+- A new Track Matte hides its source, as in After Effects; the LAYER MASKS card is simplified to "Cut a hole" and an on/off eye.
+
+### Fixed
+- A second mask's "Cut a hole" cut nothing (the stack was an alpha mask), and editing the first of two masks did not repaint the layer until editing was re-entered.
+- Number fields keep the typed text, so values such as 0.1 can be typed.
+- Autosave saves within 10 s of the first change and reports its real state.
+- Animation transfer pastes motion relative to the target's own pose.
+
+### Removed
+- The canvas pick-whip for Track Matte sources, the IN/OUT preset and DUPLICATE cards in the Layer tab, and the "Restored from this browser's autosave" chip.
+- C10's frame-rate retiming was reverted: changing the FPS keeps every key on its frame.
+
+## 1.1.0 candidates rc.1–rc.2 and the work integrated up to V7.2
+
+Everything below was recorded under `[Unreleased]` before the rc.3 cut. It covers
+the rc.1 and rc.2 candidates and the work integrated on `main` after them, up to
+`39f6414`.
 
 ### Added
 - A layer **OPACITY** field in the Transform section, shown as a percentage next to an **Add/Remove Keyframe** button. The field writes through the same `opacity` channel the timeline already animates: while the channel has no keyframe it sets the layer's static opacity, and once it has one, the edit lands on the current frame (adding a keyframe there when the frame is empty) — so an entrance fade is authored by setting 0% on one frame and 100% on another, and each keyframe keeps its own value. It works for every layer kind: shapes, text, images, freeform and cloners.

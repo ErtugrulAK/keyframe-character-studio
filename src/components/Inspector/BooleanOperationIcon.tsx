@@ -8,12 +8,17 @@ import type { BooleanOperation } from '../../utils/booleanGeometry';
  * the overlap survives, so one geometry serves all four operations and the icons
  * stay visually consistent with each other. Drawn here rather than taken from an
  * icon set — no third-party icon assets are used.
+ *
+ * C3 — drawn in the toolbar's line language (24-unit grid, 2-unit round
+ * stroke, like the Lucide glyphs beside them): both operands are always
+ * outlined and only the RESULT of the operation is filled. Solid blocks read
+ * as another icon family, and the four blurred into each other at 15 px.
  */
 
-/** The two operands and the region they share, as subpaths of one 16x16 icon. */
-const LEFT = 'M1 4 H10 V13 H1 Z';
-const RIGHT = 'M6 1 H15 V10 H6 Z';
-const OVERLAP = 'M6 4 H10 V10 H6 Z';
+/** The two operands and the region they share, as subpaths of one 24x24 icon. */
+const LEFT = 'M3 8 H15 V20 H3 Z';
+const RIGHT = 'M9 3 H21 V15 H9 Z';
+const OVERLAP = 'M9 8 H15 V15 H9 Z';
 
 const ICONS: Record<BooleanOperation, { d: string; fillRule: 'nonzero' | 'evenodd' }> = {
   // Both operands, painted once where they overlap.
@@ -27,7 +32,9 @@ const ICONS: Record<BooleanOperation, { d: string; fillRule: 'nonzero' | 'evenod
 };
 
 export const BooleanOperationIcon: React.FC<{ operation: BooleanOperation; size?: number }> = ({ operation, size = 16 }) => (
-  <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-    <path d={ICONS[operation].d} fillRule={ICONS[operation].fillRule} fill="currentColor" />
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    {/* The result region is what tells the four operations apart. */}
+    <path data-boolean-result="" d={ICONS[operation].d} fillRule={ICONS[operation].fillRule} fill="currentColor" fillOpacity={0.5} />
+    <path d={`${LEFT} ${RIGHT}`} fill="none" stroke="currentColor" strokeWidth={2} strokeLinejoin="round" />
   </svg>
 );

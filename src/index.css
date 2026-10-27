@@ -225,9 +225,12 @@ body, html, #root {
      edge never moves when the timeline is resized (only its height does), so a
      handle pinned below that edge cannot be pushed onto the timeline in a short
      window, and `--kcs-panel-handle-top` states the single inset both handles
-     share. */
+     share. C8: 112px (was 32), lower down the side edge. A fixed inset keeps
+     the handles still when the timeline is resized, and the 40px handle ends
+     at 152px, inside the stage's 160px minimum, so it never reaches the
+     timeline. */
   position: relative;
-  --kcs-panel-handle-top: 32px;
+  --kcs-panel-handle-top: 112px;
 }
 
 /* Typography standardization across app UI */
@@ -570,10 +573,17 @@ input[type="number"] {
   -moz-appearance: textfield !important;
 }
 @media (prefers-reduced-motion: reduce) {
+  /* C7c — NO transition, not a 0.01 ms one. Every element's default is
+     `transition: all 0s`; forcing the duration to 0.01 ms turned that into a
+     real (tiny) transition of every property, so a changed value — e.g. the
+     stage camera's translation when a dock or the timeline toggles — kept its
+     OLD computed value for 2-3 frames. The world jumped by the dock width and
+     back (measured: 360 px on a left-dock toggle). Nothing waits for a
+     `transitionend` under reduced motion. */
   *,
   *::before,
   *::after {
-    transition-duration: 0.01ms !important;
+    transition: none !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
@@ -615,4 +625,19 @@ input[type="number"] {
   /* Contrast partner of --bg-darkest on the canvas selection frame: the light
      half of the paired outline, so the frame reads over dark artwork too. */
   --kcs-selection-keyline: rgba(248, 250, 252, 0.9);
+}
+
+/* WP-05 — derived display ordinal of a layer row (a position, not an ID). */
+.layer-ordinal {
+  flex: 0 0 auto;
+  min-width: 18px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.14);
+  color: #cbd5e1;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 16px;
+  text-align: center;
 }

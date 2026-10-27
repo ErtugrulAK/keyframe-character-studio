@@ -9,6 +9,8 @@ export interface ContextMenuItem {
   /** Only set when the shortcut already exists in the editor's key map. */
   shortcut?: string;
   disabled?: boolean;
+  /** Why the item does what it does, or why it is disabled (tooltip). */
+  title?: string;
   run: () => void;
 }
 
@@ -148,6 +150,7 @@ export const EditorContextMenu: React.FC<EditorContextMenuProps> = ({ isOpen, po
               role="menuitem"
               className="editor-context-menu-item"
               disabled={item.disabled}
+              title={item.title}
               onClick={() => {
                 if (item.disabled) return;
                 item.run();

@@ -1,7 +1,8 @@
-import React from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Lock, Plus, Tv, Unlock } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Lock, Plus, Tv, Unlock } from 'lucide-react';
 import type { AnimationChannel, CharacterPart, LayerMaskChannel, LayerMaskPathChannel, Track, TrackChannel } from '../../types/animator';
-import { layerMaskChannel, layerMaskPathChannel } from '../../types/animator';
+import { laneContextOf, resolveLaneRows } from './timelineLaneLayout';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { resolveAdjacentKeyframeFrame, resolveChannelAnimationState, resolveChannelKeyframeFrames, resolveLayerKeyframeFrames } from '../../utils/timelineMetrics';
 import { resolveAuthoredBasePose } from '../../utils/channelKeyframeGroups';
@@ -9,6 +10,10 @@ import { InlineRename } from '../Shared/InlineRename';
 
 interface TrackOutlinerRowProps {
   track: Track;
+  /** WP-05: the layer's derived display ordinal (shared with the Outliner). */
+  ordinal?: number;
+  /** Total layer count, for the ordinal's description. */
+  layerCount?: number;
   /** BUGFIX: parts resolve the real element name — the track only carries
    *  partId (track.name may be a generated "Track part_x" placeholder after
    *  import, since the name field is not serialized). */
@@ -29,7 +34,7 @@ interface TrackOutlinerRowProps {
   onToggleLock: (trackId: string) => void;
   onAddKeyframe: (trackId: string, frame: number) => void;
   onAddChannelKeyframe: (trackId: string, channel: AnimationChannel, partId: string) => void;
-  /** K1 (D2) — stopwatch press: arm when off, request disarm when on. */
+  /** K1 (D2) — arm an unanimated property (C10: its "+"), or ask to remove all its keys (C10: the row's menu). */
   onToggleChannelAnimation: (trackId: string, channel: AnimationChannel) => void;
   /** R3-07 — moves the playhead to a frame. Navigation only: never a document write. */
   onJumpToFrame: (frame: number) => void;
@@ -52,6 +57,14 @@ const TREE_LABEL: Partial<Record<TrackChannel, string>> = {
   trimPathStart: 'Start',
   trimPathEnd: 'End',
   trimPathOffset: 'Offset',
+};
+
+/** C7 — a mask property row reads like other motion tools: Path, Feather, Opacity, Expansion. */
+const MASK_PROPERTY_LABEL: Record<string, string> = {
+  path: 'Path',
+  feather: 'Feather',
+  opacity: 'Opacity',
+  expansion: 'Expansion',
 };
 
 /** Every disclosure row shows the same chevron, at the same size. */
@@ -77,8 +90,10 @@ const activateOnKey = (toggle: () => void) => (event: React.KeyboardEvent) => {
  * accessible name, so a Transform row can never read as an orphan that belongs
  * to no layer (or to the timeline as a whole).
  */
-export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
+const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
   track,
+  ordinal,
+  layerCount,
   parts,
   isChildLayer,
   isSelected,
@@ -111,19 +126,26 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
   // `resolveTrackChannels`). Navigation reads exactly what the rows draw.
   const basePose = resolveAuthoredBasePose(parts, track.partId);
   const isTrackExpanded = track.expanded === true;
-  const isPositionExpanded = isGroupExpanded(`${track.id}_position`, true);
-  const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
-  const isTrimPathExpanded = isGroupExpanded(`${track.id}_trim`, true);
-  const isMaskExpanded = isGroupExpanded(`${track.id}_mask`, false);
-  // K3 — the mask group lists every animatable property of every mask the
-  // layer actually owns; no masks means no group, not an empty header.
-  const partMasks = parts.find((p) => p.id === track.partId)?.masks ?? [];
-  const maskRows: AnimationChannel[] = partMasks.flatMap((mask) => [
-    layerMaskChannel(mask.id, 'opacity'),
-    layerMaskChannel(mask.id, 'feather'),
-    layerMaskChannel(mask.id, 'expansion'),
-    layerMaskPathChannel(mask.id),
-  ]);
+  // C10 — a property row's right-click menu (only for an animated property).
+  const [channelMenu, setChannelMenu] = useState<{ channel: AnimationChannel; label: string; x: number; y: number } | null>(null);
+  const channelMenuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!channelMenu) return undefined;
+    const close = (event: MouseEvent | KeyboardEvent) => {
+      if (event instanceof KeyboardEvent && event.key !== 'Escape') return;
+      if (event instanceof MouseEvent && channelMenuRef.current?.contains(event.target as Node)) return;
+      setChannelMenu(null);
+    };
+    window.addEventListener('mousedown', close);
+    window.addEventListener('keydown', close);
+    return () => {
+      window.removeEventListener('mousedown', close);
+      window.removeEventListener('keydown', close);
+    };
+  }, [channelMenu]);
+  // K3 / C7 — the layer's masks name their property groups.
+  const owningPart = parts.find((p) => p.id === track.partId);
+  const partMasks = owningPart?.masks ?? [];
 
   /**
    * R3-07 — the layer's own keyframe endpoints. Both endpoints are resolved from
@@ -174,7 +196,14 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
         className="ue-channel-row"
         data-owner-part-id={track.partId}
         data-property-channel={ch}
+        data-animation-state={animationState}
         style={{ height: CHANNEL_ROW_HEIGHT }}
+        onContextMenu={(event) => {
+          // C10 — "Remove all keyframes" replaces the stopwatch's disarm.
+          event.preventDefault();
+          event.stopPropagation();
+          setChannelMenu(animationState === 'off' ? null : { channel: ch, label: meta.label, x: event.clientX, y: event.clientY });
+        }}
       >
         <span className={indentClass} />
         {/* R3-06 — the row states the property, not how many keys it holds: the
@@ -184,35 +213,19 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
             because the channel colour already lives on the lane keyframes and
             the connector the row belongs to. */}
         <span className="ue-channel-label" title={`${meta.label}${chKfs.length ? ` — ${chKfs.length} keyframe${chKfs.length === 1 ? '' : 's'}` : ''}`}>
-          {TREE_LABEL[ch as TrackChannel] ?? meta.label}
+          {TREE_LABEL[ch as TrackChannel] ?? (ch.includes(':') ? MASK_PROPERTY_LABEL[ch.slice(ch.lastIndexOf(':') + 1)] ?? meta.label : meta.label)}
         </span>
         <div className="ue-channel-controls">
           {/* [◀][+][▶] scoped to THIS property — the layer row's own trio, one
               level down: the row states its property, its nav strip states the
               property's keys. The strip is neutral (R5-06/R5-07): a plain plus
               adds the key, a greyed pair means that side has nothing. */}
-          {/* K1 (D2) — the stopwatch owns the property's animation state; the
-              plus below stays the "add a key here" action it has always been.
-              K3: a mask PATH row shows its geometry keyframes and navigates
-              them, but its keys are authored on the path lane — the stopwatch
-              and the plus have no meaning for a shape. */}
-          {!isPathChannel && (
-          <button
-            className="btn-icon ue-channel-stopwatch"
-            data-property-channel={ch}
-            data-animation-state={animationState}
-            aria-pressed={animationState !== 'off'}
-            onClick={(e) => { e.stopPropagation(); onToggleChannelAnimation(track.id, ch); }}
-            title={animationState === 'off'
-              ? `Animate ${meta.label} of ${displayName}`
-              : `Stop animating ${meta.label} of ${displayName} (${chKfs.length} keyframe${chKfs.length === 1 ? '' : 's'} in this sequence)`}
-            aria-label={animationState === 'off'
-              ? `Animate ${meta.label} of ${displayName}`
-              : `Stop animating ${meta.label} of ${displayName}`}
-          >
-            <Clock size={12} aria-hidden="true" />
-          </button>
-          )}
+          {/* C10 — no stopwatch (QA: it confused more than it helped). The plus
+              starts a property's animation with its first key, like any later
+              key; removing all of a property's keys is the row's right-click
+              menu. A mask PATH row's plus arms the path at the playhead (the
+              shape shown there becomes the first key); later path keys come
+              from editing the path on the canvas or in the Inspector. */}
           <button
             className="btn-icon track-icon-btn"
             onClick={(e) => { e.stopPropagation(); if (previousChannelFrame !== null) onJumpToFrame(previousChannelFrame); }}
@@ -228,10 +241,19 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
           </button>
           <button
             className="btn-icon track-add-kf-btn"
-            onClick={(e) => { e.stopPropagation(); onAddChannelKeyframe(track.id, ch, track.partId); }}
-            disabled={isPathChannel}
-            title={isPathChannel ? `${meta.label} geometry is authored on the path lane` : `Add ${meta.label} keyframe`}
-            aria-label={isPathChannel ? `${meta.label} keyframes are authored on the path lane` : `Add ${meta.label} keyframe`}
+            data-property-channel={ch}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (animationState === 'off') onToggleChannelAnimation(track.id, ch);
+              else onAddChannelKeyframe(track.id, ch, track.partId);
+            }}
+            disabled={isPathChannel && animationState !== 'off'}
+            title={isPathChannel && animationState !== 'off'
+              ? `${meta.label} geometry is authored on the path lane`
+              : `Add ${meta.label} keyframe`}
+            aria-label={isPathChannel && animationState !== 'off'
+              ? `${meta.label} keyframes are authored on the path lane`
+              : `Add ${meta.label} keyframe`}
           >
             <Plus size={12} aria-hidden="true" />
           </button>
@@ -281,7 +303,7 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
   );
 
   return (
-    <div key={track.id} className="ue-track-group">
+    <div key={track.id} className="ue-track-group" data-track-row-id={track.id} data-track-part-id={track.partId}>
       {/* ── LAYER ROW ── */}
       <div
         className={`ue-track-row ${isSelected ? 'selected' : ''}`}
@@ -302,6 +324,15 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
           {isTrackExpanded ? <ChevronDown size={12} aria-hidden="true" /> : <ChevronRight size={12} aria-hidden="true" />}
         </button>
 
+        {ordinal !== undefined && (
+          <span
+            className="layer-ordinal"
+            data-layer-ordinal={ordinal}
+            title={`Position ${ordinal}${layerCount ? ` of ${layerCount}` : ''} in the layer list — a display number, not an ID`}
+          >
+            {ordinal}
+          </span>
+        )}
         <span className="ue-color-dot" style={{ backgroundColor: track.color }} />
 
         {editingPartId === track.partId ? (
@@ -345,7 +376,7 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
           </button>
 
           {/* 3. Lock Button */}
-          <button className="btn-icon track-icon-btn" onClick={(e) => { e.stopPropagation(); onToggleLock(track.id); }} title={track.locked ? 'Unlock' : 'Lock Layer'}>
+          <button type="button" className={`btn-icon track-icon-btn${track.locked ? ' is-locked' : ''}`} onClick={(e) => { e.stopPropagation(); onToggleLock(track.id); }} title={track.locked ? 'Unlock (Ctrl+L)' : 'Lock Layer (Ctrl+L)'} aria-label={`${track.locked ? 'Unlock' : 'Lock'} ${displayName}`} aria-pressed={Boolean(track.locked)}>
             {track.locked ? <Lock size={12} className="text-gold" /> : <Unlock size={12} />}
           </button>
 
@@ -371,6 +402,8 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
           </button>
 
           {/* 4. Add Keyframe Button */}
+          {/* The frame is resolved by the parent at call time: a collapsed row
+              is not re-rendered for every playhead frame (C3). */}
           <button className="btn-icon track-add-kf-btn" onClick={(e) => { e.stopPropagation(); onAddKeyframe(track.id, currentFrame); }} title="Add Composite Keyframe">
             <Plus size={12} />
           </button>
@@ -411,31 +444,75 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
             the tree row for row, so a property row and its lane are always the
             same band.
           */}
-          {renderGroupHeader(`${track.id}_position`, 'Position', isPositionExpanded, true)}
-          {isPositionExpanded && ['x', 'y'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-deep'))}
-
-          {/* Rotation is one channel: it is a leaf of the tree, not a group. */}
-          {renderChannelRow('rotation', 'ue-channel-indent', true)}
-
-          {renderGroupHeader(`${track.id}_scale`, 'Scale', isScaleExpanded, false)}
-          {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-deep'))}
-
-          {renderChannelRow('opacity', 'ue-channel-indent')}
-
-          {/* Trim Path is a peer of the transform channels, not one of their children. */}
-          {renderGroupHeader(`${track.id}_trim`, 'Trim Path', isTrimPathExpanded, true)}
-          {isTrimPathExpanded && ['trimPathStart', 'trimPathEnd', 'trimPathOffset'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-deep'))}
-
-          {/* K3 — the layer's masks, in the tree and in the band, in exactly
-              this order: below Trim Path, one lane per property per mask. */}
-          {maskRows.length > 0 && (
-            <>
-              {renderGroupHeader(`${track.id}_mask`, 'Mask', isMaskExpanded, false)}
-              {isMaskExpanded && maskRows.map((chKey) => renderChannelRow(chKey, 'ue-channel-indent-deep'))}
-            </>
-          )}
+          {/* C7 — the rows come from `resolveLaneRows`, the same model the
+              lanes, the marquee and the row heights use (so tree row N and
+              lane N are always the same property). Order, as in other motion
+              tools: Position, Scale, Rotation, Opacity; Trim Paths only when
+              the layer uses it; then one group per mask (Path, Feather,
+              Opacity, Expansion). */}
+          {resolveLaneRows(track, isGroupExpanded, laneContextOf(owningPart)).map((row) => {
+            if (row.kind === 'track') return null;
+            if (row.kind === 'header') {
+              const key = `${track.id}_${row.group}`;
+              return <React.Fragment key={key}>{renderGroupHeader(key, row.label, isGroupExpanded(key, row.defaultExpanded), row.defaultExpanded)}</React.Fragment>;
+            }
+            return renderChannelRow(row.channel, row.depth === 2 ? 'ue-channel-indent-deep' : 'ue-channel-indent', true);
+          })}
         </div>
+      )}
+      {channelMenu && createPortal(
+        <div
+          ref={channelMenuRef}
+          role="menu"
+          aria-label={`${channelMenu.label} of ${displayName}`}
+          className="timeline-channel-menu"
+          style={{
+            position: 'fixed', left: channelMenu.x, top: channelMenu.y, zIndex: 1000, minWidth: 180,
+            background: '#1e2430', border: '1px solid #39415a', borderRadius: 6, boxShadow: '0 4px 16px rgba(0,0,0,0.5)', padding: '4px 0',
+          }}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="timeline-menu-item"
+            autoFocus
+            title={`Delete every ${channelMenu.label} keyframe of ${displayName} in this sequence (asks first)`}
+            style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#dbe3f0', fontSize: 11, fontWeight: 600, padding: '6px 12px', cursor: 'pointer' }}
+            onClick={() => {
+              const { channel } = channelMenu;
+              setChannelMenu(null);
+              onToggleChannelAnimation(track.id, channel);
+            }}
+          >
+            Remove all keyframes
+          </button>
+        </div>,
+        document.body,
       )}
     </div>
   );
 };
+
+/** The previous/next keyframe a collapsed row offers at `frame` — all it shows of the playhead. */
+const collapsedRowNavigation = (props: TrackOutlinerRowProps): string => {
+  const frames = resolveLayerKeyframeFrames(props.track, props.activeTemplateId || 'Sequence', resolveAuthoredBasePose(props.parts, props.track.partId));
+  return `${resolveAdjacentKeyframeFrame(frames, props.currentFrame, 'previous')}:${resolveAdjacentKeyframeFrame(frames, props.currentFrame, 'next')}`;
+};
+
+/**
+ * C3 — a playhead frame re-renders only what shows the frame. Every prop is
+ * compared by identity (the parent passes stable actions that read the latest
+ * handlers at call time), except the frame: an expanded row shows per-channel
+ * state at the frame, a collapsed one only its previous/next keyframe
+ * navigation, so it re-renders when that navigation changes.
+ */
+const sameRowProps = (prev: TrackOutlinerRowProps, next: TrackOutlinerRowProps): boolean => {
+  const keys = Object.keys(next) as (keyof TrackOutlinerRowProps)[];
+  if (keys.length !== Object.keys(prev).length) return false;
+  if (keys.some((key) => key !== 'currentFrame' && prev[key] !== next[key])) return false;
+  if (prev.currentFrame === next.currentFrame) return true;
+  if (next.track.expanded === true) return false;
+  return collapsedRowNavigation(prev) === collapsedRowNavigation(next);
+};
+
+export const TrackOutlinerRow = React.memo(TrackOutlinerRowView, sameRowProps);

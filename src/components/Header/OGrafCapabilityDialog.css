@@ -1,0 +1,92 @@
+/* WP-07 — OGraf export check. Wider than a confirmation, bounded by the
+   window, with a scrolling body so the footer actions never leave the screen. */
+.ograf-capability-dialog {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+
+.ograf-capability-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 0 16px;
+  padding-right: 4px;
+}
+
+.ograf-capability-dialog h3 {
+  margin: 0 0 6px;
+  color: var(--kcs-text-primary);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ograf-capability-section,
+.ograf-capability-layers {
+  margin: 0 0 12px;
+}
+
+.ograf-capability-dialog ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ograf-capability-layer {
+  padding: 8px 10px;
+  border: 1px solid var(--kcs-border-subtle);
+  border-left-width: 3px;
+  border-radius: var(--kcs-radius-control);
+  margin-bottom: 6px;
+}
+
+.ograf-capability-layer.is-supported { border-left-color: #10b981; }
+.ograf-capability-layer.is-conditional { border-left-color: #f59e0b; }
+.ograf-capability-layer.is-blocked { border-left-color: #ef4444; }
+
+.ograf-capability-layer-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ograf-capability-name {
+  color: var(--kcs-text-primary);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.ograf-capability-status {
+  flex: 0 0 auto;
+  color: var(--kcs-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.ograf-capability-layer.is-blocked .ograf-capability-status { color: #fca5a5; }
+.ograf-capability-layer.is-conditional .ograf-capability-status { color: #fcd34d; }
+
+.ograf-capability-issue {
+  margin-top: 4px;
+  color: var(--kcs-text-secondary);
+  font-size: var(--font-size-caption);
+  line-height: 1.45;
+}
+
+.ograf-capability-feature {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: rgba(148, 163, 184, 0.16);
+  color: var(--kcs-text-primary);
+  font-family: var(--font-mono);
+}
+
+.ograf-capability-export:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -8,7 +8,7 @@
 // Animation track model is defined once in `animator.ts` as `AnimationTrackData`
 // (partId-based, canonical). `SceneData.tracks` references it directly —
 // there is no separate AnimationTrack type (P4-S3).
-import type { AnimationTrackData, BezierPath, ImageContentBounds, LayerMask, MotionTemplate, PartMatte, TrackMatteV2 } from './animator';
+import type { AnimationTrackData, BezierPath, ColorCorrectionEffect, ImageContentBounds, LayerMask, MotionTemplate, PartMatte, TrackMatteV2 } from './animator';
 import type { WorldAffine } from '../utils/containerMath';
 /**
  * Coordinate-unit semantics for persisted scene data.
@@ -43,8 +43,8 @@ export interface PersistedTrackState {
 }
 
 export interface SceneData {
-  /** Schema version for forward-compatible migration */
-  version: 1 | 2;
+  /** Schema version for forward-compatible migration (3: the scene uses effects or effect-only masks — WP-08). */
+  version: 1 | 2 | 3;
   /** Explicit coordinate-unit semantics; absent on historical v1 files. */
   coordinateSystem?: SceneCoordinateSystem;
   /** Human-readable scene name */
@@ -93,6 +93,8 @@ export interface SceneLayer {
   masks?: LayerMask[];
   /** V6 track matte relationship. */
   trackMatte?: TrackMatteV2;
+  /** WP-08 — layer effects (colour correction); present only in version 3 scenes. */
+  effects?: ColorCorrectionEffect[];
   booleanGroupId?: string;
   booleanOperation?: 'union' | 'subtract' | 'intersect' | 'exclude';
   booleanOperandIds?: string[];
@@ -126,6 +128,8 @@ export interface SceneLayer {
   shadowOffsetX?: number;
   shadowOffsetY?: number;
   borderRadius?: number;
+  /** C6 — stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
+  strokeLinejoin?: 'miter' | 'round';
 
   // Content — type-dependent; only fields actually read by PartRenderer sub-renderers
   textValue?: string;
@@ -264,11 +268,15 @@ export interface LayerContent {
   masks?: LayerMask[];
   /** V6 track matte relationship. */
   trackMatte?: TrackMatteV2;
+  /** WP-08 — layer effects (colour correction); present only in version 3 scenes. */
+  effects?: ColorCorrectionEffect[];
   shadowColor?: string;
   shadowBlur?: number;
   shadowOffsetX?: number;
   shadowOffsetY?: number;
   borderRadius?: number;
+  /** C6 — stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
+  strokeLinejoin?: 'miter' | 'round';
   trimPathEnabled?: boolean;
   trimPathStart?: number;
   trimPathEnd?: number;

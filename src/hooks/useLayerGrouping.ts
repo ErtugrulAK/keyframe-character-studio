@@ -8,6 +8,7 @@ import {
   ungroupBlockReason,
 } from '../utils/layerGrouping';
 import type { CharacterPart, Track, Transform } from '../types/animator';
+import { lockedOutcomeRefusal } from '../utils/layerLocks';
 import type { ToastOptions } from './useToast';
 
 /** The toast writer the context exposes. */
@@ -85,13 +86,18 @@ export const createLayerGroupingActions = ({
       showToast(outcome.reason, 'error');
       return;
     }
+    // C4 — refused whole when it would change a locked layer (nothing written).
+    const lockRefusal = lockedOutcomeRefusal(characterParts, tracks, outcome.parts, outcome.tracks);
+    if (lockRefusal) {
+      showToast(lockRefusal, 'error');
+      return;
+    }
     startBatchInteraction();
     setCharacterParts(outcome.parts);
     setTracks(outcome.tracks);
     endBatchInteraction();
     setSelectedPartIds([outcome.groupId]);
     setSelectedPartId(outcome.groupId);
-    showToast(`Grouped ${outcome.childIds.length} layers`, 'success');
   };
 
   const ungroupSelection = () => {
@@ -104,13 +110,18 @@ export const createLayerGroupingActions = ({
       showToast(outcome.reason, 'error');
       return;
     }
+    // C4 — refused whole when it would change a locked layer (nothing written).
+    const lockRefusal = lockedOutcomeRefusal(characterParts, tracks, outcome.parts, outcome.tracks);
+    if (lockRefusal) {
+      showToast(lockRefusal, 'error');
+      return;
+    }
     startBatchInteraction();
     setCharacterParts(outcome.parts);
     setTracks(outcome.tracks);
     endBatchInteraction();
     setSelectedPartIds(outcome.childIds);
     setSelectedPartId(outcome.childIds[0] ?? null);
-    showToast(`Ungrouped ${outcome.childIds.length} layers; positions kept.`, 'success');
   };
 
   return {

@@ -135,7 +135,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         fill="none"
         pointerEvents="none"
         style={{ stroke: 'var(--kcs-selection-keyline)' }}
-        strokeWidth={3 * zScale}
+        strokeWidth={3}
         vectorEffect="non-scaling-stroke"
       />
       <rect
@@ -147,7 +147,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         fill="none"
         pointerEvents="none"
         style={{ stroke: 'var(--bg-darkest)' }}
-        strokeWidth={1 * zScale}
+        strokeWidth={1}
         vectorEffect="non-scaling-stroke"
       />
       <rect
@@ -158,8 +158,8 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         fill="none"
         pointerEvents="none"
         stroke="#00d2ff"
-        strokeWidth={1.5 * zScale}
-        strokeDasharray={`${5 * zScale} ${4 * zScale}`}
+        strokeWidth={1.5}
+        strokeDasharray="5 4"
         vectorEffect="non-scaling-stroke"
       />
     </>
@@ -210,7 +210,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         x2={point.x}
         y2={point.y}
         stroke="#00d2ff"
-        strokeWidth={2 * zScale}
+        strokeWidth={2}
         vectorEffect="non-scaling-stroke"
       />
       <circle

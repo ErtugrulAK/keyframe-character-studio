@@ -29,7 +29,7 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({
   if (!applies) return null;
 
   return (
-    <StyleCard title="TEXT" collapsible defaultOpen={false}>
+    <StyleCard title="TEXT" collapsible defaultOpen={false} retainKey="text">
       {/* UI CARD CUSTOMIZATION FIELDS */}
       {selectedPart.type === 'custom_card' && (
         <>
@@ -169,7 +169,7 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({
           )}
         <StyleEffectsSection selectedPart={selectedPart} onPartPropChange={onPartPropChange} embedded />
         {(selectedPart.type === 'custom_card' || selectedPart.type === 'custom_banner') && (
-          <StyleCard title="APPEARANCE" collapsible defaultOpen={false}>
+          <StyleCard title="APPEARANCE" collapsible defaultOpen={false} retainKey="text-appearance">
             <div className="form-field-group">
               <label className="form-label">CORNER RADIUS</label>
               <SmartNumberInput

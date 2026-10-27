@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import zlib from 'zlib';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 /**
  * M13 Step 2E — Track matte REAL-BROWSER validation (Chromium).
@@ -182,6 +183,18 @@ function makeLayer(id: string, name: string, type: string, overrides: Record<str
   };
 }
 
+/**
+ * C4 / Sprint 1 — the X/Y coordinate overlay (axes, origin, readout) is edit
+ * chrome drawn over the stage, on by default in every new page. These probes
+ * measure the LAYERS' pixels, so the overlay is switched off with its own
+ * toolbar toggle before sampling — after the seed AND after every reload.
+ */
+async function hideCoordinateOverlay(page: Page): Promise<void> {
+  const overlayToggle = page.getByRole('button', { name: 'Toggle coordinate overlay' });
+  if (await overlayToggle.getAttribute('aria-pressed') === 'true') await overlayToggle.click();
+  await expect(page.locator('.canvas-coordinate-overlay')).toHaveCount(0);
+}
+
 async function seed(page: Page, layers: Record<string, unknown>[], tracks: Record<string, unknown>[] = []): Promise<void> {
   const scene = {
     version: 1, layers, tracks,
@@ -210,6 +223,7 @@ async function seed(page: Page, layers: Record<string, unknown>[], tracks: Recor
     undefined,
     { timeout: 15000 },
   );
+  await hideCoordinateOverlay(page);
 }
 
 async function matteDom(page: Page): Promise<MatteDom> {
@@ -939,6 +953,7 @@ test.describe('M15 freeform matte — real browser pixel assertions', () => {
 
     // IMPORT path: reload → the app restores the scene from the autosaved JSON
     await page.reload();
+    await hideCoordinateOverlay(page);
     await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
 
     // Pixel AFTER the round-trip — identical (serialization changed nothing)
@@ -973,6 +988,7 @@ test.describe('M15 freeform matte — real browser pixel assertions', () => {
     ]);
 
     await page.reload();
+    await hideCoordinateOverlay(page);
     await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
 
     const rampAfter = [
@@ -1071,6 +1087,7 @@ test.describe('M16 matte strength — real browser pixel assertions', () => {
 
     // Reload → real import path
     await page.reload();
+    await hideCoordinateOverlay(page);
     await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
     expect(await page.evaluate(() => document.querySelectorAll('mask[id="kcs-mask-src-alpha-f12-s0.5"]').length)).toBe(1);
     expect(await page.evaluate(() =>
@@ -1094,6 +1111,7 @@ test.describe('M16 matte strength — real browser pixel assertions', () => {
       } catch { return false; }
     }, undefined, { timeout: 10000 });
     await page.reload();
+    await hideCoordinateOverlay(page);
     await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
 
     const after = [
@@ -1115,6 +1133,7 @@ test.describe('M16 matte strength — real browser pixel assertions', () => {
       } catch { return false; }
     }, undefined, { timeout: 10000 });
     await page.reload();
+    await hideCoordinateOverlay(page);
     await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
     // evenodd hole + strength preserved after the real import
     expect(await page.evaluate(() =>
@@ -1244,6 +1263,7 @@ test.describe('M17 gradient matte — real browser pixel assertions', () => {
     const autosaved = await page.evaluate(() => JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5')!));
     expect(autosaved.layers.find((l: any) => l.id === 'tgt').matte.gradient).toEqual({ angle: 0 });
     await page.reload();
+    await hideCoordinateOverlay(page);
     await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
     const after = [await greenAt(page, 305, 255), await greenAt(page, 315, 255)];
     expect(after[0]).toBe(before[0]); // exact pixel parity through the real import
@@ -1298,7 +1318,8 @@ test.describe('M17 gradient matte — real browser pixel assertions', () => {
     await seed(page, [sourcePart, targetPart]);
 
     await page.getByRole('treeitem', { name: /^Target/ }).click();
-    await page.getByRole('button', { name: 'Expand MASK / TRACK MATTE' }).click();
+    await openDetailsTab(page, 'Masks');
+    await page.getByRole('button', { name: 'Expand LEGACY CLIP MATTE' }).click();
     const angle = page.locator('input[aria-label="Gradient angle"]');
     await angle.focus();
     await angle.press('End');
@@ -1626,6 +1647,7 @@ test.describe('M18 text matte — real browser pixel assertions (full 4E matrix)
     });
     expect(JSON.stringify(autosaved.layers.find((l: any) => l.id === 'tgt').matte)).not.toContain('fontSize'); // runtime data NOT persisted
     await page.reload();
+    await hideCoordinateOverlay(page);
     await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
     await ready(page);
     const after = [await maxGreen(page, INK.x0, INK.x1, INK.y0, INK.y1), await greenAtWorld(page, 165, 240)];
@@ -1828,6 +1850,7 @@ test.describe('M19 multi-stop gradient — real browser pixel assertions (5E mat
     expect(autosaved.layers.find((l: any) => l.id === 'tgt').matte.gradient).toEqual({ angle: 0, stops });
     expect(JSON.stringify(autosaved.layers.find((l: any) => l.id === 'tgt').matte)).not.toContain('fontSize');
     await page.reload();
+    await hideCoordinateOverlay(page);
     await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
     await ready(page);
     const after = [await maxGreen(page, INK.x0, INK.x1, INK.y0, INK.y1), await greenAtWorld(page, 165, 240)];

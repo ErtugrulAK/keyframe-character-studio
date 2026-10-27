@@ -9,6 +9,13 @@ export interface ToolbarMenuItem {
   label: string;
   icon: LucideIcon;
   run: () => void;
+  /** C3 — an item the current selection cannot use stays listed, disabled, with its reason. */
+  disabled?: boolean;
+  title?: string;
+  /** The item's `aria-keyshortcuts`, when the command has a key. */
+  keyshortcuts?: string;
+  /** C4 — an on/off command (grid, snapping, crop mode…): a menuitemcheckbox showing its state. */
+  checked?: boolean;
 }
 
 interface ToolbarMenuProps {
@@ -20,6 +27,8 @@ interface ToolbarMenuProps {
   /** What the trigger says when it is unavailable (and why). */
   title: string;
   items: ToolbarMenuItem[];
+  /** C4 — something behind the trigger is on (e.g. crop mode): the trigger shows it like a pressed button. */
+  active?: boolean;
 }
 
 /**
@@ -33,7 +42,7 @@ interface ToolbarMenuProps {
  * press close it and give focus back to the trigger. It writes nothing on open —
  * a menu is chrome, and only an item runs a command.
  */
-export const ToolbarMenu: React.FC<ToolbarMenuProps> = ({ label, icon: Icon, disabled, title, items }) => {
+export const ToolbarMenu: React.FC<ToolbarMenuProps> = ({ label, icon: Icon, disabled, title, items, active = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -60,28 +69,31 @@ export const ToolbarMenu: React.FC<ToolbarMenuProps> = ({ label, icon: Icon, dis
     }
   }, [disabled, isOpen]);
 
-  // Focus lands on the first item once the menu is placed, so the whole set is
-  // reachable from the keyboard without a second tab stop.
+  // Focus lands on the first usable item once the menu is placed, so the whole
+  // set is reachable from the keyboard without a second tab stop.
+  const enabledIndexes = items.flatMap((item, index) => (item.disabled ? [] : [index]));
   useEffect(() => {
     if (!isOpen || !placement) return;
-    itemRefs.current[0]?.focus();
-  }, [isOpen, placement]);
+    itemRefs.current[items.findIndex((item) => !item.disabled)]?.focus();
+  }, [isOpen, placement, items]);
 
+  // Arrow/Home/End walk the usable items only (a disabled button cannot hold focus).
   const moveFocus = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const count = items.length;
-    const currentIndex = itemRefs.current.findIndex((item) => item === document.activeElement);
-    const nextIndex = event.key === 'ArrowDown'
-      ? (currentIndex + 1) % count
+    const count = enabledIndexes.length;
+    if (count === 0) return;
+    const position = enabledIndexes.findIndex((index) => itemRefs.current[index] === document.activeElement);
+    const nextPosition = event.key === 'ArrowDown'
+      ? (position + 1) % count
       : event.key === 'ArrowUp'
-        ? (currentIndex - 1 + count) % count
+        ? (position - 1 + count) % count
         : event.key === 'Home'
           ? 0
           : event.key === 'End'
             ? count - 1
             : -1;
-    if (nextIndex < 0) return;
+    if (nextPosition < 0) return;
     event.preventDefault();
-    itemRefs.current[nextIndex]?.focus();
+    itemRefs.current[enabledIndexes[nextPosition]]?.focus();
   };
 
   return (
@@ -89,7 +101,7 @@ export const ToolbarMenu: React.FC<ToolbarMenuProps> = ({ label, icon: Icon, dis
       <button
         ref={triggerRef}
         type="button"
-        className={`authoring-toolbar-button${isOpen ? ' is-open' : ''}`}
+        className={`authoring-toolbar-button${isOpen ? ' is-open' : ''}${active ? ' active' : ''}`}
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={isOpen}
@@ -132,9 +144,13 @@ export const ToolbarMenu: React.FC<ToolbarMenuProps> = ({ label, icon: Icon, dis
               key={item.id}
               ref={(element) => { itemRefs.current[index] = element; }}
               type="button"
-              role="menuitem"
-              className="authoring-toolbar-menu-item"
+              role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+              aria-checked={item.checked}
+              className={`authoring-toolbar-menu-item${item.checked ? ' is-checked' : ''}`}
               aria-label={item.label}
+              aria-keyshortcuts={item.keyshortcuts}
+              disabled={item.disabled}
+              title={item.title}
               onClick={() => {
                 item.run();
                 close(true);
@@ -142,6 +158,7 @@ export const ToolbarMenu: React.FC<ToolbarMenuProps> = ({ label, icon: Icon, dis
             >
               <item.icon aria-hidden="true" />
               <span>{item.label}</span>
+              {item.checked !== undefined && <span className="authoring-toolbar-menu-check" aria-hidden="true">{item.checked ? 'On' : 'Off'}</span>}
             </button>
           ))}
         </div>,

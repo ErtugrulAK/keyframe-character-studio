@@ -69,9 +69,12 @@
   overflow: hidden;
 }
 
+/* C5 — the split's height is set inline from `resolveOutlinerHeight` (and the
+   user's splitter); these minimums match its bounds, so a short window or a
+   user's choice is never overruled by the stylesheet. */
 .outliner-dock {
   height: 38%;
-  min-height: 160px;
+  min-height: 72px;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-dark);
 }
@@ -79,7 +82,7 @@
 .details-dock {
   flex: 1;
   height: 62%;
-  min-height: 200px;
+  min-height: 44px;
   background: var(--bg-darkest);
 }
 
@@ -238,6 +241,9 @@
 }
 
 .root-node {
+  /* C7 — the dock's edge handle is centred on the panel boundary (it reaches
+     10px into the panel): the list's first disclosure starts clear of it. */
+  padding-left: 12px;
   background: #151821;
   font-weight: 700;
   color: var(--text-secondary);
@@ -301,6 +307,34 @@
   max-width: 100%;
 }
 
+/* C4 — the layer lock switch in the layer list. */
+.tree-node .outliner-lock-btn {
+  width: 20px;
+  height: 20px;
+  margin-right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-xs, 3px);
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+.tree-node .outliner-lock-btn:hover,
+.tree-node .outliner-lock-btn:focus-visible {
+  color: var(--text-primary, #e2e8f0);
+  background: rgba(255, 255, 255, 0.06);
+}
+.tree-node .outliner-lock-btn.is-locked {
+  color: var(--accent-gold, #f5b942);
+}
+.tree-node.is-locked .actor-name {
+  opacity: 0.78;
+}
+
 .tree-node .col-eye {
   width: 24px;
   display: flex;
@@ -343,6 +377,22 @@
   align-items: center;
   padding: 0 var(--space-xs);
   flex-shrink: 0;
+}
+
+/* C3: no hint, no status → no footer row; the live region stays in the DOM
+   (collapsed, not display:none) so its next announcement is still read. */
+.outliner-footer.is-empty {
+  height: 0;
+  border-top: 0;
+  overflow: hidden;
+}
+
+.outliner-count {
+  margin-left: auto;
+  color: #7889a0;
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* ── Details Panel ── */
@@ -1591,8 +1641,179 @@
   letter-spacing: 0.2px;
 }
 
+/*
+ * C3 — relationship badges in the layer tree, in the same pill language as
+ * the Boolean badge: Matte/Clip (a Track Matte or legacy clip matte and its
+ * source), a missing source (warning colour), and the layer's own masks.
+ */
+.outliner-relation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  max-width: 128px;
+  padding: 1px 6px 1px 5px;
+  border: 1px solid rgba(34, 211, 238, 0.32);
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.08);
+  color: #67e8f9;
+  font-size: 9.5px;
+  font-weight: 650;
+  line-height: 14px;
+}
+.outliner-relation-badge.is-missing {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.1);
+  color: #fbbf24;
+}
+.outliner-relation-badge.is-mask {
+  border-color: rgba(148, 163, 184, 0.35);
+  background: rgba(148, 163, 184, 0.08);
+  color: #cbd5e1;
+}
+.outliner-relation-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
+/*
+ * C3 — the layer's masks as compact rows: index, name, mode tag and an Off tag,
+ * one row each (the old large pills wrapped and hid the settings below them).
+ * The selected row carries the accent edge; it is the mask the settings edit.
+ */
+.layer-mask-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.layer-mask-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 26px;
+  padding: 0 8px 0 6px;
+  border: 1px solid var(--kcs-border-subtle, rgba(148, 163, 184, 0.18));
+  border-left: 3px solid transparent;
+  border-radius: var(--kcs-radius-control, 4px);
+  background: var(--kcs-bg-input, rgba(15, 23, 42, 0.6));
+  color: var(--kcs-text-secondary, #cbd5e1);
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+.layer-mask-row:hover {
+  background: var(--kcs-hover, rgba(148, 163, 184, 0.12));
+  color: var(--kcs-text-primary, #f8fafc);
+}
+.layer-mask-row.is-active {
+  border-left-color: var(--kcs-accent, #35c8b0);
+  background: rgba(53, 200, 176, 0.12);
+  color: var(--kcs-text-primary, #f8fafc);
+}
+.layer-mask-row:focus-visible {
+  outline: 2px solid var(--kcs-focus, #35c8b0);
+  outline-offset: -2px;
+}
+.layer-mask-row.is-off .layer-mask-row-name {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+.layer-mask-row-index {
+  color: var(--kcs-text-muted, #94a3b8);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.layer-mask-row-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.layer-mask-row-mode,
+.layer-mask-row-off {
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 650;
+  line-height: 14px;
+}
+.layer-mask-row-mode {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--kcs-text-muted, #94a3b8);
+}
+.layer-mask-row-off {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+}
+.layer-mask-add {
+  align-self: flex-start;
+  margin-top: 4px;
+}
 
+/* C5 — every mask row: the row (select) then its aligned actions — Enabled,
+   Lock path, Edit on canvas — the same square icon buttons on every row. */
+.layer-mask-row-wrap {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-columns: 26px;
+  align-items: center;
+  gap: 2px;
+}
+.layer-mask-row-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--kcs-border-subtle);
+  border-radius: var(--kcs-radius-control);
+  background: transparent;
+  color: var(--kcs-text-secondary);
+  cursor: pointer;
+}
+.layer-mask-row-action:hover:not(:disabled) {
+  background: var(--kcs-bg-hover);
+  color: var(--kcs-text-primary);
+}
+.layer-mask-row-action:focus-visible {
+  outline: 2px solid var(--kcs-border-focus);
+  outline-offset: 1px;
+}
+.layer-mask-row-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.layer-mask-row-action.is-off {
+  color: var(--kcs-warning);
+}
+.layer-mask-row-action.is-locked {
+  color: var(--kcs-warning);
+  border-color: rgba(241, 183, 91, 0.45);
+}
+.layer-mask-row-action.is-active {
+  border-color: rgba(53, 200, 176, 0.6);
+  background: var(--kcs-bg-active);
+  color: var(--kcs-accent);
+}
+
+/* The per-row stack arrows are secondary: they appear for the row the user
+   is on (hover, selection, keyboard focus) instead of repeating on every row. */
+.tree-node .outliner-stack-buttons {
+  opacity: 0;
+  transition: opacity var(--kcs-motion-fast, 120ms) ease;
+}
+.tree-node:hover .outliner-stack-buttons,
+.tree-node.selected .outliner-stack-buttons,
+.tree-node:focus-within .outliner-stack-buttons {
+  opacity: 1;
+}
 
 .color-swatch-btn {
   width: 18px;
@@ -1881,11 +2102,12 @@
   background: var(--kcs-panel);
   border-left-color: var(--kcs-border-quiet);
   box-shadow: -8px 0 20px rgba(0, 0, 0, .18);
-  /* The last word on this element's transition. The geometry (width, min-width,
-     flex-basis) is deliberately absent: the dock edge is eased and committed
-     frame by frame with the camera (see `useDockedPanelEdge`), so the browser
-     must never animate the box the camera is a projection of. */
-  transition: transform 240ms ease, opacity 240ms ease, visibility 240ms ease;
+  /* The last word on this element's transition: NONE. The dock's show/hide is
+     one JS slide (see `useDockedPanelEdge`), eased frame by frame and committed
+     with the camera. A stylesheet transition here ran a SECOND animation when
+     the slide settled and its inline styles were removed (C6: the panel faded
+     and nudged 12px after it had already arrived or left). */
+  transition: none;
 }
 
 .motion-design-right-sidebar.is-hidden {
@@ -2022,7 +2244,784 @@
 }
 /* Preserve the Inspector dock-follow motion over the shared handle defaults. */
 .sidebar-handle.inspector-dock-toggle {
-  /* The handle rides the collapsing edge: same 240ms/ease as the panel width,
-     no overshoot curve, so it never detaches from the edge. */
-  transition: right 240ms ease, background-color 160ms ease, color 160ms ease;
+  /* C6 — the handle rides the sliding edge through the dock's own frame ease
+     (`useDockedPanelEdge` offsets it per frame); a CSS `right` transition ran
+     on its own clock and settled after the panel had stopped. */
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+/* WP-04 — the effective Track Matte reading above the matte settings. */
+.track-matte-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-panel);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.track-matte-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.track-matte-summary-row strong {
+  color: #22d3ee;
+}
+
+.track-matte-summary-warning {
+  color: #fbbf24;
+}
+
+.track-matte-summary-note {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+
+/* C2 — the mask path editor: full Inspector width, the owner's proportions,
+   an expandable view, and control rows that wrap instead of squeezing. */
+.bezier-path-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.bezier-path-editor__header,
+.bezier-path-editor__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.bezier-path-editor__header {
+  justify-content: space-between;
+}
+
+.bezier-path-editor__status {
+  color: var(--text-secondary, #cbd5e1);
+  font-size: 11px;
+}
+
+.bezier-path-editor__canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 220px;
+  border-radius: 4px;
+  touch-action: none;
+}
+
+/* C5 — the focused vertex is also the selected one (white fill), so its ring
+   uses the focus token, not white. */
+.bezier-path-editor__canvas circle[role="button"]:focus-visible {
+  outline: none;
+  stroke: var(--kcs-border-focus);
+  stroke-width: 3;
+}
+
+.bezier-path-editor__note {
+  margin: 0;
+  color: #fbbf24;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* C2-E — layer tree drop affordance: a line for Before/After, a box for Nest. */
+.tree-node:focus-visible {
+  outline: 2px solid var(--accent-teal);
+  outline-offset: -2px;
+}
+
+.tree-node.dragging {
+  opacity: 0.45;
+}
+
+.tree-node.drop-before {
+  box-shadow: inset 0 2px 0 0 var(--accent-teal);
+}
+
+.tree-node.drop-after {
+  box-shadow: inset 0 -2px 0 0 var(--accent-teal);
+}
+
+/* C5 — a parent target is the whole row, outlined DASHED so it never reads as
+   the selection highlight, with its own "Parent to …" label; a reorder stays
+   the line at the row edge above. */
+.tree-node.drop-nest {
+  background: rgba(20, 184, 166, 0.14);
+  box-shadow: none;
+  outline: 1px dashed var(--accent-teal);
+  outline-offset: -2px;
+}
+
+.tree-node.drop-blocked {
+  cursor: not-allowed;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.tree-node.drop-nest.drop-blocked {
+  outline-color: rgba(239, 68, 68, 0.8);
+}
+
+.tree-node.drop-before.drop-blocked {
+  box-shadow: inset 0 2px 0 0 rgba(239, 68, 68, 0.85);
+}
+
+.tree-node.drop-after.drop-blocked {
+  box-shadow: inset 0 -2px 0 0 rgba(239, 68, 68, 0.85);
+}
+
+.outliner-drop-label {
+  flex: 0 1 auto;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 6px;
+  border-radius: var(--radius-xs);
+  background: rgba(20, 184, 166, 0.22);
+  color: var(--text-primary);
+  font-size: 10px;
+  line-height: 16px;
+  pointer-events: none;
+}
+
+.outliner-drop-label.is-blocked {
+  background: rgba(239, 68, 68, 0.24);
+}
+
+.tree-node .outliner-rename-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.outliner-drop-hint {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--accent-teal);
+}
+
+.outliner-drop-hint:empty {
+  display: none;
+}
+
+.outliner-drop-hint.is-blocked {
+  color: #fca5a5;
+  white-space: normal;
+}
+
+.outliner-footer:has(.outliner-drop-hint.is-blocked) {
+  height: auto;
+  min-height: 22px;
+  padding-block: 2px;
+}
+
+/* C2-E — Inspector Parent field (keyboard alternative to tree drag and drop). */
+.layer-parent-field {
+  /* C6 — one aligned row (label · choice · remove) and the sentence that names
+     the relation (group membership vs transform parent). */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--font-size-caption);
+}
+
+.layer-parent-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) var(--kcs-control-xs, 24px);
+  align-items: center;
+  gap: 6px;
+}
+
+.layer-parent-label {
+  color: var(--kcs-text-label, var(--text-secondary));
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.layer-parent-row select {
+  min-width: 0;
+  width: 100%;
+  height: var(--kcs-control-xs, 24px);
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--kcs-radius-control, 4px);
+  padding: 0 6px;
+  text-overflow: ellipsis;
+}
+
+.details-container .layer-parent-row .btn-secondary.layer-parent-clear {
+  width: var(--kcs-control-xs, 24px);
+  min-width: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.layer-parent-relation {
+  margin: 0;
+  padding-left: 58px;
+  color: var(--kcs-text-muted, var(--text-muted));
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.layer-parent-reason {
+  padding-left: 58px;
+  color: #fca5a5;
+  line-height: 1.35;
+}
+
+.actor-type-label {
+  flex-shrink: 0;
+}
+
+.actor-title-box {
+  min-width: 0;
+}
+
+.actor-action-divider {
+  width: 1px;
+  height: 16px;
+  margin: 0 2px;
+  background: var(--kcs-border-quiet, var(--border-color));
+}
+
+/* C4 — a locked layer is inspected, not edited. */
+.details-lock-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 10px 0;
+  padding: 6px 8px;
+  border: 1px solid rgba(245, 185, 66, 0.45);
+  border-radius: 6px;
+  background: rgba(245, 185, 66, 0.1);
+  color: var(--text-primary, #e2e8f0);
+  font-size: var(--font-size-caption, 11px);
+  line-height: 1.35;
+}
+.details-lock-banner svg {
+  flex: none;
+  color: var(--accent-gold, #f5b942);
+}
+.details-lock-banner span {
+  flex: 1;
+  min-width: 0;
+}
+.details-lock-banner .btn-secondary {
+  flex: none;
+  min-height: 24px;
+}
+.details-body[data-locked='true'] :is(input, select, textarea, button):disabled {
+  cursor: not-allowed;
+}
+
+/* C4 — mask path lock. */
+.layer-mask-row-lock {
+  flex: none;
+  color: var(--accent-gold, #f5b942);
+}
+.matte-field-hint {
+  flex-basis: 100%;
+  margin-left: 22px;
+  color: var(--text-muted, #94a3b8);
+  font-size: var(--font-size-caption, 11px);
+  line-height: 1.3;
+}
+.matte-toggle-field.matte-span-full {
+  flex-wrap: wrap;
+}
+
+/* C4 — like the row's stack buttons, an UNLOCKED switch appears for the row the
+   user is on (hover, selection, keyboard focus); a locked one always shows. */
+.tree-node .outliner-lock-btn:not(.is-locked) {
+  opacity: 0;
+}
+.tree-node:hover .outliner-lock-btn,
+.tree-node.selected .outliner-lock-btn,
+.tree-node:focus-within .outliner-lock-btn,
+.tree-node .outliner-lock-btn:focus-visible {
+  opacity: 1;
+}
+
+/* C5 — layer search, inside the Layers header (no extra row of height). */
+.outliner-search {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: var(--kcs-control-xs);
+  margin-inline: 8px;
+  padding: 0 4px 0 6px;
+  border: 1px solid var(--kcs-border-subtle);
+  border-radius: var(--kcs-radius-control);
+  background: var(--kcs-bg-input);
+  color: var(--kcs-text-muted);
+}
+
+.outliner-search:focus-within {
+  border-color: var(--kcs-border-focus);
+  box-shadow: 0 0 0 1px var(--kcs-border-focus);
+}
+
+/* The field's ring is its box (above), so the input itself draws none. */
+.outliner-search-input:focus-visible {
+  outline: none;
+}
+
+.outliner-search-icon {
+  flex: none;
+}
+
+.outliner-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--kcs-text-primary);
+  font-size: 11px;
+}
+
+.outliner-search-input::placeholder {
+  color: var(--kcs-text-muted);
+}
+
+.outliner-search-count {
+  flex: none;
+  font-size: 10px;
+  color: var(--kcs-text-secondary);
+  white-space: nowrap;
+}
+
+.outliner-search-clear {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kcs-text-muted);
+  cursor: pointer;
+}
+
+.outliner-search-clear:hover {
+  color: var(--kcs-text-primary);
+  background: var(--kcs-bg-hover);
+}
+
+/* An ancestor shown only to place a match in the hierarchy reads quieter. */
+.tree-node[data-search-match="false"] .actor-name {
+  color: var(--kcs-text-muted);
+}
+
+/* C5 — the Inspector names the editing session under the layer header, with
+   the same mode chip the canvas strip uses. */
+.details-edit-target {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0 10px 6px;
+  padding: 4px 6px;
+  border: 1px solid rgba(53, 200, 176, 0.35);
+  border-radius: var(--kcs-radius-control);
+  background: rgba(53, 200, 176, 0.06);
+  font-size: 11px;
+  color: var(--kcs-text-secondary);
+}
+
+.details-edit-target .edit-target-mode {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--kcs-bg-active);
+  color: var(--kcs-accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.details-edit-target[data-edit-target='matte-source'] {
+  border-color: rgba(167, 139, 250, 0.4);
+  background: rgba(167, 139, 250, 0.06);
+}
+
+.details-edit-target[data-edit-target='matte-source'] .edit-target-mode {
+  background: rgba(167, 139, 250, 0.16);
+  color: #c4b5fd;
+}
+
+.details-edit-target-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--kcs-text-primary);
+}
+
+.details-edit-target-detail {
+  color: var(--kcs-text-muted);
+}
+
+/*
+ * C5 — one button geometry in the Inspector. A "primary" button here is a
+ * SELECTED / ACTIVE state of the same control (Corner, Closed path, the chosen
+ * draw shape, Edit on Canvas while editing), never a different-sized pill with
+ * a glow: both share height, padding, radius and type; the state reads from
+ * the accent fill + border + text, not from size.
+ */
+.details-container .btn-secondary,
+.details-container .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: var(--kcs-control-xs);
+  min-height: var(--kcs-control-xs);
+  padding: 0 10px;
+  border-radius: var(--kcs-radius-control);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: none;
+  transform: none;
+}
+
+.details-container .btn-secondary {
+  border: 1px solid var(--kcs-border-default);
+  background: var(--kcs-bg-input);
+  color: var(--kcs-text-secondary);
+}
+
+.details-container .btn-secondary:hover:not(:disabled) {
+  border-color: var(--kcs-border-strong);
+  background: var(--kcs-bg-hover);
+  color: var(--kcs-text-primary);
+  box-shadow: none;
+}
+
+.details-container .btn-primary {
+  border: 1px solid rgba(53, 200, 176, 0.6);
+  background: var(--kcs-bg-active);
+  color: var(--kcs-accent);
+}
+
+.details-container .btn-primary:hover:not(:disabled) {
+  background: rgba(53, 200, 176, 0.24);
+  color: var(--kcs-text-primary);
+  box-shadow: none;
+  transform: none;
+}
+
+/* C5 — layer rows: the visibility switch is a real button in the same 20 px
+   square as the lock; the NAME keeps the room (badges shrink to their icon
+   first), and a long name is read from the row's tooltip / accessible name. */
+.tree-node .outliner-eye-btn {
+  width: 20px;
+  height: 20px;
+  margin: 0 6px 0 2px;
+  padding: 0;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-xs, 3px);
+  background: transparent;
+  color: var(--kcs-accent);
+  cursor: pointer;
+}
+.tree-node .outliner-eye-btn.is-hidden {
+  color: var(--kcs-text-muted);
+}
+.tree-node .outliner-eye-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--kcs-text-primary);
+}
+.tree-node.actor-node .actor-name {
+  flex: 1 1 auto;
+  min-width: 56px;
+}
+.tree-node .outliner-relation-badge {
+  flex: 0 1 auto;
+  min-width: 22px;
+}
+
+.tree-node .outliner-eye-btn.is-hidden ~ .col-label .actor-name {
+  color: var(--kcs-text-muted);
+}
+.tree-node .outliner-relation-badge.is-matte {
+  min-width: 56px;
+}
+
+/* C6 — shape geometry: parametric shape vs editable path. */
+.path-geometry-note {
+  margin: 0 0 8px;
+  color: var(--kcs-text-secondary, var(--text-secondary));
+  font-size: var(--font-size-caption);
+  line-height: 1.4;
+}
+
+.path-geometry-convert {
+  width: 100%;
+}
+
+.path-geometry-reason {
+  margin: 6px 0 0;
+  color: var(--kcs-text-muted, var(--text-muted));
+  font-size: var(--font-size-caption);
+  line-height: 1.35;
+}
+
+/* C6 — a card's status next to its title, and the quiet look of a
+   compatibility card that this layer does not use. */
+.inspector-section-title {
+  flex: 0 1 auto;
+}
+
+.inspector-section-badge {
+  margin: 0 auto 0 8px;
+  padding: 1px 6px;
+  border: 1px solid var(--kcs-border-default, var(--border-color));
+  border-radius: 999px;
+  color: var(--kcs-text-muted, var(--text-muted));
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.inspector-section-card.is-quiet {
+  background: transparent;
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.inspector-section-card.is-quiet .inspector-section-title {
+  color: var(--kcs-text-muted, var(--text-muted));
+}
+
+.matte-section-intro {
+  margin: 0 0 8px;
+  color: var(--kcs-text-secondary, var(--text-secondary));
+  font-size: var(--font-size-caption);
+  line-height: 1.4;
+}
+
+/* WP-08 — Color Correction card. */
+.color-correction {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.color-correction-row,
+.color-correction-draw {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.color-correction-draw .form-label {
+  margin-right: auto;
+}
+
+.color-correction-scope {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.color-correction-status {
+  margin: 0;
+  color: #f59e0b;
+  font-size: var(--font-size-caption);
+  line-height: 1.35;
+}
+
+.color-correction-value {
+  color: var(--kcs-accent, #00d2ff);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.layer-mask-row-effect {
+  padding: 0 4px;
+  border: 1px solid var(--kcs-border-default, var(--border-color));
+  border-radius: 4px;
+  color: var(--kcs-text-muted, var(--text-muted));
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* C7 — Details tabs (Radix Tabs): a compact segmented strip under the layer
+   header. The strip stays put while the body scrolls; the active tab carries
+   the accent underline, a count shows what the Masks tab holds. */
+.details-tabs {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* C8 — a short Details pane (200 % zoom, a low window, a tall layer list) left
+   the scrolling body a ~30 px strip under the fixed header, layer name and
+   tabs. Below 180 px (a body under ~75 px) the pane scrolls as ONE column
+   instead: header, layer name, tabs and properties move together. Taller panes,
+   including the default 1440×900 layout (~215 px), are unchanged. */
+.details-dock {
+  container: details-pane / size;
+}
+
+@container details-pane (max-height: 180px) {
+  .details-container {
+    overflow-y: auto;
+  }
+
+  .details-tabs,
+  .details-body {
+    flex: none;
+    min-height: auto;
+    overflow-y: visible;
+  }
+}
+
+.details-tab-list {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 0 10px;
+  background: var(--kcs-bg-inspector, #0d141b);
+  border-bottom: 1px solid var(--kcs-border-subtle);
+}
+
+.details-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  min-width: 0;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--kcs-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--kcs-motion-fast, 120ms) ease, border-color var(--kcs-motion-fast, 120ms) ease;
+}
+
+.details-tab:hover {
+  color: var(--kcs-text-primary);
+}
+
+.details-tab[data-state="active"] {
+  color: var(--kcs-text-primary);
+  border-bottom-color: var(--kcs-accent);
+}
+
+.details-tab:focus {
+  outline: none;
+}
+
+.details-tab:focus-visible {
+  outline: 2px solid var(--kcs-focus);
+  outline-offset: -2px;
+  border-radius: calc(var(--kcs-radius-control) - 2px);
+}
+
+.details-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--kcs-radius-pill, 999px);
+  background: var(--kcs-bg-active-muted, rgba(45, 212, 191, .14));
+  color: var(--kcs-text-secondary);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.details-tab-panel:focus {
+  outline: none;
+}
+
+.details-tab-panel:focus-visible {
+  outline: 1px solid var(--kcs-focus);
+  outline-offset: 2px;
+}
+
+/* Inside the Layer tab's HIERARCHY card the field needs no frame of its own. */
+.inspector-section-content > .layer-parent-field {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+/* C7 — a closed card is one header row: no divider, no empty band under it. */
+.inspector-section-card.is-collapsible[data-open="false"] {
+  padding-bottom: 8px;
+}
+
+.inspector-section-card.is-collapsible[data-open="false"] > .inspector-section-header {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom-color: transparent;
+}
+
+.inspector-section-card.is-collapsible > .inspector-section-header {
+  cursor: pointer;
+}
+
+/* C7 — Inspector dropdowns share the 28px height and 11px text of its fields
+   (the app-wide select rule is 32px/12px and !important, so this scoped rule
+   has to be as well). */
+.motion-design-right-sidebar select {
+  height: 28px !important;
+  font-size: 11px !important;
+  padding-right: 26px !important;
+  background-position: right 8px center !important;
+}
+
+.details-tab-list[data-pointer="true"] .details-tab:focus-visible {
+  outline: none;
 }

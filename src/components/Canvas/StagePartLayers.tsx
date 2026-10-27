@@ -35,7 +35,9 @@ import {
   resolveMatteMode,
 } from '../../utils/matte';
 import type { MatteClipPath, MatteMask, MatteGradientStop, MatteImageContent } from '../../utils/matte';
-import { buildLayerMaskDefinition, layerMaskFilterId } from '../../utils/layerMasks';
+import { buildLayerMaskDefinition, layerMaskFilterId, layerMaskRenderKeys } from '../../utils/layerMasks';
+import { colorCorrectionFilter, colorCorrectionIds, isEffectOnlyMask, resolveColorCorrection, resolvedParameters } from '../../utils/colorCorrection';
+import type { ColorCorrectionRender } from './renderers/PartRenderer';
 import type { LayerMaskSvgDefinition } from '../../utils/layerMasks';
 import type { WorldTransform } from '../../types/composition';
 import type { NamedSequenceRuntimeState } from '../../utils/broadcastEngine';
@@ -62,7 +64,8 @@ interface StagePartLayersProps {
    * selects that layer instead of the group it belongs to.
    */
   onDrillIn: (partId: string) => void;
-  tracks: (AnimationTrackData & RuntimeTrackState)[];
+  /** `locked` (the layer lock switch) only steers canvas picking, never the evaluation. */
+  tracks: (AnimationTrackData & RuntimeTrackState & { locked?: boolean })[];
   customPresets: CustomMotionPreset[];
   liveStuntsState: Record<string, { stunt: string; progress: number; loop?: boolean; customPresetId?: string }>;
   /** Project resolution — world-space artboard region for inverted masks.
@@ -99,7 +102,7 @@ function getEffectiveMatte(part: CharacterPart): CharacterPart['matte'] {
   return part.matte;
 }
 
-export const StagePartLayers: React.FC<StagePartLayersProps> = ({
+const StagePartLayersView: React.FC<StagePartLayersProps> = ({
   sortedParts,
   appMode,
   broadcastState,
@@ -209,25 +212,61 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   }
   const layerMaskDefinitions = new Map<string, LayerMaskSvgDefinition>();
   const layerMaskIdsByPart = new Map<string, string[]>();
+  const layerMaskRenderKeyById = new Map<string, string>();
   for (const part of sortedParts) {
     const evaluated = evaluatedFrame.layers.find((layer) => layer.id === part.id);
     const evaluatedMasks = evaluated?.content.masks ?? part.masks;
     if (!evaluated || !evaluatedMasks?.length) continue;
     const ids: string[] = [];
+    const stack: LayerMaskSvgDefinition[] = [];
     let previousId: string | undefined;
     for (const mask of evaluatedMasks) {
+      // WP-08 — an effect-only mask scopes an effect; it never cuts the layer.
+      if (isEffectOnlyMask(mask)) continue;
       const definition = buildLayerMaskDefinition(part, mask, evaluated.transform, outputOrigin);
       if (!definition) continue;
       const id = `kcs-layer-mask-${part.id}-${mask.id}${definition.mode === 'add' && !previousId ? '-add' : ''}`;
       const compositeMode = definition.inverted
         ? definition.mode === 'add' ? 'subtract' : definition.mode === 'subtract' ? 'add' : 'difference'
         : definition.mode;
-      layerMaskDefinitions.set(id, { ...definition, id, previousId, compositeMode });
+      const step = { ...definition, id, previousId, compositeMode };
+      layerMaskDefinitions.set(id, step);
+      stack.push(step);
       previousId = id;
     }
+    layerMaskRenderKeys(stack).forEach((key, index) => layerMaskRenderKeyById.set(stack[index].id, key));
     if (previousId) {
       ids.push(previousId);
       layerMaskIdsByPart.set(part.id, ids);
+    }
+  }
+
+  // WP-08 — colour correction: per corrected layer one sRGB filter (F) and,
+  // for a mask scope, a coverage mask (w) and its inverse (1 - w), both
+  // luminance masks in the same world space as the layer masks. A correction
+  // that resolves to anything but 'applied' (off, neutral, missing or
+  // disabled mask) gets no defs and renders the layer untouched.
+  const colorCorrections = new Map<string, ColorCorrectionRender & {
+    matrix: string;
+    slope: number;
+    intercept: number;
+    coverage?: LayerMaskSvgDefinition & { amount: number };
+  }>();
+  for (const part of sortedParts) {
+    if (!part.effects?.length) continue;
+    const evaluated = evaluatedFrame.layers.find((layer) => layer.id === part.id);
+    if (!evaluated) continue;
+    const status = resolveColorCorrection(part, evaluated.content.masks ?? part.masks);
+    if (status.kind !== 'applied') continue;
+    const ids = colorCorrectionIds(part.id, status.effect.id);
+    const { amount } = resolvedParameters(status.effect);
+    const filter = colorCorrectionFilter(status.effect);
+    if (status.mask) {
+      const definition = buildLayerMaskDefinition(part, status.mask, evaluated.transform, outputOrigin);
+      if (!definition) continue;
+      colorCorrections.set(part.id, { filterId: ids.filter, coverageMaskId: ids.coverage, inverseMaskId: ids.inverse, amount, ...filter, coverage: { ...definition, id: ids.coverage, amount } });
+    } else {
+      colorCorrections.set(part.id, { filterId: ids.filter, amount, ...filter });
     }
   }
 
@@ -591,7 +630,54 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
           const auxiliary = definition.previousId && operation === 'difference'
             ? <><mask id={shapeId} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse"><path d={definition.pathD} fill="white" /></mask><mask id={inverseId} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse"><rect x={region.x} y={region.y} width={region.width} height={region.height} fill="white" /><rect x={region.x} y={region.y} width={region.width} height={region.height} fill="black" mask={`url(#${definition.previousId})`} /></mask><mask id={`${definition.id}-inverse`} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse"><rect x={region.x} y={region.y} width={region.width} height={region.height} fill="white" /><path d={definition.pathD} fill="black" /></mask></>
             : null;
-          return <React.Fragment key={definition.id}>{auxiliary}<mask id={definition.id} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="alpha" data-mask-operation={operation}>{body}</mask></React.Fragment>;
+          // C12 — luminance, not alpha: a hole step paints its shape BLACK over
+          // the previous stack, and in an alpha mask opaque black still shows
+          // the layer (the "Cut a hole" of a second mask cut nothing). White
+          // content keeps every other step identical.
+          return <React.Fragment key={layerMaskRenderKeyById.get(definition.id) ?? definition.id}>{auxiliary}<mask id={definition.id} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="luminance" data-mask-operation={operation}>{body}</mask></React.Fragment>;
+        })}
+        {[...colorCorrections.values()].map((correction) => {
+          const coverage = correction.coverage;
+          const coverageFilter = coverage && (coverage.feather > 0 || coverage.expansion !== 0) ? layerMaskFilterId(coverage.id) : undefined;
+          // The coverage shape: the mask's own outline (or, inverted, everything outside it).
+          const shapeD = coverage ? (coverage.inverted ? `${layerMaskOuterPath} ${coverage.pathD}` : coverage.pathD) : '';
+          const weight = coverage ? coverage.opacity * coverage.amount : 0;
+          return (
+            <React.Fragment key={correction.filterId}>
+              <filter id={correction.filterId} colorInterpolationFilters="sRGB" data-color-correction-filter="true">
+                <feComponentTransfer>
+                  <feFuncR type="linear" slope={correction.slope} intercept={correction.intercept} />
+                  <feFuncG type="linear" slope={correction.slope} intercept={correction.intercept} />
+                  <feFuncB type="linear" slope={correction.slope} intercept={correction.intercept} />
+                </feComponentTransfer>
+                <feColorMatrix type="matrix" values={correction.matrix} />
+              </filter>
+              {coverage && coverageFilter && (
+                <filter
+                  id={coverageFilter}
+                  filterUnits="userSpaceOnUse"
+                  x={region.x - coverage.feather - Math.abs(coverage.expansion)}
+                  y={region.y - coverage.feather - Math.abs(coverage.expansion)}
+                  width={region.width + (coverage.feather + Math.abs(coverage.expansion)) * 2}
+                  height={region.height + (coverage.feather + Math.abs(coverage.expansion)) * 2}
+                >
+                  {coverage.expansion !== 0 && <feMorphology operator={coverage.expansion > 0 ? 'dilate' : 'erode'} radius={Math.abs(coverage.expansion)} />}
+                  {coverage.feather > 0 && <feGaussianBlur stdDeviation={coverage.feather / 2} />}
+                </filter>
+              )}
+              {coverage && (
+                <>
+                  <mask id={correction.coverageMaskId} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="luminance">
+                    <path d={shapeD} fillRule={coverage.inverted ? 'evenodd' : undefined} fill="white" fillOpacity={weight} filter={coverageFilter ? `url(#${coverageFilter})` : undefined} />
+                  </mask>
+                  <mask id={correction.inverseMaskId} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="luminance">
+                    <rect x={region.x} y={region.y} width={region.width} height={region.height} fill="white" />
+                    <path d={shapeD} fillRule={coverage.inverted ? 'evenodd' : undefined} fill="black" fillOpacity={weight} filter={coverageFilter ? `url(#${coverageFilter})` : undefined} />
+                  </mask>
+                </>
+              )}
+            </React.Fragment>
+          );
         })}
         {[...matteMasks.values()]
           .filter((m) => (m.feather ?? 0) > 0)
@@ -761,6 +847,9 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
             const part = sortedParts.find((candidate) => candidate.id === el.id);
             return !hiddenMatteSources.has(el.id) && part?.booleanGroupId === booleanOperandEditingGroupId;
           }));
+        // C4 — a locked layer is drawn exactly as before but is not picked on
+        // the canvas: clicks fall through to the layer beneath (edit mode only).
+        const lockedIds = appMode === 'edit' ? new Set(tracks.filter((track) => track.locked).map((track) => track.partId)) : null;
         return layers.map((el) => {
           const part = sortedParts.find(p => p.id === el.id);
           if (!part) return null;
@@ -783,7 +872,9 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
               layerMaskIds={layerMaskIds}
               matteClipPathId={matteAttrs.clipId}
               matteMaskId={matteAttrs.maskId}
+              colorCorrection={colorCorrections.get(part.id)}
               outputOrigin={outputOrigin}
+              isLocked={lockedIds?.has(el.id) ?? false}
             />
           );
         });
@@ -791,3 +882,11 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     </g>
   );
 };
+
+/**
+ * C3 — rendering is a pure function of these props (no context read here), so
+ * the layers re-render only when one of them changes: a camera pan/zoom or a
+ * dock-layout frame of the canvas does not re-evaluate and re-render every
+ * part. Evaluation and SVG output are unchanged.
+ */
+export const StagePartLayers = React.memo(StagePartLayersView);

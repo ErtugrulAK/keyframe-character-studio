@@ -133,9 +133,14 @@ export const createStageCropActions = ({
   const selectionCropRect = selectionTargets.length > 0
     ? stageCropRectFromWorldBounds(unionWorldBounds(selectionTargets.map((target) => target.bounds)), projectResolution)
     : null;
-  const visibleCropRect = boundsOfLayers(characterParts.filter(
-    (part) => tracks.find((track) => track.partId === part.id)?.editVisible !== false,
-  ));
+  // C5 — the visible-content rectangle is computed only when that crop runs.
+  // The commands are rebuilt on every provider render (every playback frame),
+  // and the availability flag only needs ONE visible layer with bounds, so it
+  // stops at the first one instead of evaluating every layer's world box.
+  const hiddenIds = new Set(tracks.filter((track) => track.editVisible === false).map((track) => track.partId));
+  const visibleParts = () => characterParts.filter((part) => !hiddenIds.has(part.id));
+  const hasVisibleContent = blockReason === null
+    && characterParts.some((part) => !hiddenIds.has(part.id) && getLayerWorldBounds(characterParts, part.id, worldOf) !== null);
 
   /**
    * The ONE crop write: shift every top-level layer, move the whole scene to the
@@ -173,9 +178,9 @@ export const createStageCropActions = ({
   return {
     blockReason,
     canCropToSelection: blockReason === null && selectionCropRect !== null,
-    canCropToVisibleContent: blockReason === null && visibleCropRect !== null,
+    canCropToVisibleContent: hasVisibleContent,
     applyCropRegion: (rect) => commitCrop(rect ?? null, 'Cropped the stage'),
     cropToSelection: () => commitCrop(selectionCropRect, 'Cropped the stage to the selection'),
-    cropToVisibleContent: () => commitCrop(visibleCropRect, 'Cropped the stage to the visible content'),
+    cropToVisibleContent: () => commitCrop(boundsOfLayers(visibleParts()), 'Cropped the stage to the visible content'),
   };
 };

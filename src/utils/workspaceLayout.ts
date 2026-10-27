@@ -30,17 +30,69 @@ export const WORKSPACE_LAYOUT_COMMAND_EVENT = 'canvas-viewport-command';
 /** Command payload that makes the stage re-measure and re-fold its box. */
 export const REMEASURE_STAGE_BOX_COMMAND = 'remeasure-stage-box';
 
+/**
+ * C2 — sent once by the workspace when it corrected its own OPENING layout
+ * (e.g. the timeline clamped to a short or 200 %-zoomed window). The stage
+ * re-fits only while the camera is still the untouched opening camera (zoom 1,
+ * never panned); any user camera is left exactly as it is.
+ */
+export const REFIT_UNTOUCHED_CAMERA_COMMAND = 'refit-untouched-camera';
+
+/**
+ * C3 — the stage width below which the editor OPENS with the left dock
+ * (Project/Media/Elements/Texts) closed, so a narrow or browser-zoomed window
+ * starts with a usable stage (Master Review UI spec: canvas target ≥ 400 CSS
+ * px). Decided once, at mount; afterwards only the user opens or closes it.
+ */
+export const MIN_OPENING_STAGE_WIDTH = 400;
+
+export const shouldOpenWithLeftDockClosed = (stageWidth: number): boolean => (
+  Number.isFinite(stageWidth) && stageWidth > 0 && stageWidth < MIN_OPENING_STAGE_WIDTH
+);
+
+/**
+ * C11 — phone-width windows, where the docks open over the stage instead of
+ * beside it (kcsEditorTheme.css uses the same 600 px breakpoint). Only there
+ * does the inspector also open closed: it would cover the stage entirely.
+ */
+export const PHONE_LAYOUT_QUERY = '(max-width: 600px)';
+
+export const isPhoneLayout = (): boolean => (
+  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+  && window.matchMedia(PHONE_LAYOUT_QUERY).matches
+);
+
+/**
+ * C11 — closes the docks, left first, while the stage is narrower than
+ * MIN_OPENING_STAGE_WIDTH. Used at mount and when the window is made narrower
+ * (a phone, a tablet, a browser snapped to half the screen); never on the
+ * user's own toggles, so a dock the user reopens stays open. `closers` must
+ * re-layout synchronously (`snap` does), so the stage is re-measured between
+ * them. Returns whether the stage was narrow at all.
+ */
+export const closeDocksForNarrowStage = (
+  measureStageWidth: () => number,
+  closers: ReadonlyArray<() => void>,
+): boolean => {
+  if (!shouldOpenWithLeftDockClosed(measureStageWidth())) return false;
+  for (const close of closers) {
+    close();
+    if (!shouldOpenWithLeftDockClosed(measureStageWidth())) break;
+  }
+  return true;
+};
+
 export const commitWorkspaceLayout = (apply: () => void): void => {
   flushSync(apply);
   window.dispatchEvent(new CustomEvent(WORKSPACE_LAYOUT_COMMAND_EVENT, { detail: { type: REMEASURE_STAGE_BOX_COMMAND } }));
 };
 
 /**
- * How long a docked panel edge takes to travel. Mirrors the browser-side
- * duration this replaces (the inspector's former `transition: width 240ms`) so
- * opening and closing read exactly as they always did.
+ * How long a docked panel edge takes to travel. C8: 320 ms (was 240, the
+ * inspector's former CSS `transition: width 240ms`), with the ease-in-out
+ * curve below, so opening and closing read as one soft slide.
  */
-export const PANEL_EDGE_TRANSITION_MS = 240;
+export const PANEL_EDGE_TRANSITION_MS = 320;
 
 /**
  * How an eased docked edge is expressed while it travels: all three properties
@@ -51,6 +103,15 @@ export const PANEL_EDGE_TRANSITION_MS = 240;
  */
 export const panelEdgeStyle = (width: number | null): CSSProperties | undefined => (
   width === null ? undefined : { width: `${width}px`, minWidth: `${width}px`, flexBasis: `${width}px` }
+);
+
+/**
+ * Whether the user asked the system for reduced motion. Eased workspace edges
+ * (the side docks and the timeline) then move in one step instead of sliding.
+ */
+export const prefersReducedMotion = (): boolean => (
+  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+  && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 );
 
 export interface FrameEase {
@@ -67,7 +128,9 @@ export interface FrameEase {
 }
 
 /**
- * A monotone ease-out cubic driven one frame at a time.
+ * A monotone ease-in-out cubic driven one frame at a time (C8: was ease-out,
+ * which started at full speed and read as abrupt; this one starts and lands
+ * softly).
  *
  * `write` is called once per animation frame with the value for that frame, so
  * an app can commit the value through `commitWorkspaceLayout` and have layout and
@@ -104,7 +167,8 @@ export const createFrameEase = (
         startedAt = startedAt ?? now;
         const progress = Math.min(1, (now - startedAt) / durationMs);
         if (progress < 1) {
-          value = from + (to - from) * (1 - (1 - progress) ** 3);
+          const eased = progress < 0.5 ? 4 * progress ** 3 : 1 - ((-2 * progress + 2) ** 3) / 2;
+          value = from + (to - from) * eased;
           write(value);
           frame = requestAnimationFrame(step);
           return;
@@ -116,4 +180,50 @@ export const createFrameEase = (
       frame = requestAnimationFrame(step);
     },
   };
+};
+
+/**
+ * WP-06 — the Details pane keeps a usable height whenever the right sidebar has
+ * room for both panes. The Outliner's stored height used to be bounded only by
+ * the WINDOW, so in a 720 px window Details shrank to a sliver beside the
+ * timeline. The bound is applied at render time (the stored height is kept)
+ * and only when the sidebar can hold both panes; a sidebar squeezed by a
+ * maximised timeline keeps the historic layout, so nothing slides under the
+ * dock handle.
+ */
+// C4: 140 (was 160) — on a short window the layer list gets the 20 px; Details stays usable (WP-06: ≥ 120).
+const DETAILS_MIN_HEIGHT = 140;
+const TWO_PANE_MIN_SIDEBAR_HEIGHT = 280;
+const OUTLINER_MIN_HEIGHT = 72;
+
+/*
+ * C4 — the window cap that used to be WRITTEN into the stored height
+ * (`min(height, max(160, innerHeight − 320))`, which assumed a 320 px
+ * timeline and permanently lowered the user's split) is now applied at render
+ * time only, and only where the sidebar cannot hold both panes. A sidebar that
+ * can is bounded by its own real height.
+ */
+/**
+ * C5 — once the USER has sized the split (drag or keyboard on the divider),
+ * their height is honoured up to the sidebar's own height: the Details pane may
+ * then shrink to its header (it scrolls), because giving the layer list the
+ * room is exactly what the user asked for. The caps above only shape the
+ * untouched default.
+ */
+export const DETAILS_HEADER_MIN_HEIGHT = 44;
+
+export const outlinerHeightBounds = (sidebarHeight: number | null): { min: number; max: number } => ({
+  min: OUTLINER_MIN_HEIGHT,
+  max: sidebarHeight === null ? 650 : Math.max(OUTLINER_MIN_HEIGHT, sidebarHeight - DETAILS_HEADER_MIN_HEIGHT),
+});
+
+export const resolveOutlinerHeight = (stored: number, sidebarHeight: number | null, windowHeight?: number, userSized = false): number => {
+  if (userSized) {
+    const { min, max } = outlinerHeightBounds(sidebarHeight);
+    return Math.max(min, Math.min(stored, max));
+  }
+  if (sidebarHeight !== null && sidebarHeight >= TWO_PANE_MIN_SIDEBAR_HEIGHT) {
+    return Math.max(OUTLINER_MIN_HEIGHT, Math.min(stored, sidebarHeight - DETAILS_MIN_HEIGHT));
+  }
+  return windowHeight === undefined ? stored : Math.min(stored, Math.max(160, windowHeight - 320));
 };

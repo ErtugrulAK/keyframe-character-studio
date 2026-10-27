@@ -121,7 +121,8 @@
 }
 
 .gif-export-blocked,
-.gif-export-done {
+.gif-export-done,
+.gif-export-note {
   margin: 0;
   color: var(--kcs-text-muted);
   font-size: var(--font-size-caption);

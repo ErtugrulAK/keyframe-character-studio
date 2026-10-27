@@ -59,7 +59,6 @@ export const usePartBindingAuthoring = (): PartBindingAuthoring => {
     startBatchInteraction();
     setCharacterParts((parts) => bindParts(parts, selectedIds));
     endBatchInteraction();
-    showToast('Layers bonded: moving one moves the others.', 'success');
   };
 
   const releaseBinding = () => {
@@ -70,7 +69,6 @@ export const usePartBindingAuthoring = (): PartBindingAuthoring => {
     startBatchInteraction();
     setCharacterParts((parts) => unbindPart(parts, selectedPartId));
     endBatchInteraction();
-    showToast('Bond released.', 'info');
   };
 
   return {

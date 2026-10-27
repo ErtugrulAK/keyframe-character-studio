@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnimatorProvider } from './context/AnimatorContext';
 import { EditorContextMenuProvider } from './context/EditorContextMenuContext';
@@ -11,8 +11,23 @@ import { PropertyInspector } from './components/Inspector/PropertyInspector';
 import { SequencerTimeline } from './components/Timeline/SequencerTimeline';
 import { LiveDirectorPanel } from './components/Broadcast/LiveDirectorPanel';
 import { useDockedPanelEdge } from './hooks/useDockedPanelEdge';
+import { REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, closeDocksForNarrowStage, isPhoneLayout } from './utils/workspaceLayout';
 
 import './kcsEditorTheme.css';
+
+/*
+ * C2 perf — a docked panel's edge eases through ~15 synchronous commits
+ * (`commitWorkspaceLayout`), each re-rendering this shell. These surfaces take
+ * no props and read the editor state from context, so memoizing them keeps a
+ * dock frame to the panel's own width write; any real state change still
+ * re-renders them through the context.
+ */
+const MemoHeaderBar = React.memo(HeaderBar);
+const MemoAuthoringToolbar = React.memo(AuthoringToolbar);
+const MemoStageCanvas = React.memo(StageCanvas);
+const MemoSequencerTimeline = React.memo(SequencerTimeline);
+const MemoLiveDirectorPanel = React.memo(LiveDirectorPanel);
+
 const MainAppContent: React.FC = () => {
   const { appMode, modeSwapActive, finishModeSwap } = useAnimator();
 
@@ -23,8 +38,72 @@ const MainAppContent: React.FC = () => {
   const handleModeSwapAnimationEnd = useCallback((event: React.AnimationEvent<HTMLDivElement>) => {
     if (event.animationName === 'kcs-mode-enter') finishModeSwap();
   }, [finishModeSwap]);
-  const leftToolbar = useDockedPanelEdge(true);
-  const inspector = useDockedPanelEdge(true);
+  const leftToolbar = useDockedPanelEdge(true, 'left');
+  const inspector = useDockedPanelEdge(true, 'right');
+
+  // C3 — a narrow (or browser-zoomed) window opens with the left dock closed
+  // when the stage would otherwise be narrower than MIN_OPENING_STAGE_WIDTH.
+  // Measured once from the real first layout, before the first paint (the
+  // microtask runs before the browser paints, outside React's commit), then the
+  // untouched opening camera is re-fitted to the wider stage. After this the
+  // dock opens and closes only when the user says so, or (C11, below) when the
+  // window itself is made narrower.
+  // C11: on a phone-width window the docks open OVER the stage
+  // (kcsEditorTheme.css), so they never squeeze it to nothing, and the
+  // inspector opens closed too — open, it would cover the whole stage.
+  const snapLeftDock = leftToolbar.snap;
+  const snapInspector = inspector.snap;
+  const closeDocksIfStageNarrow = useCallback((): boolean => {
+    const stage = document.querySelector('.stage-canvas-container');
+    if (!stage) return false;
+    if (isPhoneLayout()) {
+      // The docks would cover the stage: both start (or become) closed.
+      snapLeftDock(false);
+      snapInspector(false);
+      return true;
+    }
+    return closeDocksForNarrowStage(
+      () => stage.getBoundingClientRect().width,
+      [() => snapLeftDock(false)],
+    );
+  }, [snapLeftDock, snapInspector]);
+  useLayoutEffect(() => {
+    if (appMode !== 'edit') return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled || !closeDocksIfStageNarrow()) return;
+      window.dispatchEvent(new CustomEvent(WORKSPACE_LAYOUT_COMMAND_EVENT, { detail: { type: REFIT_UNTOUCHED_CAMERA_COMMAND } }));
+    });
+    return () => {
+      cancelled = true;
+    };
+    // Mount only, by design.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // C11 — the same rule when the WINDOW is made narrower (resizing, snapping
+  // the browser to half the screen, rotating a tablet). Only a shrink acts, so
+  // a dock the user reopens in a narrow window is never closed again under them.
+  useEffect(() => {
+    if (appMode !== 'edit') return;
+    let lastWidth = window.innerWidth;
+    let frame: number | null = null;
+    const onResize = () => {
+      if (frame !== null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        const width = window.innerWidth;
+        const shrank = width < lastWidth;
+        lastWidth = width;
+        if (shrank) closeDocksIfStageNarrow();
+      });
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
+  }, [appMode, closeDocksIfStageNarrow]);
 
   // R2-07 — the browser's native context menu is suppressed for the whole
   // editor: canvas, layer list, sequence tabs, toolbar, timeline, Details and
@@ -55,27 +134,28 @@ const MainAppContent: React.FC = () => {
       className={`app-container ${leftToolbar.visible ? '' : 'left-toolbar-hidden'} ${inspector.visible ? '' : 'inspector-hidden'} ${modeSwapActive ? 'kcs-mode-swap' : ''}`}
       onAnimationEnd={handleModeSwapAnimationEnd}
     >
-      <HeaderBar />
-      {appMode === 'edit' && <AuthoringToolbar />}
+      <MemoHeaderBar />
+      {appMode === 'edit' && <MemoAuthoringToolbar />}
       <div className="main-layout">
         {appMode === 'edit' && (
           <LeftToolbar
             isHidden={!leftToolbar.visible}
-            edgeWidth={leftToolbar.edgeWidth}
+            edgeStyle={leftToolbar.edgeStyle}
             panelRef={leftToolbar.panelRef}
           />
         )}
-        <StageCanvas />
+        <MemoStageCanvas />
         {appMode === 'edit' && (
           <PropertyInspector
             isHidden={!inspector.visible}
-            edgeWidth={inspector.edgeWidth}
+            edgeStyle={inspector.edgeStyle}
             panelRef={inspector.panelRef}
           />
         )}
         {appMode === 'edit' && (
           <button
             type="button"
+            ref={leftToolbar.handleRef as React.RefObject<HTMLButtonElement>}
             className="sidebar-handle left-toolbar-toggle"
             aria-label={leftToolbar.visible ? 'Hide Left Toolbar' : 'Show Left Toolbar'}
             aria-expanded={leftToolbar.visible}
@@ -88,6 +168,7 @@ const MainAppContent: React.FC = () => {
         {appMode === 'edit' && (
           <button
             type="button"
+            ref={inspector.handleRef as React.RefObject<HTMLButtonElement>}
             className="sidebar-handle inspector-dock-toggle"
             aria-label={inspector.visible ? 'Hide Inspector' : 'Show Inspector'}
             aria-expanded={inspector.visible}
@@ -98,7 +179,7 @@ const MainAppContent: React.FC = () => {
           </button>
         )}
       </div>
-      {appMode === 'edit' ? <SequencerTimeline /> : <LiveDirectorPanel />}
+      {appMode === 'edit' ? <MemoSequencerTimeline /> : <MemoLiveDirectorPanel />}
     </div>
   );
 };

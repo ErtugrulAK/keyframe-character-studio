@@ -41,49 +41,125 @@ async function seed(page: Page, data: Record<string, unknown>) {
 }
 
 test.describe('Stroke Alignment V2', () => {
-  test('outside control preserves centered legacy stroke geometry and works without fill', async ({ page }) => {
+  test('inside, center and outside each draw the authored width on their side of the edge and persist', async ({ page }) => {
     await page.setViewportSize({ width: 1200, height: 800 });
-    await seed(page, scene());
+    // A green stroke, so it cannot be mistaken for the dark stage behind it.
+    const greenStroke = scene();
+    greenStroke.layers[0].strokeColor = '#20ff20';
+    // 20 stage units: the bands stay clear of each other and of the axis on
+    // the scaled-up rectangle.
+    greenStroke.layers[0].strokeWidth = 20;
+    // Scaled up, and unevenly. C12: the stroke ignores the layer's own scale
+    // (it zooms with the view only), so it measures 20 STAGE units on every
+    // side; under C10's layer-scaled stroke this row read 40.
+    Object.assign(greenStroke.layers[0], { scaleX: 2, scaleY: 4 });
+    await seed(page, greenStroke);
     await page.locator('.actor-node', { hasText: 'Stroke Shape' }).click();
     await page.getByRole('button', { name: 'Expand APPEARANCE', exact: true }).click();
 
+    // A legacy centred stroke shows as CENTER (it used to show as OUTSIDE).
+    await expect(page.getByLabel('Stroke Alignment')).toHaveValue('center');
     const fillRect = page.locator('.stage-svg rect[fill="#ff2020"]').first();
     await expect(fillRect).toBeVisible();
-    const authoredGeometry = {
-      x: await fillRect.getAttribute('x'),
-      y: await fillRect.getAttribute('y'),
-      width: await fillRect.getAttribute('width'),
-      height: await fillRect.getAttribute('height'),
+    const authored = await fillRect.evaluate((node) => ['x', 'y', 'width', 'height'].map((name) => node.getAttribute(name)));
+
+    // Measured, not assumed: along a row through the shape, how many stroke
+    // pixels lie outside the fill's left edge and how many inside it, in
+    // stage units: the screen run divided by the stage's screen pixels per
+    // unit (C12: the view scale, not the shape's own).
+    const viewScale = () => page.locator('.stage-svg').first().evaluate((svg) => Number(getComputedStyle(svg).getPropertyValue('--kcs-stroke-scale')));
+    const profile = async () => {
+      const stage = await page.locator('.stage-canvas-container').boundingBox();
+      if (!stage) throw new Error('no stage');
+      await page.mouse.click(stage.x + 12, stage.y + stage.height - 12);
+      await expect(page.locator('[role="tree"] [aria-selected="true"]')).toHaveCount(0);
+      await page.mouse.move(stage.x + 6, stage.y + 6);
+      // The geometry's own left edge on screen (a bounding box would include
+      // the stroke), sampled on a row clear of the coordinate overlay's axis.
+      const edge = await fillRect.evaluate((node) => {
+        const rect = node as SVGRectElement;
+        const ctm = rect.getScreenCTM()!;
+        const x = rect.x.baseVal.value;
+        // 42 % down: below the top stroke band and above the X axis at the centre.
+        const y = rect.y.baseVal.value + rect.height.baseVal.value * 0.42;
+        const point = new DOMPoint(x, y).matrixTransform(ctm);
+        return { x: point.x, y: point.y };
+      });
+      const scale = await viewScale();
+      expect(scale).toBeGreaterThan(0);
+      const half = Math.ceil(45 * scale) + 10;
+      const clip = { x: Math.round(edge.x) - half, y: Math.round(edge.y), width: 2 * half, height: 1 };
+      const png = (await page.screenshot({ clip })).toString('base64');
+      const columns = await page.evaluate(async (data) => {
+        const image = new Image();
+        image.src = `data:image/png;base64,${data}`;
+        await image.decode();
+        const canvas = document.createElement('canvas');
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext('2d')!;
+        context.drawImage(image, 0, 0);
+        const px = context.getImageData(0, 0, image.width, 1).data;
+        const kinds: string[] = [];
+        for (let i = 0; i < px.length; i += 4) {
+          const [r, g, b] = [px[i], px[i + 1], px[i + 2]];
+          kinds.push(g > 180 && r < 90 && b < 90 ? 's' : r > 180 && g < 90 && b < 90 ? 'f' : '-');
+        }
+        return kinds;
+      }, png);
+      // The stroke run on each side of the edge column. Up to two anti-aliased
+      // pixels at the edge itself are skipped (not counted).
+      const run = (from: number, step: number) => {
+        let column = from;
+        for (let skipped = 0; skipped < 2 && columns[column] !== undefined && columns[column] !== 's'; skipped += 1) column += step;
+        let count = 0;
+        for (; columns[column] === 's'; column += step) count += 1;
+        return count;
+      };
+      const edgeColumn = Math.round(edge.x) - clip.x;
+      const outside = run(edgeColumn - 1, -1);
+      const inside = run(edgeColumn, 1);
+      return { outside: outside / scale, inside: inside / scale, scale };
     };
-    const centerStroke = page.locator('.stage-svg rect[stroke="#101218"]').first();
-    const centerBounds = await centerStroke.boundingBox();
-    expect(centerBounds).not.toBeNull();
-    await expect(centerStroke).toHaveAttribute('stroke-width', '40');
+    // ± 2 screen pixels (the anti-aliased edge), in stage units.
+    const near = (value: { outside: number; inside: number; scale: number }, side: 'outside' | 'inside', expected: number) =>
+      expect(Math.abs(value[side] - expected), `${side}: ${value[side].toFixed(2)} units, expected ${expected} ± ${(2 / value.scale).toFixed(2)}`).toBeLessThanOrEqual(2 / value.scale);
 
+    let measured = await profile();
+    near(measured, 'outside', 10);
+    near(measured, 'inside', 10);
+
+    await page.locator('.actor-node', { hasText: 'Stroke Shape' }).click();
     await page.getByLabel('Stroke Alignment').selectOption('outside');
-    await expect(page.getByLabel('Stroke Alignment')).toHaveValue('outside');
-    await expect(page.locator('.stage-svg rect[mask*="outside-stroke"]')).toHaveCount(0);
-    await expect(centerStroke).toBeVisible();
-    await expect(centerStroke).toHaveAttribute('stroke-width', '40');
-    expect(await fillRect.getAttribute('x')).toBe(authoredGeometry.x);
-    expect(await fillRect.getAttribute('width')).toBe(authoredGeometry.width);
-    expect(await fillRect.getAttribute('height')).toBe(authoredGeometry.height);
+    await expect(page.locator('.stage-svg rect[mask*="outside-stroke"]')).toHaveAttribute('stroke-width', '40');
+    measured = await profile();
+    near(measured, 'outside', 20);
+    near(measured, 'inside', 0);
 
+    await page.locator('.actor-node', { hasText: 'Stroke Shape' }).click();
+    await page.getByLabel('Stroke Alignment').selectOption('inside');
+    await expect(page.locator('.stage-svg rect[mask*="inside-stroke"]')).toHaveAttribute('stroke-width', '40');
+    measured = await profile();
+    near(measured, 'outside', 0);
+    near(measured, 'inside', 20);
+
+    // The authored geometry never moves; only the stroke changes side.
+    expect(await fillRect.evaluate((node) => ['x', 'y', 'width', 'height'].map((name) => node.getAttribute(name)))).toEqual(authored);
+
+    await page.locator('.actor-node', { hasText: 'Stroke Shape' }).click();
+    await page.getByLabel('Stroke Alignment').selectOption('outside');
     await page.getByLabel('Fill Enabled').uncheck();
-    await expect(centerStroke).toBeVisible();
-    await expect(centerStroke).toHaveAttribute('fill', 'none');
+    await expect(page.locator('.stage-svg rect[mask*="outside-stroke"]')).toBeVisible();
 
     const badge = page.locator('.autosave-status-badge');
     if (await badge.count()) await badge.click();
-    await expect.poll(() => page.evaluate((key) => {
+    const stored = () => page.evaluate((key) => {
       const raw = localStorage.getItem(key);
       return raw ? JSON.parse(raw).layers?.[0]?.strokeAlignment : undefined;
-    }, STORAGE_KEY)).toBe('center');
+    }, STORAGE_KEY);
+    await expect.poll(stored).toBe('outside');
     await page.reload();
-    await expect.poll(() => page.evaluate((key) => {
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw).layers?.[0]?.strokeAlignment : undefined;
-    }, STORAGE_KEY)).toBe('center');
+    await expect.poll(stored).toBe('outside');
     await page.locator('.actor-node', { hasText: 'Stroke Shape' }).click();
     await page.getByRole('button', { name: 'Expand APPEARANCE', exact: true }).click();
     await expect(page.getByLabel('Stroke Alignment')).toHaveValue('outside');

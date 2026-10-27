@@ -48,6 +48,20 @@ async function seed(page: Page, layers: Record<string, unknown>[]): Promise<void
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 }
 
+/**
+ * C4 — the 1280×720 stage opens taller (compact header, shorter opening
+ * timeline), so the camera frames its 600×480 view larger and layers placed
+ * beyond it (±400–500 units in the tests that call this) would sit off the
+ * stage. Two zoom-out steps keep them on it; the assertions read the live scale.
+ */
+async function keepWideLayoutOnStage(page: Page): Promise<void> {
+  const zoomBefore = await page.locator('.stage-canvas-container').getAttribute('data-camera-zoom');
+  for (let step = 0; step < 2; step += 1) {
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent('canvas-viewport-command', { detail: { type: 'zoom-out' } })));
+  }
+  await expect(page.locator('.stage-canvas-container')).not.toHaveAttribute('data-camera-zoom', zoomBefore ?? '');
+}
+
 /** Stage units → screen pixels, through the stage's own CTM. */
 async function stageToScreen(page: Page, x: number, y: number) {
   return page.evaluate(({ x, y, camera, stage }) => {
@@ -112,6 +126,7 @@ const armCropMode = async (page: Page) => {
 
 test('draws a region, resizes it with a handle, applies it and keeps the world where it was', async ({ page }) => {
   await seed(page, [layer('a', 'Alpha', 150, -100), layer('b', 'Bravo', -250, 150)]);
+  await keepWideLayoutOnStage(page);
   await armCropMode(page);
 
   // Arming the mode writes nothing, and there is nothing to apply yet.

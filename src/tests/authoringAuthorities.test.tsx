@@ -135,10 +135,40 @@ describe('shared authoring authorities', () => {
     const edited: LayerMask = { ...mask, feather: 40 };
     authoring.part.handleDisplayedPartPropChange('masks', [edited]);
 
-    expect(animatorCtx.updatePropertyKeyframeValue).toHaveBeenCalledWith('t1', layerMaskChannel('m1', 'feather'), 'k1', 40);
+    // WP-01: the exact-frame key is updated in place through the track mutator,
+    // so its id, frame, easing and sequence survive.
+    const trackCalls = animatorCtx.setTracks.mock.calls;
+    const [writtenTrack] = (trackCalls[trackCalls.length - 1][0] as (tracks: Track[]) => Track[])([track]);
+    expect(writtenTrack.maskChannels?.[layerMaskChannel('m1', 'feather')]).toEqual([
+      { id: 'k1', frame: 0, value: 40, easing: 'linear' },
+    ]);
     const [written] = appliedParts([part]);
     expect(written.masks?.[0].feather).toBe(2);
     expect(written.masks?.[0].path).toEqual(mask.path);
+  });
+
+  it('writes an edited mask scalar to the base mask when the layer has no track (WP-01)', () => {
+    const mask: LayerMask = {
+      id: 'm1',
+      name: 'Mask',
+      mode: 'add',
+      feather: 2,
+      path: { version: 1, coordinateSpace: 'local', closed: true, points: [] },
+    };
+    const part = shape('a', { masks: [mask] });
+    animatorCtx.characterParts = [part];
+    animatorCtx.tracks = [];
+    animatorCtx.selectedPartId = 'a';
+    const authoring = renderAuthoring().result.current;
+
+    // The Inspector shows evaluated defaults (opacity 1, expansion 0) the base
+    // mask does not store; only the edited feather may reach the base mask.
+    authoring.part.handleDisplayedPartPropChange('masks', [{ ...mask, feather: 9, opacity: 1, expansion: 0 }]);
+
+    expect(animatorCtx.setTracks).not.toHaveBeenCalled();
+    const [written] = appliedParts([part]);
+    expect(written.masks).toEqual([{ ...mask, feather: 9 }]);
+    expect(written.masks?.[0]).not.toHaveProperty('opacity');
   });
 
   it('creates a Boolean group from two eligible operands through one batch', () => {
@@ -160,7 +190,8 @@ describe('shared authoring authorities', () => {
     expect(animatorCtx.setTracks).toHaveBeenCalledTimes(1);
     expect(animatorCtx.setSelectedPartIds).toHaveBeenCalledWith([group?.id]);
     expect(animatorCtx.setSelectedPartId).toHaveBeenCalledWith(group?.id);
-    expect(animatorCtx.showToast).toHaveBeenCalledWith('Union boolean created', 'success');
+    // C8: a visible result needs no confirmation toast.
+    expect(animatorCtx.showToast).not.toHaveBeenCalled();
   });
 
   it('refuses Boolean creation below two eligible operands', () => {
@@ -195,7 +226,8 @@ describe('shared authoring authorities', () => {
     expect(animatorCtx.setTracks).toHaveBeenCalledTimes(1);
     expect(animatorCtx.setSelectedPartIds).toHaveBeenCalledWith([group.id]);
     expect(animatorCtx.setSelectedPartId).toHaveBeenCalledWith(group.id);
-    expect(animatorCtx.showToast).toHaveBeenCalledWith('Grouped 2 layers', 'success');
+    // C8: a visible result needs no confirmation toast.
+    expect(animatorCtx.showToast).not.toHaveBeenCalled();
   });
 
   it('reports why a single layer cannot be grouped instead of writing state', () => {
@@ -234,7 +266,8 @@ describe('shared authoring authorities', () => {
     expect(nextTracks.map((track) => track.partId)).toEqual(['a']);
     expect(animatorCtx.setSelectedPartIds).toHaveBeenCalledWith(['a', 'b']);
     expect(animatorCtx.setSelectedPartId).toHaveBeenCalledWith('a');
-    expect(animatorCtx.showToast).toHaveBeenCalledWith('Ungrouped 2 layers; positions kept.', 'success');
+    // C8: a visible result needs no confirmation toast.
+    expect(animatorCtx.showToast).not.toHaveBeenCalled();
   });
 
   it('bonds the selection in one batch, through the shared bind authority', () => {
@@ -253,7 +286,8 @@ describe('shared authoring authorities', () => {
     const next = appliedParts([a, b]);
     expect(next.find((part) => part.id === 'a')?.boundPartIds).toEqual(['b']);
     expect(next.find((part) => part.id === 'b')?.boundPartIds).toEqual(['a']);
-    expect(animatorCtx.showToast).toHaveBeenCalledWith('Layers bonded: moving one moves the others.', 'success');
+    // C8: a visible result needs no confirmation toast.
+    expect(animatorCtx.showToast).not.toHaveBeenCalled();
   });
 
   it('refuses to bond a parent and its own child, and reports why', () => {
@@ -289,7 +323,8 @@ describe('shared authoring authorities', () => {
     const next = appliedParts([a, b, free]);
     expect(next.find((part) => part.id === 'a')?.boundPartIds).toBeUndefined();
     expect(next.find((part) => part.id === 'b')?.boundPartIds).toBeUndefined();
-    expect(animatorCtx.showToast).toHaveBeenCalledWith('Bond released.', 'info');
+    // C8: a visible result needs no confirmation toast.
+    expect(animatorCtx.showToast).not.toHaveBeenCalled();
 
     vi.clearAllMocks();
     animatorCtx.selectedPartId = 'free';
@@ -298,5 +333,7 @@ describe('shared authoring authorities', () => {
     expect(second.binding.canRelease).toBe(false);
     second.binding.releaseBinding();
     expect(animatorCtx.setCharacterParts).not.toHaveBeenCalled();
+    // A refusal still says why nothing happened.
+    expect(animatorCtx.showToast).toHaveBeenCalledWith('Select a bonded layer to release its bond.', 'info');
   });
 });

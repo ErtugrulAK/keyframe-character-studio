@@ -182,6 +182,11 @@ test.describe('editor interaction regressions', () => {
     await expect(page.locator('.nested-node.actor-node')).toHaveCount(2);
 
     await page.keyboard.press('Delete');
+    // C5 — a (Boolean) group is a container: its operands are named before the delete.
+    const dialog = page.getByTestId('delete-dependents-dialog');
+    await expect(dialog.getByTestId('delete-owned-list')).toContainText('Rectangle');
+    await expect(dialog.getByTestId('delete-owned-list')).toContainText('Triangle');
+    await dialog.getByRole('button', { name: 'Delete 3 layers' }).click();
     await expect(page.locator('.actor-node', { hasText: 'Rectangle' })).toHaveCount(0);
     await expect(page.locator('.actor-node', { hasText: 'Triangle' })).toHaveCount(0);
     await expect(page.locator('.actor-node', { hasText: 'Circle' })).toHaveCount(1);

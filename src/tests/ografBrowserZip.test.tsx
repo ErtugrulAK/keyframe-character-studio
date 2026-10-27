@@ -105,8 +105,9 @@ describe('HeaderBar OGraf export integration', () => {
     expect(screen.getByRole('menuitem', { name: 'JSON', exact: true })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: 'Animated GIF', exact: true })).toBeTruthy();
-    // The single-file legacy export is gone: the menu offers exactly these three.
-    expect(screen.getAllByRole('menuitem')).toHaveLength(3);
+    // The single-file legacy export is gone: the menu offers exactly these three
+    // exports, plus the WP-07 read-only pre-export check (not an export format).
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['JSON', 'OGraf Package', 'Animated GIF', 'Check OGraf Export…']);
     fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
     await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
     expect(downloads[0]).toBe('my-project-demo-ograf.zip');
@@ -214,7 +215,8 @@ describe('HeaderBar OGraf export integration', () => {
     expect(warningCall?.[0]).toContain('Clip matte approximated [Target]');
     expect(warningCall?.[2].title).toBe('Export warnings (1)');
     expect(warningCall?.[2].action).toContain('warnings do not block');
-    expect(context.showToast).toHaveBeenCalledWith('Exported "my-project-demo-ograf.zip"', 'success');
+    // C8: the download is the confirmation; the warning is the only toast.
+    expect(context.showToast.mock.calls.map(([, type]) => type)).toEqual(['info']);
   });
 
   it('aggregates duplicate missing-font diagnostics by font root cause', async () => {
@@ -247,7 +249,8 @@ describe('HeaderBar OGraf export integration', () => {
     // The OGraf item reports its in-flight state through both its label and its
     // disabled flag; JSON and the GIF panel stay available throughout.
     const menuItems = screen.getAllByRole('menuitem') as HTMLButtonElement[];
-    expect(menuItems.map((item) => item.disabled)).toEqual([false, true, false]);
+    // The WP-07 check stays available too: it only reads the scene.
+    expect(menuItems.map((item) => item.disabled)).toEqual([false, true, false, false]);
     expect(menuItems[1].textContent).toContain('Packaging OGraf');
     fireEvent.click(menuItems[1]);
     expect(createZipMock).toHaveBeenCalledTimes(1);
@@ -291,7 +294,8 @@ describe('HeaderBar OGraf export integration', () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [new File(['{"version":1}'], 'scene.kcs', { type: 'application/json' })] } });
     await waitFor(() => expect(context.importProject).toHaveBeenCalledWith('{"version":1}', 'scene'));
-    expect(context.showToast).toHaveBeenCalledWith('Imported "scene" as a new Template tab!', 'success');
+    // C8: the new Template tab is the confirmation; no success toast.
+    expect(context.showToast).not.toHaveBeenCalled();
   });
 
   it('refuses an unreadable OGraf package with a report instead of applying it', async () => {

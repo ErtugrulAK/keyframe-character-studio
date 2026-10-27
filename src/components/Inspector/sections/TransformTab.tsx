@@ -8,6 +8,7 @@ import { TransformScaleCard } from './transform/TransformScaleCard';
 import { TransformOpacityCard } from './transform/TransformOpacityCard';
 import { TransformControlPoints } from './transform/TransformControlPoints';
 import { StyleCard } from './style/StyleCard';
+import { AnimationDataCard } from './AnimationDataCard';
 
 interface TransformTabProps {
   selectedPart: CharacterPart;
@@ -54,7 +55,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
 
   return (
     <>
-      <StyleCard title="TRANSFORM" collapsible defaultOpen={false}>
+      <StyleCard title="TRANSFORM" collapsible defaultOpen={false} retainKey="transform">
         <div className="transform-property-list">
           <TransformPositionCard
             transform={transform}
@@ -90,7 +91,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
       {/* 4 control points only make sense for regular shapes — hand-drawn
           freeform polygons use the per-vertex editor below instead */}
       {selectedPart.type !== 'custom_freeform' && (
-        <StyleCard title="CONTROL POINTS" collapsible defaultOpen={false}>
+        <StyleCard title="CONTROL POINTS" collapsible defaultOpen={false} retainKey="control-points">
           <TransformControlPoints
             selectedPart={selectedPart}
             transform={transform}
@@ -101,45 +102,16 @@ export const TransformTab: React.FC<TransformTabProps> = ({
       )}
 
 
-      {/* Canonical animation-data actions remain useful for named sequences.
-          The legacy procedural IN/OUT editor is intentionally de-emphasized
-          without removing its data model or runtime support. */}
+      {/* Canonical animation-data actions (C7: the Inspector's Layer tab shows
+          the same card; it passes no copy action here). */}
       {onCopyAnimation && (
-        <StyleCard title="ANIMATION DATA" collapsible defaultOpen={false}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-            <button
-              type="button"
-              className="btn-secondary"
-              title="Copy animation from this element"
-              aria-label="Copy Animation"
-              onClick={onCopyAnimation}
-            >
-              Copy Animation
-            </button>
-            <button
-              type="button"
-              className="btn-secondary"
-              title="Paste animation onto selected element"
-              aria-label="Paste Animation"
-              disabled={!clipboardSourceId || clipboardSourceId === selectedPart.id}
-              onClick={onPasteAnimation}
-            >
-              Paste Animation
-            </button>
-            {onClearAnimation && (
-              <button
-                type="button"
-                className="btn-secondary"
-                style={{ color: '#f87171' }}
-                title="Clear animation (IN/OUT presets, durations and keyframes)"
-                aria-label="Clear Animation"
-                onClick={onClearAnimation}
-              >
-                Clear Animation
-              </button>
-            )}
-          </div>
-        </StyleCard>
+        <AnimationDataCard
+          partId={selectedPart.id}
+          onCopyAnimation={onCopyAnimation}
+          onPasteAnimation={onPasteAnimation}
+          onClearAnimation={onClearAnimation}
+          clipboardSourceId={clipboardSourceId}
+        />
       )}
     </>
   );

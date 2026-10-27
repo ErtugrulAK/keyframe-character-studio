@@ -319,7 +319,11 @@ export const resolveChannelAnimationState = (
   frame: number,
   templateId: string,
 ): ChannelAnimationState => {
-  const store = (channel.includes(':') ? track.maskChannels : track.channels) as Record<string, PropertyKeyframe[]> | undefined;
+  // A mask PATH channel keeps its keys in its own store (WP-03); reading the
+  // scalar mask store for it would report an animated path as 'off'.
+  const store = (channel.includes(':')
+    ? (channel.endsWith(':path') ? track.maskPathChannels : track.maskChannels)
+    : track.channels) as Record<string, { frame: number; templateId?: string }[]> | undefined;
   const keyframes = (store?.[channel] ?? []).filter((k) => (k.templateId || 'Sequence') === templateId);
   if (keyframes.length === 0) return 'off';
   return keyframes.some((k) => k.frame === frame) ? 'keyed' : 'animated';

@@ -17,7 +17,7 @@ export const StyleParticleSection: React.FC<StyleParticleSectionProps> = ({ sele
   };
 
   return (
-    <StyleCard title="PARTICLES" collapsible defaultOpen={false}>
+    <StyleCard title="PARTICLES" collapsible defaultOpen={false} retainKey="particles">
       <div className="input-grid">
         <div className="form-field-group">
           <label className="form-label">PARTICLE COUNT</label>

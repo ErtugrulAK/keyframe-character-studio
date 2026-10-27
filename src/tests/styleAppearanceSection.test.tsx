@@ -126,22 +126,21 @@ describe('StyleAppearanceSection', () => {
   });
 
 
-  it('exposes only inside and outside alignment while mapping center compatibility', () => {
+  it('offers inside, center and outside, and writes the one chosen', () => {
     const onChange = vi.fn();
     const part = { ...makePart('custom_rect'), strokeAlignment: 'center' as const };
     openAppearance(part, onChange);
 
     const alignment = screen.getByLabelText('Stroke Alignment');
-    expect(alignment).toHaveValue('outside');
-    expect(screen.getAllByRole('option')).toHaveLength(2);
-    expect(screen.getByRole('option', { name: 'INSIDE' })).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'OUTSIDE' })).toBeTruthy();
-    expect(screen.queryByRole('option', { name: 'CENTER' })).toBeNull();
+    expect(alignment).toHaveValue('center');
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['INSIDE', 'CENTER', 'OUTSIDE']);
 
     fireEvent.change(alignment, { target: { value: 'inside' } });
-    expect(onChange).toHaveBeenCalledWith('strokeAlignment', 'inside');
+    expect(onChange).toHaveBeenLastCalledWith('strokeAlignment', 'inside');
     fireEvent.change(alignment, { target: { value: 'outside' } });
-    expect(onChange).toHaveBeenCalledWith('strokeAlignment', 'center');
+    expect(onChange).toHaveBeenLastCalledWith('strokeAlignment', 'outside');
+    fireEvent.change(alignment, { target: { value: 'center' } });
+    expect(onChange).toHaveBeenLastCalledWith('strokeAlignment', 'center');
   });
 
   it('keeps Stroke Width and Align in one compact row without changing callbacks', () => {

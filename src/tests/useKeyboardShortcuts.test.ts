@@ -291,6 +291,32 @@ describe('shortcut commands added in round four, part four', () => {
     pressWith(' ');
     expect(broadcast.setIsPlaying).not.toHaveBeenCalled();
   });
+
+  it('C4: Broadcast takes no editing key — only the shortcut reference opens', () => {
+    const api = renderShortcuts({ appMode: 'broadcast' });
+
+    pressWith('Delete');
+    pressWith('Backspace');
+    pressWith('z', { ctrlKey: true });
+    pressWith('y', { ctrlKey: true });
+    pressWith('c', { ctrlKey: true });
+    pressWith('v', { ctrlKey: true });
+    pressWith('d', { ctrlKey: true });
+    pressWith('a', { ctrlKey: true });
+    pressWith('g', { ctrlKey: true });
+    pressWith('r');
+    pressWith('t');
+    pressWith('p');
+    pressWith('Escape');
+
+    for (const spy of [api.deletePart, api.deleteSelectedKeyframes, api.undo, api.redo, api.copySelectedPart, api.pasteCopiedPart,
+      api.duplicateSelectedPart, api.selectAllLayers, api.groupSelection, api.armShapeCreation, api.addCustomPart, api.setActiveTool,
+      api.clearKeyframeSelection]) {
+      expect(spy).not.toHaveBeenCalled();
+    }
+    pressWith('?', { shiftKey: true });
+    expect(api.openShortcutReference).toHaveBeenCalledOnce();
+  });
 });
 
 describe('the Escape chain', () => {
@@ -378,5 +404,88 @@ describe('the timeline scope owns Delete', () => {
     scope.remove();
     pressWith('Delete');
     expect(api.deletePart).toHaveBeenCalledWith('part_1');
+  });
+});
+
+describe('C8: the arrow keys nudge the selected layers', () => {
+  const renderNudge = (options: { isMaskEditing?: boolean; activeTool?: string; begin?: () => ((dx: number, dy: number) => void) | null } = {}) => {
+    const move = vi.fn();
+    const beginNudge = vi.fn(options.begin ?? (() => move));
+    const endNudge = vi.fn();
+    renderHook(() => useKeyboardShortcuts({
+      ...spies(),
+      selectedPartId: 'part_1',
+      isMaskEditing: options.isMaskEditing,
+      activeTool: (options.activeTool ?? 'select') as never,
+      beginNudge,
+      endNudge,
+    }));
+    return { move, beginNudge, endNudge };
+  };
+  const release = (key: string) => act(() => window.dispatchEvent(new KeyboardEvent('keyup', { key })));
+
+  it('makes a held key ONE session that writes the total offset, 1 unit or 10 with Shift', () => {
+    const api = renderNudge();
+    pressWith('ArrowRight');
+    pressWith('ArrowRight', { repeat: true });
+    pressWith('ArrowRight', { repeat: true });
+    pressWith('ArrowDown', { shiftKey: true });
+    expect(api.beginNudge).toHaveBeenCalledOnce();
+    expect(api.move.mock.calls).toEqual([[1, 0], [2, 0], [3, 0], [3, 10]]);
+    expect(api.endNudge).not.toHaveBeenCalled();
+
+    release('ArrowDown');
+    expect(api.endNudge).toHaveBeenCalledOnce();
+
+    // The next press is a new session (its own undo step) from offset zero.
+    pressWith('ArrowLeft');
+    expect(api.beginNudge).toHaveBeenCalledTimes(2);
+    expect(api.move).toHaveBeenLastCalledWith(-1, 0);
+    release('ArrowLeft');
+    expect(api.endNudge).toHaveBeenCalledTimes(2);
+  });
+
+  it('claims nothing when there is nothing to move', () => {
+    const api = renderNudge({ begin: () => null });
+    const event = new KeyboardEvent('keydown', { key: 'ArrowUp', cancelable: true });
+    act(() => { window.dispatchEvent(event); });
+    expect(api.beginNudge).toHaveBeenCalledOnce();
+    expect(event.defaultPrevented).toBe(false);
+    release('ArrowUp');
+    expect(api.endNudge).not.toHaveBeenCalled();
+  });
+
+  it('leaves the arrows to the mask editor, the drawing tools and focused arrow widgets', () => {
+    expect(renderNudge({ isMaskEditing: true }).beginNudge).not.toHaveBeenCalled();
+    pressWith('ArrowRight');
+
+    const pen = renderNudge({ activeTool: 'freeform_draw' });
+    pressWith('ArrowRight');
+    expect(pen.beginNudge).not.toHaveBeenCalled();
+
+    for (const owner of [
+      { attribute: 'data-shortcut-scope', value: 'layers' },
+      { attribute: 'role', value: 'tablist' },
+      { attribute: 'role', value: 'toolbar' },
+    ]) {
+      const api = renderNudge();
+      const surface = document.createElement('div');
+      surface.setAttribute(owner.attribute, owner.value);
+      const button = document.createElement('button');
+      surface.appendChild(button);
+      document.body.appendChild(surface);
+      act(() => button.focus());
+      pressWith('ArrowRight');
+      expect(api.beginNudge, `${owner.attribute}=${owner.value}`).not.toHaveBeenCalled();
+      surface.remove();
+    }
+
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    const typing = renderNudge();
+    act(() => input.focus());
+    pressWith('ArrowRight');
+    expect(typing.beginNudge).not.toHaveBeenCalled();
+    input.remove();
   });
 });

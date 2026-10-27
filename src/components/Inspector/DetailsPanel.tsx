@@ -1,19 +1,26 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import * as Tabs from '@radix-ui/react-tabs';
 import { useAnimator } from '../../context/useAnimator';
 import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
+import { useLockedRegion } from '../../hooks/useLockedRegion';
 import { makeEmptyChannels } from '../../utils/defaults';
 import { evaluateLayerMasks } from '../../utils/evaluateLayerMasks';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { TransformTab } from './sections/TransformTab';
+import { LayerParentField } from './LayerParentField';
+import { editTargetText, layerTypeLabel, resolveEditTarget } from '../../utils/editTarget';
 import { StyleTab } from './sections/StyleTab';
 import { evaluateTrimPath } from '../../utils/trimPath';
-import { DuplicateTab } from './sections/DuplicateTab';
+import { AnimationDataCard } from './sections/AnimationDataCard';
+import { StyleCard } from './sections/style/StyleCard';
+import { useRetainedUiState } from '../../hooks/useRetainedUiState';
 import {
   Sliders,
-  Copy,
-  Trash2,
-  CopyPlus,
+  Lock,
 } from 'lucide-react';
+
+/** C7 — the Details tabs: what the layer looks like, what cuts it, how it relates and animates. */
+type DetailsTab = 'properties' | 'masks' | 'layer';
 
 /**
  * Details is the Inspector's information surface: it reports and edits the
@@ -33,12 +40,10 @@ export const DetailsPanel: React.FC = () => {
     updateCurrentTransform,
     updateCurrentPropertyChannel,
     authorMaskPath,
-    deletePart,
     customPresets,
     savePreset,
     updatePreset,
     deletePreset,
-    duplicateSelectedPart,
     importPresets,
     copySelectedPart,
     pasteAnimationOntoSelected,
@@ -49,17 +54,83 @@ export const DetailsPanel: React.FC = () => {
     tracks,
     activeTemplateId,
       coordinateSystem,
+    maskEditTarget,
+    enterMaskEditing,
+    exitMaskEditing,
+    maskDrawSession,
+    startMaskDraw,
+    matteReturnTargetId,
+    selectMatteSource,
+    backToMatteTarget,
+    handleSelectPart,
+    maskVertexIndex,
+    setMaskVertexIndex,
+    setLayersLocked,
+    applyMaskPathOrder,
+    convertToEditablePath,
+    setPartPath,
+    pathVertex,
+    selectPathVertex,
   } = useAnimator();
 
-  const [activeTabSection, setActiveTabSection] = useState<'edit' | 'duplicate'>('edit');
+  // C5 — the same "what am I editing" description the canvas strip shows; the
+  // Inspector names the session (mask path, mask drawing, matte source) under
+  // the layer it belongs to. Its controls stay where they are (the canvas
+  // strip's Finish, the mask row's toggle, the matte summary's Back), so no
+  // second copy of them is added here.
+  const editTarget = resolveEditTarget({
+    characterParts,
+    selectedPartId,
+    selectedPartIds: selectedPartId ? [selectedPartId] : [],
+    maskEditTarget,
+    maskDrawSession,
+    matteReturnTargetId,
+    activeTool: 'select',
+    pendingShapeType: null,
+    freeformPointCount: null,
+  });
+  const sessionTarget = editTarget && (editTarget.kind === 'mask' || editTarget.kind === 'drawing-mask' || editTarget.kind === 'matte-source') ? editTarget : null;
+
+  /*
+   * C7 — Details is split into tabs (Radix Tabs: roving arrow keys, Home/End,
+   * tab/tabpanel roles): Properties (transform, paint, text, Trim Path,
+   * geometry, effects), Masks (layer masks, Track Matte, legacy clip matte) and
+   * Layer (parent, animation data). The choice is session UI memory, like an
+   * open card. A mask or matte session (editing a mask path, drawing a layer
+   * mask, picking a matte source) opens the Masks tab, where its controls are;
+   * an effect-only mask stays with Color Correction in Properties.
+   */
+  const [detailsTab, setDetailsTab] = useRetainedUiState<DetailsTab>('inspector.details-tab', 'properties');
+  const [tabPointer, setTabPointer] = useState(false);
+  // An effect-only mask (drawing it, or editing it after the draw) belongs to
+  // Color Correction, so it keeps the Properties tab.
+  const editsEffectMask = sessionTarget?.kind === 'drawing-mask'
+    ? maskDrawSession?.purpose === 'effect'
+    : sessionTarget?.kind === 'mask'
+      && characterParts.find((part) => part.id === maskEditTarget?.ownerPartId)?.masks?.find((mask) => mask.id === maskEditTarget?.maskId)?.affectsAlpha === false;
+  const opensMasksTab = Boolean(sessionTarget) && !editsEffectMask;
+  useEffect(() => {
+    if (opensMasksTab) setDetailsTab('masks');
+  }, [opensMasksTab, selectedPartId, setDetailsTab]);
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const selectedTrack = selectedPartId ? tracks.find((track) => track.partId === selectedPartId) : undefined;
+  // WP-01: the Inspector shows the ACTIVE sequence's mask, as the renderer does.
   const evaluatedMasks = selectedPart && selectedTrack
-    ? evaluateLayerMasks(selectedPart, selectedTrack, currentFrame)
+    ? evaluateLayerMasks(selectedPart, selectedTrack, currentFrame, activeTemplateId || 'Sequence')
     : undefined;
   const inspectorPart = selectedPart && evaluatedMasks ? { ...selectedPart, masks: evaluatedMasks } : selectedPart;
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
+  // C4 — a locked layer is inspected, not edited: its controls are disabled
+  // (disclosure and navigation stay), and the banner offers the unlock.
+  const isLocked = Boolean(selectedTrack?.locked);
+  // A group container owns no geometry, so it has no paint, masks or matte.
+  const hasMasksTab = Boolean(selectedPart && !selectedPart.isGroup);
+  const shownTab: DetailsTab = detailsTab === 'masks' && !hasMasksTab ? 'properties' : detailsTab;
+  // Shown on the Masks tab, so a mask or matte is never hidden behind it unnoticed.
+  const masksInUse = (selectedPart?.masks?.length ?? 0) + (selectedPart?.trackMatte ? 1 : 0) + (selectedPart?.matte?.sourcePartId ? 1 : 0);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useLockedRegion(bodyRef, isLocked);
 
   /**
    * Trim Path authoring follows the same rule as every other scalar channel:
@@ -126,7 +197,6 @@ export const DetailsPanel: React.FC = () => {
       ),
     );
     endBatchInteraction();
-    showToast('Animation cleared', 'success');
   };
 
   return (
@@ -143,40 +213,10 @@ export const DetailsPanel: React.FC = () => {
       {selectedPart ? (
         <div className="details-actor-header">
           <div className="actor-title-box">
-            <span className="actor-main-name">{selectedPart.name}</span>
-            <span className="actor-type-label">{selectedPart.isGroup ? 'group' : selectedPart.type.replace('custom_', '')}</span>
+            <span className="actor-main-name" title={selectedPart.name}>{selectedPart.name}</span>
+            <span className="actor-type-label">{layerTypeLabel(selectedPart)}</span>
           </div>
 
-          <div className="actor-action-row" role="group" aria-label="Inspector object actions">
-            <button
-              type="button"
-              className={`actor-context-action ${activeTabSection === 'duplicate' ? 'active' : ''}`}
-              aria-expanded={activeTabSection === 'duplicate'}
-              aria-label="Duplicate"
-              title="Duplicate options"
-              onClick={() => setActiveTabSection((section) => section === 'duplicate' ? 'edit' : 'duplicate')}
-            >
-              <CopyPlus size={13} />
-            </button>
-            <button
-              type="button"
-              className="btn-icon-small"
-              onClick={duplicateSelectedPart}
-              title="Duplicate Actor Instance"
-              aria-label="Duplicate Actor Instance"
-            >
-              <Copy size={12} />
-            </button>
-            <button
-              type="button"
-              className="btn-icon-small danger"
-              onClick={() => deletePart(selectedPart.id)}
-              title="Delete Actor Instance"
-              aria-label="Delete Actor Instance"
-            >
-              <Trash2 size={12} />
-            </button>
-          </div>
         </div>
       ) : (
         <div className="details-empty-state">
@@ -184,12 +224,57 @@ export const DetailsPanel: React.FC = () => {
         </div>
       )}
 
+      {/* C10 — selecting a matte source needs no caption here either. */}
+      {selectedPart && sessionTarget && sessionTarget.kind !== 'matte-source' && (
+        <div className="details-edit-target" role="status" data-testid="inspector-edit-target" data-edit-target={sessionTarget.kind}>
+          <span className="edit-target-mode">{sessionTarget.mode}</span>
+          <span className="details-edit-target-path" title={editTargetText(sessionTarget)}>
+            {sessionTarget.path.join(' / ')}
+            {sessionTarget.detail ? <span className="details-edit-target-detail"> · {sessionTarget.detail}</span> : null}
+          </span>
+        </div>
+      )}
 
-      {/* 4. Property Section Body */}
+      {selectedPart && isLocked && (
+        <div className="details-lock-banner" role="status" data-testid="details-lock-banner">
+          <Lock size={12} aria-hidden="true" />
+          <span>This layer is locked. Its properties are shown but cannot be changed.</span>
+          <button type="button" className="btn-secondary" onClick={() => setLayersLocked([selectedPart.id], false)}>
+            Unlock
+          </button>
+        </div>
+      )}
+
+      {/* 4. Property Section Body. C8: the header carries no actions — delete,
+          duplicate and paste live in the keyboard and the context menu, and
+          the duplicate / mirror copies in the Layer tab. */}
       {selectedPart && transform && (
-        <div className="details-body">
-          {activeTabSection === 'edit' && (
-            <>
+        <Tabs.Root
+          className="details-tabs"
+          value={shownTab}
+          onValueChange={(value) => setDetailsTab(value as DetailsTab)}
+        >
+          {/* Radix focuses the tab on pointer-down, which Chrome then paints as
+              :focus-visible; the ring is for keyboard users only. */}
+          <Tabs.List
+            className="details-tab-list"
+            aria-label="Details sections"
+            data-pointer={tabPointer ? 'true' : undefined}
+            onPointerDown={() => setTabPointer(true)}
+            onKeyDown={() => setTabPointer(false)}
+          >
+            <Tabs.Trigger className="details-tab" value="properties">Properties</Tabs.Trigger>
+            {hasMasksTab && (
+              <Tabs.Trigger className="details-tab" value="masks">
+                Masks
+                {masksInUse > 0 && <span className="details-tab-count" aria-label={`, ${masksInUse} in use`}>{masksInUse}</span>}
+              </Tabs.Trigger>
+            )}
+            <Tabs.Trigger className="details-tab" value="layer">Layer</Tabs.Trigger>
+          </Tabs.List>
+
+          <div className="details-body" ref={bodyRef} data-locked={isLocked ? 'true' : undefined}>
+            <Tabs.Content className="details-tab-panel" value="properties">
               <TransformTab
                 selectedPart={selectedPart}
                 transform={transform}
@@ -202,37 +287,151 @@ export const DetailsPanel: React.FC = () => {
                 onDeletePreset={deletePreset}
                 onImportPresets={importPresets}
                 showToast={showToast}
+              />
+              {!selectedPart.isGroup && (
+                <StyleTab
+                  section="properties"
+              selectedPart={inspectorPart ?? selectedPart}
+              characterParts={characterParts}
+              transform={transform}
+              coordinateSystem={coordinateSystem}
+              handlePartPropChange={handleDisplayedPartPropChange}
+              handlePartColorChange={handlePartColorChange}
+              evaluatedTrim={evaluatedTrim}
+              onUpdateTrimChannel={updateCurrentPropertyChannel}
+              onChangeMaskPath={(maskId, path) => {
+                if (selectedPartId) authorMaskPath(selectedPartId, maskId, path);
+              }}
+              maskEditTargetId={maskEditTarget?.ownerPartId === selectedPart.id ? maskEditTarget.maskId : null}
+              onEditMaskOnCanvas={(maskId) => {
+                const refusal = enterMaskEditing(selectedPart.id, maskId);
+                if (refusal) showToast(refusal, 'error');
+              }}
+              onExitMaskEditing={exitMaskEditing}
+              maskDrawShape={maskDrawSession?.ownerPartId === selectedPart.id ? maskDrawSession.shape : null}
+              onStartMaskDraw={(shape) => {
+                const refusal = startMaskDraw(selectedPart.id, shape);
+                if (refusal) showToast(refusal, 'error');
+              }}
+              maskPathChannels={selectedTrack?.maskPathChannels}
+              maskVertexIndex={maskVertexIndex}
+              onSelectMaskVertex={setMaskVertexIndex}
+              matteReturnTargetId={matteReturnTargetId}
+              onSelectMatteSource={selectMatteSource}
+              onBackToMatteTarget={backToMatteTarget}
+              onPickRefused={(reason) => showToast(reason, 'info')}
+              onMaskPathOrder={(maskId, command, index) => {
+                const outcome = applyMaskPathOrder(selectedPart.id, maskId, command, index);
+                if (!outcome.applied) return undefined;
+                if (maskEditTarget?.maskId === maskId) setMaskVertexIndex(outcome.selectedIndex);
+                return outcome.selectedIndex;
+              }}
+              onSelectMatteTarget={(targetId) => handleSelectPart(targetId)}
+              onColorInteractionStart={startBatchInteraction}
+              onColorInteractionEnd={endBatchInteraction}
+              colorCorrection={{
+                evaluatedMasks,
+                onChangeEffects: (effects) => handleDisplayedPartPropChange('effects', effects),
+                onDrawEffectMask: (shape) => {
+                  const refusal = startMaskDraw(selectedPart.id, shape, 'effect');
+                  if (refusal) showToast(refusal, 'error');
+                },
+                drawingEffectMask: maskDrawSession?.ownerPartId === selectedPart.id && maskDrawSession.purpose === 'effect' ? maskDrawSession.shape : null,
+                readOnlyReason: isLocked ? 'This layer is locked.' : null,
+              }}
+              pathEditing={{
+                tracks,
+                readOnlyReason: isLocked ? 'This layer is locked.' : null,
+                onConvert: convertToEditablePath,
+                onChangePath: setPartPath,
+                selectedIndex: pathVertex?.partId === selectedPart.id ? pathVertex.index : null,
+                onSelectIndex: (index) => selectPathVertex(selectedPart.id, index),
+              }}
+                />
+              )}
+            </Tabs.Content>
+
+            {hasMasksTab && (
+              <Tabs.Content className="details-tab-panel" value="masks">
+                <StyleTab
+                  section="masks"
+              selectedPart={inspectorPart ?? selectedPart}
+              characterParts={characterParts}
+              transform={transform}
+              coordinateSystem={coordinateSystem}
+              handlePartPropChange={handleDisplayedPartPropChange}
+              handlePartColorChange={handlePartColorChange}
+              evaluatedTrim={evaluatedTrim}
+              onUpdateTrimChannel={updateCurrentPropertyChannel}
+              onChangeMaskPath={(maskId, path) => {
+                if (selectedPartId) authorMaskPath(selectedPartId, maskId, path);
+              }}
+              maskEditTargetId={maskEditTarget?.ownerPartId === selectedPart.id ? maskEditTarget.maskId : null}
+              onEditMaskOnCanvas={(maskId) => {
+                const refusal = enterMaskEditing(selectedPart.id, maskId);
+                if (refusal) showToast(refusal, 'error');
+              }}
+              onExitMaskEditing={exitMaskEditing}
+              maskDrawShape={maskDrawSession?.ownerPartId === selectedPart.id ? maskDrawSession.shape : null}
+              onStartMaskDraw={(shape) => {
+                const refusal = startMaskDraw(selectedPart.id, shape);
+                if (refusal) showToast(refusal, 'error');
+              }}
+              maskPathChannels={selectedTrack?.maskPathChannels}
+              maskVertexIndex={maskVertexIndex}
+              onSelectMaskVertex={setMaskVertexIndex}
+              matteReturnTargetId={matteReturnTargetId}
+              onSelectMatteSource={selectMatteSource}
+              onBackToMatteTarget={backToMatteTarget}
+              onPickRefused={(reason) => showToast(reason, 'info')}
+              onMaskPathOrder={(maskId, command, index) => {
+                const outcome = applyMaskPathOrder(selectedPart.id, maskId, command, index);
+                if (!outcome.applied) return undefined;
+                if (maskEditTarget?.maskId === maskId) setMaskVertexIndex(outcome.selectedIndex);
+                return outcome.selectedIndex;
+              }}
+              onSelectMatteTarget={(targetId) => handleSelectPart(targetId)}
+              onColorInteractionStart={startBatchInteraction}
+              onColorInteractionEnd={endBatchInteraction}
+              colorCorrection={{
+                evaluatedMasks,
+                onChangeEffects: (effects) => handleDisplayedPartPropChange('effects', effects),
+                onDrawEffectMask: (shape) => {
+                  const refusal = startMaskDraw(selectedPart.id, shape, 'effect');
+                  if (refusal) showToast(refusal, 'error');
+                },
+                drawingEffectMask: maskDrawSession?.ownerPartId === selectedPart.id && maskDrawSession.purpose === 'effect' ? maskDrawSession.shape : null,
+                readOnlyReason: isLocked ? 'This layer is locked.' : null,
+              }}
+              pathEditing={{
+                tracks,
+                readOnlyReason: isLocked ? 'This layer is locked.' : null,
+                onConvert: convertToEditablePath,
+                onChangePath: setPartPath,
+                selectedIndex: pathVertex?.partId === selectedPart.id ? pathVertex.index : null,
+                onSelectIndex: (index) => selectPathVertex(selectedPart.id, index),
+              }}
+                />
+              </Tabs.Content>
+            )}
+
+            <Tabs.Content className="details-tab-panel" value="layer">
+              {!selectedPart.booleanGroupId && (
+                <StyleCard title="HIERARCHY" collapsible defaultOpen retainKey="layer-hierarchy">
+                  <LayerParentField part={selectedPart} characterParts={characterParts} tracks={tracks} />
+                </StyleCard>
+              )}
+              <AnimationDataCard
+                partId={selectedPart.id}
+                defaultOpen
                 onCopyAnimation={handleCopyAnimation}
                 onPasteAnimation={handlePasteAnimation}
                 onClearAnimation={() => setPendingClear(true)}
                 clipboardSourceId={clipboardData?.part.id ?? null}
               />
-
-              {/* A group container owns no geometry, so paint, masks and Trim
-                  Path would be controls over nothing. Its transform stays. */}
-              {!selectedPart.isGroup && (
-                <StyleTab
-                selectedPart={inspectorPart ?? selectedPart}
-                characterParts={characterParts}
-                transform={transform}
-                coordinateSystem={coordinateSystem}
-                handlePartPropChange={handleDisplayedPartPropChange}
-                handlePartColorChange={handlePartColorChange}
-                evaluatedTrim={evaluatedTrim}
-                onUpdateTrimChannel={updateCurrentPropertyChannel}
-                onChangeMaskPath={(maskId, path) => {
-                  if (selectedPartId) authorMaskPath(selectedPartId, maskId, path);
-                }}
-                onColorInteractionStart={startBatchInteraction}
-                onColorInteractionEnd={endBatchInteraction}
-              />
-              )}
-
-            </>
-          )}
-
-          {activeTabSection === 'duplicate' && <DuplicateTab />}
-        </div>
+            </Tabs.Content>
+          </div>
+        </Tabs.Root>
       )}
 
       <ConfirmationDialog

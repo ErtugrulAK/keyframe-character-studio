@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import zlib from 'zlib';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 /**
  * M21 — IMAGE MATTE full-browser pixel matrix (permanent regression suite).
@@ -65,6 +66,18 @@ function makeLayer(id: string, name: string, type: string, overrides: Record<str
   };
 }
 
+/**
+ * C4 / Sprint 1 — the X/Y coordinate overlay (axes, origin, readout) is edit
+ * chrome drawn over the stage, on by default in every new page. These probes
+ * measure the LAYERS' pixels, so the overlay is switched off with its own
+ * toolbar toggle before sampling — after the seed AND after every reload.
+ */
+async function hideCoordinateOverlay(page: Page): Promise<void> {
+  const overlayToggle = page.getByRole('button', { name: 'Toggle coordinate overlay' });
+  if (await overlayToggle.getAttribute('aria-pressed') === 'true') await overlayToggle.click();
+  await expect(page.locator('.canvas-coordinate-overlay')).toHaveCount(0);
+}
+
 async function seed(page: Page, layers: Record<string, unknown>[], tracks: Record<string, unknown>[] = []): Promise<void> {
   // pre-decode every data-URI payload into the browser image cache FIRST —
   // SVG <image> elements then resolve from cache synchronously and the mask
@@ -101,6 +114,7 @@ async function seed(page: Page, layers: Record<string, unknown>[], tracks: Recor
     undefined,
     { timeout: 15000 },
   );
+  await hideCoordinateOverlay(page);
   // settle window for the SVG <image> elements to composite their cache-hit
   // payloads into the mask (measured: fully-decoded luminance reads within
   // ~1.2s — 1000ms measured flaky, keep the margin)
@@ -435,8 +449,9 @@ test.describe('M21 image matte — real browser pixel matrix', () => {
     expect(pt).not.toBeNull();
     await page.mouse.click(pt!.x, pt!.y);
     await page.waitForTimeout(600);
-    // The matte relationship is owned by the consolidated Inspector card.
-    const matteDisclosure = page.getByRole('button', { name: /(?:Expand|Collapse) MASK \/ TRACK MATTE/ });
+    // The legacy matte relationship is owned by the LEGACY CLIP MATTE card (WP-04 rename).
+    await openDetailsTab(page, 'Masks');
+    const matteDisclosure = page.getByRole('button', { name: /(?:Expand|Collapse) LEGACY CLIP MATTE/ });
     await expect(matteDisclosure).toBeVisible();
     if (await matteDisclosure.getAttribute('aria-expanded') === 'false') {
       await matteDisclosure.click();
@@ -555,6 +570,7 @@ test.describe('M21 image matte — real browser pixel matrix', () => {
       try { return JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5') ?? '{}').layers?.length === 2; } catch { return false; }
     }, undefined, { timeout: 10000 });
     await page.reload();
+    await hideCoordinateOverlay(page);
     await page.waitForSelector('radialGradient', { state: 'attached', timeout: 30000 });
     await page.waitForTimeout(1200); // fixture settle after reload
     const after = {

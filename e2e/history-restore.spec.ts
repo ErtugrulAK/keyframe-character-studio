@@ -119,7 +119,7 @@ test('undo after a tool-created shape returns to the restored scene, not an empt
 
   await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).first().click({ timeout: 3000 });
   await page.getByRole('button', { name: 'Rectangle', exact: true }).first().click({ timeout: 3000 });
-  const stage = await page.locator('.stage-svg').boundingBox();
+  const stage = await page.locator('.stage-canvas-container').boundingBox() /* C7b: the visible stage; the drawing surface is window-sized */;
   if (!stage) throw new Error('stage svg is not visible');
   await page.mouse.move(stage.x + stage.width - 120, stage.y + stage.height - 90);
   await page.mouse.down();

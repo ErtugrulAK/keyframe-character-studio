@@ -105,7 +105,6 @@ export const useBooleanAuthoring = (): BooleanAuthoring => {
     endBatchInteraction();
     setSelectedPartIds([groupId]);
     setSelectedPartId(groupId);
-    showToast(`${operation[0].toUpperCase()}${operation.slice(1)} boolean created`, 'success');
   };
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
@@ -169,7 +168,6 @@ export const useBooleanAuthoring = (): BooleanAuthoring => {
     setSelectedPartIds(result.operandIds);
     setSelectedPartId(result.operandIds[result.operandIds.length - 1] ?? null);
     endBatchInteraction();
-    showToast('Boolean dissolved; operands preserved.', 'success');
   };
 
   return { booleanEligibleParts, selectedBooleanGroup, createBooleanGroup, updateBooleanOperation, dissolveBooleanGroup };

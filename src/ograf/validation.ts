@@ -13,6 +13,7 @@ import {
 } from './types';
 import { resolveOGrafPublicControls } from './publicControls';
 import { describeOGrafValueForDiagnostics } from './diagnostics';
+import { resolveMatteSource } from '../utils/matte';
 const SUPPORTED_LAYER_TYPES: Record<string, true> = {
   custom_box: true,
   custom_rect: true,
@@ -597,8 +598,33 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
   const diagnostics: OGrafExportDiagnostic[] = [];
   const assets: OGrafAssetPlan[] = [];
 
-  if (!sceneData || (sceneData.version !== 1 && sceneData.version !== 2) || !Number.isFinite(sceneData.width) || !Number.isFinite(sceneData.height) || !Number.isFinite(sceneData.fps)) {
-    diagnostics.push({ code: 'OGRAF_INVALID_PROJECT', severity: 'ERROR', message: 'SceneData must be a version 1 or version 2 project with finite width, height, and FPS.' });
+  if (!sceneData || (sceneData.version !== 1 && sceneData.version !== 2 && sceneData.version !== 3) || !Number.isFinite(sceneData.width) || !Number.isFinite(sceneData.height) || !Number.isFinite(sceneData.fps)) {
+    diagnostics.push({ code: 'OGRAF_INVALID_PROJECT', severity: 'ERROR', message: 'SceneData must be a version 1, 2 or 3 project with finite width, height, and FPS.' });
+  }
+  // WP-08 — the generated OGraf runtime does not draw colour correction and
+  // would read an effect-only mask as an alpha cut, so either one blocks the
+  // package (never flattened, never silently dropped). GIF renders both.
+  for (const layer of sceneData?.layers || []) {
+    if (layer.effects?.some((effect) => effect.type === 'colorCorrection')) {
+      diagnostics.push({
+        code: 'OGRAF_UNSUPPORTED_COLOR_CORRECTION',
+        severity: 'ERROR',
+        message: `Layer "${describeOGrafValueForDiagnostics(layer.name || layer.id)}" has a colour correction, which the OGraf runtime does not render yet. Remove it (or export a GIF) to export this scene.`,
+        layerId: layer.id,
+        layerName: layer.name,
+        feature: 'color-correction',
+      });
+    }
+    if (layer.masks?.some((mask) => mask.affectsAlpha === false)) {
+      diagnostics.push({
+        code: 'OGRAF_UNSUPPORTED_EFFECT_MASK',
+        severity: 'ERROR',
+        message: `Layer "${describeOGrafValueForDiagnostics(layer.name || layer.id)}" has an effect-only mask; the OGraf runtime would cut the layer with it. Make it a normal mask or remove it to export this scene.`,
+        layerId: layer.id,
+        layerName: layer.name,
+        feature: 'effect-mask',
+      });
+    }
   }
   if (!sceneData || sceneData.width <= 0 || sceneData.height <= 0 || sceneData.fps <= 0) {
     diagnostics.push({ code: 'OGRAF_INVALID_PROJECT', severity: 'ERROR', message: 'SceneData width, height, and FPS must be greater than zero.' });
@@ -615,8 +641,16 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
   const layerById = new Map((sceneData.layers || []).map((layer) => [layer.id, layer]));
   const relationships = new Map<string, string>();
   for (const layer of sceneData.layers || []) {
-    const sourceId = layer.trackMatte?.sourceLayerId ?? layer.matte?.sourcePartId;
-    if (!sourceId) continue;
+    const storedSourceId = layer.trackMatte?.sourceLayerId ?? layer.matte?.sourcePartId;
+    if (!storedSourceId) continue;
+    // WP-07: only the ACTIVE relationship is an export edge — the one the
+    // editor, the stage and the generated runtime all resolve through
+    // `resolveMatteSource` (an enabled Track Matte, else an enabled legacy
+    // matte). A disabled relationship renders nothing, so it can neither form
+    // a blocking cycle nor report a blocking missing source. Reserved ids are
+    // still refused whether or not the relationship is enabled.
+    const activeSourceId = resolveMatteSource(layer)?.sourceId;
+    const sourceId = activeSourceId && isPrototypeSensitiveKey(activeSourceId) ? activeSourceId : storedSourceId;
     if (isPrototypeSensitiveKey(sourceId)) {
       diagnostics.push({
         code: 'OGRAF_INVALID_TRACK_MATTE',
@@ -628,12 +662,13 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
       });
       continue;
     }
-    relationships.set(layer.id, sourceId);
-    if (!layerById.has(sourceId)) {
+    if (!activeSourceId) continue;
+    relationships.set(layer.id, activeSourceId);
+    if (!layerById.has(activeSourceId)) {
       diagnostics.push({
         code: 'OGRAF_INVALID_TRACK_MATTE',
         severity: 'ERROR',
-        message: `Track matte source "${describeOGrafValueForDiagnostics(sourceId)}" for layer "${describeOGrafValueForDiagnostics(layer.id)}" was not found.`,
+        message: `Track matte source "${describeOGrafValueForDiagnostics(activeSourceId)}" for layer "${describeOGrafValueForDiagnostics(layer.id)}" was not found.`,
         layerId: layer.id,
         layerName: layer.name,
         feature: 'track-matte',

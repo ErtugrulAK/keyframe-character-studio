@@ -1,30 +1,55 @@
 import React from 'react';
-import type { CharacterPart, FreeformPoint, Transform } from '../../../../types/animator';
+import type { BezierPath, CharacterPart, FreeformPoint, Transform } from '../../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../../types/composition';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { StyleCard } from '../style/StyleCard';
-import { freeformVertexToDisplay, freeformVertexToLocal } from '../../../../utils/freeform';
+import { freeformVertexToDisplay, freeformVertexToLocal, resolveFreeformPath } from '../../../../utils/freeform';
 
 interface TransformVertexEditorProps {
   selectedPart: CharacterPart;
   transform: Transform;
   coordinateSystem: SceneCoordinateSystem;
   onPartPropChange: (key: keyof CharacterPart, value: unknown) => void;
+  /**
+   * C6 — writes the canonical path. The canvas draws `path` whenever it exists,
+   * so a vertex typed here must move THAT point (with its handles); writing the
+   * legacy `points` alone changed nothing on screen.
+   */
+  onChangePath?: (path: BezierPath) => void;
 }
 
 const VERTEX_COLORS = ['#38bdf8', '#10b981', '#f59e0b', '#c084fc', '#f43f5e', '#22d3ee', '#a3e635', '#fb7185'];
 
 /** Per-vertex coordinate editor for freeform shapes. */
-export const TransformVertexEditor: React.FC<TransformVertexEditorProps> = ({ selectedPart, transform, coordinateSystem, onPartPropChange }) => {
-  const points = selectedPart.points || [];
+export const TransformVertexEditor: React.FC<TransformVertexEditorProps> = ({ selectedPart, transform, coordinateSystem, onPartPropChange, onChangePath }) => {
+  const path = onChangePath ? resolveFreeformPath(selectedPart) : undefined;
+  const points: FreeformPoint[] = path ? path.points : selectedPart.points || [];
   if (points.length === 0) return null;
   const positionDisplayScale = coordinateSystem === 'legacy-unknown' || coordinateSystem === 'legacy-centi-unit' ? 0.01 : undefined;
   const updateVertex = (index: number, patch: Partial<FreeformPoint>) => {
+    if (path && onChangePath) {
+      onChangePath({
+        ...path,
+        points: path.points.map((vertex, i) => {
+          if (i !== index) return vertex;
+          const dx = (patch.x ?? vertex.x) - vertex.x;
+          const dy = (patch.y ?? vertex.y) - vertex.y;
+          return {
+            ...vertex,
+            x: vertex.x + dx,
+            y: vertex.y + dy,
+            ...(vertex.handleIn ? { handleIn: { x: vertex.handleIn.x + dx, y: vertex.handleIn.y + dy } } : {}),
+            ...(vertex.handleOut ? { handleOut: { x: vertex.handleOut.x + dx, y: vertex.handleOut.y + dy } } : {}),
+          };
+        }),
+      });
+      return;
+    }
     onPartPropChange('points', points.map((point, i) => (i === index ? { ...point, ...patch } : point)));
   };
 
   return (
-    <StyleCard title={`FREE DRAW VERTICES (${points.length})`} collapsible defaultOpen={false}>
+    <StyleCard title={`FREE DRAW VERTICES (${points.length})`} collapsible defaultOpen={false} retainKey="free-draw-vertices">
       <div style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 6 }}>
         Same coordinates as POS X / POS Y (canvas center = 0). Numbered markers on the canvas show which vertex is which.
       </div>

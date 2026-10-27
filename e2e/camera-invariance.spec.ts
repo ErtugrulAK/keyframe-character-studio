@@ -1,4 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
+import { resolveOpeningTimelineHeight } from '../src/components/Timeline/timelineConstants';
+
+// C4 — the timeline OPENS at `resolveOpeningTimelineHeight(window height)`:
+// 320 px on a tall window, about a third of a shorter one. These specs run in
+// the default 1280×720 window, so the opening height comes from the same rule.
+const OPENING_TIMELINE_HEIGHT = resolveOpeningTimelineHeight(720);
 
 /**
  * CAMERA INVARIANCE — authoring chrome must never move the authored world.
@@ -60,7 +66,12 @@ async function settle(page: Page): Promise<void> {
     let stable = 0;
     const sample = () => {
       const rect = stage.getBoundingClientRect();
-      const key = [
+      // C3: a dock slides over a FIXED stage box and only then re-enters the
+      // row, so "the stage box stopped changing" is not "the layout is at rest"
+      // while a dock still carries its travel style.
+      const docksAtRest = [...document.querySelectorAll<HTMLElement>('.left-toolbar-container, .motion-design-right-sidebar')]
+        .every((dock) => dock.style.position === '');
+      const key = !docksAtRest ? `travelling|${performance.now()}` : [
         Math.round(rect.left * 100) / 100,
         Math.round(rect.top * 100) / 100,
         Math.round(rect.width * 100) / 100,
@@ -198,9 +209,10 @@ async function dragTimelineTo(page: Page, targetPx: number) {
   const bar = page.locator('.timeline-resizer-bar');
   const box = await bar.boundingBox();
   expect(box).not.toBeNull();
-  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  // C8: grabbed a quarter of the way in; the collapse handle owns the centre.
+  await page.mouse.move(box!.x + box!.width / 4, box!.y + box!.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box!.x + box!.width / 2, targetPx, { steps: 10 });
+  await page.mouse.move(box!.x + box!.width / 4, targetPx, { steps: 10 });
   await page.mouse.up();
   await settle(page);
 }
@@ -265,7 +277,7 @@ test('timeline collapse, expand and resize never move the authored world', async
   const baseline = await probe(page);
   const sceneBefore = await snapshot(page);
   const undoBefore = baseline.undoDisabled;
-  expect(await timelineHeight(page)).toBeCloseTo(320, 0);
+  expect(await timelineHeight(page)).toBeCloseTo(OPENING_TIMELINE_HEIGHT, 0);
 
   // The timeline exposes a resizer bar (150..700 px); its minimum is the
   // collapsed state of the panel.
@@ -279,6 +291,7 @@ test('timeline collapse, expand and resize never move the authored world', async
   const expanded = await probe(page);
   report('timeline expand (back to default)', baseline, expanded);
   expectInvariant('timeline expand (back to default)', baseline, expanded);
+  // (150 px + the 170 px drag: an authored 320, whatever the opening height was)
   expect(await timelineHeight(page)).toBeCloseTo(320, 0);
 
   // Dragging the resizer bar up makes the timeline taller and the stage shorter.
@@ -287,7 +300,7 @@ test('timeline collapse, expand and resize never move the authored world', async
   report('timeline resize up', baseline, resizedUp);
   expectInvariant('timeline resize up', baseline, resizedUp);
   const tallerHeight = await timelineHeight(page);
-  expect(tallerHeight).toBeGreaterThan(320);
+  expect(tallerHeight).toBeGreaterThan(OPENING_TIMELINE_HEIGHT);
   expect(resizedUp.stage.height).toBeLessThan(baseline.stage.height - 1);
 
   await dragTimelineTo(page, resizedUp.stage.top + resizedUp.stage.height + 180);

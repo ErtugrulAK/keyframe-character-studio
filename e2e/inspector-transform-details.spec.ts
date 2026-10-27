@@ -86,8 +86,8 @@ test('R5-14 — TRANSFORM is a Position row plus one compact Rotation/Scale/Opac
 
   // The trio: one row, three labelled cells, in order.
   const trio = await compactTrio(page);
-  expect(trio.cells.map((cell) => cell.title)).toEqual(['Rotation', 'Scale', 'Opacity']);
-  expect(trio.cells.map((cell) => cell.label)).toEqual(['Rotation', 'Scale', 'Opacity']);
+  expect(trio.cells.map((cell) => cell.title)).toEqual(['Rotation', 'Scale', 'Layer opacity']);
+  expect(trio.cells.map((cell) => cell.label)).toEqual(['Rotation', 'Scale', 'Layer opacity']);
   const tops = trio.cells.map((cell) => cell.input.top);
   for (const top of tops) expect(Math.abs(top - tops[0])).toBeLessThanOrEqual(1);
   expect(trio.cells[0].input.right).toBeLessThanOrEqual(trio.cells[1].input.x);
@@ -128,7 +128,7 @@ test('R5-14 — the compact trio stays on one row at the narrowest inspector wid
   await expect.poll(inspectorWidth).toBe(250);
 
   const narrow = await compactTrio(page);
-  expect(narrow.cells.map((cell) => cell.title)).toEqual(['Rotation', 'Scale', 'Opacity']);
+  expect(narrow.cells.map((cell) => cell.title)).toEqual(['Rotation', 'Scale', 'Layer opacity']);
   const narrowTops = narrow.cells.map((cell) => cell.input.top);
   for (const top of narrowTops) expect(Math.abs(top - narrowTops[0])).toBeLessThanOrEqual(1);
   // No cell overflows its own column, and no input overflows its cell.
@@ -145,7 +145,7 @@ test('R5-14 — the compact trio stays on one row at the narrowest inspector wid
   await expect.poll(async () => Math.round((await compactTrio(page)).grid.width))
     .toBeGreaterThan(narrow.grid.width + 20);
   const restored = await compactTrio(page);
-  expect(restored.cells.map((cell) => cell.title)).toEqual(['Rotation', 'Scale', 'Opacity']);
+  expect(restored.cells.map((cell) => cell.title)).toEqual(['Rotation', 'Scale', 'Layer opacity']);
   expect(restored.cells[0].input.width).toBeGreaterThan(narrow.cells[0].input.width);
 });
 
@@ -187,7 +187,8 @@ test('R5-15 — Details carries no layer index and no Arrange duplicate; the too
   // The authoring toolbar owns that write, as its own labelled group.
   const arrange = page.getByRole('group', { name: 'Arrange' });
   await expect(arrange).toBeVisible();
-  await expect(arrange.getByRole('button', { name: 'Bring forward', exact: true })).toBeEnabled();
+  // Alpha is the top layer, so only Send backward has somewhere to go.
+  await expect(arrange.getByRole('button', { name: 'Bring forward', exact: true })).toBeDisabled();
   await expect(arrange.getByRole('button', { name: 'Send backward', exact: true })).toBeEnabled();
 
   // The stage renders ascending zIndex: Beta (1) paints under Alpha (2).

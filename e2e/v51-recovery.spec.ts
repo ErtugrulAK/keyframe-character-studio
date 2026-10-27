@@ -80,12 +80,14 @@ test.describe('KCS V5.1 consolidated recovery', () => {
     // The dock's geometry is eased and committed frame by frame with the stage
     // camera (`useDockedPanelEdge`), so the browser must never animate the panel's
     // own box: a `transition: width` here is exactly the one-frame camera
-    // compensation lag the transition contract forbids. The non-geometric polish
-    // (the 12px slide, the fade, the edge colours) keeps its 240ms.
+    // compensation lag the transition contract forbids.
+    // C6 — nor its transform/opacity: those CSS transitions ran a SECOND
+    // animation (a fade and a 12px nudge) after the JS slide had settled. The
+    // slide is the one animation; c6-dock-visual-continuity checks it per frame.
     expect(transition).not.toContain('width');
     expect(transition).not.toContain('flex-basis');
-    expect(transition).toContain('transform 0.24s');
-    expect(transition).toContain('opacity 0.24s');
+    expect(transition).not.toContain('transform');
+    expect(transition).not.toContain('opacity');
 
     await page.getByRole('button', { name: 'Hide Inspector' }).click();
     // R3-02: the panel visibility flags and the handles they position live on the

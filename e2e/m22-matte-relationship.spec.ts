@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { openDetailsTab, deleteSelectedLayer } from './fixtures/inspectorTabs';
 
 /**
  * M22 STEP 8C — REAL USER E2E: outliner matte relationship visibility (8A)
@@ -51,9 +52,10 @@ async function selectPart(page: Page, name: string): Promise<void> {
   await page.waitForTimeout(300);
 }
 
-/** Open the consolidated Inspector MASK / TRACK MATTE card. */
+/** Open the Inspector's legacy clip matte card (renamed from MASK / TRACK MATTE in WP-04). */
 async function openMatteSection(page: Page): Promise<void> {
-  const disclosure = page.getByRole('button', { name: /(?:Expand|Collapse) MASK \/ TRACK MATTE/ });
+  await openDetailsTab(page, 'Masks');
+  const disclosure = page.getByRole('button', { name: /(?:Expand|Collapse) LEGACY CLIP MATTE/ });
   await expect(disclosure).toBeVisible();
   if (await disclosure.getAttribute('aria-expanded') === 'false') {
     await disclosure.click();
@@ -99,11 +101,13 @@ test.describe('M22 — outliner matte relationship + validation (real UI)', () =
       makeLayer('logo', 'The Logo', 'custom_box', { matte: { sourcePartId: 'cow', mode: 'alpha', enabled: true } }),
     ]);
     expect(await matteIndicator(page, 'Matte source: The Cow')).toBe(true);
-    // delete the SOURCE part through the Inspector delete button (real path)
+    // delete the SOURCE part through the Delete key (real path)
     await selectPart(page, 'The Cow');
-    const del = page.locator('button[title="Delete Actor Instance"]');
-    await del.waitFor({ state: 'visible', timeout: 10000 });
-    await del.click();
+    await deleteSelectedLayer(page);
+    // C2: the source has a dependent, so the delete names it before running.
+    const confirm = page.getByTestId('delete-dependents-dialog');
+    await expect(confirm.locator('[data-dependent-id="logo"]')).toContainText('The Logo');
+    await confirm.getByRole('button', { name: 'Delete' }).click();
     await page.waitForTimeout(400);
     // outliner: the Logo row now shows the warning state; app still alive
     expect(await matteIndicator(page, 'Missing matte source')).toBe(true);
@@ -213,7 +217,9 @@ test.describe('M22 — outliner matte relationship + validation (real UI)', () =
     ]);
     expect(await matteIndicator(page, 'Matte source: The Cow')).toBe(true);
     await selectPart(page, 'The Cow');
-    await page.locator('button[title="Delete Actor Instance"]').click();
+    await deleteSelectedLayer(page);
+    // C2: confirm the named dependent first.
+    await page.getByTestId('delete-dependents-dialog').getByRole('button', { name: 'Delete' }).click();
     await page.waitForTimeout(400);
     expect(await matteIndicator(page, 'Missing matte source')).toBe(true);
     // restore: reload the valid scene through the real app path (same ids)

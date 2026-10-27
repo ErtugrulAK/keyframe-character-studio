@@ -1,12 +1,14 @@
 import { useAnimator } from '../context/useAnimator';
-import type { CharacterPart, Transform } from '../types/animator';
+import type { CharacterPart, Track, Transform } from '../types/animator';
 import type { ToastOptions } from './useToast';
+import { lockedLayersRefusal } from '../utils/layerLocks';
 import {
   collectArrangeTargets,
   planAlign,
   planDistributeByGap,
   planFlip,
   planRotate,
+  planTranslate,
   type AlignEdge,
   type ArrangePlan,
   type DistributeAxis,
@@ -40,6 +42,14 @@ export interface VectorArrange {
   distributeGap: (axis: DistributeAxis) => void;
   rotate: (direction: RotateDirection) => void;
   flip: (axis: FlipAxis) => void;
+  /**
+   * Starts a held arrow-key nudge of the selection: opens ONE batch interaction
+   * and returns the mover, which takes the TOTAL offset since the start. Null
+   * when nothing can move (no selection, or a locked layer, whose reason is
+   * shown). `endNudge` closes the batch, so a held key is one undo step.
+   */
+  beginNudge: () => ((dx: number, dy: number) => void) | null;
+  endNudge: () => void;
 }
 
 /**
@@ -53,6 +63,8 @@ export interface VectorArrangeDependencies {
   selectedPartIds: string[];
   characterParts: CharacterPart[];
   getComputedTransform: (partId: string, frame: number) => Transform;
+  /** Read for the layer locks: a command that would move a locked layer is refused whole. */
+  tracks: Track[];
   /** The ONE transform write path: world-space patch in, container-local out. */
   updateCurrentTransform: (newTransform: Partial<Transform>, partIdOverride?: string) => void;
   startBatchInteraction: () => void;
@@ -66,6 +78,7 @@ export const createVectorArrangeActions = ({
   selectedPartId,
   selectedPartIds,
   characterParts,
+  tracks,
   getComputedTransform,
   updateCurrentTransform,
   startBatchInteraction,
@@ -93,6 +106,12 @@ export const createVectorArrangeActions = ({
     // A command that would not move anything writes nothing at all: no empty
     // history entry and no keyframe on a property that did not change.
     if (entries.length === 0) return;
+    // C4 — every target is written or none: a locked one refuses the command.
+    const lockRefusal = lockedLayersRefusal(characterParts, tracks, entries.map(([id]) => id));
+    if (lockRefusal) {
+      showToast?.(lockRefusal, 'error');
+      return;
+    }
 
     startBatchInteraction();
     entries.forEach(([id, patch]) => updateCurrentTransform(patch, id));
@@ -117,6 +136,19 @@ export const createVectorArrangeActions = ({
       planFlip(targets, axis),
       'Select a layer to flip.',
     ),
+    beginNudge: () => {
+      if (targets.length === 0) return null;
+      const lockRefusal = lockedLayersRefusal(characterParts, tracks, targets.map((target) => target.id));
+      if (lockRefusal) {
+        showToast?.(lockRefusal, 'error');
+        return null;
+      }
+      startBatchInteraction();
+      return (dx, dy) => {
+        Object.entries(planTranslate(targets, dx, dy)).forEach(([id, patch]) => updateCurrentTransform(patch, id));
+      };
+    },
+    endNudge: endBatchInteraction,
   };
 };
 

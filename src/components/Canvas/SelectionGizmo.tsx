@@ -3,6 +3,7 @@ import type { CharacterPart, Track, Transform } from '../../types/animator';
 import { affineSvgTransform, worldAffineOf, type WorldAffine } from '../../utils/containerMath';
 import type { CornerBounds } from '../../utils/cornerResize';
 import { getGroupChildren } from '../../utils/layerGrouping';
+import { suppressedMatteSourceIds } from '../../utils/matte';
 import { getSelectionFrameBounds, selectionFrameGizmoBounds } from '../../utils/selectionFrame';
 import { TransformGizmo, type ScaleMode } from './overlays/TransformGizmo';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../utils/projectCoordinates';
@@ -113,7 +114,11 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
     const isFreeform = !selectedPart.isGroup && selectedPart.type === 'custom_freeform' && !selectedPart.booleanOperandIds?.length;
 
     const hasActiveMatte = Boolean(selectedPart.matte?.sourcePartId && selectedPart.matte.enabled !== false);
-    const matteHitArea = hasActiveMatte ? (
+    // WP-04: a Track Matte source hidden from the composition is not painted,
+    // so it has no body to press. While it is selected it gets an edit-only
+    // move area and a label — its visibility setting is never touched.
+    const isHiddenMatteSource = suppressedMatteSourceIds(characterParts).has(selectedPart.id);
+    const matteHitArea = hasActiveMatte || isHiddenMatteSource ? (
       <g
         // The hit area must cover what is actually drawn: through the world
         // affine, so a sheared target (a rotated child of an anisotropically
@@ -124,6 +129,7 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
         <rect
           data-testid="matte-editor-hit-area"
           data-part-id={selectedPart.id}
+          data-hidden-matte-source={isHiddenMatteSource ? 'true' : undefined}
           x={frameBounds.minX}
           y={frameBounds.minY}
           width={frameBounds.maxX - frameBounds.minX}

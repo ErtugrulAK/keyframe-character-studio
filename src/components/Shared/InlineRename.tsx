@@ -12,6 +12,9 @@ interface InlineRenameProps {
 export const InlineRename: React.FC<InlineRenameProps> = ({ value, ariaLabel, className, onCommit, onCancel }) => {
   const [draft, setDraft] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Enter or Escape settles the edit once; the blur that follows the unmount
+  // (or the focus move) must not commit a cancelled edit.
+  const settledRef = useRef(false);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -19,6 +22,8 @@ export const InlineRename: React.FC<InlineRenameProps> = ({ value, ariaLabel, cl
   }, []);
 
   const commit = () => {
+    if (settledRef.current) return;
+    settledRef.current = true;
     const next = draft.trim();
     if (next) onCommit(next);
     else onCancel?.();
@@ -37,7 +42,10 @@ export const InlineRename: React.FC<InlineRenameProps> = ({ value, ariaLabel, cl
       onKeyDown={(event) => {
         event.stopPropagation();
         if (event.key === 'Enter') commit();
-        if (event.key === 'Escape') onCancel?.();
+        if (event.key === 'Escape') {
+          settledRef.current = true;
+          onCancel?.();
+        }
       }}
       onBlur={commit}
     />

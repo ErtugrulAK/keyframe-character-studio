@@ -10,6 +10,8 @@ The current state is written in exactly one place; everything else is a record. 
 4. `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md` — the release boundary and the accepted blocker constraints.
 5. `docs/KCS_DOCS_CLEANUP_MAP.md` — which document is live, which is historical, and the preservation rules.
 
+How a version is numbered, tagged and released: `docs/RELEASING.md`.
+
 `node scripts/check-state-consistency.mjs` is the gate over that set: it fails when a live document contradicts the repository's branch, `main` revision or release tag, when the roadmap and the next action disagree, or when a handoff mirror drifts.
 
 Most recent checkpoint (a historical record, kept unchanged): `docs/checkpoints/2026-09-18-after-lottie-core/`, whose `RESUME_PROMPT.md` was written for the session that followed it.

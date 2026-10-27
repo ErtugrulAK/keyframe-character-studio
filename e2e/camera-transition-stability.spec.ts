@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { resolveOpeningTimelineHeight } from '../src/components/Timeline/timelineConstants';
 
 /**
  * CAMERA TRANSITION STABILITY — finding A.
@@ -159,7 +160,15 @@ async function sampleTransition(page: Page, toggle: string | ScheduledToggle[], 
         stageWidth: stageBox.width,
         stageHeight: stageBox.height,
         cameraZoom: document.querySelector('.stage-canvas-container')?.getAttribute('data-camera-zoom') ?? '',
-        inspectorWidth: document.querySelector('.motion-design-right-sidebar')!.getBoundingClientRect().width,
+        // How much of the inspector is ON SCREEN: the distance from its inner
+        // (stage-facing) edge to the row's right edge. At rest this is its
+        // width; while it travels it is the edge the user sees move — whether
+        // the panel narrows or (C3) slides over the stage at a fixed width.
+        inspectorWidth: (() => {
+          const panel = document.querySelector('.motion-design-right-sidebar')!.getBoundingClientRect();
+          const row = document.querySelector('.main-layout')!.getBoundingClientRect();
+          return Math.max(0, Math.min(panel.width, row.right - panel.left));
+        })(),
         timelineHeight: panelBox.height,
         panelTop: panelBox.top,
         handleCentreY: handleBox.top + handleBox.height / 2,
@@ -373,7 +382,10 @@ test('R5-03 — the timeline eases between collapsed and expanded without moving
   expectEasedEdge('timeline expand', expand, 'grow');
   await settle(page);
   const expandedHeight = await page.evaluate(() => document.querySelector('.sequencer-timeline')!.getBoundingClientRect().height);
-  expect(expandedHeight.toFixed(1), 'expanding did not restore the authored height').toBe('320.0');
+  // C4 — the timeline OPENS at `resolveOpeningTimelineHeight(window height)`:
+  // 320 px on a tall window, about a third of a shorter one. These specs run in
+  // the default 1280×720 window, so the opening height comes from the same rule.
+  expect(expandedHeight.toFixed(1), 'expanding did not restore the authored height').toBe(resolveOpeningTimelineHeight(720).toFixed(1));
 });
 
 /** The inspector's resting geometry: its border-box width and inline override. */

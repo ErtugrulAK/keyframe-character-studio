@@ -22,7 +22,7 @@ import {
 import { applyEasing, deriveAutoBezierControlPoints, interpolateChannel, lerp, makeEmptyChannels } from './defaults';
 import { evaluateTransform } from './evaluateTransform';
 import { generateId } from './idGenerator';
-import { isRelationshipChainRelated, relationshipParentId } from './partBinding';
+import { isRelationshipChainRelated, relationshipAncestorIds, relationshipParentId } from './partBinding';
 
 /**
  * Layer groups — an authoring surface over the parent-child transform KCS
@@ -279,7 +279,7 @@ const foldLegacyKeyframes = (
 );
 
 /** True when the layer's own transform is animated on any sequence. */
-const isLocalTransformAnimated = (track: Track | undefined): boolean => {
+export const isLocalTransformAnimated = (track: Track | undefined): boolean => {
   if (!track) return false;
   if (LOCAL_CHANNELS.some((channel) => (track.channels?.[channel]?.length ?? 0) > 0)) return true;
   return (track.keyframes?.length ?? 0) > 0;
@@ -907,6 +907,10 @@ const bakeScopeChannel = (options: {
       }
       missing.push(segmentMiss(key, right).frame);
     });
+    // C4 — the re-easing above may already have made the list exact: measure
+    // again before deciding that only a split (or the dense bake) can help.
+    error = errorOf(keys);
+    if (error <= BAKE_TOLERANCE) break;
     const next = [...new Set([...frames, ...missing])].sort((left, right) => left - right);
     // Nothing left to split: no frame the bake could add carries the segment.
     if (next.length === frames.length) break;
@@ -1042,6 +1046,20 @@ export const dissolveLayerGroup = (
 ): UngroupOutcome => {
   const blocked = ungroupBlockReason(parts, tracks, groupId);
   if (blocked) return { ok: false, reason: blocked };
+  return dissolveContainer(parts, tracks, groupId);
+};
+
+/**
+ * The container-removal core shared by ungroup and by deleting a plain parent
+ * layer: the container and its track go, its direct children move up to its
+ * parent and keep their evaluated world pose (base fold + per-scope bake). The
+ * caller owns the preconditions.
+ */
+const dissolveContainer = (
+  parts: CharacterPart[],
+  tracks: Track[],
+  groupId: string,
+): Extract<UngroupOutcome, { ok: true }> => {
   const group = parts.find((part) => part.id === groupId)!;
   const children = getGroupChildren(parts, groupId);
   const parentId = group.parentId;
@@ -1110,6 +1128,254 @@ export const dissolveLayerGroup = (
     ...(bakeNotes.length > 0 ? { bakeNotes } : {}),
   };
 };
+
+// ─── Deleting a plain parent ──────────────────────────────────────────────
+
+export type ParentReleaseOutcome =
+  | { ok: true; parts: CharacterPart[]; tracks: Track[]; releasedChildIds: string[]; bakeNotes?: string[] }
+  | { ok: false; reason: string };
+
+/** Every integer frame where a layer's world pose could differ, per scope. */
+const verificationFrames = (tracks: Track[], ids: string[], scope: string): number[] => {
+  const keyed = ids.flatMap((id) => localKeyFramesInScope(tracks.find((track) => track.partId === id), scope));
+  const frames = new Set<number>([0, ...keyed.map((frame) => Math.round(frame))]);
+  const sorted = [...frames].sort((a, b) => a - b);
+  // Between two keys the bake writes every integer frame; check one inside each gap.
+  sorted.slice(1).forEach((frame, index) => frames.add(Math.round((sorted[index] + frame) / 2)));
+  return [...frames].sort((a, b) => a - b);
+};
+
+/**
+ * Deleting a layer that is NOT a group container but still parents surviving
+ * layers. Its children must not keep a `parentId` to a layer that no longer
+ * exists — `evaluateTransform` would drop the parent and every child would jump
+ * to its bare local pose. They move up to the deleted layer's own parent and
+ * keep their evaluated world pose at every frame of every sequence, through
+ * the same container-removal core as ungroup (`dissolveContainer`).
+ *
+ * Deepest parents are released first, so a chain of deleted parents folds into
+ * the nearest surviving ancestor. The result is then VERIFIED: every released
+ * child's world affine is compared at the key frames (and one frame inside each
+ * key gap) of every sequence it or a released ancestor animates in. When it
+ * cannot be kept — a stage-anchored child (the anchor replaces its position),
+ * a Boolean operand as parent, or a pose that would need a skew — nothing is
+ * written and the reason is returned.
+ *
+ * `deletedIds` is the full deletion closure; the released parents are removed
+ * here, the caller deletes the rest as before.
+ */
+export const releaseChildrenOfDeletedParents = (
+  parts: CharacterPart[],
+  tracks: Track[],
+  deletedIds: Set<string>,
+): ParentReleaseOutcome => {
+  const partById = new Map(parts.map((part) => [part.id, part]));
+  const nameOf = (part: CharacterPart) => `"${part.name || part.id}"`;
+  const survivingChildren = (current: CharacterPart[], id: string) => current.filter((part) => part.parentId === id && !deletedIds.has(part.id));
+  // The next deleted parent to release: the deepest one that (now) holds a
+  // surviving child. Releasing it can hand its children to a deleted
+  // grandparent, which is then released in turn.
+  const nextParent = (current: CharacterPart[]) => [...deletedIds]
+    .filter((id) => current.some((part) => part.id === id) && survivingChildren(current, id).length > 0)
+    .sort((a, b) => relationshipAncestorDepth(current, b) - relationshipAncestorDepth(current, a))[0];
+
+  let nextParts = parts;
+  let nextTracks = tracks;
+  const bakeNotes: string[] = [];
+  const released = new Set<string>();
+  const parents: string[] = [];
+  for (let id = nextParent(nextParts); id; id = nextParent(nextParts)) {
+    const parent = partById.get(id)!;
+    if (parent.booleanGroupId) {
+      return { ok: false, reason: `${nameOf(parent)} is a Boolean operand with child layers; their position cannot be kept. Unparent them first.` };
+    }
+    const anchored = survivingChildren(nextParts, id).find((child) => child.anchor && child.anchor !== 'none');
+    if (anchored) {
+      return { ok: false, reason: `${nameOf(anchored)} is placed by a stage anchor inside ${nameOf(parent)}; deleting the parent would move it. Set its Anchor to None or unparent it first.` };
+    }
+    const outcome = dissolveContainer(nextParts, nextTracks, id);
+    nextParts = outcome.parts;
+    nextTracks = outcome.tracks;
+    parents.push(id);
+    outcome.childIds.forEach((childId) => { if (!deletedIds.has(childId)) released.add(childId); });
+    bakeNotes.push(...(outcome.bakeNotes ?? []));
+  }
+  if (parents.length === 0) return { ok: true, parts, tracks, releasedChildIds: [] };
+
+  const releasedChildIds = [...released];
+  const chainIds = [...new Set([...releasedChildIds, ...parents, ...releasedChildIds.flatMap((childId) => relationshipAncestorIds(parts, childId))])];
+  const scopes = [...new Set(['Sequence', ...chainIds.flatMap((chainId) => localTransformScopes(tracks.find((track) => track.partId === chainId)))])];
+  for (const scope of scopes) {
+    for (const frame of verificationFrames(tracks, chainIds, scope)) {
+      for (const childId of releasedChildIds) {
+        const before = worldAffineOf(evaluateTransform(parts, tracks, scope, childId, frame));
+        const after = worldAffineOf(evaluateTransform(nextParts, nextTracks, scope, childId, frame));
+        const tolerance = 1e-4 * Math.max(1, ...AFFINE_KEYS.map((key) => Math.abs(before[key])));
+        if (AFFINE_KEYS.some((key) => Math.abs(after[key] - before[key]) > tolerance)) {
+          const child = partById.get(childId)!;
+          return { ok: false, reason: `${nameOf(child)} cannot keep its exact place without its parent (its pose would need a skew). Unparent it first.` };
+        }
+      }
+    }
+  }
+
+  return { ok: true, parts: nextParts, tracks: nextTracks, releasedChildIds, ...(bakeNotes.length > 0 ? { bakeNotes } : {}) };
+};
+
+// ─── Re-parenting an animated layer ───────────────────────────────────────
+
+/**
+ * A scope no key belongs to: evaluating in it gives every layer its authored
+ * base pose (the pose a sequence nobody animates shows).
+ */
+const REST_SCOPE = '\u0000kcs-rest';
+
+export interface RebasedChild {
+  id: string;
+  name: string;
+  keyframesBefore: number;
+  keyframesAfter: number;
+  /** A channel had to be baked one key per frame (no sparse exact equivalent). */
+  perFrame: boolean;
+  notes: string[];
+}
+
+export type RebaseOutcome =
+  | { ok: true; parts: CharacterPart[]; tracks: Track[]; rebased: RebasedChild | null }
+  | { ok: false; reason: string };
+
+const localKeyCount = (track: Track | undefined): number => (track
+  ? LOCAL_CHANNELS.reduce((sum, channel) => sum + (track.channels?.[channel]?.length ?? 0), 0) + (track.keyframes?.length ?? 0)
+  : 0);
+
+/**
+ * C4 — gives `childId` a new parent (`newParentId`, or none) and keeps its
+ * WORLD pose at every integer frame of every sequence, also when the layer or
+ * a layer of the old or new parent chain is animated.
+ *
+ * - The base transform becomes `inverse(newParentBase) ∘ oldWorldBase`.
+ * - In every sequence where the layer or one of those chains animates its own
+ *   transform, the layer's local x/y/rotation/scale are re-expressed in the new
+ *   parent: `inverse(newParentWorld(t)) ∘ oldWorld(t)`, through the same bake
+ *   ladder ungroup uses — the source key times and easings first, adaptive
+ *   subdivision next, one key per frame only where nothing sparser is exact.
+ *   Keys go into the canonical channels (legacy keys stay stored, as ungroup).
+ * - The result is VERIFIED against the old world affines at the key frames
+ *   and a frame inside every key gap of every sequence; a pose that would need
+ *   a skew (rotation inside a non-uniformly scaled parent) refuses the change.
+ *
+ * Between integer frames a re-based rotating composition can differ slightly
+ * from the original (it was exact at the frames the product draws). Descendants
+ * keep their own local poses and follow the layer as before. The caller has
+ * already checked the structural rules (cycles, Boolean, anchors, bonds).
+ */
+export const rebaseLayerOntoParent = (
+  parts: CharacterPart[],
+  tracks: Track[],
+  childId: string,
+  newParentId: string | null,
+): RebaseOutcome => {
+  const child = parts.find((part) => part.id === childId);
+  if (!child) return { ok: false, reason: 'The layer no longer exists.' };
+  const trackOf = (id: string) => tracks.find((track) => track.partId === id);
+  const oldChain = relationshipAncestorIds(parts, childId);
+  const newChain = newParentId ? [newParentId, ...relationshipAncestorIds(parts, newParentId)] : [];
+  const involved = [...new Set([childId, ...oldChain, ...newChain])];
+
+  // The base pose, re-expressed in the new parent.
+  const baseWorld = evaluateTransform(parts, tracks, REST_SCOPE, childId, 0);
+  const baseLocal = newParentId ? worldToContainerLocal(baseWorld, evaluateTransform(parts, tracks, REST_SCOPE, newParentId, 0)) : baseWorld;
+  const nextParts = parts.map((part) => {
+    if (part.id !== childId) return part;
+    const next: CharacterPart = {
+      ...part,
+      baseTransform: { ...part.baseTransform, x: baseLocal.x, y: baseLocal.y, rotation: baseLocal.rotation, scaleX: baseLocal.scaleX, scaleY: baseLocal.scaleY },
+    };
+    if (newParentId) next.parentId = newParentId;
+    else delete next.parentId;
+    return next;
+  });
+
+  // Every sequence one of the involved layers animates its own transform in.
+  const scopes = [...new Set(involved.flatMap((id) => localTransformScopes(trackOf(id))))].sort();
+  const childTrack = trackOf(childId);
+  const notes: string[] = [];
+  let channels = childTrack ? { ...makeEmptyChannels(), ...childTrack.channels } : makeEmptyChannels();
+  scopes.forEach((scope) => {
+    const span = involved.flatMap((id) => localKeyFramesInScope(trackOf(id), scope));
+    if (span.length === 0) return;
+    channels = bakeScopeChannels({
+      channels,
+      childId,
+      childName: child.name,
+      scope,
+      span,
+      sampleAt: (frame) => {
+        const world = evaluateTransform(parts, tracks, scope, childId, frame);
+        return newParentId ? worldToContainerLocal(world, evaluateTransform(parts, tracks, scope, newParentId, frame)) : world;
+      },
+      sources: involved.map(trackOf),
+      notes,
+    });
+    // A channel the layer never keyed in this scope and that stays at the new
+    // base value needs no key: the base already shows it (fewer invented keys).
+    LOCAL_CHANNELS.forEach((channel) => {
+      const inScope = channels[channel].filter((keyframe) => keyframeScope(keyframe) === scope);
+      const hadKeys = scopeChannelKeys(childTrack, channel, scope).length > 0
+        || (childTrack?.keyframes ?? []).some((keyframe) => keyframeScope(keyframe) === scope);
+      if (!hadKeys && inScope.length === 1 && Math.abs(inScope[0].value - baseLocal[channel]) <= BAKE_TOLERANCE) {
+        channels = { ...channels, [channel]: channels[channel].filter((keyframe) => keyframeScope(keyframe) !== scope) };
+      }
+    });
+  });
+
+  let nextTracks = tracks;
+  let rebased: RebasedChild | null = null;
+  if (scopes.length > 0) {
+    const base: Track = childTrack ?? {
+      id: generateId('track'),
+      partId: childId,
+      name: child.name,
+      color: TOOLBAR_COLORS[0],
+      visible: true,
+      locked: false,
+      expanded: false,
+      keyframes: [],
+      channels: makeEmptyChannels(),
+    };
+    const nextTrack: Track = { ...base, channels };
+    nextTracks = childTrack ? tracks.map((track) => (track === childTrack ? nextTrack : track)) : [...tracks, nextTrack];
+    rebased = {
+      id: childId,
+      name: child.name || childId,
+      keyframesBefore: localKeyCount(childTrack),
+      keyframesAfter: localKeyCount(nextTrack),
+      perFrame: notes.length > 0,
+      notes,
+    };
+  }
+
+  // Verify the world pose wherever it could differ.
+  const verifyIds = [...involved, ...parts.filter((part) => relationshipAncestorIds(parts, part.id).includes(childId)).map((part) => part.id)];
+  // (the rest scope checks the base pose every unanimated sequence shows)
+  for (const scope of [...new Set([REST_SCOPE, 'Sequence', ...scopes])]) {
+    for (const frame of verificationFrames(tracks, involved, scope)) {
+      for (const id of verifyIds) {
+        const before = worldAffineOf(evaluateTransform(parts, tracks, scope, id, frame));
+        const after = worldAffineOf(evaluateTransform(nextParts, nextTracks, scope, id, frame));
+        const tolerance = 1e-4 * Math.max(1, ...AFFINE_KEYS.map((key) => Math.abs(before[key])));
+        if (AFFINE_KEYS.some((key) => Math.abs(after[key] - before[key]) > tolerance)) {
+          return { ok: false, reason: `“${child.name || childId}” cannot keep its exact place inside the new parent at every frame (its pose would need a skew — a rotation inside a non-uniformly scaled parent). Nothing was changed.` };
+        }
+      }
+    }
+  }
+  return { ok: true, parts: nextParts, tracks: nextTracks, rebased };
+};
+
+const AFFINE_KEYS = ['a', 'b', 'c', 'd', 'e', 'f'] as const;
+
+const relationshipAncestorDepth = (parts: CharacterPart[], partId: string): number => relationshipAncestorIds(parts, partId).length;
 
 /** The display name for the next group in a document. */
 export const createGroupDisplayName = (parts: CharacterPart[]): string => {

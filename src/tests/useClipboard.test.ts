@@ -28,7 +28,8 @@ describe('useClipboard Hook', () => {
       result.current.copySelectedPart();
     });
 
-    expect(mockShowToast).toHaveBeenCalledWith(expect.stringContaining('Copied'), 'info');
+    // C8: copy and paste show their result, not a toast.
+    expect(mockShowToast).not.toHaveBeenCalled();
     expect(result.current.clipboardData).not.toBeNull();
 
     await act(async () => {
@@ -38,6 +39,7 @@ describe('useClipboard Hook', () => {
     expect(mockSetTracks).toHaveBeenCalled();
     expect(mockSetCharacterParts).toHaveBeenCalled();
     expect(mockSetSelectedPartId).toHaveBeenCalled();
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 
   it('warns on paste when empty', () => {
@@ -133,6 +135,7 @@ describe('useClipboard Hook', () => {
     // The copy is offset in its own parent's space, and selects the new container.
     expect(cloneContainer.baseTransform.x).toBe(20);
     expect(mockSetSelectedPartId).toHaveBeenCalledWith(cloneContainer.id);
-    expect(mockShowToast).toHaveBeenCalledWith('Duplicated "Group" with 1 layers', 'success');
+    // C8: the selected copy is the confirmation.
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 });

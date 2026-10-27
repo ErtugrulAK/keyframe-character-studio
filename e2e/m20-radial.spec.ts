@@ -66,6 +66,18 @@ function makeLayer(id: string, name: string, type: string, overrides: Record<str
   };
 }
 
+/**
+ * C4 / Sprint 1 — the X/Y coordinate overlay (axes, origin, readout) is edit
+ * chrome drawn over the stage, on by default in every new page. These probes
+ * measure the LAYERS' pixels, so the overlay is switched off with its own
+ * toolbar toggle before sampling — after the seed AND after every reload.
+ */
+async function hideCoordinateOverlay(page: Page): Promise<void> {
+  const overlayToggle = page.getByRole('button', { name: 'Toggle coordinate overlay' });
+  if (await overlayToggle.getAttribute('aria-pressed') === 'true') await overlayToggle.click();
+  await expect(page.locator('.canvas-coordinate-overlay')).toHaveCount(0);
+}
+
 async function seed(page: Page, layers: Record<string, unknown>[], tracks: Record<string, unknown>[] = []): Promise<void> {
   const scene = {
     version: 1, layers, tracks,
@@ -86,6 +98,7 @@ async function seed(page: Page, layers: Record<string, unknown>[], tracks: Recor
     undefined,
     { timeout: 15000 },
   );
+  await hideCoordinateOverlay(page);
 }
 
 /** Raw green channel at a world point. */
@@ -446,6 +459,7 @@ test.describe('M20 radial gradient — real browser pixel matrix', () => {
       edge: await greenAt(page, 300, 280),
     };
     await page.reload();
+    await hideCoordinateOverlay(page);
     await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
     const after = {
       cx: (await radialDom(page))!.cx,

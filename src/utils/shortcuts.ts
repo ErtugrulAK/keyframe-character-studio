@@ -68,6 +68,13 @@
  * The rotate pair carries `mod` so it can never be confused with the timeline's
  * plain arrow walking, and no binding in this table is a prefix of another.
  *
+ * ── C8: arrow-key nudge ─────────────────────────────────────────────────────
+ * Plain arrows move the selected layers 1 project unit, Shift+arrows 10, through
+ * the arrange authority (`beginNudge`: world offset in, the one keyframe-aware
+ * transform write out). A held key is one undo step. The arrows nudge only while
+ * the canvas owns the keyboard: the layer list, the timeline, the mask editor
+ * and arrow-driven widgets (toolbars, tabs, menus) keep their own arrows.
+ *
  * Deliberately NOT adopted:
  *   - A temporary "suspend snapping" modifier for the translate drag. The snap
  *     radius and the toggle are enough, and every candidate modifier is already
@@ -90,12 +97,7 @@
  *     (and the browser's own activation key for a focused button), so a
  *     hold-to-pan would either fire playback on every pan or need a delay
  *     heuristic that makes playback feel broken. Pan keeps its own `h` tool.
- *   - Arrow-key nudging of the selected layer. There is no relative-move
- *     authority in the editor (position writes are absolute and keyframe-aware,
- *     through `usePartPropertyAuthoring`), the step size is a product decision,
- *     and the arrows already walk focus in the timeline lane and the value
- *     graph. Nudging needs an authority, not a keymap entry.
- *   - `shift+1` fit stage and `shift+2` zoom to selection. The camera authority
+ *  *   - `shift+1` fit stage and `shift+2` zoom to selection. The camera authority
  *     exposes a zoom STEP and a re-centre that keeps the zoom; it has no fit
  *     math, and inventing one would change the camera-invariance contract the
  *     stage's fit is built on.
@@ -117,23 +119,27 @@ export type ShortcutPlatform = 'mac' | 'other';
  * pointer does, what it creates, how it arranges what is selected, the timeline,
  * grouping, the view, and the general commands.
  */
-export type ShortcutCategory = 'selection' | 'create' | 'transform' | 'timeline' | 'grouping' | 'view' | 'general';
+export type ShortcutCategory = 'selection' | 'create' | 'transform' | 'layers' | 'timeline' | 'grouping' | 'view' | 'general';
 
 /**
  * Where a binding is live. `global` commands run anywhere the editor owns the
  * keyboard; `canvas` commands belong to the stage; `timeline` commands are owned
  * by the timeline's own focused controls.
  */
-export type ShortcutScope = 'global' | 'canvas' | 'timeline';
+export type ShortcutScope = 'global' | 'canvas' | 'timeline' | 'layers' | 'drawing' | 'mask-edit';
 
 export type ShortcutCommandId =
   | 'tool-select' | 'tool-pan'
   | 'create-rectangle' | 'create-circle' | 'create-text' | 'tool-pen'
   | 'select-all' | 'group-layers' | 'ungroup-layers'
-  | 'rotate-ccw' | 'rotate-cw' | 'flip-horizontal' | 'flip-vertical'
+  | 'rotate-ccw' | 'rotate-cw' | 'flip-horizontal' | 'flip-vertical' | 'nudge-selection'
   | 'undo' | 'redo' | 'copy' | 'paste' | 'duplicate' | 'delete-selection' | 'cancel-gesture' | 'context-menu'
   | 'keyframe-select' | 'keyframe-walk' | 'marquee-cancel'
   | 'play-pause' | 'zoom-in' | 'zoom-out'
+  | 'mask-point-next' | 'mask-point-previous' | 'mask-point-nudge' | 'mask-point-ends' | 'mask-point-type' | 'mask-point-focus'
+  | 'draw-finish' | 'draw-undo-point' | 'draw-discard'
+  | 'layer-walk' | 'layer-expand' | 'layer-select' | 'layer-rename' | 'layer-move-up' | 'layer-move-down' | 'layer-nest' | 'layer-unparent'
+  | 'lock-layers' | 'unlock-all-layers'
   | 'shortcut-reference';
 
 export interface ShortcutCommand {
@@ -152,6 +158,7 @@ export const SHORTCUT_CATEGORY_LABELS: Record<ShortcutCategory, string> = {
   selection: 'Selection and navigation',
   create: 'Creation',
   transform: 'Transform and arrange',
+  layers: 'Layer list',
   timeline: 'Timeline',
   grouping: 'Grouping and Boolean',
   view: 'View',
@@ -159,7 +166,7 @@ export const SHORTCUT_CATEGORY_LABELS: Record<ShortcutCategory, string> = {
 };
 
 /** The reference UI's band order. */
-export const SHORTCUT_CATEGORY_ORDER: ShortcutCategory[] = ['selection', 'create', 'transform', 'grouping', 'timeline', 'view', 'general'];
+export const SHORTCUT_CATEGORY_ORDER: ShortcutCategory[] = ['selection', 'create', 'transform', 'layers', 'grouping', 'timeline', 'view', 'general'];
 
 export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
   { id: 'tool-select', label: 'Select tool', category: 'selection', gestures: ['v'], scope: 'global' },
@@ -204,6 +211,43 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
     detail: 'Mirrors about the selection centre; a layer stays exactly where it was on screen.',
   },
 
+  {
+    id: 'nudge-selection',
+    label: 'Nudge the selected layers',
+    category: 'transform',
+    gestures: ['arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'shift+arrowleft', 'shift+arrowright', 'shift+arrowup', 'shift+arrowdown'],
+    scope: 'canvas',
+    detail: '1 unit, Shift 10. A held key is one undo step. An already animated position is keyed at the current frame.',
+  },
+
+  // C2 — owned by the drawing tools while a Pen / Mask Pen draft is open, and
+  // by the canvas mask editor; listed here so the reference shows them. They
+  // are dispatched by their owners, never by the global handler.
+  { id: 'draw-finish', label: 'Finish the drawing', category: 'create', gestures: ['enter'], scope: 'drawing', detail: 'Also: click the first point, double-click, or the banner Finish button.' },
+  { id: 'draw-undo-point', label: 'Undo / redo the last point', category: 'create', gestures: ['mod+z', 'mod+shift+z'], scope: 'drawing', detail: 'While drawing, Undo steps through the drawing only — never a finished shape. Backspace also removes the last Mask Pen point.' },
+  { id: 'draw-discard', label: 'Discard the drawing', category: 'create', gestures: ['escape'], scope: 'drawing', detail: 'A second Escape leaves the tool.' },
+  { id: 'mask-point-next', label: 'Select the next mask point', category: 'transform', gestures: [']'], scope: 'mask-edit', detail: 'While a mask is edited on the canvas.' },
+  { id: 'mask-point-previous', label: 'Select the previous mask point', category: 'transform', gestures: ['['], scope: 'mask-edit', detail: 'While a mask is edited on the canvas.' },
+  // C4 — the canvas point list is one Tab stop; these keys act on the FOCUSED point.
+  { id: 'mask-point-focus', label: 'Move keyboard focus into / out of the mask points', category: 'transform', gestures: ['tab', 'shift+tab'], scope: 'mask-edit', detail: 'The points are one Tab stop; focus follows the selected point. Tab again leaves them.' },
+  { id: 'mask-point-ends', label: 'Go to the first / last mask point', category: 'transform', gestures: ['home', 'end'], scope: 'mask-edit', detail: 'With a mask point focused.' },
+  { id: 'mask-point-type', label: 'Switch the selected point between Corner and Smooth', category: 'transform', gestures: ['c'], scope: 'mask-edit', detail: 'Mask and path points. A double-click on the point does the same (again: the handles retract); Alt-drag a handle to break the two handles apart or link them again, Alt-drag a point to pull out new handles. One undo step.' },
+  { id: 'mask-point-nudge', label: 'Nudge the selected mask point', category: 'transform', gestures: ['arrowleft', 'arrowright', 'arrowup', 'arrowdown'], scope: 'mask-edit', detail: 'Shift moves 10 units. With no point selected the whole path moves. A held key is one undo step.' },
+
+  // C2-E — owned by the focused layer tree (its rows are focusable treeitems).
+  { id: 'layer-walk', label: 'Move focus through the layer list', category: 'layers', gestures: ['arrowup', 'arrowdown'], scope: 'layers', detail: 'Home and End jump to the first and last row.' },
+  { id: 'layer-expand', label: 'Expand / collapse a parent row', category: 'layers', gestures: ['arrowright', 'arrowleft'], scope: 'layers', detail: 'On a collapsed row → expands; on a child → moves focus to its parent.' },
+  { id: 'layer-select', label: 'Select the focused layer', category: 'layers', gestures: ['enter'], scope: 'layers', detail: 'Ctrl/⌘ or Shift+Enter adds it to the selection.' },
+  { id: 'layer-rename', label: 'Rename the focused layer or group', category: 'layers', gestures: ['f2'], scope: 'layers', detail: 'Also double-click the name. Enter saves, Esc cancels.' },
+  { id: 'layer-move-up', label: 'Move the layer up among its siblings', category: 'layers', gestures: ['alt+arrowup'], scope: 'layers' },
+  { id: 'layer-move-down', label: 'Move the layer down among its siblings', category: 'layers', gestures: ['alt+arrowdown'], scope: 'layers' },
+  { id: 'layer-nest', label: 'Nest into the layer above (set parent)', category: 'layers', gestures: ['alt+arrowright'], scope: 'layers', detail: 'Keeps the layer where it is on screen. Refused, with the reason, when an animated layer is involved.' },
+  { id: 'layer-unparent', label: 'Unparent (move out one level)', category: 'layers', gestures: ['alt+arrowleft'], scope: 'layers', detail: 'Keeps the layer where it is on screen.' },
+
+  // C4 — the After Effects pair (Layer > Switches > Lock / Unlock All Layers).
+  { id: 'lock-layers', label: 'Lock / unlock the selected layers', category: 'layers', gestures: ['mod+l'], scope: 'global', detail: 'Locks every selected layer; when all of them are locked already, unlocks them. A locked layer stays visible and animated but cannot be changed.' },
+  { id: 'unlock-all-layers', label: 'Unlock all layers', category: 'layers', gestures: ['mod+shift+l'], scope: 'global' },
+
   { id: 'group-layers', label: 'Group selected layers', category: 'grouping', gestures: ['mod+g'], scope: 'global' },
   { id: 'ungroup-layers', label: 'Ungroup selected layer', category: 'grouping', gestures: ['mod+shift+g'], scope: 'global' },
 
@@ -226,7 +270,7 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
     category: 'general',
     gestures: ['delete', 'backspace'],
     scope: 'global',
-    detail: 'While the timeline owns focus only keyframes are deleted, so a layer cannot be removed from there by accident.',
+    detail: 'While the timeline owns focus only keyframes are deleted, so a layer cannot be removed from there by accident. While a mask is edited on the canvas the layer is never deleted.',
   },
   {
     id: 'cancel-gesture',
@@ -234,7 +278,7 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
     category: 'general',
     gestures: ['escape'],
     scope: 'global',
-    detail: 'In priority order: cancel the armed gesture or the Boolean operand edit, leave a grouped child for its container, then clear the timeline keyframe selection. Clicking empty stage space clears the layer selection.',
+    detail: 'In priority order: cancel the armed gesture, cancel a canvas mask drag or leave mask editing, leave the Boolean operand edit, leave a grouped child for its container, then clear the timeline keyframe selection. Clicking empty stage space clears the layer selection.',
   },
   { id: 'context-menu', label: 'Layer context menu', category: 'general', gestures: ['shift+f10', 'contextmenu'], scope: 'global' },
   { id: 'shortcut-reference', label: 'Keyboard shortcut reference', category: 'general', gestures: ['?'], scope: 'global' },
@@ -269,6 +313,9 @@ const KEY_LABELS: Record<string, string> = {
   plus: '+',
   contextmenu: 'Menu key',
   f10: 'F10',
+  f2: 'F2',
+  home: 'Home',
+  end: 'End',
 };
 
 const SHIFT_IMPLICIT_KEYS = ['?', 'plus'];

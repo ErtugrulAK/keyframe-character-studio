@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useLayoutEffect, useCallback, useMe
 import { flushSync } from 'react-dom';
 import { useAnimator } from '../../context/useAnimator';
 import { useEditorContextMenu } from '../../context/editorContextMenu';
-import type { CharacterPart, Transform } from '../../types/animator';
+import type { BezierPath, CharacterPart, Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { parseElementDropPayload } from '../../utils/elementDropPayload';
 import { getPartBounds } from '../../utils/bounds';
@@ -44,20 +44,60 @@ import {
   type StageCropHandle,
   type StageCropRect,
 } from '../../utils/stageCrop';
-import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
+import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter, type CoordinatePoint } from '../../utils/projectCoordinates';
-import { REMEASURE_STAGE_BOX_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT } from '../../utils/workspaceLayout';
-import { buildFreeformPath, normalizeFreeformPoints } from '../../utils/freeform';
+import { REFIT_UNTOUCHED_CAMERA_COMMAND, REMEASURE_STAGE_BOX_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT } from '../../utils/workspaceLayout';
+import { normalizeFreeformPoints } from '../../utils/freeform';
+import { buildBezierPathD } from '../../utils/bezierPath';
+import { penAnchorsToPath } from '../../utils/penDraft';
 import { resolveBondGroup } from '../../utils/partBinding';
-import { useFreeformDraw } from '../../hooks/useFreeformDraw';
+import { lockedLayerIds, lockedLayersRefusal } from '../../utils/layerLocks';
+import { useFreeformDraw, type FreeformFinishReason } from '../../hooks/useFreeformDraw';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
+import { CanvasCoordinateOverlay } from './overlays/CanvasCoordinateOverlay';
+import { CanvasCoordinateReadout } from './overlays/CanvasCoordinateReadout';
 import { FreeformTangentOverlay } from './overlays/FreeformTangentOverlay';
 import { isFreeformTangentOverlayEligible } from '../../utils/freeformTangentEligibility';
 import { ShapeCreationPreview } from './ShapeCreationPreview';
 import { SelectionGizmo } from './SelectionGizmo';
+import { MaskPathOverlay } from './overlays/MaskPathOverlay';
+import { MaskDrawOverlay, type MaskPenDraftState } from './overlays/MaskDrawOverlay';
+import { insertMaskVertex, nearestMaskPathSegment } from '../../utils/maskPathCreation';
+import { evaluateLayerMasks } from '../../utils/evaluateLayerMasks';
+import { resolveMaskEditBlock, resolveMaskPathFrame } from '../../utils/maskPathEditing';
 import { StagePartLayers } from './StagePartLayers';
+import { EditTargetStrip } from './overlays/EditTargetStrip';
+import { resolveEditTarget } from '../../utils/editTarget';
 import { Sparkles } from 'lucide-react';
 import './StageCanvas.css';
+
+/**
+ * C7 — a fitted camera centre on WHOLE device pixels. The centre of a stage
+ * with an odd size is a half pixel: the origin's axes then sat exactly on a
+ * pixel boundary and the smallest float difference between two frames flipped
+ * which pixel they were antialiased into (a flicker on every stage resize).
+ */
+const snapToDevicePixel = (point: CoordinatePoint): CoordinatePoint => {
+  const ratio = typeof window !== 'undefined' && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
+  return { x: Math.round(point.x * ratio) / ratio, y: Math.round(point.y * ratio) / ratio };
+};
+
+/** Half of a length, rounded to whole device pixels. */
+const deviceHalf = (length: number): number => {
+  const ratio = typeof window !== 'undefined' && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
+  return Math.round((length / 2) * ratio) / ratio;
+};
+
+/**
+ * C7b — the edit SVG's own size: the window's, in whole pixels. It does not
+ * follow the stage box, so opening or closing a dock or the timeline never
+ * resizes (and so never re-rasterises) the drawing surface; the stage
+ * container clips it.
+ */
+const readEditSurface = (): { width: number; height: number } => ({
+  width: Math.max(1, Math.ceil(typeof window !== 'undefined' ? window.innerWidth : 1)),
+  height: Math.max(1, Math.ceil(typeof window !== 'undefined' ? window.innerHeight : 1)),
+});
 
 /**
  * The four corner handles of the transform gizmo, keyed by the scale mode they
@@ -142,6 +182,9 @@ const solveFramePatchToWorld = (
   return worldPatch;
 };
 
+/** A right press that travels less than this (CSS px) is a click, not a pan. */
+const RIGHT_CLICK_SLOP_PX = 4;
+
 export const StageCanvas: React.FC = () => {
   const {
     currentFrame,
@@ -159,19 +202,20 @@ export const StageCanvas: React.FC = () => {
     addCustomPart,
     updatePartMedia,
     showGrid,
+    showCoordinateOverlay,
     snapEnabled,
     cropMode,
     cropRegion,
     setCropRegion,
     totalFrames,
     projectResolution,
+    coordinateSystem,
     appMode,
     broadcastState,
     broadcastSessionActivated,
     namedSequenceRuntime,
     activeTemplateId,
     tracks,
-    setCharacterParts,
     setFocusModeNodeId,
     startBatchInteraction,
     endBatchInteraction,
@@ -182,7 +226,30 @@ export const StageCanvas: React.FC = () => {
     liveStuntsState,
     booleanOperandEditingGroupId,
     setBooleanOperandEditingGroupId,
+    isPlaying,
+    maskEditTarget,
+    exitMaskEditing,
+    registerMaskGestureCancel,
+    captureMaskGestureSnapshot,
+    cancelMaskGesture,
+    authorMaskPath,
+    maskVertexIndex,
+    setMaskVertexIndex,
+    applyMaskTopologyEdit,
+    maskDrawSession,
+    cancelMaskDraw,
+    commitMaskDraw,
+    registerDraftHistory,
+    setPartPath,
+    pathVertex,
+    selectPathVertex,
+    matteReturnTargetId,
+    backToMatteTarget,
   } = useAnimator();
+  /** C2: the open Mask Pen draft, for the banner's visible Finish control. */
+  const [maskPenDraft, setMaskPenDraft] = useState<MaskPenDraftState | null>(null);
+  /** WP-02/03: a mask is edited or drawn on the canvas — the layer gestures stand down. */
+  const maskInteractionActive = Boolean(maskEditTarget || maskDrawSession);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const { openContextMenu } = useEditorContextMenu();
@@ -195,6 +262,15 @@ export const StageCanvas: React.FC = () => {
    */
   const [cameraView, setCameraView] = useState<StageCameraView | null>(null);
   const [stageBox, setStageBox] = useState<StageBox | null>(null);
+  const [editSurface, setEditSurface] = useState(readEditSurface);
+  useEffect(() => {
+    const onResize = () => setEditSurface((current) => {
+      const next = readEditSurface();
+      return next.width === current.width && next.height === current.height ? current : next;
+    });
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   const cameraViewRef = useRef<StageCameraView | null>(null);
   const stageBoxRef = useRef<StageBox | null>(null);
   const windowSizeRef = useRef<{ width: number; height: number } | null>(null);
@@ -232,16 +308,17 @@ export const StageCanvas: React.FC = () => {
       && previous.width === box.width && previous.height === box.height) return;
     stageBoxRef.current = box;
     setStageBox(box);
-    const center = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    const stageCenter = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
     const baseScale = getStageFitScale(box, EDITOR_CAMERA_VIEWBOX);
     setCameraView((view) => {
-      if (!view) return { center, baseScale };
+      if (!view) return { center: snapToDevicePixel(stageCenter), baseScale };
       if (!reanchor || !previous) return view;
+      // A re-anchor carries the camera by exactly the stage centre's own move.
       const previousCenter = { x: previous.left + previous.width / 2, y: previous.top + previous.height / 2 };
       return {
         center: {
-          x: view.center.x + (center.x - previousCenter.x),
-          y: view.center.y + (center.y - previousCenter.y),
+          x: view.center.x + (stageCenter.x - previousCenter.x),
+          y: view.center.y + (stageCenter.y - previousCenter.y),
         },
         baseScale,
       };
@@ -252,6 +329,8 @@ export const StageCanvas: React.FC = () => {
   // pan/zoom (that would leave the stage off-center with dark 'curtain' bands).
   // The edit camera is remembered and restored when switching back.
   const editViewportRef = useRef({ zoom: 1, pan: { x: 0, y: 0 } });
+  const openingCameraSeenRef = useRef(false);
+  const openingCameraCenterRef = useRef<{ x: number; y: number } | null>(null);
   useLayoutEffect(() => {
     if (appMode === 'broadcast') {
       // The committed DOM is already the broadcast layout, so the pan offset is
@@ -281,9 +360,14 @@ export const StageCanvas: React.FC = () => {
     setZoomLevel(restored.zoom);
     // oxlint-disable-next-line react/set-state-in-effect
     setCameraView({
-      center: { x: box.left + box.width / 2 + restored.pan.x, y: box.top + box.height / 2 + restored.pan.y },
+      center: snapToDevicePixel({ x: box.left + box.width / 2 + restored.pan.x, y: box.top + box.height / 2 + restored.pan.y }),
       baseScale: getStageFitScale(box, EDITOR_CAMERA_VIEWBOX),
     });
+    // C2: the opening camera, until the user moves it (see REFIT_UNTOUCHED_CAMERA_COMMAND).
+    if (!openingCameraSeenRef.current) {
+      openingCameraSeenRef.current = true;
+      openingCameraCenterRef.current = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    }
   }, [appMode, readStageBox]);
 
   useEffect(() => {
@@ -305,6 +389,13 @@ export const StageCanvas: React.FC = () => {
   }, [applyStageBox, readStageBox]);
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  /**
+   * C2-F — one right-button press is EITHER a pan (it moved) OR a context-menu
+   * request (it did not). Without this the menu opened on release after every
+   * right-drag pan, and on platforms that send `contextmenu` on press the pan
+   * kept running under the open menu.
+   */
+  const rightPressRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
   const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale_corner_tl' | 'scale_corner_tr' | 'scale_corner_bl' | 'scale_corner_br' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'shape_create' | 'child_frame_scale' | 'child_frame_rotate' | 'crop_new' | 'crop_move' | 'crop_resize' | null>(null);
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [shapeCreationStart, setShapeCreationStart] = useState<{ clientX: number; clientY: number; svgX: number; svgY: number } | null>(null);
@@ -406,24 +497,61 @@ export const StageCanvas: React.FC = () => {
       },
       [clientToSVG]
     ),
+    getPixelsPerStageUnit: useCallback(() => {
+      const svg = containerRef.current?.querySelector<SVGSVGElement>('svg.stage-svg');
+      const matrix = svg?.getScreenCTM?.();
+      return matrix ? Math.hypot(matrix.a, matrix.b) : 1;
+    }, []),
     onComplete: useCallback(
-      (stagePoints) => {
-        const { points, centerX, centerY } = normalizeFreeformPoints(stagePoints);
+      (stagePath: BezierPath, reason: FreeformFinishReason) => {
+        // The layer sits at the centre of its points; the path (points AND
+        // their tangents) is stored around it in the layer's local space.
+        const { centerX, centerY } = normalizeFreeformPoints(stagePath.points);
+        const path: BezierPath = { ...stagePath, points: stagePath.points.map((vertex) => ({
+          ...vertex,
+          x: vertex.x - centerX,
+          y: vertex.y - centerY,
+          ...(vertex.handleIn ? { handleIn: { x: vertex.handleIn.x - centerX, y: vertex.handleIn.y - centerY } } : {}),
+          ...(vertex.handleOut ? { handleOut: { x: vertex.handleOut.x - centerX, y: vertex.handleOut.y - centerY } } : {}),
+        })) };
         addCustomPart('custom_freeform', 'Freeform Shape', {
-          points,
+          path,
+          // The legacy anchor list stays in step for readers that still use it.
+          points: path.points.map(({ x, y }) => ({ x, y })),
           baseTransform: { x: centerX, y: centerY, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
         });
-        setActiveTool('select');
-        showToast('Freeform shape created', 'success');
+        // A finished drawing hands the stage back to Select; a tool switch
+        // keeps the tool the user just chose.
+        if (reason === 'finish') setActiveTool('select');
+        // C8 — no confirmation for a finish the user asked for; a tool switch
+        // finishing it implicitly is still said.
+        else showToast('Freeform shape finished when you switched tools', 'info');
       },
       [addCustomPart, setActiveTool, showToast]
     ),
-    onCancel: useCallback(() => {
-      // Esc pressed while drawing: exit the tool so clicks work normally again.
+    onCancel: useCallback((hadDraft: boolean) => {
+      // Escape is one level: it discards a draft and keeps the Pen; with no
+      // draft it leaves the tool so clicks select again.
+      if (hadDraft) return;
       setActiveTool('select');
-      showToast('Drawing cancelled', 'info');
-    }, [setActiveTool, showToast]),
+    }, [setActiveTool]),
+    onDiscard: useCallback(() => {
+      showToast('Drawing discarded: a shape needs at least three points', 'info');
+    }, [showToast]),
   });
+
+  // C2 — an open freeform draft owns Undo/Redo (its own points), so the
+  // command never reaches the scene history while the drawing is unfinished.
+  useEffect(() => {
+    if (!freeform.isDrawing) return undefined;
+    registerDraftHistory({
+      undo: freeform.undoDraft,
+      redo: freeform.redoDraft,
+      canUndo: freeform.canUndoDraft,
+      canRedo: freeform.canRedoDraft,
+    });
+    return () => registerDraftHistory(null);
+  }, [freeform.isDrawing, freeform.undoDraft, freeform.redoDraft, freeform.canUndoDraft, freeform.canRedoDraft, registerDraftHistory]);
 
   useEffect(() => {
     if (activeTool !== 'shape_create' && (shapeCreationStart || shapeCreationPreview)) {
@@ -436,6 +564,9 @@ export const StageCanvas: React.FC = () => {
 
   const startTranslateDragForPart = (partId: string, e: React.MouseEvent) => {
     if (appMode === 'broadcast' || activeTool !== 'select' || e.button !== 0) return;
+    // WP-02: while a mask is edited on the canvas, no layer body starts a move —
+    // the image under the mask must stay exactly where it is.
+    if (maskInteractionActive) return;
     if (e.ctrlKey || e.metaKey) return;
     const draggedPart = characterParts.find((part) => part.id === partId);
     if (
@@ -482,6 +613,14 @@ export const StageCanvas: React.FC = () => {
     const dragSelectionIds = selectedPartIds.includes(dragTargetId) ? canvasSelectionIds : [dragTargetId];
     const worldOf = (id: string) => getComputedTransform(id, currentFrame);
     const movingTargets = collectArrangeTargets(characterParts, dragSelectionIds, worldOf);
+    // C4 — a move that would carry a locked layer (selected from the layer list,
+    // or bonded to a moving one) is refused before it starts: all or nothing.
+    const lockRefusal = lockedLayersRefusal(characterParts, tracks, movingTargets.flatMap((target) => resolveBondGroup(characterParts, target.id)));
+    if (lockRefusal) {
+      groupBodyDragRef.current = null;
+      showToast(lockRefusal, 'error');
+      return;
+    }
     const movingBounds = movingTargets.length > 0
       ? unionWorldBounds(movingTargets.map((target) => target.bounds))
       : null;
@@ -563,12 +702,8 @@ export const StageCanvas: React.FC = () => {
       return;
     }
     if (activeTool === 'shape_create' && appMode !== 'broadcast' && pendingShapeType && e.button === 0) {
-      const target = e.target as HTMLElement;
-      const isCanvasTarget = target === containerRef.current
-        || target.tagName === 'svg'
-        || target.classList.contains('canvas-bg')
-        || target.classList.contains('focus-spotlight-dimmer');
-      if (!isCanvasTarget) return;
+      // C2: an armed creation tool owns the press wherever it lands — on empty
+      // stage or on top of an image — so drawing never selects what is below.
       const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
       e.preventDefault();
       e.stopPropagation();
@@ -581,6 +716,7 @@ export const StageCanvas: React.FC = () => {
 
     if (e.button === 2 || (e.button === 0 && activeTool === 'pan')) {
       e.preventDefault();
+      rightPressRef.current = e.button === 2 ? { x: e.clientX, y: e.clientY, moved: false } : null;
       setIsDragging(true);
       setDragMode('pan');
       setDragStart({
@@ -592,6 +728,9 @@ export const StageCanvas: React.FC = () => {
     }
 
     if (appMode === 'broadcast' || activeTool !== 'select') return;
+    // WP-02: an empty-stage press in mask editing neither clears the selection
+    // (which would leave the mode) nor starts a layer marquee.
+    if (maskInteractionActive) return;
 
     const target = e.target as HTMLElement;
     if (
@@ -634,8 +773,18 @@ export const StageCanvas: React.FC = () => {
       : { transform: world };
   };
 
+  /** C4 — the gizmo of a locked layer (selected from the layer list) does not edit it. */
+  const refuseLockedGizmo = (e: React.MouseEvent): boolean => {
+    const lockRefusal = selectedPart ? lockedLayersRefusal(characterParts, tracks, resolveBondGroup(characterParts, selectedPart.id)) : null;
+    if (!lockRefusal) return false;
+    e.stopPropagation();
+    showToast(lockRefusal, 'error');
+    return true;
+  };
+
   const startRotate = (e: React.MouseEvent) => {
     if (appMode === 'broadcast' || e.button !== 0 || !selectedPart || !selectedTransform) return;
+    if (refuseLockedGizmo(e)) return;
     e.stopPropagation();
     startBatchInteraction();
     setIsDragging(true);
@@ -674,6 +823,7 @@ export const StageCanvas: React.FC = () => {
 
   const startScale = (e: React.MouseEvent, mode: ScaleMode, bounds?: CornerBounds) => {
     if (appMode === 'broadcast' || e.button !== 0 || !selectedPart || !selectedTransform) return;
+    if (refuseLockedGizmo(e)) return;
     e.stopPropagation();
     startBatchInteraction();
     setIsDragging(true);
@@ -750,6 +900,10 @@ export const StageCanvas: React.FC = () => {
       if (dragMode === 'pan') {
         const clientX = e.clientX;
         const clientY = e.clientY;
+        const press = rightPressRef.current;
+        if (press && !press.moved && Math.hypot(clientX - press.x, clientY - press.y) > RIGHT_CLICK_SLOP_PX) press.moved = true;
+        // Below the slop a right press is still a click: the camera stays put.
+        if (press && !press.moved) return;
         if (rafPanRef.current) cancelAnimationFrame(rafPanRef.current);
         rafPanRef.current = requestAnimationFrame(() => {
           const dx = clientX - dragStart.x;
@@ -969,6 +1123,8 @@ export const StageCanvas: React.FC = () => {
         EDITOR_CAMERA_CENTER.y,
         (part) => (
           tracks.find((track) => track.partId === part.id)?.editVisible !== false
+          // C4 — a locked layer is not picked by the box (nor by a click).
+          && !tracks.find((track) => track.partId === part.id)?.locked
           && (!part.booleanGroupId || part.booleanGroupId === booleanOperandEditingGroupId)
           && (!booleanOperandEditingGroupId || !part.booleanOperandIds?.length)
         ),
@@ -1059,8 +1215,23 @@ export const StageCanvas: React.FC = () => {
         const box = stageBoxRef.current;
         if (!box) return;
         setCameraView((view) => (view
-          ? { ...view, center: { x: box.left + box.width / 2, y: box.top + box.height / 2 } }
+          ? { ...view, center: snapToDevicePixel({ x: box.left + box.width / 2, y: box.top + box.height / 2 }) }
           : view));
+        return;
+      }
+      if (type === REFIT_UNTOUCHED_CAMERA_COMMAND) {
+        const view = cameraViewRef.current;
+        const opening = openingCameraCenterRef.current;
+        const box = readStageBox();
+        if (!view || !opening || !box || zoomRef.current !== 1) return;
+        if (Math.hypot(view.center.x - opening.x, view.center.y - opening.y) > 0.5) return;
+        const center = snapToDevicePixel({ x: box.left + box.width / 2, y: box.top + box.height / 2 });
+        stageBoxRef.current = box;
+        openingCameraCenterRef.current = center;
+        flushSync(() => {
+          setStageBox(box);
+          setCameraView({ center, baseScale: getStageFitScale(box, EDITOR_CAMERA_VIEWBOX) });
+        });
         return;
       }
       if (type === REMEASURE_STAGE_BOX_COMMAND) {
@@ -1186,15 +1357,234 @@ export const StageCanvas: React.FC = () => {
     });
   };
 
-  const sortedParts = stackingOrder(characterParts);
+  const sortedParts = useMemo(() => stackingOrder(characterParts), [characterParts]);
+
+  const selectPartFromStage = (id: string, event: React.MouseEvent) => {
+    // WP-02: a canvas click does not retarget the selection while
+    // a mask is edited; the Outliner or Exit leaves the mode.
+    if (maskInteractionActive) return;
+    // The browser still fires a click when a drag ends on the
+    // element it started on; that click must not steal the
+    // selection back from the group the drag just moved.
+    if (suppressClickSelectRef.current) {
+      suppressClickSelectRef.current = false;
+      return;
+    }
+    // R4-09: a plain click selects the GROUP the geometry belongs
+    // to; the layer itself is selected through an explicit
+    // drill-in (`onDrillIn`) or from the timeline Outliner.
+    handleSelectPart(
+      resolveStageSelectionTarget(characterParts, id, canvasSelectionIds),
+      event.ctrlKey || event.metaKey,
+    );
+  };
+  const drillIntoPart = (id: string) => {
+    if (maskInteractionActive) return;
+    // Double-click enters the group: the pressed layer itself
+    // becomes the selection, so the next click or drag on it edits
+    // that layer. `selectedPartIds` keeps the primary a member of
+    // the canonical set (the resolver reads it on the next press).
+    setSelectedPartId(id);
+    setSelectedPartIds([id]);
+  };
+  /**
+   * C3 — the part layers are memoized: a camera or dock-layout frame (which
+   * re-renders this canvas) re-renders no layer whose inputs are unchanged
+   * (measured: every dock frame re-rendered every part). Their actions are one
+   * stable bag that reads the latest handlers at call time.
+   */
+  const partLayerLatest = useRef({ selectPartFromStage, drillIntoPart, startTranslateDragForPart });
+  useLayoutEffect(() => {
+    partLayerLatest.current = { selectPartFromStage, drillIntoPart, startTranslateDragForPart };
+  });
+  const partLayerActions = useMemo(() => ({
+    onSelect: (id: string, event: React.MouseEvent) => partLayerLatest.current.selectPartFromStage(id, event),
+    onDrillIn: (id: string) => partLayerLatest.current.drillIntoPart(id),
+    onStartTranslateDrag: (partId: string, event: React.MouseEvent) => partLayerLatest.current.startTranslateDragForPart(partId, event),
+  }), []);
   const isPanning = activeTool === 'pan' || (isDragging && dragMode === 'pan');
   // A primitive draw tool that is armed (waiting for its drag) owns the stage
   // cursor: the canvas reads as a creation surface until Escape or the next
   // tool exits it, and the cursor returns with the state change itself.
   const isDrawToolArmed = (activeTool === 'shape_create' && Boolean(pendingShapeType)) || activeTool === 'freeform_draw';
-  const cameraTransform = appMode === 'broadcast' || !cameraView || !stageBox
-    ? null
-    : getStageCameraTransform({ view: cameraView, stage: stageBox, zoom: zoomLevel, viewBox: EDITOR_CAMERA_VIEWBOX });
+  /*
+   * C7 — the edit camera lives in the viewBox, not in a CSS scale.
+   *
+   * The viewBox spans the stage box at the camera's final scale
+   * (baseScale × zoom), so the browser rasterises the world directly at the
+   * size it is shown; the CSS transform is a pure translation whose fractional
+   * part does not depend on the stage size (the viewBox origin is anchored at
+   * the stage's whole-pixel centre). Before, the fixed 600×480 viewBox's fit
+   * scale changed with every stage resize and a CSS scale undid it: the same
+   * picture re-rasterised at a different scale and sub-pixel offset on every
+   * frame of a timeline height drag or a dock settle — thin lines and edges
+   * visibly shimmered. World-to-screen is unchanged:
+   *   screen = view.center + (world − CAMERA_CENTER) × baseScale × zoom.
+   */
+  /*
+   * C7b — the SVG itself has a fixed, whole-pixel size (the window's, see
+   * `readEditSurface`) instead of the stage box's. A dock or timeline change
+   * then leaves its size AND its viewBox untouched; at most the translation
+   * changes (when the stage's left/top edge moves), which the compositor
+   * applies without redrawing. Sizing it to the stage box re-rasterised the
+   * whole drawing on every frame of a timeline ease and once per dock toggle,
+   * at a fractional size: thin lines (the X axis, the grid) jumped between
+   * two pixel rows for a frame — the "coordinate plane flickers" report.
+   */
+  const cameraScale = cameraView ? cameraView.baseScale * zoomLevel : 0;
+  const surfaceHalfX = deviceHalf(editSurface.width);
+  const surfaceHalfY = deviceHalf(editSurface.height);
+  const editViewBox = appMode !== 'broadcast' && cameraView && stageBox && cameraScale > 0
+    ? {
+      x: EDITOR_CAMERA_CENTER.x - surfaceHalfX / cameraScale,
+      y: EDITOR_CAMERA_CENTER.y - surfaceHalfY / cameraScale,
+      width: editSurface.width / cameraScale,
+      height: editSurface.height / cameraScale,
+    }
+    : null;
+  /*
+   * C12 — screen pixels per stage unit. An authored shape stroke is drawn
+   * non-scaling (so the layer's own scale, uniform or not, never thickens it:
+   * a large rectangle is drawn as a scaled 120-unit one) and multiplied by
+   * this, so it still zooms with the view. It is a CSS variable on the SVG:
+   * a zoom step restyles it without re-rendering a single part.
+   */
+  const strokeViewScale = appMode === 'broadcast'
+    ? (stageBox ? getStageFitScale(stageBox, projectResolution) : 1)
+    : cameraScale > 0
+      ? cameraScale
+      : (stageBox ? getStageFitScale(stageBox, EDITOR_CAMERA_VIEWBOX) : 1);
+  // C12 — the part of the camera space the stage box shows (the axis badges
+  // sit at the visible end of each axis, not past the window's edge).
+  const visibleCameraRect = cameraView && stageBox && cameraScale > 0
+    ? {
+      left: EDITOR_CAMERA_CENTER.x + (stageBox.left - cameraView.center.x) / cameraScale,
+      right: EDITOR_CAMERA_CENTER.x + (stageBox.left + stageBox.width - cameraView.center.x) / cameraScale,
+      top: EDITOR_CAMERA_CENTER.y + (stageBox.top - cameraView.center.y) / cameraScale,
+      bottom: EDITOR_CAMERA_CENTER.y + (stageBox.top + stageBox.height - cameraView.center.y) / cameraScale,
+    }
+    : null;
+  const cameraTransform = editViewBox && cameraView && stageBox
+    ? {
+      translateX: cameraView.center.x - stageBox.left - surfaceHalfX,
+      translateY: cameraView.center.y - stageBox.top - surfaceHalfY,
+      scale: 1,
+    }
+    : null;
+  /**
+   * C2-D — the stage's dotted backdrop is anchored to the CAMERA, not to the
+   * container's corner. Opening or closing a panel moves the container's edge
+   * while the world keeps its screen position; a corner-anchored pattern then
+   * slid under the content for the whole dock transition (measured: its phase
+   * against the artboard changed 20 px → 12 px on a left-drawer toggle). With
+   * this anchor the backdrop moves only with the camera (pan), never with
+   * layout.
+   */
+  const backdropStyle = appMode !== 'broadcast' && cameraView && stageBox
+    ? { backgroundPosition: `${cameraView.center.x - stageBox.left}px ${cameraView.center.y - stageBox.top}px, center center` }
+    : undefined;
+
+  /**
+   * C2 — pointer ownership. While a creation tool (Rectangle/Circle armed,
+   * Pen), the Hand or the crop mode is active, the TOOL owns a primary press
+   * on the stage: it is handled in the capture phase, before any layer body,
+   * group frame or transform gizmo can turn it into a selection or a move, and
+   * the click/double-click that follow are kept from selecting or drilling in.
+   * Mask editing/drawing owns its own overlay and is excluded here. Stage
+   * chrome (banners) is never a canvas press.
+   */
+  const toolOwnsStagePointer = appMode !== 'broadcast' && !maskInteractionActive && (
+    cropMode
+    || activeTool === 'freeform_draw'
+    || activeTool === 'pan'
+    || (activeTool === 'shape_create' && Boolean(pendingShapeType))
+  );
+  // The selection's transform handles are NOT chrome: while a tool owns the
+  // stage, a press on a handle draws/pans like any other press (the gizmo is
+  // shown passive, see `tool-owns-pointer` in StageCanvas.css). Resizing needs
+  // Select (V / Escape).
+  const isStageChrome = (target: EventTarget | null): boolean =>
+    target instanceof Element && target.closest('[data-stage-chrome]') !== null;
+  const handleToolOwnedMouseDownCapture = (e: React.MouseEvent) => {
+    if (!toolOwnsStagePointer || e.button !== 0 || isStageChrome(e.target)) return;
+    e.stopPropagation();
+    handleMouseDown(e);
+  };
+  const handleToolOwnedClickCapture = (e: React.MouseEvent) => {
+    if (!toolOwnsStagePointer || isStageChrome(e.target)) return;
+    e.stopPropagation();
+  };
+  const handleToolOwnedDoubleClickCapture = (e: React.MouseEvent) => {
+    if (!toolOwnsStagePointer || isStageChrome(e.target)) return;
+    e.stopPropagation();
+    if (activeTool === 'freeform_draw') {
+      e.preventDefault();
+      freeform.finishDraw();
+    }
+  };
+
+  /**
+   * WP-02 — the canvas mask-editing context: the owner, its mask as the
+   * renderer evaluates it at this frame of the active sequence, the owner's
+   * evaluated pose, and the reason editing is refused (locked mask, an IN/OUT
+   * preset moving the layer, a collapsed map), if any.
+   */
+  const maskEditing = (() => {
+    if (!maskEditTarget || appMode === 'broadcast') return null;
+    const owner = characterParts.find((part) => part.id === maskEditTarget.ownerPartId);
+    if (!owner) return null;
+    const ownerTrack = tracks.find((track) => track.partId === owner.id);
+    const mask = evaluateLayerMasks(owner, ownerTrack, currentFrame, activeTemplateId || 'Sequence')
+      ?.find((candidate) => candidate.id === maskEditTarget.maskId);
+    if (!mask) return null;
+    const transform = getComputedTransform(owner.id, currentFrame);
+    const block = resolveMaskEditBlock({
+      part: owner,
+      mask,
+      tracks,
+      totalFrames,
+      frame: currentFrame,
+      customPresets,
+      hasLiveStunt: Object.prototype.hasOwnProperty.call(liveStuntsState, owner.id),
+      frameMap: resolveMaskPathFrame(owner, mask.path.coordinateSpace, transform),
+      isPlaying,
+    });
+    return { owner, mask, transform, block };
+  })();
+
+  /** WP-03 — the mask-drawing context: owner, pose and refusal reason. */
+  const maskDrawing = (() => {
+    if (!maskDrawSession || appMode === 'broadcast') return null;
+    const owner = characterParts.find((part) => part.id === maskDrawSession.ownerPartId);
+    if (!owner) return null;
+    const transform = getComputedTransform(owner.id, currentFrame);
+    const block = resolveMaskEditBlock({
+      part: owner,
+      mask: { id: '', name: '', mode: 'add', path: { version: 1, coordinateSpace: 'normalized', closed: true, points: [] } },
+      tracks,
+      totalFrames,
+      frame: currentFrame,
+      customPresets,
+      hasLiveStunt: Object.prototype.hasOwnProperty.call(liveStuntsState, owner.id),
+      frameMap: resolveMaskPathFrame(owner, 'normalized', transform),
+      isPlaying,
+    });
+    return { owner, shape: maskDrawSession.shape, transform, block };
+  })();
+
+  /** C5 — what is being edited: one description for the strip and the Inspector. */
+  const editTarget = resolveEditTarget({
+    characterParts,
+    selectedPartId,
+    selectedPartIds,
+    maskEditTarget,
+    maskDrawSession,
+    matteReturnTargetId,
+    activeTool,
+    pendingShapeType,
+    freeformPointCount: freeform.isDrawing ? freeform.points.length : null,
+    lockedIds: lockedLayerIds(tracks),
+  });
 
   /**
    * Right-click on the stage opens the shared authoring menu. The target is the
@@ -1204,6 +1594,15 @@ export const StageCanvas: React.FC = () => {
    */
   const handleContextMenu = useCallback((event: React.MouseEvent) => {
     event.preventDefault();
+    const press = rightPressRef.current;
+    rightPressRef.current = null;
+    // A right-drag panned the stage: its release is not a menu request.
+    if (press?.moved) return;
+    // `contextmenu` on press (macOS): the menu wins and the pan never starts.
+    if (press && (event.buttons & 2)) {
+      setIsDragging(false);
+      setDragMode(null);
+    }
     if (appMode === 'broadcast') return;
     const target = event.target as Element | null;
     const partId = target?.closest('[data-part-id]')?.getAttribute('data-part-id') ?? null;
@@ -1212,9 +1611,13 @@ export const StageCanvas: React.FC = () => {
 
   return (
     <div
-      className={`stage-canvas-container ${isPanning ? 'panning' : ''} ${activeTool === 'pan' ? 'hand-tool' : 'select-tool'} ${isDragging ? 'interaction-dragging' : ''} ${cropMode ? 'crop-mode' : ''} ${isDrawToolArmed ? 'drawing-tool' : ''}`}
+      className={`stage-canvas-container ${isPanning ? 'panning' : ''} ${activeTool === 'pan' ? 'hand-tool' : 'select-tool'} ${isDragging ? 'interaction-dragging' : ''} ${cropMode ? 'crop-mode' : ''} ${isDrawToolArmed ? 'drawing-tool' : ''} ${toolOwnsStagePointer ? 'tool-owns-pointer' : ''}`}
       data-camera-zoom={zoomLevel}
+      style={backdropStyle}
       ref={containerRef}
+      onMouseDownCapture={handleToolOwnedMouseDownCapture}
+      onClickCapture={handleToolOwnedClickCapture}
+      onDoubleClickCapture={handleToolOwnedDoubleClickCapture}
       onMouseDown={handleMouseDown}
       onContextMenu={handleContextMenu}
       onDragOver={handleDragOverStage}
@@ -1231,27 +1634,26 @@ export const StageCanvas: React.FC = () => {
       )}
 
       <svg
-        className="stage-svg"
-        width="100%"
-        height="100%"
+        className={`stage-svg${editViewBox ? ' is-edit-surface' : ''}`}
+        width={editViewBox ? editSurface.width : '100%'}
+        height={editViewBox ? editSurface.height : '100%'}
         viewBox={appMode === 'broadcast'
           ? `0 0 ${projectResolution.width} ${projectResolution.height}`
-          : `0 0 ${EDITOR_CAMERA_VIEWBOX.width} ${EDITOR_CAMERA_VIEWBOX.height}`}
+          : editViewBox
+            ? `${editViewBox.x} ${editViewBox.y} ${editViewBox.width} ${editViewBox.height}`
+            : `0 0 ${EDITOR_CAMERA_VIEWBOX.width} ${EDITOR_CAMERA_VIEWBOX.height}`}
         preserveAspectRatio="xMidYMid meet"
-        onDoubleClick={(e) => {
-          if (activeTool === 'freeform_draw') {
-            e.preventDefault();
-            freeform.finishDraw();
-          }
-        }}
+
         style={{
           // Identity while broadcast shows the fitted artboard and while the
           // edit camera has not been anchored yet (the mount view).
           transform: cameraTransform
-            ? `translate(${cameraTransform.translateX}px, ${cameraTransform.translateY}px) scale(${cameraTransform.scale})`
-            : 'translate(0px, 0px) scale(1)',
-          transformOrigin: 'center center',
+            ? `translate(${cameraTransform.translateX}px, ${cameraTransform.translateY}px)`
+            : 'translate(0px, 0px)',
+          transformOrigin: '0 0',
+          ...(editViewBox ? { width: `${editSurface.width}px`, height: `${editSurface.height}px` } : {}),
           cursor: isDrawToolArmed ? 'crosshair' : undefined,
+          ['--kcs-stroke-scale' as string]: String(strokeViewScale),
         }}
       >
         <defs>
@@ -1334,53 +1736,70 @@ export const StageCanvas: React.FC = () => {
                 selectedPartId={selectedPartId}
                 selectedPartIds={selectedPartIds}
                 booleanOperandEditingGroupId={booleanOperandEditingGroupId}
-                onSelect={(id, event) => {
-                  // The browser still fires a click when a drag ends on the
-                  // element it started on; that click must not steal the
-                  // selection back from the group the drag just moved.
-                  if (suppressClickSelectRef.current) {
-                    suppressClickSelectRef.current = false;
-                    return;
-                  }
-                  // R4-09: a plain click selects the GROUP the geometry belongs
-                  // to; the layer itself is selected through an explicit
-                  // drill-in (`onDrillIn`) or from the timeline Outliner.
-                  handleSelectPart(
-                    resolveStageSelectionTarget(characterParts, id, canvasSelectionIds),
-                    event.ctrlKey || event.metaKey,
-                  );
-                }}
-                onDrillIn={(id) => {
-                  // Double-click enters the group: the pressed layer itself
-                  // becomes the selection, so the next click or drag on it edits
-                  // that layer. `selectedPartIds` keeps the primary a member of
-                  // the canonical set (the resolver reads it on the next press).
-                  setSelectedPartId(id);
-                  setSelectedPartIds([id]);
-                }}
+                onSelect={partLayerActions.onSelect}
+                onDrillIn={partLayerActions.onDrillIn}
                 customPresets={customPresets}
                 liveStuntsState={liveStuntsState}
-                onStartTranslateDrag={startTranslateDragForPart}
+                onStartTranslateDrag={partLayerActions.onStartTranslateDrag}
                 projectResolution={projectResolution}
               />
 
-              {/* Freeform Drawing Preview (active draw tool) */}
+              {appMode !== 'broadcast' && showCoordinateOverlay && (
+                <CanvasCoordinateOverlay
+                  artX={artX}
+                  artY={artY}
+                  width={projectResolution.width}
+                  height={projectResolution.height}
+                  origin={EDITOR_CAMERA_CENTER}
+                  zScale={zScale}
+                  visibleRect={visibleCameraRect}
+                  selectedTransform={selectedTransform}
+                />
+              )}
+
+              {/* Pen drawing preview: the path so far (with its tangents), the
+                  live segment to the cursor, and the handles of the point being
+                  shaped. */}
               {freeform.isDrawing && freeform.points.length > 0 && (
-                <g transform={`translate(${EDITOR_CAMERA_CENTER.x}, ${EDITOR_CAMERA_CENTER.y})`} pointerEvents="none">
+                <g transform={`translate(${EDITOR_CAMERA_CENTER.x}, ${EDITOR_CAMERA_CENTER.y})`} pointerEvents="none" data-testid="pen-draft">
                   <path
-                    d={buildFreeformPath([...freeform.points, ...(freeform.cursorPoint ? [freeform.cursorPoint] : [])])}
+                    data-testid="pen-draft-path"
+                    d={buildBezierPathD({
+                      ...penAnchorsToPath([...freeform.points, ...(freeform.cursorPoint && !freeform.cursorClosesShape ? [freeform.cursorPoint] : [])], 'local', freeform.cursorClosesShape),
+                    })}
                     fill="rgba(56, 189, 248, 0.10)"
                     stroke="var(--accent-cyan)"
                     strokeWidth={1.5 * zScale}
                     strokeDasharray="5 3"
                     strokeLinejoin="round"
                   />
-                  {freeform.points.map((p, i) => (
-                    <circle key={`vf-${i}`} cx={p.x} cy={p.y} r={2.5 * zScale} fill="#38bdf8" />
-                  ))}
-                  {freeform.points.length > 0 && freeform.cursorPoint && (
+                  {freeform.points.map((p, i) => {
+                    const shaping = freeform.activeIndex === i || (freeform.activeIndex === null && i === freeform.points.length - 1);
+                    return (
+                      <g key={`vf-${i}`}>
+                        {shaping && [p.handleIn, p.handleOut].map((handle, side) => handle && (
+                          <g key={side} data-testid="pen-draft-handle">
+                            <line x1={p.x} y1={p.y} x2={handle.x} y2={handle.y} stroke="#facc15" strokeWidth={1.2 * zScale} />
+                            <circle cx={handle.x} cy={handle.y} r={3.5 * zScale} fill="#facc15" stroke="#0f172a" strokeWidth={1 * zScale} />
+                          </g>
+                        ))}
+                        <circle
+                          data-testid="freeform-draft-point"
+                          data-point-kind={p.handleOut || p.handleIn ? 'smooth' : 'corner'}
+                          data-close-target={i === 0 && freeform.cursorClosesShape ? 'true' : undefined}
+                          cx={p.x}
+                          cy={p.y}
+                          r={(i === 0 && freeform.cursorClosesShape ? 6 : i === 0 ? 3.5 : 3) * zScale}
+                          fill={i === 0 && freeform.cursorClosesShape ? '#0f172a' : p.handleOut || p.handleIn ? '#0f172a' : '#38bdf8'}
+                          stroke="#38bdf8"
+                          strokeWidth={1.5 * zScale}
+                        />
+                      </g>
+                    );
+                  })}
+                  {freeform.cursorPoint && (
                     <text x={freeform.cursorPoint.x} y={freeform.cursorPoint.y - 10 * zScale} fontSize={10 * zScale} fill="#7dd3fc" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                      {freeform.points.length < 3 ? 'Click to add corners • Drag to draw freely' : 'Double-click or Enter to finish • Esc to cancel'}
+                      {freeform.cursorClosesShape ? 'Click to close the shape' : freeform.canFinish ? 'Click: corner · Drag: smooth · First point closes' : 'Click: corner point · Drag: smooth point'}
                     </text>
                   )}
                 </g>
@@ -1428,7 +1847,7 @@ export const StageCanvas: React.FC = () => {
                 height={projectResolution.height}
                 fill="none"
                 stroke={appMode === 'broadcast' ? 'none' : 'rgba(255, 255, 255, 0.15)'}
-                strokeWidth={2 * zScale}
+                strokeWidth={2}
                 vectorEffect="non-scaling-stroke"
                 pointerEvents="none"
               />
@@ -1536,8 +1955,9 @@ export const StageCanvas: React.FC = () => {
                 </g>
               )}
 
-              {/* Interactive Transform Gizmo (Only in Edit Mode when not hard-hidden) */}
-              {appMode !== 'broadcast' && (
+              {/* Interactive Transform Gizmo (Only in Edit Mode when not hard-hidden;
+                  hidden while a mask is edited, so the layer box cannot be grabbed) */}
+              {appMode !== 'broadcast' && !maskInteractionActive && (
                 <SelectionGizmo
                   selectedPartIds={selectedPartIds}
                   characterParts={characterParts}
@@ -1556,7 +1976,7 @@ export const StageCanvas: React.FC = () => {
               )}
 
               {/* Direct tangent-handle authoring for the selected freeform layer */}
-              {selectedPart && selectedTransform && isFreeformTangentOverlayEligible({
+              {!maskInteractionActive && selectedPart && selectedTransform && isFreeformTangentOverlayEligible({
                 appMode,
                 activeTool,
                 selectedPartIds,
@@ -1571,19 +1991,167 @@ export const StageCanvas: React.FC = () => {
                   zScale={zScale}
                   toWorld={clientToSVG}
                   outputOrigin={EDITOR_CAMERA_CENTER}
-                  onPathChange={(nextPath) => {
-                    setCharacterParts((previous) => previous.map((part) => (
-                      part.id === selectedPart.id ? { ...part, path: nextPath } : part
-                    )));
-                  }}
+                  onPathChange={(nextPath) => setPartPath(selectedPart.id, nextPath)}
                   onBatchStart={startBatchInteraction}
                   onBatchEnd={endBatchInteraction}
+                  selectedIndex={pathVertex?.partId === selectedPart.id ? pathVertex.index : null}
+                  onSelectIndex={(index) => selectPathVertex(selectedPart.id, index)}
+                />
+              )}
+
+              {/* WP-02: on-canvas editing of the targeted layer mask */}
+              {maskEditing && (
+                <MaskPathOverlay
+                  owner={maskEditing.owner}
+                  maskId={maskEditing.mask.id}
+                  path={maskEditing.mask.path}
+                  transform={maskEditing.transform}
+                  zScale={zScale}
+                  toWorld={clientToSVG}
+                  editKey={`${activeTemplateId || 'Sequence'}@${currentFrame}`}
+                  interactive={!maskEditing.block}
+                  onPathChange={(nextPath) => authorMaskPath(maskEditing.owner.id, maskEditing.mask.id, nextPath)}
+                  onBatchStart={startBatchInteraction}
+                  onBatchEnd={endBatchInteraction}
+                  captureSnapshot={() => captureMaskGestureSnapshot(maskEditing.owner.id)}
+                  cancelGesture={cancelMaskGesture}
+                  registerGestureCancel={registerMaskGestureCancel}
+                  selectedIndex={maskVertexIndex}
+                  onSelectIndex={setMaskVertexIndex}
+                  onInsertVertex={(world) => {
+                    const frame = resolveMaskPathFrame(maskEditing.owner, maskEditing.mask.path.coordinateSpace, maskEditing.transform);
+                    if (!frame) return;
+                    applyMaskTopologyEdit(maskEditing.owner.id, maskEditing.mask.id, (basePath) => {
+                      const hit = nearestMaskPathSegment(basePath, frame, world);
+                      return hit ? insertMaskVertex(basePath, hit.segmentIndex, hit.t) : null;
+                    }, 'A point could not be added here.');
+                  }}
+                />
+              )}
+
+              {/* WP-03: drawing a new mask on the selected layer */}
+              {maskDrawing && (
+                <MaskDrawOverlay
+                  owner={maskDrawing.owner}
+                  shape={maskDrawing.shape}
+                  transform={maskDrawing.transform}
+                  zScale={zScale}
+                  toWorld={clientToSVG}
+                  interactive={!maskDrawing.block}
+                  onCommit={(nextPath) => { commitMaskDraw(nextPath); }}
+                  onDegenerate={(message) => showToast(message, 'info')}
+                  registerDraftHistory={registerDraftHistory}
+                  onPenDraftChange={setMaskPenDraft}
                 />
               )}
             </>
           );
         })()}
       </svg>
+      {/*
+        C5 — ONE status strip names what is being edited (the same description
+        the Inspector header shows), with the mode's own Finish / Cancel / Back
+        control. Its text never takes a stage gesture; only its buttons do.
+      */}
+      {appMode !== 'broadcast' && !cropMode && editTarget && (() => {
+        if (editTarget.kind === 'drawing-shape') {
+          return (
+            <EditTargetStrip
+              target={editTarget}
+              testId="freeform-draft-banner"
+              hint="Click to add points, drag to draw freely · click the first point or double-click to finish · Esc cancels"
+            >
+              <button
+                type="button"
+                className="mask-edit-banner-exit"
+                disabled={!freeform.canFinish}
+                title={freeform.canFinish ? 'Finish the shape (Enter)' : 'Add at least three points to finish the shape'}
+                onClick={freeform.finishDraw}
+              >
+                Finish drawing
+              </button>
+              <button type="button" className="mask-edit-banner-exit is-secondary" title="Discard this drawing (Esc)" onClick={freeform.cancelDraw}>
+                Cancel drawing
+              </button>
+            </EditTargetStrip>
+          );
+        }
+        if (editTarget.kind === 'drawing-mask' && maskDrawing) {
+          return (
+            <EditTargetStrip
+              target={editTarget}
+              testId="mask-draw-banner"
+              hintTestId="mask-draw-hint"
+              blocked={Boolean(maskDrawing.block)}
+              hint={maskDrawing.block
+                ? maskDrawing.block.message
+                : maskDrawing.shape === 'pen'
+                  ? 'Click: corner point · drag: smooth point · click the first point, double-click or Enter to finish · Backspace removes a point · Esc cancels'
+                  : 'Drag on the canvas to draw · Esc cancels'}
+            >
+              {maskDrawing.shape === 'pen' && maskPenDraft && (
+                <button
+                  type="button"
+                  className="mask-edit-banner-exit"
+                  disabled={!maskPenDraft.canFinish}
+                  title={maskPenDraft.canFinish ? 'Close and create the mask (Enter)' : 'Add at least three points to finish the mask'}
+                  onClick={maskPenDraft.finish}
+                >
+                  Finish mask ({maskPenDraft.count} points)
+                </button>
+              )}
+              <button type="button" className="mask-edit-banner-exit is-secondary" onClick={cancelMaskDraw}>
+                Cancel Drawing
+              </button>
+            </EditTargetStrip>
+          );
+        }
+        if (editTarget.kind === 'mask' && maskEditing) {
+          return (
+            <EditTargetStrip
+              target={editTarget}
+              testId="mask-edit-banner"
+              hintTestId="mask-edit-hint"
+              blocked={Boolean(maskEditing.block)}
+              hint={maskEditing.block
+                ? maskEditing.block.message
+                : `${maskEditing.mask.enabled === false ? 'Disabled — outline only. ' : ''}Drag the path to move it, a point to reshape it · Arrow keys nudge (Shift ×10) · Esc finishes`}
+            >
+              <button
+                type="button"
+                className="mask-edit-banner-exit"
+                aria-label={`Finish mask editing — back to ${maskEditing.owner.name}`}
+                title={`Finish editing the mask and go back to the layer “${maskEditing.owner.name}” (Esc)`}
+                onClick={exitMaskEditing}
+              >
+                Finish
+              </button>
+            </EditTargetStrip>
+          );
+        }
+        if (editTarget.kind === 'matte-source') {
+          // C10 — only the way back: no "Matte source · matte of …" caption.
+          const returnTarget = characterParts.find((part) => part.id === matteReturnTargetId);
+          return (
+            <EditTargetStrip target={editTarget} testId="edit-target-strip" bare>
+              <button type="button" className="mask-edit-banner-exit" title="Select the layer this matte belongs to" onClick={backToMatteTarget}>
+                Back to {returnTarget?.name ?? 'layer'}
+              </button>
+            </EditTargetStrip>
+          );
+        }
+        if (editTarget.kind === 'new-shape') {
+          return <EditTargetStrip target={editTarget} testId="edit-target-strip" hint={activeTool === 'freeform_draw' ? 'Click to add points, drag to draw freely · Esc leaves the tool' : 'Drag on the canvas to draw the shape · Esc leaves the tool'} />;
+        }
+        return <EditTargetStrip target={editTarget} testId="edit-target-strip" />;
+      })()}
+
+      {appMode !== 'broadcast' && showCoordinateOverlay && selectedTransform && (
+        <CanvasCoordinateReadout
+          transform={selectedTransform}
+          coordinateSystem={coordinateSystem}
+        />
+      )}
     </div>
   );
 };

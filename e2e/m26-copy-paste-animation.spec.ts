@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const SCENE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -29,6 +30,7 @@ async function seed(page: Page): Promise<void> {
 
 async function selectPart(page: Page, name: string): Promise<void> {
   await page.locator('.actor-node', { hasText: name }).click();
+  await openDetailsTab(page, 'Layer');
   await expect(page.getByText('ANIMATION DATA')).toBeVisible();
   const disclosure = page.getByRole('button', { name: /(?:Expand|Collapse) ANIMATION DATA/ });
   await expect(disclosure).toBeVisible();
@@ -66,7 +68,11 @@ test.describe('M26 — animation data actions in the current Transform UI', () =
     const sourceX = scene.tracks.find((t) => t.partId === 'a')!.channels.x;
     const targetX = scene.tracks.find((t) => t.partId === 'b')!.channels.x;
     expect(targetX.map((k) => k.frame)).toEqual([0, 30]);
-    expect(targetX.map((k) => k.value)).toEqual([0, 300]);
+    // C8: the motion is transferred relative to the target's own place. The
+    // source moves 0 → 300 from its base x 0, so the target (base x 300) moves
+    // 300 → 600 instead of jumping onto the source's path.
+    expect(targetX.map((k) => k.value)).toEqual([300, 600]);
+    expect(target.x).toBe(300);
     expect(targetX.map((k) => k.id)).not.toEqual(sourceX.map((k) => k.id));
   });
 

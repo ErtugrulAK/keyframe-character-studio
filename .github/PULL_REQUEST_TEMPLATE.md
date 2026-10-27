@@ -1,35 +1,32 @@
-## Summary of Changes
+## 📝 What and why
 
-Brief description of what this PR introduces or fixes.
+<!-- The problem a user sees, and how this change solves it. -->
 
----
+## 🗂️ Area
 
-## Affected Domain
+- [ ] 🖱️ UI (header, toolbar, Inspector, dialogs)
+- [ ] 🎞️ Timeline and keyframes
+- [ ] 🎨 Rendering (stage, SVG, masks, matte, gizmos)
+- [ ] ⏱️ Animation and playback (easing, presets, broadcast)
+- [ ] 📦 Import and export (JSON, OGraf, Lottie, GIF)
+- [ ] 🌐 Optional API (`server/`)
+- [ ] 🧰 Tooling, tests or docs
 
-Select the domain branch matching this change:
+## ✅ Checks
 
-- [ ] `ui` (Toolbars, Inspector, Modals, Drawers)
-- [ ] `timeline` (Sequencer Timeline, Keyframes, Tracks)
-- [ ] `renderer` (Canvas Engine, SVG, Gizmo, Shapes, Masks)
-- [ ] `animation` (Playback, Interpolation, Math, Broadcast Engine)
-- [ ] `backend` (Express REST API, PostgreSQL, SQLite)
-- [ ] `infrastructure` (Workflows, Tests, Build Configs)
+- [ ] `npx tsc -b`: no type errors
+- [ ] `npm run lint`: no errors
+- [ ] `npx vitest run`: passes
+- [ ] `npm run build`: passes
+- [ ] E2E specs for the touched area pass (`npm run test:e2e`)
+- [ ] A new or updated test fails without this change
+- [ ] No test was relaxed, skipped or given a sleep to pass
+- [ ] `CHANGELOG.md` updated for user-visible changes
 
----
+## 📸 Screenshots
 
-## Verification & Testing Checklist
+<!-- Before / after, for anything visual. -->
 
-Please check all items that apply:
-
-- [ ] `npx tsc -b --pretty false` completes with 0 type errors
-- [ ] `npm run lint` completes cleanly
-- [ ] `npx vitest run` passes all 21 test suites (62 tests)
-- [ ] `npm run build` completes successfully
-- [ ] Added or updated unit/integration tests in `src/tests/`
-- [ ] Commit messages follow Conventional Commits format
-
----
-
-## Related Issues
+## 🔗 Related issues
 
 Fixes #

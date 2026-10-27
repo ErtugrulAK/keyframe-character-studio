@@ -135,6 +135,31 @@ export const addPropertyKeyframeMutator = (
 };
 
 /**
+ * WP-01: author a property VALUE at the playhead of a channel that is already
+ * animated in `templateId` — the convention every Inspector scalar follows.
+ * An exact (frame, sequence) key changes its value only, so its easing,
+ * temporal handles and sequence survive; otherwise one key is inserted with the
+ * sequence's easing (its first key's), as `updateCurrentPropertyChannel` does.
+ * Keys of other sequences are never touched.
+ */
+export const authorPropertyValueAtFrameMutator = (
+  tracks: Track[],
+  trackId: string,
+  channel: AnimationChannel,
+  frame: number,
+  value: number,
+  templateId: string,
+): Track[] => {
+  const track = tracks.find((candidate) => candidate.id === trackId);
+  if (!track) return tracks;
+  const channelMap = (isLayerMaskChannel(channel) ? track.maskChannels : track.channels) as Record<string, PropertyKeyframe[]> | undefined;
+  const scoped = (channelMap?.[channel] ?? []).filter((keyframe) => (keyframe.templateId || 'Sequence') === templateId);
+  const exact = scoped.find((keyframe) => keyframe.frame === frame);
+  if (exact) return updatePropertyKeyframeValueMutator(tracks, trackId, channel, exact.id, value);
+  return addPropertyKeyframeMutator(tracks, trackId, channel, frame, value, scoped[0]?.easing ?? 'easeInOut', templateId);
+};
+
+/**
  * Author ONE transform keyframe group: the canonical x/y/rotation/scaleX/
  * scaleY/opacity and Trim Path channels at (frame, template).
  *
@@ -224,6 +249,25 @@ export const addMaskPathKeyframeMutator = (
     maskPathChannels: { ...track.maskPathChannels, [channel]: updated },
   };
 });
+
+/**
+ * WP-03: removes every key of one mask path channel IN ONE SEQUENCE (the path
+ * stopwatch's confirmed disarm). Other sequences' keys survive untouched.
+ */
+export const clearMaskPathAnimationMutator = (
+  tracks: Track[],
+  trackId: string,
+  channel: LayerMaskPathChannel,
+  templateId: string,
+): Track[] => tracks.map((track) => track.id === trackId
+  ? {
+    ...track,
+    maskPathChannels: {
+      ...track.maskPathChannels,
+      [channel]: (track.maskPathChannels?.[channel] ?? []).filter((keyframe) => (keyframe.templateId || 'Sequence') !== templateId),
+    },
+  }
+  : track);
 
 export const updateMaskPathKeyframeValueMutator = (
   tracks: Track[],
@@ -623,6 +667,76 @@ export const moveKeyframesMutator = (
     };
   });
   return { tracks: next, appliedDelta: step };
+};
+
+/**
+ * C10 — proportional time-stretch of a keyframe selection (After Effects'
+ * Alt-drag of the first or last selected key). The key at the OTHER end is the
+ * pivot and stays; the dragged edge goes to `toEdge`, and every target lands at
+ * `pivot + round((frame - pivot) * scale)`. Computed from the gesture's BASE
+ * tracks every time, so a drag never accumulates rounding.
+ *
+ * Refused (`null`, the caller keeps the last valid state) when the edge would
+ * reach or cross the pivot, leave [0, totalFrames], put two moving keys of one
+ * channel on one frame, or land on a key of the same channel that is not part
+ * of the stretch. Only `frame` changes; ids, values, easing and handles stay.
+ */
+export const stretchKeyframesMutator = (
+  baseTracks: Track[],
+  targets: KeyframeMoveTarget[],
+  pivotFrame: number,
+  edgeFrame: number,
+  toEdge: number,
+  totalFrames: number,
+): Track[] | null => {
+  const span = edgeFrame - pivotFrame;
+  const reach = toEdge - pivotFrame;
+  if (span === 0 || targets.length === 0 || Math.sign(reach) !== Math.sign(span) || reach === 0) return null;
+  if (toEdge < 0 || toEdge > totalFrames) return null;
+  const factor = reach / span;
+  const landing = (frame: number) => pivotFrame + Math.round((frame - pivotFrame) * factor);
+
+  const byId = new Map(baseTracks.map((track) => [track.id, track]));
+  const movingKeys = new Set(targets.map((target) => `${target.trackId}|${target.store}|${target.channel}|${target.keyframeId}`));
+  const occupied = new Set<string>();
+  for (const target of targets) {
+    const frame = landing(target.frame);
+    if (frame < 0 || frame > totalFrames) return null;
+    const slot = `${target.trackId}|${target.store}|${target.channel}|${frame}`;
+    if (occupied.has(slot)) return null;
+    occupied.add(slot);
+    const track = byId.get(target.trackId);
+    if (track && keyframesOf(track, target.store, target.channel).some((keyframe) => (
+      keyframe.frame === frame && !movingKeys.has(`${target.trackId}|${target.store}|${target.channel}|${keyframe.id}`)
+    ))) return null;
+  }
+
+  return baseTracks.map((track) => {
+    const moved = targets.filter((target) => target.trackId === track.id);
+    if (moved.length === 0) return track;
+    const newFrame = new Map(moved.map((target) => [`${target.store}|${target.channel}|${target.keyframeId}`, landing(target.frame)]));
+    const retime = <T extends { id: string; frame: number }>(store: KeyframeStore, channel: AnimationChannel | '', keyframes: T[] | undefined) => {
+      if (keyframes === undefined) return undefined;
+      if (!keyframes.some((keyframe) => newFrame.has(`${store}|${channel}|${keyframe.id}`))) return keyframes;
+      return keyframes
+        .map((keyframe) => {
+          const frame = newFrame.get(`${store}|${channel}|${keyframe.id}`);
+          return frame === undefined ? keyframe : { ...keyframe, frame };
+        })
+        .sort((a, b) => a.frame - b.frame);
+    };
+    const retimeAll = <T extends { id: string; frame: number }>(store: KeyframeStore, entries: Record<string, T[]> | undefined) =>
+      entries === undefined
+        ? undefined
+        : Object.fromEntries(Object.entries(entries).map(([channel, keyframes]) => [channel, retime(store, channel as AnimationChannel, keyframes)])) as Record<string, T[]>;
+    return {
+      ...track,
+      ...(track.keyframes ? { keyframes: retime('keyframes', '', track.keyframes) } : {}),
+      ...(track.channels ? { channels: retimeAll('channels', track.channels) as Track['channels'] } : {}),
+      ...(track.maskChannels ? { maskChannels: retimeAll('maskChannels', track.maskChannels) as Track['maskChannels'] } : {}),
+      ...(track.maskPathChannels ? { maskPathChannels: retimeAll('maskPathChannels', track.maskPathChannels) as Track['maskPathChannels'] } : {}),
+    };
+  });
 };
 
 /**

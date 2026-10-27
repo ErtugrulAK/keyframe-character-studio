@@ -35,6 +35,20 @@ async function seed(page: Page, layers: Record<string, unknown>[]): Promise<void
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 }
 
+/**
+ * C4 — the 1280×720 stage opens taller (compact header, shorter opening
+ * timeline), so the camera frames its 600×480 view larger and layers placed
+ * beyond it (±400–500 units in the tests that call this) would sit off the
+ * stage. Two zoom-out steps keep them on it; the assertions read the live scale.
+ */
+async function keepWideLayoutOnStage(page: Page): Promise<void> {
+  const zoomBefore = await page.locator('.stage-canvas-container').getAttribute('data-camera-zoom');
+  for (let step = 0; step < 2; step += 1) {
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent('canvas-viewport-command', { detail: { type: 'zoom-out' } })));
+  }
+  await expect(page.locator('.stage-canvas-container')).not.toHaveAttribute('data-camera-zoom', zoomBefore ?? '');
+}
+
 async function selectLayers(page: Page, names: string[]): Promise<void> {
   await page.locator('.actor-node', { hasText: names[0] }).first().click();
   for (const name of names.slice(1)) {
@@ -394,6 +408,7 @@ const paintedGuides = (page: Page) => page.evaluate(() => {
 
 test('a guide covers the relation between the aligned boxes, never the canvas', async ({ page }) => {
   await seed(page, GUIDES_SEED);
+  await keepWideLayoutOnStage(page);
   await selectLayers(page, ['Alpha']);
 
   const move = await pressAndMove(page, 'a');
@@ -422,6 +437,7 @@ test('a guide covers the relation between the aligned boxes, never the canvas', 
 
 test('each snapped axis paints its own guide, and a stage line spans the moving layer', async ({ page }) => {
   await seed(page, GUIDES_SEED);
+  await keepWideLayoutOnStage(page);
   await selectLayers(page, ['Alpha']);
 
   const move = await pressAndMove(page, 'a');
@@ -448,6 +464,7 @@ test('each snapped axis paints its own guide, and a stage line spans the moving 
 
 test('the guide follows the nearest candidate, clears the moment the snap lets go, and ignores the pointer', async ({ page }) => {
   await seed(page, GUIDES_SEED);
+  await keepWideLayoutOnStage(page);
   await selectLayers(page, ['Alpha']);
   const bravo = await boxOf(page, 'b');
 

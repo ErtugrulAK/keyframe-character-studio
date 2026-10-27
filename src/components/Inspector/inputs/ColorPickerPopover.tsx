@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { NumberField } from './NumberField';
 import { createPortal } from 'react-dom';
 import { SmartHexInput } from './SmartHexInput';
 import { useFloatingPanel } from '../../../hooks/useFloatingPanel';
@@ -319,27 +320,25 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
                 ] as const).map(([key, channelLabel, value]) => (
                   <label key={key} className="rgba-picker-channel">
                     <span>{channelLabel}</span>
-                    <input
-                      type="number"
+                    <NumberField
                       min={0}
                       max={255}
                       value={value}
                       aria-label={`${label} ${channelLabel}`}
-                      onChange={(event) => updateChannel(key, Number(event.target.value))}
+                      onValue={(next) => updateChannel(key, next)}
                     />
                   </label>
                 ))}
                 {hasAlpha && (
                   <label className="rgba-picker-channel">
                     <span>A</span>
-                    <input
-                      type="number"
+                    <NumberField
                       min={0}
                       max={255}
                       step={1}
                       value={Math.round(normalizedAlpha * 255)}
                       aria-label={`${label} A`}
-                      onChange={(event) => onAlphaChange?.(clampColorChannel(Number(event.target.value)) / 255)}
+                      onValue={(next) => onAlphaChange?.(clampColorChannel(next) / 255)}
                     />
                   </label>
                 )}

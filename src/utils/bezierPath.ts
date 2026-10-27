@@ -296,6 +296,104 @@ export const initializeSmoothHandles = (path: BezierPath, index: number): Bezier
   };
 };
 
+export type BezierHandleKind = 'in' | 'out';
+const BEZIER_HANDLE_KEY: Record<BezierHandleKind, 'handleIn' | 'handleOut'> = { in: 'handleIn', out: 'handleOut' };
+/** Below this length a dragged handle vector is treated as zero. */
+const HANDLE_VECTOR_EPSILON = 1e-6;
+
+/**
+ * Moves one absolute tangent handle of a vertex to `next`, keeping the
+ * counterpart mirrored (same direction, own length) for a smooth vertex. Shared
+ * by every canvas tangent editor (freeform shapes and layer masks), so the
+ * smooth-vertex rule has one authority.
+ */
+export const moveVertexHandle = (
+  vertex: BezierVertex,
+  handle: BezierHandleKind,
+  next: PathPoint,
+): BezierVertex => {
+  const key = BEZIER_HANDLE_KEY[handle];
+  // A non-finite pointer result is never written into the path.
+  if (!Number.isFinite(next.x) || !Number.isFinite(next.y)) return vertex;
+  if (vertex.kind !== 'smooth') return { ...vertex, [key]: next };
+
+  const counterpartKey = BEZIER_HANDLE_KEY[handle === 'out' ? 'in' : 'out'];
+  const counterpart = vertex[counterpartKey];
+  if (!counterpart) return { ...vertex, [key]: next };
+
+  const dx = handle === 'out' ? next.x - vertex.x : vertex.x - next.x;
+  const dy = handle === 'out' ? next.y - vertex.y : vertex.y - next.y;
+  const length = Math.hypot(dx, dy);
+  // A handle dragged exactly onto its anchor carries no direction, so the
+  // counterpart keeps its own length and direction instead of collapsing.
+  if (length <= HANDLE_VECTOR_EPSILON) return { ...vertex, [key]: next };
+  // An overflowing (Infinity) length would normalize to a zero direction and
+  // collapse the counterpart onto the anchor, so the drag only writes itself.
+  if (!Number.isFinite(length)) return { ...vertex, [key]: next };
+
+  const counterpartLength = Math.hypot(counterpart.x - vertex.x, counterpart.y - vertex.y);
+  const mirrored = handle === 'out'
+    ? { x: vertex.x - (dx / length) * counterpartLength, y: vertex.y - (dy / length) * counterpartLength }
+    : { x: vertex.x + (dx / length) * counterpartLength, y: vertex.y + (dy / length) * counterpartLength };
+  // Imported coordinates may be finite yet overflow the mirror arithmetic
+  // (for example a counterpart at ±1.7e308 makes the hypot infinite). The
+  // counterpart then keeps its previous value instead of gaining NaN/Infinity.
+  if (!Number.isFinite(mirrored.x) || !Number.isFinite(mirrored.y)) return { ...vertex, [key]: next };
+  return { ...vertex, [key]: next, [counterpartKey]: mirrored };
+};
+
+/**
+ * Alt-drag of a tangent handle switches the link, as in After Effects. C10:
+ * on a smooth vertex the vertex becomes a corner, so only the dragged handle
+ * moves and its counterpart stays where it is. C12: on a corner (handles
+ * already broken) the vertex becomes smooth again, so the counterpart turns
+ * to mirror the dragged handle and keeps its own length.
+ */
+export const altMoveVertexHandle = (
+  vertex: BezierVertex,
+  handle: BezierHandleKind,
+  next: PathPoint,
+): BezierVertex => moveVertexHandle({ ...vertex, kind: vertex.kind === 'smooth' ? 'corner' : 'smooth' }, handle, next);
+
+/**
+ * C10 — Alt-drag from a vertex pulls out new handles, as in After Effects:
+ * the out handle follows the pointer (`offset` from the vertex) and the in
+ * handle mirrors it, so the vertex becomes smooth. A zero or non-finite offset
+ * leaves the vertex unchanged.
+ */
+export const pullVertexHandles = (vertex: BezierVertex, offset: PathPoint): BezierVertex => {
+  const length = Math.hypot(offset.x, offset.y);
+  if (!Number.isFinite(length) || length <= HANDLE_VECTOR_EPSILON) return vertex;
+  return {
+    ...vertex,
+    kind: 'smooth',
+    handleOut: { x: vertex.x + offset.x, y: vertex.y + offset.y },
+    handleIn: { x: vertex.x - offset.x, y: vertex.y - offset.y },
+  };
+};
+
+/**
+ * Double-click or C on a canvas point (C10). C12: a point WITH handles
+ * (smooth, or a corner whose handles were broken apart) becomes a sharp
+ * corner with its handles retracted; a point without handles becomes smooth
+ * with fresh mirrored handles. So a second double-click undoes the first.
+ */
+export const toggleVertexKind = (path: BezierPath, index: number): BezierPath => {
+  const vertex = path.points[index];
+  if (!vertex) return path;
+  if (vertex.handleIn || vertex.handleOut) {
+    return {
+      ...path,
+      points: path.points.map((candidate, at) => {
+        if (at !== index) return candidate;
+        const { handleIn: _in, handleOut: _out, ...rest } = candidate;
+        return { ...rest, kind: 'corner' as const };
+      }),
+    };
+  }
+  return initializeSmoothHandles(path, index);
+};
+
 export const sampleBezierPath = (path: BezierPath | undefined, samplesPerSegment = 16): PathPoint[] => {
   if (!path || path.points.length < 2) return [];
   const samples: PathPoint[] = [];

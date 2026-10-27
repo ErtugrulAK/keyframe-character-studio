@@ -45,6 +45,10 @@
 }
 .timeline-resizer-bar:hover { background: rgba(148, 163, 184, 0.08); }
 .resizer-handle-pill {
+  /* C8 — the collapse handle now sits where the grip pill sat (the centre of
+     the edge), so the pill is not painted; the whole edge stays the drag
+     target, with its row-resize cursor and hover tint. */
+  visibility: hidden;
   width: 42px; height: 3px;
   background: var(--kcs-border-default);
   border-radius: var(--radius-xs);
@@ -108,8 +112,11 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 .sidebar-handle.timeline-edge-toggle {
   position: absolute;
   top: 0;
-  right: 12px;
-  transform: translateY(-50%);
+  /* C8 — at the centre of the timeline's top edge (C7b had it just right of
+     the resize pill). Its upper half reaches over the stage's bottom-middle,
+     never over a dock, and it does not move when a dock opens or closes. */
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 46px;
   height: 20px;
   border-radius: calc(var(--kcs-radius-control) - 2px);
@@ -601,7 +608,8 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   padding: 0 var(--space-sm);
   font-size: var(--font-size-caption);
   font-weight: 800;
-  color: #4b5563;
+  /* C5 — 2.3:1 before; the label reads at the panel-label contrast now. */
+  color: var(--kcs-text-label);
   letter-spacing: 0.8px;
   flex-shrink: 0;
 }
@@ -821,24 +829,6 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   flex-shrink: 0;
 }
 
-/* K1 (D2) — the per-property stopwatch. Three honest visual states:
-   off (neutral), animated (accent outline, no key at the playhead),
-   keyed (accent filled — the property is animated AND holds a key here). */
-.ue-channel-stopwatch {
-  opacity: 0.45;
-}
-
-.ue-channel-stopwatch[data-animation-state="animated"],
-.ue-channel-stopwatch[data-animation-state="keyed"] {
-  opacity: 1;
-  color: var(--accent-cyan);
-}
-
-.ue-channel-stopwatch[data-animation-state="keyed"] {
-  background: color-mix(in srgb, var(--accent-cyan) 18%, transparent);
-  border-radius: 3px;
-}
-
 /* Trajectory Line Connecting Keyframes Across Channel Lane */
 .ue-trajectory-line {
   position: absolute;
@@ -913,7 +903,7 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   display: flex; align-items: flex-start; justify-content: center;
 }
 .playhead-frame-label {
-  font-family: var(--font-main); font-size: var(--font-size-caption); font-weight: 800; color: #fff; line-height: 10px;
+  font-family: var(--font-main); font-size: var(--font-size-caption); font-weight: 800; color: #04201b; line-height: 10px; /* C5: dark on the teal head (white read 2.5:1) */
 }
 
 /* ── TRACK LANES ── */
@@ -1268,7 +1258,10 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   background-size: 32px 28px;
 }
 
-@media (max-width: 980px) {
+/* WP-06: below 1180 px the three bands no longer fit one row (the timing band
+   overflowed under the transport at 1024 px), so the actions band takes a row
+   of its own — no control is hidden or clipped. */
+@media (max-width: 1180px) {
   .timeline-header {
     grid-template-columns: 1fr auto;
   }
@@ -1348,8 +1341,11 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   transition: border-color 140ms ease;
 }
 
+/* C5 — the field rings its box like every other control (a 1 px colour change
+   alone was too faint to find the keyboard focus). */
 .timeline-header .duration-input-group:focus-within {
-  border-color: var(--kcs-accent);
+  border-color: var(--kcs-border-focus);
+  box-shadow: 0 0 0 1px var(--kcs-border-focus);
 }
 
 .timeline-header .duration-input {
@@ -1464,4 +1460,22 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 .timeline-grid-container[data-duplicate-target="blocked"] {
   cursor: not-allowed;
   box-shadow: inset 0 0 0 2px var(--kcs-danger, #f87171);
+}
+
+/* C7 — a closed property group summarises its members' keys on its header lane. */
+.ue-channel-header-lane {
+  position: relative;
+}
+
+.ue-group-summary-key {
+  position: absolute;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  margin-top: -3px;
+  transform: rotate(45deg);
+  background: var(--kcs-text-muted, #8193a5);
+  opacity: 0.75;
+  pointer-events: none;
 }

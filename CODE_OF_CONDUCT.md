@@ -1,4 +1,17 @@
-# Contributor Covenant Code of Conduct
+# 💚 Contributor Covenant Code of Conduct
+
+**At a glance**
+
+| ✅ Do | 🚫 Don't |
+|---|---|
+| Be kind, patient and specific | Harass, insult or demean anyone |
+| Give and accept constructive feedback | Make personal or political attacks |
+| Assume good intent; ask before assuming | Publish others' private information |
+| Own your mistakes and learn from them | Use sexualised language or imagery |
+
+**Something wrong?** Contact the maintainer, [@ErtugrulAK](https://github.com/ErtugrulAK), privately through GitHub. Every report is reviewed promptly and fairly, and the reporter's privacy is respected. Details are in [Enforcement](#enforcement) below.
+
+---
 
 ## Our Pledge
 
@@ -43,6 +56,17 @@ Community leaders are responsible for clarifying and enforcing our standards of
 acceptable behavior and will take appropriate and fair corrective action in
 response to any behavior that they deem inappropriate, threatening, offensive,
 or harmful.
+
+---
+
+## Enforcement
+
+Instances of abusive, harassing or otherwise unacceptable behavior may be
+reported to the community leaders responsible for enforcement: the maintainer,
+[@ErtugrulAK](https://github.com/ErtugrulAK), privately through GitHub. All
+complaints will be reviewed and investigated promptly and fairly. All community
+leaders are obligated to respect the privacy and security of the reporter of
+any incident.
 
 ---
 

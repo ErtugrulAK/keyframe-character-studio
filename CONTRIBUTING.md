@@ -1,108 +1,69 @@
-# Contributing to Keyframe Character Studio
+# 🤝 Contributing to Keyframe Character Studio
 
-Thank you for your interest in contributing to **Keyframe Character Studio**! We welcome contributions from developers of all skill levels.
+Thanks for helping! This page is short on purpose. The full engineering rules live in [`AGENTS.md`](AGENTS.md).
 
-Please take a moment to review this document before submitting bug reports, feature requests, or pull requests.
+## 🔄 The flow
 
----
-
-## 🏛️ Architectural Principles
-
-Before writing code, please familiarize yourself with the project's core architecture:
-
-1. **Thin Orchestrator Pattern**:
-   - `AnimatorContext` serves exclusively as a dependency injection and state orchestration layer.
-   - **Do NOT** place heavy business logic or mathematical calculations inside `AnimatorContext`.
-2. **Domain-Driven Hooks**:
-   - Business logic resides inside modular domain hooks located in `src/hooks/`.
-   - Each hook manages a distinct functional domain (`usePlayback`, `useTimeline`, `useSelection`, `useClipboard`, etc.).
-3. **Pure Utility Layer**:
-   - Mathematical calculations, transform interpolations, and shape algorithms reside inside `src/utils/`.
-   - Utilities must remain pure, deterministic, independently testable, and free from React hook dependencies.
-4. **Defensive Programming**:
-   - Apply optional chaining, safe fallbacks, and exhaustive type checking around external boundaries (e.g., `localStorage`, `JSON.parse`, browser APIs, database responses).
-
----
-
-## 🌿 Branching Strategy
-
-This repository enforces a domain-driven branching workflow documented in `.agents/BRANCH_STRATEGY.md`:
-
-### Long-Lived Domain Branches
-- `main`: Stable production branch.
-- `ui`: User interface, inspector, toolbars, drawers, and modal components.
-- `timeline`: Sequencer timeline, keyframing, tracks, and channels.
-- `renderer`: Canvas renderer, SVG vector engine, gizmos, shapes, and media masks.
-- `animation`: Playback controls, motion transitions, bezier interpolation, and broadcast director engine.
-- `backend`: Express REST API, PostgreSQL database, and SQLite embedded engine.
-- `infrastructure`: Workflows, agent rules, test suites, and build scripts.
-
-### Development Flow
-1. Branch off the appropriate long-lived domain branch into a temporary working branch:
-   - Feature: `feature/<domain>/<short-name>`
-   - Bugfix: `bugfix/<domain>/<short-name>`
-   - Refactor: `refactor/<domain>/<short-name>`
-2. Implement and validate your changes.
-3. Open a Pull Request targeting the parent domain branch.
-4. Delete the temporary working branch after merging.
-
----
-
-## 📝 Commit Conventions
-
-All commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/):
-
-```text
-<type>(<scope>): <short description>
+```mermaid
+flowchart LR
+    I["💡 Issue<br/><sub>bug or idea</sub>"] --> B["🌿 Branch<br/><sub>from main</sub>"]
+    B --> C["⌨️ Code + tests"]
+    C --> V["✅ npm run check<br/><sub>+ E2E</sub>"]
+    V --> PR["📬 Pull request"]
+    PR --> R["👀 Review"]
+    R --> M["🔀 Merge commit<br/><sub>no squash</sub>"]
 ```
 
-### Supported Types
-- `feat`: A new feature
-- `fix`: A bug fix
-- `refactor`: A code change that neither fixes a bug nor adds a feature
-- `perf`: A code change that improves performance
-- `test`: Adding missing tests or correcting existing tests
-- `docs`: Documentation changes
-- `style`: Formatting or linting fixes without code logic changes
-- `build`: Build system or dependency updates
-- `ci`: CI pipeline configuration updates
-- `chore`: Maintenance tasks
+1. **Open or pick an issue** and describe the problem a user sees.
+2. **Branch from `main`**, named after the kind of change and the area it touches, for example:
+   - `feature/timeline/onion-skin`
+   - `bugfix/masks/hole-not-cut`
+   - `docs/readme`
+3. **Change the smallest thing that solves it**, with tests.
+4. **Validate** (see below) and open a pull request using the template.
+5. PRs are merged with **"Create a merge commit"**, so every commit keeps its author and date.
 
----
+## 🏛️ Architecture in one picture
 
-## 🧪 Local Setup & Verification
-
-### 1. Clone & Install
-```bash
-git clone https://github.com/ErtugrulAK/keyframe-character-studio.git
-cd keyframe-character-studio
-npm install
+```mermaid
+flowchart TB
+    UI["🖱️ Components<br/><sub>interaction and SVG drawing only</sub>"] --> CTX["🔌 AnimatorContext<br/><sub>wiring, no business logic</sub>"]
+    CTX --> H["⚙️ Domain hooks<br/><sub>src/hooks</sub>"]
+    H --> U["🧮 Pure utilities<br/><sub>src/utils · React-free · deterministic</sub>"]
 ```
 
-### 2. Run Verification Checks
-Before submitting a pull request, ensure all checks pass:
+- New behaviour goes **pure helper → domain hook → thin wiring → minimal UI**.
+- One authority per job: no second animation engine, playback clock, serializer or clipboard.
+- `Track.channels` is the canonical animation data. Legacy `Track.keyframes` is kept for old projects.
+- Rendering is SVG. A renderer draws evaluated results; it never interpolates on its own.
 
-```bash
-# 1. Type Check (builds the referenced projects; a bare root `tsc --noEmit` checks no project file)
-npx tsc -b --pretty false
+## ✅ Before you open a PR
 
-# 2. Linting
-npm run lint
+| Check | Command |
+|---|---|
+| 🔤 Types | `npx tsc -b` |
+| 🧹 Lint | `npm run lint` |
+| 🧪 Unit tests | `npx vitest run` |
+| 🏗️ Build | `npm run build` |
+| 🌐 End-to-end | `npm run test:e2e` (or the specs your change touches) |
 
-# 3. Unit & Integration Tests
-npx vitest run
+All five at once, without E2E: `npm run check`.
 
-# 4. Production Build
-npm run build
-```
+**Tests**
+- Add a test that fails without your change.
+- Never relax a threshold, skip a test or add a sleep to make a test pass. Find the cause.
+- For visual changes, attach before and after screenshots.
 
----
+## ✍️ Conventions
 
-## 📬 Pull Request Guidelines
+- **Commits:** [Conventional Commits](https://www.conventionalcommits.org/), for example `fix(masks): …` or `feat(timeline): …`. Write a body that says why.
+- **Language:** code, comments and commit messages are in English.
+- **Style:** match the surrounding code; TypeScript strict; no `any` without a reason.
+- **Changelog:** user-visible changes get a line in [`CHANGELOG.md`](CHANGELOG.md) under `[Unreleased]`.
+- **Releases** follow [`docs/RELEASING.md`](docs/RELEASING.md).
 
-1. Ensure all new functions have corresponding unit tests in `src/tests/`.
-2. Do not introduce circular dependencies between hooks or components.
-3. Keep pull requests focused on a single logical change or feature.
-4. Fill out the Pull Request Template completely when opening your PR.
+## 🐞 Bugs and 💡 ideas
 
-Thank you for helping improve Keyframe Character Studio!
+Use the [issue forms](https://github.com/ErtugrulAK/keyframe-character-studio/issues/new/choose). For security problems, **don't open an issue**; see [SECURITY.md](SECURITY.md).
+
+By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md). 💚

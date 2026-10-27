@@ -1,33 +1,42 @@
-# Security Policy
+# 🛡️ Security Policy
 
-## Supported Versions
+## 📦 Supported versions
 
-The following versions of **Keyframe Character Studio** are currently supported with security updates:
+| Version | Supported |
+|---|:---:|
+| `main` and the latest `1.1.0` release candidate | ✅ |
+| Earlier `1.1.0` candidates (`rc.1`, `rc.2`) | ⚠️ upgrade to the latest |
+| `1.0.x` | ❌ |
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.0.x   | :white_check_mark: |
-| < 1.0.0 | :x:                |
+## 🔒 Reporting a vulnerability
 
----
+**Please don't open a public issue.**
 
-## Reporting a Vulnerability
+1. Go to the repository's **Security** tab and choose **"Report a vulnerability"** (GitHub private vulnerability reporting).
+2. Describe:
+   - what you found;
+   - how to reproduce it;
+   - what it affects (editor import, OGraf package, GIF export, the optional API …);
+   - a proof of concept, if you have one.
+3. You will get an answer as soon as possible, usually within a week. A fix is planned according to severity.
 
-We take the security of Keyframe Character Studio seriously. If you discover a security vulnerability, please follow these steps:
+```mermaid
+flowchart LR
+    R["🔒 Private report"] --> A["👀 Acknowledged"]
+    A --> F["🛠️ Fix on a branch<br/><sub>+ regression test</sub>"]
+    F --> RL["📦 Release candidate"]
+    RL --> D["📣 Advisory published"]
+```
 
-1. **Do NOT open a public GitHub issue** for security vulnerabilities.
-2. Email a detailed vulnerability report to the repository maintainer.
-3. Include the following details in your report:
-   - Type of vulnerability (e.g., XSS, CORS misconfiguration, SQL injection)
-   - Steps to reproduce the issue
-   - Potential impact and affected components (e.g., Express REST API, PostgreSQL/SQLite queries)
-   - Proof-of-concept code or payload, if available
+## 🧱 What is protected today
 
----
+| Area | Protection |
+|---|---|
+| 📥 **Imports** (project JSON, Lottie, OGraf) | The whole file is validated before anything changes. Prototype-sensitive keys are refused. |
+| 🗜️ **OGraf ZIP** | Decoded in memory with entry-count and entry-size limits. Unsafe, duplicate or reserved paths are refused. |
+| 🖼️ **SVG input** | Bounded and sanitised at the import boundary. |
+| 💾 **Saved data** | Lives in the user's own browser storage. Concurrent tabs cannot overwrite each other's autosave. |
+| 🌐 **Optional API** (`server/`) | Parameterised SQL, an explicit CORS allow-list, body-size limits. Secrets stay in `.env`, never in Git. |
+| 📦 **Dependencies** | `npm audit` is part of the release check. |
 
-## Security Practices in Keyframe Character Studio
-
-- **Environment Variables**: Sensitive configuration parameters (database credentials, API keys) must be stored in `.env` files and never committed to version control.
-- **REST API Payload Limits**: The Express backend enforces explicit JSON body payload limits (`50mb`).
-- **SQL Injection Prevention**: Database queries use parameterized placeholders (`$1`, `$2` for PostgreSQL; `?` for SQLite).
-- **CORS Protection**: CORS middleware is configured explicitly in `server/index.js`.
+> KCS is a prototype. The optional API is meant for trusted local use, not for hostile multi-tenant hosting.

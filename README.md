@@ -63,10 +63,10 @@ The code is layered: a React-free core does the maths, hooks own the editor's do
 
 ```mermaid
 flowchart TB
-    UI["🖱️ React components<br/>Header · Toolbar · Stage · Inspector · Timeline · Live Director"]
+    UI["🖱️ React components<br/>header, toolbar, stage,<br/>Inspector, timeline, director"]
     CTX["🔌 AnimatorContext<br/>wires the hooks into one editor state"]
-    HOOKS["⚙️ Domain hooks<br/>playback · history · timeline · clipboard · presets · broadcast · serialization"]
-    CORE["🧮 Pure core (src/utils)<br/>evaluation · easing · geometry · masks · validation · migration"]
+    HOOKS["⚙️ Domain hooks<br/>playback, history, timeline,<br/>presets, broadcast, saving"]
+    CORE["🧮 Pure core: src/utils<br/>evaluation, easing, geometry,<br/>masks, validation"]
     UI --> CTX --> HOOKS --> CORE
 ```
 
@@ -104,7 +104,7 @@ Requires Node.js `^22.22.2 || ^24.15.0 || >=26.0.0`. The editor runs entirely in
 ## 🧪 Quality
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'pie1': '#35c8b0', 'pie2': '#38bdf8', 'pieStrokeColor': '#0d141b', 'pieSectionTextColor': '#0d141b', 'pieTitleTextSize': '18px'}}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'pie1': '#35c8b0', 'pie2': '#38bdf8', 'pieStrokeColor': '#0d141b', 'pieSectionTextColor': '#0d141b', 'pieTitleTextSize': '18px', 'pieTitleTextColor': '#8b9baa', 'pieLegendTextColor': '#8b9baa'}}}%%
 pie showData
     title Automated tests
     "Unit & component (Vitest)" : 3220

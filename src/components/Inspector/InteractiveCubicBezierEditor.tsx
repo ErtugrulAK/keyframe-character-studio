@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { NumberField } from './inputs/NumberField';
 import { parseCubicBezierText } from '../../utils/cubicBezierText';
 import ReactDOM from 'react-dom';
-import { Copy, Check, X, Play, Pause, Sparkles } from 'lucide-react';
+import { Copy, Check, X, Play, Pause } from 'lucide-react';
 import type { PropertyKeyframe, TemporalHandle } from '../../types/animator';
 import { TemporalGraphPanel } from './TemporalGraphPanel';
 import { solveCubicBezier } from '../../utils/defaults';
@@ -37,6 +37,19 @@ interface InteractiveCubicBezierEditorProps {
 
 const clampControlPoint = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));
+
+/** C12 — the curve graph's size and inner padding (drawing and dragging share them). */
+const GRAPH = { width: 640, height: 300, padX: 44, padY: 30 } as const;
+/** The graph's value range: the 0..1 unit box plus room to overshoot (-1..2). */
+const Y_MIN = -1;
+const Y_RANGE = 3;
+
+/** A preset's curve as a small icon path (unit box inset in a 32 × 22 box). */
+const presetIconPath = ([x1, y1, x2, y2]: [number, number, number, number]): string => {
+  const sx = (x: number) => 3 + x * 26;
+  const sy = (y: number) => 17 - y * 12;
+  return `M ${sx(0)} ${sy(0)} C ${sx(x1)} ${sy(y1)} ${sx(x2)} ${sy(y2)} ${sx(1)} ${sy(1)}`;
+};
 
 export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditorProps> = ({
   controlPoints = [0.42, 0.0, 0.58, 1.0],
@@ -137,7 +150,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
       const eased = solveCubicBezier(p1.x, p1.y, p2.x, p2.y, progress);
       const bounded = Math.max(0, Math.min(1, eased));
       return {
-        left: `clamp(14px, ${bounded * 100}%, calc(100% - 40px))`,
+        left: `clamp(2px, ${bounded * 100}%, calc(100% - 16px))`,
       };
     });
     const animation = ball.animate(keyframes, {
@@ -196,16 +209,17 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
     const point = draggingPointRef.current;
     const svg = modalSvgRef.current;
     if (!point || !svg) return;
+    // The graph scales down to fit a narrow window, so its padding does too.
     const rect = svg.getBoundingClientRect();
-    const paddingX = 50;
-    const paddingY = 40;
-    const innerWidth = rect.width - paddingX * 2;
-    const innerHeight = rect.height - paddingY * 2;
-    const mouseX = clientX - rect.left - paddingX;
-    const mouseY = clientY - rect.top - paddingY;
+    const padX = GRAPH.padX * (rect.width / GRAPH.width);
+    const padY = GRAPH.padY * (rect.height / GRAPH.height);
+    const innerWidth = rect.width - padX * 2;
+    const innerHeight = rect.height - padY * 2;
+    const mouseX = clientX - rect.left - padX;
+    const mouseY = clientY - rect.top - padY;
     const xClamped = Math.max(0, Math.min(1, parseFloat((mouseX / innerWidth).toFixed(2))));
     const yNormalized = Math.max(0, Math.min(1, 1 - mouseY / innerHeight));
-    const yMath = parseFloat((-1.0 + yNormalized * 3.0).toFixed(2));
+    const yMath = parseFloat((Y_MIN + yNormalized * Y_RANGE).toFixed(2));
     if (point === 1) {
       updatePoints({ x: xClamped, y: yMath }, p2);
     } else {
@@ -225,36 +239,28 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
     }, 0);
   };
 
-  // Helper for rendering SVG Graph with exact max/min limit red boundary lines [-1.0, 2.0]
-  const renderSvgGraph = (
-    ref: React.RefObject<SVGSVGElement | null>,
-    svgWidth: number,
-    svgHeight: number,
-    paddingX: number,
-    paddingY: number
-  ) => {
-    const innerWidth = svgWidth - paddingX * 2;
-    const innerHeight = svgHeight - paddingY * 2;
-
-    // Y Range mapped strictly to [-1.0, 2.0] (Total range = 3.0)
-    // Red dashed lines mark the absolute top (Y = +2.0) and bottom (Y = -1.0) limits!
-    const mathToSvg = (mx: number, my: number) => {
-      const sx = paddingX + mx * innerWidth;
-      const yNormalized = (my - (-1.0)) / 3.0;
-      const sy = paddingY + innerHeight - yNormalized * innerHeight;
-      return { sx, sy };
-    };
+  /**
+   * C12 — the curve graph: the 0..1 unit box with a quiet grid and the linear
+   * diagonal, the overshoot room above and below it (-1..2) shaded instead of
+   * labelled, and two handles without captions (their values are the fields
+   * under the graph).
+   */
+  const renderSvgGraph = (ref: React.RefObject<SVGSVGElement | null>) => {
+    const { width: svgWidth, height: svgHeight, padX, padY } = GRAPH;
+    const innerWidth = svgWidth - padX * 2;
+    const innerHeight = svgHeight - padY * 2;
+    const mathToSvg = (mx: number, my: number) => ({
+      sx: padX + mx * innerWidth,
+      sy: padY + innerHeight - ((my - Y_MIN) / Y_RANGE) * innerHeight,
+    });
 
     const startP = mathToSvg(0, 0);
     const endP = mathToSvg(1, 1);
     const handle1P = mathToSvg(p1.x, p1.y);
     const handle2P = mathToSvg(p2.x, p2.y);
-
-    const zeroBoxP = mathToSvg(0, 0);
-    const oneBoxP = mathToSvg(1, 1);
-    const topLimitP = mathToSvg(0, 2.0);
-    const botLimitP = mathToSvg(0, -1.0);
-
+    const top = mathToSvg(0, 2);
+    const bottom = mathToSvg(0, -1);
+    const unitHeight = startP.sy - endP.sy;
     const bezierPathD = `M ${startP.sx},${startP.sy} C ${handle1P.sx},${handle1P.sy} ${handle2P.sx},${handle2P.sy} ${endP.sx},${endP.sy}`;
 
     const handlePointerDown = (pointNum: 1 | 2, event: React.PointerEvent<SVGGElement>) => {
@@ -282,324 +288,171 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
       if (draggingPointerIdRef.current === event.pointerId) finishPointerDrag();
     };
 
+    const handles = [
+      { id: 1 as const, at: handle1P, from: startP, className: 'is-out' },
+      { id: 2 as const, at: handle2P, from: endP, className: 'is-in' },
+    ];
+
     return (
       <svg
         ref={ref}
+        className="ce-curve-svg"
         width={svgWidth}
         height={svgHeight}
+        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onLostPointerCapture={handleLostPointerCapture}
         style={{ overflow: 'visible', cursor: draggingPoint ? 'grabbing' : 'default', touchAction: 'none' }}
       >
-        {/* Unit Box (0 to 1) Solid Outline */}
-        <rect
-          x={zeroBoxP.sx}
-          y={oneBoxP.sy}
-          width={innerWidth}
-          height={zeroBoxP.sy - oneBoxP.sy}
-          fill="none"
-          stroke="#2a3245"
-          strokeWidth="1.5"
-          strokeDasharray="4 4"
-        />
+        {/* Overshoot room: above 1 and below 0, up to the editable limits. */}
+        <rect className="ce-curve-overshoot" x={padX} y={top.sy} width={innerWidth} height={endP.sy - top.sy} />
+        <rect className="ce-curve-overshoot" x={padX} y={startP.sy} width={innerWidth} height={bottom.sy - startP.sy} />
+        <line className="ce-curve-limit" x1={padX} y1={top.sy} x2={padX + innerWidth} y2={top.sy} />
+        <line className="ce-curve-limit" x1={padX} y1={bottom.sy} x2={padX + innerWidth} y2={bottom.sy} />
 
-        {/* Upper Limit Boundary Line (Y = +2.0 MAX) */}
-        <line
-          x1={paddingX}
-          y1={topLimitP.sy}
-          x2={svgWidth - paddingX}
-          y2={topLimitP.sy}
-          stroke="rgba(239, 68, 68, 0.7)"
-          strokeWidth="1.5"
-          strokeDasharray="4 3"
-        />
-        {/* C8: the limit labels sit above their line, inside the graph. */}
-        <text x={svgWidth - paddingX} y={topLimitP.sy - 5} textAnchor="end" fill="rgba(239, 68, 68, 0.85)" fontSize="10" fontWeight="700" fontFamily="monospace">
-          Y = +2.0 (MAX)
-        </text>
+        {/* The unit box with a quarter grid and the linear reference. */}
+        <rect className="ce-curve-unit" x={startP.sx} y={endP.sy} width={innerWidth} height={unitHeight} />
+        {[0.25, 0.5, 0.75].map((step) => (
+          <React.Fragment key={step}>
+            <line className="ce-curve-grid" x1={startP.sx + step * innerWidth} y1={endP.sy} x2={startP.sx + step * innerWidth} y2={startP.sy} />
+            <line className="ce-curve-grid" x1={startP.sx} y1={startP.sy - step * unitHeight} x2={endP.sx} y2={startP.sy - step * unitHeight} />
+          </React.Fragment>
+        ))}
+        <line className="ce-curve-linear" x1={startP.sx} y1={startP.sy} x2={endP.sx} y2={endP.sy} />
+        <text className="ce-curve-tick" x={padX - 8} y={endP.sy + 3} textAnchor="end">1</text>
+        <text className="ce-curve-tick" x={padX - 8} y={startP.sy + 3} textAnchor="end">0</text>
 
-        {/* Lower Limit Boundary Line (Y = -1.0 MIN) */}
-        <line
-          x1={paddingX}
-          y1={botLimitP.sy}
-          x2={svgWidth - paddingX}
-          y2={botLimitP.sy}
-          stroke="rgba(239, 68, 68, 0.7)"
-          strokeWidth="1.5"
-          strokeDasharray="4 3"
-        />
-        <text x={svgWidth - paddingX} y={botLimitP.sy - 5} textAnchor="end" fill="rgba(239, 68, 68, 0.85)" fontSize="10" fontWeight="700" fontFamily="monospace">
-          Y = -1.0 (MIN)
-        </text>
+        {handles.map((handle) => (
+          <line key={`arm-${handle.id}`} className={`ce-curve-arm ${handle.className}`} x1={handle.from.sx} y1={handle.from.sy} x2={handle.at.sx} y2={handle.at.sy} />
+        ))}
+        <path className="ce-curve-path" d={bezierPathD} />
+        <circle className="ce-curve-anchor" cx={startP.sx} cy={startP.sy} r={4} />
+        <circle className="ce-curve-anchor" cx={endP.sx} cy={endP.sy} r={4} />
 
-        {/* Control Handle Lines */}
-        <line
-          x1={startP.sx}
-          y1={startP.sy}
-          x2={handle1P.sx}
-          y2={handle1P.sy}
-          stroke="#38bdf8"
-          strokeWidth="2"
-          strokeDasharray="3 3"
-        />
-        <line
-          x1={endP.sx}
-          y1={endP.sy}
-          x2={handle2P.sx}
-          y2={handle2P.sy}
-          stroke="#fbbf24"
-          strokeWidth="2"
-          strokeDasharray="3 3"
-        />
-
-        {/* Cubic Bezier Curve Line */}
-        <path d={bezierPathD} fill="none" stroke="#2dd4bf" strokeWidth="3.5" strokeLinecap="round" />
-
-        {/* Start (0,0) and End (1,1) Fixed Anchor Dots */}
-        <circle cx={startP.sx} cy={startP.sy} r="6" fill="#818cf8" stroke="#ffffff" strokeWidth="2" />
-        <circle cx={endP.sx} cy={endP.sy} r="6" fill="#2dd4bf" stroke="#ffffff" strokeWidth="2" />
-
-        {/* Interactive P1 Handle Dot (Cyan) */}
-        <g
-          transform={`translate(${handle1P.sx}, ${handle1P.sy})`}
-          style={{ cursor: 'grab' }}
-          onPointerDown={(event) => handlePointerDown(1, event)}
-        >
-          <circle r="12" fill="rgba(56, 189, 248, 0.2)" />
-          <circle r="7" fill="#38bdf8" stroke="#ffffff" strokeWidth="2.5" />
-          {/* C8 — the label sits on the side of the handle away from the unit
-              box (below a low handle, above a high one), never on the curve. */}
-          <text y={p1.y <= 0.5 ? 26 : -16} textAnchor="middle" fill="#38bdf8" fontSize="11" fontWeight="700">
-            P1 ({p1.x}, {p1.y})
-          </text>
-        </g>
-
-        {/* Interactive P2 Handle Dot (Gold) */}
-        <g
-          transform={`translate(${handle2P.sx}, ${handle2P.sy})`}
-          style={{ cursor: 'grab' }}
-          onPointerDown={(event) => handlePointerDown(2, event)}
-        >
-          <circle r="12" fill="rgba(251, 191, 36, 0.2)" />
-          <circle r="7" fill="#fbbf24" stroke="#ffffff" strokeWidth="2.5" />
-          <text y={p2.y <= 0.5 ? 26 : -16} textAnchor="middle" fill="#fbbf24" fontSize="11" fontWeight="700">
-            P2 ({p2.x}, {p2.y})
-          </text>
-        </g>
+        {handles.map((handle) => (
+          <g
+            key={`handle-${handle.id}`}
+            className={`ce-curve-handle ${handle.className}${draggingPoint === handle.id ? ' is-dragging' : ''}`}
+            transform={`translate(${handle.at.sx}, ${handle.at.sy})`}
+            style={{ cursor: 'grab' }}
+            onPointerDown={(event) => handlePointerDown(handle.id, event)}
+          >
+            <circle className="ce-curve-handle-hit" r={12} />
+            <circle className="ce-curve-handle-dot" r={6} />
+          </g>
+        ))}
       </svg>
     );
   };
   if (!isModalOpen) return null;
 
 
+  const handleFields = [
+    {
+      id: 1 as const, point: p1, className: 'is-out', name: 'Out',
+      note: segmentFrames ? `leaves F${segmentFrames.from}` : 'leaves the first key',
+      set: (next: { x: number; y: number }) => updatePoints(next, p2),
+    },
+    {
+      id: 2 as const, point: p2, className: 'is-in', name: 'In',
+      note: segmentFrames ? `arrives at F${segmentFrames.to}` : 'arrives at the next key',
+      set: (next: { x: number; y: number }) => updatePoints(p1, next),
+    },
+  ];
+
+  const close = () => {
+    setIsModalOpen(false);
+    onCloseModal?.();
+  };
+
   return ReactDOM.createPortal(
     <div
-      className="modal-backdrop"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 999999,
-        background: 'rgba(10, 14, 23, 0.88)',
-        backdropFilter: 'blur(16px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 20,
-      }}
+      className="modal-backdrop ce-backdrop"
       onClick={(event) => {
         if (event.target !== event.currentTarget || suppressBackdropClickRef.current || draggingPointRef.current) return;
-        setIsModalOpen(false);
-        onCloseModalRef.current?.();
+        close();
       }}
     >
+      {/* C12 — one quiet surface: the curve and its numbers on the left; the
+          presets, preview and code on the right; no captions on the graph. */}
       <div
         ref={modalCardRef}
-        className="bezier-modal-card bezier-modal-shell"
+        className="bezier-modal-card ce-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="bezier-modal-title"
-        style={{
-          width: '100%',
-          maxWidth: 920,
-          maxHeight: 'calc(100vh - 40px)',
-          background: '#131722',
-          border: '1px solid #242a3a',
-          borderRadius: 16,
-          boxShadow: '0 24px 60px rgba(0,0,0,0.85)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflowY: 'auto',
-          position: 'relative',
-          margin: '0 auto',
-        }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header Row with Close Button */}
-        <div className="bezier-modal-header v3-graph-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px 0 24px' }}>
-          <div className="bezier-modal-heading" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <h2 id="bezier-modal-title" className="bezier-modal-title">Motion Curve Editor</h2>
-            {segmentFrames ? (
-              <span
-                className="bezier-modal-segment"
-                style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.3, color: '#38bdf8' }}
-              >
-                {segmentChannelLabel ? `${segmentChannelLabel} · ` : ''}
-                Segment F{segmentFrames.from} → F{segmentFrames.to}
-              </span>
-            ) : (
-              <span
-                className="bezier-modal-segment is-empty"
-                style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.3, color: '#64748b' }}
-              >
-                No segment selected
-              </span>
-            )}
-          </div>
-          <button
-            className="btn-icon"
-            onClick={() => {
-              setIsModalOpen(false);
-              onCloseModal?.();
-            }}
-            title="Close"
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: 6,
-              background: '#1c2230',
-              border: '1px solid #2d3548',
-              color: '#94a3b8',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <X size={16} />
+        <header className="ce-header">
+          <h2 id="bezier-modal-title" className="ce-title">Motion Curve Editor</h2>
+          {segmentFrames ? (
+            <span className="ce-segment">
+              {segmentChannelLabel ? <strong>{segmentChannelLabel}</strong> : null}
+              <span>Segment F{segmentFrames.from} → F{segmentFrames.to}</span>
+            </span>
+          ) : (
+            <span className="ce-segment is-empty">No segment selected</span>
+          )}
+          <button type="button" className="ce-close" onClick={close} title="Close" aria-label="Close">
+            <X size={15} />
           </button>
-        </div>
+        </header>
 
         {/* No segment: explain instead of editing an unrelated keyframe. */}
         {inactiveReason && (
-          <div
-            className="bezier-modal-empty"
-            role="status"
-            style={{
-              margin: '12px 28px 28px 28px',
-              padding: '22px 24px',
-              background: '#0f131c',
-              border: '1px solid #242a3a',
-              borderRadius: 12,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-            }}
-          >
-            <p className="bezier-modal-empty-title" style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#e2e8f0' }}>
-              No curve to shape here
-            </p>
-            <p className="bezier-modal-empty-body" style={{ margin: 0, fontSize: 12, lineHeight: 1.55, color: '#94a3b8' }}>
-              {inactiveReason}
-            </p>
+          <div className="ce-empty" role="status">
+            <p className="ce-empty-title">No curve to shape here</p>
+            <p className="ce-empty-body">{inactiveReason}</p>
           </div>
         )}
 
-        {/* Modal Content Grid */}
         {!inactiveReason && (
-        <div className="bezier-modal-grid v3-graph-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, padding: '12px 28px 28px 28px' }}>
-          {/* Left Column: SVG Canvas + P1/P2 Coordinates */}
-          <div className="bezier-modal-column bezier-modal-main v3-graph-main" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* C8 — the graph and its two handle cards share one row, and the
-                value/speed graph takes the full width under them, so the
-                editor fits a 1440×900 window without scrolling. */}
-            <div className="bezier-graph-row" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-            {/* SVG Canvas Box with Exact Red Limit Lines */}
-            <div className="bezier-graph-surface"
-              style={{
-                flex: 'none',
-                background: '#090b10',
-                borderRadius: 12,
-                border: '1px solid #232838',
-                padding: '24px 16px',
-                display: 'flex',
-                justifyContent: 'center',
-                position: 'relative',
-              }}
-            >
-              {renderSvgGraph(modalSvgRef, 500, 360, 50, 40)}
+        <div className="ce-body">
+          <div className="ce-main">
+            <div className="bezier-graph-surface ce-graph">
+              {renderSvgGraph(modalSvgRef)}
             </div>
 
-            {/* Direct Coordinate Inputs */}
-            <div className="bezier-handle-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12, flex: 1, minWidth: 0 }}>
-              <div className="bezier-handle-card" style={{ background: '#181d2a', padding: '12px 14px', borderRadius: 8, border: '1px solid #283044' }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', display: 'block', marginBottom: 8 }}>
-                  P1 HANDLE (CYAN){segmentFrames ? ` · leaves F${segmentFrames.from}` : ''}
-                </span>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <div style={{ flex: 1 }}>
-                    <label className="form-label" htmlFor="bezier-p1-x" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>X1 (0..1)</label>
-                    <NumberField id="bezier-p1-x" className="input-control"
+            <div className="ce-handle-row">
+              {handleFields.map((handle) => (
+                <div key={handle.id} className={`ce-handle-field ${handle.className}`}>
+                  <span className="ce-handle-name">
+                    <span className="ce-handle-swatch" aria-hidden="true" />
+                    {handle.name}
+                    <span className="ce-handle-note">{handle.note}</span>
+                  </span>
+                  <label className="ce-number" htmlFor={`bezier-p${handle.id}-x`}>
+                    <span>X{handle.id}</span>
+                    <NumberField id={`bezier-p${handle.id}-x`} className="input-control"
                       min={0}
                       max={1}
                       step={0.05}
-                      value={p1.x}
-                      style={{ width: '100%', background: '#0e1118', border: '1px solid #2a3348', color: '#fff', borderRadius: 5, padding: '6px 8px', fontSize: 12, fontWeight: 600 }}
-                      onValue={(next) => updatePoints({ x: clampControlPoint(next, 0, 1), y: p1.y }, p2)}
+                      value={handle.point.x}
+                      onValue={(next) => handle.set({ x: clampControlPoint(next, 0, 1), y: handle.point.y })}
                     />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label className="form-label" htmlFor="bezier-p1-y" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Y1 (-1.0..2.0)</label>
-                    <NumberField id="bezier-p1-y" className="input-control"
+                  </label>
+                  <label className="ce-number" htmlFor={`bezier-p${handle.id}-y`}>
+                    <span>Y{handle.id}</span>
+                    <NumberField id={`bezier-p${handle.id}-y`} className="input-control"
                       min={-1}
                       max={2}
                       step={0.05}
-                      value={p1.y}
-                      onValue={(next) => updatePoints({ x: p1.x, y: clampControlPoint(next, -1, 2) }, p2)}
+                      value={handle.point.y}
+                      onValue={(next) => handle.set({ x: handle.point.x, y: clampControlPoint(next, -1, 2) })}
                     />
-                  </div>
+                  </label>
                 </div>
-              </div>
-
-              <div className="bezier-handle-card" style={{ background: '#181d2a', padding: '12px 14px', borderRadius: 8, border: '1px solid #283044' }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#fbbf24', display: 'block', marginBottom: 8 }}>
-                  P2 HANDLE (GOLD){segmentFrames ? ` · arrives at F${segmentFrames.to}` : ''}
-                </span>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <div style={{ flex: 1 }}>
-                    <label className="form-label" htmlFor="bezier-p2-x" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>X2 (0..1)</label>
-                    <NumberField id="bezier-p2-x" className="input-control"
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      value={p2.x}
-                      style={{ width: '100%', background: '#0e1118', border: '1px solid #2a3348', color: '#fff', borderRadius: 5, padding: '6px 8px', fontSize: 12, fontWeight: 600 }}
-                      onValue={(next) => updatePoints(p1, { x: clampControlPoint(next, 0, 1), y: p2.y })}
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label className="form-label" htmlFor="bezier-p2-y" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Y2 (-1.0..2.0)</label>
-                    <NumberField id="bezier-p2-y" className="input-control"
-                      min={-1}
-                      max={2}
-                      step={0.05}
-                      value={p2.y}
-                      style={{ width: '100%', background: '#0e1118', border: '1px solid #2a3348', color: '#fff', borderRadius: 5, padding: '6px 8px', fontSize: 12, fontWeight: 600 }}
-                      onValue={(next) => updatePoints(p1, { x: p2.x, y: clampControlPoint(next, -1, 2) })}
-                    />
-                </div>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
+
             {onChangeKeyframeValue && (
-              <div className="bezier-value-graph-card" style={{ background: '#181d2a', borderRadius: 10, border: '1px solid #283044', padding: 14 }}>
-                <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+              <section className="ce-card ce-value-graph">
+                <div className="ce-segmented" role="group" aria-label="Graph">
                   {(['value', 'speed'] as const).map((mode) => (
                     <button
                       key={mode}
                       type="button"
-                      className="btn-secondary"
                       aria-pressed={graphMode === mode}
                       onClick={() => setGraphMode(mode)}
                     >
@@ -616,33 +469,39 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                   onInteractionStart={onBatchStart}
                   onInteractionEnd={onBatchEnd}
                 />
-              </div>
+              </section>
             )}
           </div>
 
-          {/* Right Column: Live Motion Simulation, Presets, Easing Code & Apply */}
-          <div className="bezier-modal-column bezier-modal-side v3-graph-support" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* Live Motion Test Box */}
-            <div className="bezier-preview-card">
-              <div className="bezier-preview-toolbar">
-                <div className="bezier-preview-speed">
-                  <span>Test Speed</span>
-                  <div className="bezier-preview-speed-options">
-                    {[0.6, 1.2, 1.8, 3.0].map((dur) => (
-                      <button
-                        key={dur}
-                        type="button"
-                        className={previewDuration === dur ? 'is-active' : ''}
-                        onClick={() => setPreviewDuration(dur)}
-                      >
-                        {dur}s
-                      </button>
-                    ))}
-                  </div>
-                </div>
+          <aside className="ce-side">
+            <section className="ce-section">
+              <h3 className="ce-section-title">Presets</h3>
+              <div className="ce-presets">
+                {PRESET_BEZIERS.map((preset) => {
+                  const active = preset.points[0] === p1.x && preset.points[1] === p1.y && preset.points[2] === p2.x && preset.points[3] === p2.y;
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      className={`ce-preset${active ? ' is-active' : ''}`}
+                      onClick={() => updatePoints({ x: preset.points[0], y: preset.points[1] }, { x: preset.points[2], y: preset.points[3] })}
+                    >
+                      <svg className="ce-preset-icon" width={32} height={22} viewBox="0 0 32 22" aria-hidden="true">
+                        <path d={presetIconPath(preset.points)} />
+                      </svg>
+                      <span>{preset.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="ce-section">
+              <h3 className="ce-section-title">Preview</h3>
+              <div className="ce-preview">
                 <button
                   type="button"
-                  className="btn-icon bezier-preview-play"
+                  className="ce-play"
                   onClick={() => {
                     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
                     setIsPreviewPlaying((playing) => !playing);
@@ -650,70 +509,43 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                   title={isPreviewPlaying ? 'Pause Preview' : 'Play Preview'}
                   aria-label={isPreviewPlaying ? 'Pause Preview' : 'Play Preview'}
                 >
-                  {isPreviewPlaying ? <Pause size={12} /> : <Play size={12} />}
+                  {isPreviewPlaying ? <Pause size={13} /> : <Play size={13} />}
                 </button>
+                <div className="ce-preview-stage" data-testid="bezier-mini-stage">
+                  <div className="ce-preview-track" />
+                  <div ref={previewBallRef} className={`ce-preview-ball${isPreviewPlaying ? ' is-playing' : ''}`} />
+                </div>
               </div>
-
-              <div className="bezier-mini-stage" data-testid="bezier-mini-stage">
-                <div className="bezier-mini-stage-track" />
-                <div
-                  ref={previewBallRef}
-                  className={`bezier-preview-ball${isPreviewPlaying ? ' is-playing' : ''}`}
-                />
-              </div>
-
-              <div className="bezier-preview-status" aria-live="polite">
-                {isPreviewPlaying ? 'Playing preview' : 'Preview paused'} · {getMotionAnalysis()}
-              </div>
-            </div>
-
-            {/* Presets Grid */}
-            <div className="bezier-presets-section">
-              <label className="form-label" style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', display: 'block', marginBottom: 8 }}>
-                STUDIO BEZIER PRESETS
-              </label>
-              <div className="bezier-presets-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                {PRESET_BEZIERS.map((preset) => (
+              <div className="ce-segmented ce-speed" role="group" aria-label="Preview duration">
+                {[0.6, 1.2, 1.8, 3.0].map((dur) => (
                   <button
-                    key={preset.label}
-                    style={{
-                      fontSize: 11,
-                      padding: '8px 10px',
-                      background: '#181d2a',
-                      border: '1px solid #283044',
-                      color: '#f8fafc',
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      fontWeight: 600,
-                    }}
-                    onClick={() => updatePoints({ x: preset.points[0], y: preset.points[1] }, { x: preset.points[2], y: preset.points[3] })}
+                    key={dur}
+                    type="button"
+                    aria-pressed={previewDuration === dur}
+                    onClick={() => setPreviewDuration(dur)}
                   >
-                    <span>{preset.label}</span>
-                    <Sparkles size={12} className="text-teal" />
+                    {dur}s
                   </button>
                 ))}
               </div>
-            </div>
+              <span className="ce-visually-hidden" aria-live="polite">
+                {isPreviewPlaying ? 'Playing preview' : 'Preview paused'} · {getMotionAnalysis()}
+              </span>
+            </section>
 
-            {/* CSS Code Output */}
-            <div className="bezier-css-card" style={{ background: '#181d2a', padding: 12, borderRadius: 8, border: '1px solid #283044' }}>
-              <label className="form-label" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>CSS EASING CODE</label>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 12, fontFamily: 'monospace', color: '#38bdf8', fontWeight: 700 }}>
-                  {cssString}
-                </span>
-                <button className="btn-icon" onClick={copyToClipboard} title="Copy CSS code" style={{ width: 24, height: 24, background: '#0e1118', border: '1px solid #2a3348', borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {copied ? <Check size={13} className="text-green" /> : <Copy size={13} />}
+            <section className="ce-section">
+              <h3 className="ce-section-title">CSS easing</h3>
+              <div className="ce-code">
+                <code title={cssString}>{cssString}</code>
+                <button type="button" className="ce-icon-button" onClick={copyToClipboard} title="Copy CSS code" aria-label="Copy CSS code">
+                  {copied ? <Check size={13} /> : <Copy size={13} />}
                 </button>
               </div>
-              <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+              <div className="ce-paste">
                 <input
                   className="input-control"
                   aria-label="Paste easing code"
-                  placeholder="Paste cubic-bezier(…) or 4 numbers"
+                  placeholder="Paste cubic-bezier(…)"
                   value={pasteText}
                   onChange={(event) => { setPasteText(event.target.value); setPasteError(null); }}
                   onKeyDown={(event) => {
@@ -721,41 +553,17 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                     event.preventDefault();
                     applyPastedEasing();
                   }}
-                  style={{ flex: 1, minWidth: 0, fontFamily: 'monospace', fontSize: 11 }}
                 />
                 <button type="button" className="btn-secondary" disabled={pasteText.trim() === ''} onClick={applyPastedEasing}>Use</button>
               </div>
-              {pasteError && <p role="alert" style={{ margin: '6px 0 0', fontSize: 11, color: '#f87171' }}>{pasteError}</p>}
-            </div>
+              {pasteError && <p role="alert" className="ce-error">{pasteError}</p>}
+            </section>
 
-            {/* Apply Button */}
-            <button
-              className="btn-primary w-full bezier-apply-button"
-              onClick={() => {
-                setIsModalOpen(false);
-                onCloseModal?.();
-              }}
-              style={{
-                marginTop: 'auto',
-                padding: '12px 0',
-                fontSize: 13,
-                fontWeight: 700,
-                background: '#14b8a6',
-                color: '#000',
-                border: 'none',
-                borderRadius: 8,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                boxShadow: '0 4px 14px rgba(20, 184, 166, 0.4)',
-              }}
-            >
-              <Check size={16} />
+            <button type="button" className="ce-apply" onClick={close}>
+              <Check size={15} />
               <span>Apply</span>
             </button>
-          </div>
+          </aside>
         </div>
         )}
       </div>

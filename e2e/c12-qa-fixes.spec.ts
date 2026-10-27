@@ -7,6 +7,7 @@
  * - the artboard border and the selection frame stay thin when zoomed out;
  * - a shape's border ignores the layer's own scale and zooms with the view;
  * - the X/Y axis badges stay on screen at every zoom;
+ * - the redesigned Motion Curve Editor fits a phone; its graph drags true;
  * - a Track Matte source shows no "No track matte on this layer" line;
  * - changing the frame rate keeps the frame numbers (C10's retime reverted).
  */
@@ -287,6 +288,45 @@ test.describe('C12 — QA fixes', () => {
     expect(y.y).toBeGreaterThanOrEqual(top.y - 1);
     expect(y.y - top.y).toBeLessThan(8);
   });
+
+  for (const size of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+    test(`the Motion Curve Editor fits ${size.width} px; a handle dragged on its graph lands under the pointer`, async ({ page }) => {
+      await seed(page, {
+        version: 1, coordinateSystem: 'project-unit-center-v1', width: 1920, height: 1080, fps: 30, totalFrames: 60,
+        layers: [{ id: 'box', name: 'Box', type: 'custom_rect', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, fillColor: '#f43f5e' }],
+        tracks: [{ id: 'track-box', partId: 'box', name: 'Box', color: '#22d3ee', visible: true, locked: false, expanded: false,
+          channels: { ...emptyChannels(), x: [{ id: 'k0', frame: 0, value: 0, easing: 'easeInOut' }, { id: 'k1', frame: 30, value: 200, easing: 'easeInOut' }] } }],
+      });
+      await page.setViewportSize(size);
+      await page.locator('.ue-track-row', { hasText: 'Box' }).first().click();
+      await page.locator('.keyframe-diamond').last().click();
+      await page.getByRole('button', { name: /Motion Curves/ }).first().click();
+      const dialog = page.getByRole('dialog', { name: 'Motion Curve Editor' });
+      await expect(dialog).toBeVisible();
+      await expect(dialog).toContainText('Segment F0 → F30');
+
+      // Nothing sticks out of the window sideways, the graph included.
+      const graph = page.locator('.ce-curve-svg');
+      const graphBox = await graph.boundingBox();
+      if (!graphBox) throw new Error('no graph');
+      expect(graphBox.x).toBeGreaterThanOrEqual(0);
+      expect(graphBox.x + graphBox.width).toBeLessThanOrEqual(size.width);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(size.width);
+
+      // The unit box's middle (0.5, 0.5), from the drawn unit box itself.
+      const unit = await page.locator('.ce-curve-unit').boundingBox();
+      if (!unit) throw new Error('no unit box');
+      const handle = page.locator('.ce-curve-handle.is-out .ce-curve-handle-dot');
+      const from = await handle.boundingBox();
+      if (!from) throw new Error('no handle');
+      await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(unit.x + unit.width / 2, unit.y + unit.height / 2, { steps: 6 });
+      await page.mouse.up();
+      expect(Number(await page.locator('#bezier-p1-x').inputValue())).toBeCloseTo(0.5, 1);
+      expect(Number(await page.locator('#bezier-p1-y').inputValue())).toBeCloseTo(0.5, 1);
+    });
+  }
 
   test('a Track Matte source shows which layer it is the matte of, and no "No track matte" line', async ({ page }) => {
     await seed(page, {

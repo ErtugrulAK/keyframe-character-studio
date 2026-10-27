@@ -36,7 +36,9 @@ export const TrackMatteSummary: React.FC<TrackMatteSummaryProps> = ({
 
   return (
     <div className="matte-span-full track-matte-summary" data-testid="track-matte-summary">
-      {relationship ? (
+      {/* C12 — a layer with no matte of its own (shown here only because it is
+          another layer's source) gets no "No track matte" line. */}
+      {relationship && (
         <div className="track-matte-summary-row" data-relationship-kind={relationship.kind} data-relationship-status={relationship.status}>
           <span>
             Matte source: <strong>{nameOf(relationship.source, relationship.sourceId)}</strong>
@@ -57,8 +59,6 @@ export const TrackMatteSummary: React.FC<TrackMatteSummaryProps> = ({
             </button>
           )}
         </div>
-      ) : (
-        <div className="track-matte-summary-row track-matte-summary-muted">No track matte on this layer.</div>
       )}
       {relationship?.status === 'missing' && (
         <div className="track-matte-summary-warning" role="status">

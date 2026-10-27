@@ -6,12 +6,12 @@ Thanks for helping! This page is short on purpose. The full engineering rules li
 
 ```mermaid
 flowchart LR
-    I["💡 Issue<br/><sub>bug or idea</sub>"] --> B["🌿 Branch<br/><sub>from main</sub>"]
+    I["💡 Issue<br/>bug or idea"] --> B["🌿 Branch<br/>from main"]
     B --> C["⌨️ Code + tests"]
-    C --> V["✅ npm run check<br/><sub>+ E2E</sub>"]
+    C --> V["✅ npm run check<br/>+ E2E"]
     V --> PR["📬 Pull request"]
     PR --> R["👀 Review"]
-    R --> M["🔀 Merge commit<br/><sub>no squash</sub>"]
+    R --> M["🔀 Merge commit<br/>no squash"]
 ```
 
 1. **Open or pick an issue** and describe the problem a user sees.
@@ -27,9 +27,9 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    UI["🖱️ Components<br/><sub>interaction and SVG drawing only</sub>"] --> CTX["🔌 AnimatorContext<br/><sub>wiring, no business logic</sub>"]
-    CTX --> H["⚙️ Domain hooks<br/><sub>src/hooks</sub>"]
-    H --> U["🧮 Pure utilities<br/><sub>src/utils · React-free · deterministic</sub>"]
+    UI["🖱️ Components<br/>interaction and SVG drawing only"] --> CTX["🔌 AnimatorContext<br/>wiring, no business logic"]
+    CTX --> H["⚙️ Domain hooks<br/>src/hooks"]
+    H --> U["🧮 Pure utilities<br/>src/utils · React-free · deterministic"]
 ```
 
 - New behaviour goes **pure helper → domain hook → thin wiring → minimal UI**.

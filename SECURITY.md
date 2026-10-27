@@ -23,7 +23,7 @@
 ```mermaid
 flowchart LR
     R["🔒 Private report"] --> A["👀 Acknowledged"]
-    A --> F["🛠️ Fix on a branch<br/><sub>+ regression test</sub>"]
+    A --> F["🛠️ Fix on a branch<br/>+ regression test"]
     F --> RL["📦 Release candidate"]
     RL --> D["📣 Advisory published"]
 ```

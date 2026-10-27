@@ -51,22 +51,22 @@ Everything you see on the stage is **SVG**. A frame is computed by a pure functi
 
 ```mermaid
 flowchart LR
-    P["🧩 Layers<br/><sub>shape · text · image · masks</sub>"] --> T
-    K["🎞️ Track channels<br/><sub>keyframes + easing</sub>"] --> T
-    T["evaluateTransform<br/><sub>interpolate · parent → world</sub>"] --> F["evaluateFrame<br/><sub>IN/OUT motion · visibility · order</sub>"]
-    F --> E["🖥️ Editor canvas<br/><sub>React + SVG</sub>"]
-    F --> O["📦 OGraf package<br/><sub>web component</sub>"]
-    F --> G["🖼️ GIF<br/><sub>SVG → pixels</sub>"]
+    P["🧩 Layers<br/>shape · text · image · masks"] --> T
+    K["🎞️ Track channels<br/>keyframes + easing"] --> T
+    T["evaluateTransform<br/>interpolate · parent → world"] --> F["evaluateFrame<br/>IN/OUT motion · visibility · order"]
+    F --> E["🖥️ Editor canvas<br/>React + SVG"]
+    F --> O["📦 OGraf package<br/>web component"]
+    F --> G["🖼️ GIF<br/>SVG → pixels"]
 ```
 
 The code is layered: a React-free core does the maths, hooks own the editor's domains, and React only shows and edits.
 
 ```mermaid
 flowchart TB
-    UI["🖱️ React components<br/><sub>Header · Toolbar · Stage · Inspector · Timeline · Live Director</sub>"]
-    CTX["🔌 AnimatorContext<br/><sub>wires the hooks into one editor state</sub>"]
-    HOOKS["⚙️ Domain hooks<br/><sub>playback · history · timeline · clipboard · presets · broadcast · serialization</sub>"]
-    CORE["🧮 Pure core (src/utils)<br/><sub>evaluation · easing · geometry · masks · validation · migration</sub>"]
+    UI["🖱️ React components<br/>Header · Toolbar · Stage · Inspector · Timeline · Live Director"]
+    CTX["🔌 AnimatorContext<br/>wires the hooks into one editor state"]
+    HOOKS["⚙️ Domain hooks<br/>playback · history · timeline · clipboard · presets · broadcast · serialization"]
+    CORE["🧮 Pure core (src/utils)<br/>evaluation · easing · geometry · masks · validation · migration"]
     UI --> CTX --> HOOKS --> CORE
 ```
 
@@ -104,6 +104,7 @@ Requires Node.js `^22.22.2 || ^24.15.0 || >=26.0.0`. The editor runs entirely in
 ## 🧪 Quality
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'pie1': '#35c8b0', 'pie2': '#38bdf8', 'pieStrokeColor': '#0d141b', 'pieSectionTextColor': '#0d141b', 'pieTitleTextSize': '18px'}}}%%
 pie showData
     title Automated tests
     "Unit & component (Vitest)" : 3220
@@ -118,17 +119,18 @@ pie showData
 ## 🗺️ Releases
 
 ```mermaid
+%%{init: {'gitGraph': {'rotateCommitLabel': true}}}%%
 gitGraph
-    commit id: "v1.0.0" tag: "v1.0.0"
-    commit id: "rc.1" tag: "v1.1.0-rc.1"
-    commit id: "rc.2" tag: "v1.1.0-rc.2"
-    commit id: "V7.2"
+    commit id: "v1.0.0"
+    commit id: "v1.1.0-rc.1"
+    commit id: "v1.1.0-rc.2"
+    commit id: "V7.2 integration"
     branch feature
-    commit id: "masks · layers"
-    commit id: "paths · workspace"
-    commit id: "QA rounds C1–C12"
+    commit id: "masks + layers"
+    commit id: "paths + workspace"
+    commit id: "QA rounds C1-C12"
     checkout main
-    merge feature id: "rc.3" tag: "v1.1.0-rc.3 (next)"
+    merge feature id: "v1.1.0-rc.3 (next)" type: HIGHLIGHT
 ```
 
 Versions follow [Semantic Versioning](https://semver.org/). Each candidate is QA'd by hand, and the accepted one becomes the final release. See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASING.md](docs/RELEASING.md).

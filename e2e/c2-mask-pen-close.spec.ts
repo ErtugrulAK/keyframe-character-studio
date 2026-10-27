@@ -83,7 +83,12 @@ for (const zoom of [{ label: 'zoomed out', steps: 4, direction: 'zoom-out' as co
     // Move the stage on screen after the points were placed (a layout resize
     // shifts the camera centre): the close target must follow the point's
     // CURRENT screen position, not where it was clicked.
+    const beforeResize = await firstPointCenter(page);
     await page.setViewportSize({ width: 1380, height: 900 });
+    // The camera re-centres a few frames after the resize; reading the point
+    // before that sent the hover to its OLD place (seen as an intermittent
+    // miss, 9 in 20 runs on a production build). Wait for the shift itself.
+    await expect.poll(async () => Math.abs((await firstPointCenter(page)).x - beforeResize.x)).toBeGreaterThan(10);
     const first = await firstPointCenter(page);
 
     // Just outside the close radius: adds a point, does not close.

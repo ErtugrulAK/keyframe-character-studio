@@ -35,7 +35,7 @@ import {
   resolveMatteMode,
 } from '../../utils/matte';
 import type { MatteClipPath, MatteMask, MatteGradientStop, MatteImageContent } from '../../utils/matte';
-import { buildLayerMaskDefinition, layerMaskFilterId } from '../../utils/layerMasks';
+import { buildLayerMaskDefinition, layerMaskFilterId, layerMaskRenderKeys } from '../../utils/layerMasks';
 import { colorCorrectionFilter, colorCorrectionIds, isEffectOnlyMask, resolveColorCorrection, resolvedParameters } from '../../utils/colorCorrection';
 import type { ColorCorrectionRender } from './renderers/PartRenderer';
 import type { LayerMaskSvgDefinition } from '../../utils/layerMasks';
@@ -212,11 +212,13 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
   }
   const layerMaskDefinitions = new Map<string, LayerMaskSvgDefinition>();
   const layerMaskIdsByPart = new Map<string, string[]>();
+  const layerMaskRenderKeyById = new Map<string, string>();
   for (const part of sortedParts) {
     const evaluated = evaluatedFrame.layers.find((layer) => layer.id === part.id);
     const evaluatedMasks = evaluated?.content.masks ?? part.masks;
     if (!evaluated || !evaluatedMasks?.length) continue;
     const ids: string[] = [];
+    const stack: LayerMaskSvgDefinition[] = [];
     let previousId: string | undefined;
     for (const mask of evaluatedMasks) {
       // WP-08 — an effect-only mask scopes an effect; it never cuts the layer.
@@ -227,9 +229,12 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
       const compositeMode = definition.inverted
         ? definition.mode === 'add' ? 'subtract' : definition.mode === 'subtract' ? 'add' : 'difference'
         : definition.mode;
-      layerMaskDefinitions.set(id, { ...definition, id, previousId, compositeMode });
+      const step = { ...definition, id, previousId, compositeMode };
+      layerMaskDefinitions.set(id, step);
+      stack.push(step);
       previousId = id;
     }
+    layerMaskRenderKeys(stack).forEach((key, index) => layerMaskRenderKeyById.set(stack[index].id, key));
     if (previousId) {
       ids.push(previousId);
       layerMaskIdsByPart.set(part.id, ids);
@@ -625,7 +630,11 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
           const auxiliary = definition.previousId && operation === 'difference'
             ? <><mask id={shapeId} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse"><path d={definition.pathD} fill="white" /></mask><mask id={inverseId} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse"><rect x={region.x} y={region.y} width={region.width} height={region.height} fill="white" /><rect x={region.x} y={region.y} width={region.width} height={region.height} fill="black" mask={`url(#${definition.previousId})`} /></mask><mask id={`${definition.id}-inverse`} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse"><rect x={region.x} y={region.y} width={region.width} height={region.height} fill="white" /><path d={definition.pathD} fill="black" /></mask></>
             : null;
-          return <React.Fragment key={definition.id}>{auxiliary}<mask id={definition.id} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="alpha" data-mask-operation={operation}>{body}</mask></React.Fragment>;
+          // C12 — luminance, not alpha: a hole step paints its shape BLACK over
+          // the previous stack, and in an alpha mask opaque black still shows
+          // the layer (the "Cut a hole" of a second mask cut nothing). White
+          // content keeps every other step identical.
+          return <React.Fragment key={layerMaskRenderKeyById.get(definition.id) ?? definition.id}>{auxiliary}<mask id={definition.id} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="luminance" data-mask-operation={operation}>{body}</mask></React.Fragment>;
         })}
         {[...colorCorrections.values()].map((correction) => {
           const coverage = correction.coverage;

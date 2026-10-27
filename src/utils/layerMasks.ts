@@ -20,6 +20,33 @@ export interface LayerMaskSvgDefinition {
   compositeMode?: LayerMaskCompositeMode;
 }
 
+const fnv1a = (text: string): string => {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(36);
+};
+
+/**
+ * C12 — React keys for one layer's ordered mask stack. Each step after the
+ * first draws the previous step through `mask="url(#previous)"`, and Chromium
+ * does not repaint a layer when only such a NESTED mask changes: editing the
+ * first of two masks kept painting its old shape until the editor re-mounted.
+ * A step's key therefore carries every earlier step (and its own
+ * feather/expansion filter), so a change there re-mounts the steps after it
+ * and the layer resolves its mask afresh. The element IDs never change.
+ */
+export const layerMaskRenderKeys = (stack: readonly LayerMaskSvgDefinition[]): string[] => {
+  let upstream = '';
+  return stack.map((definition) => {
+    const key = `${definition.id}@${fnv1a(`${upstream}#${definition.feather}|${definition.expansion}`)}`;
+    upstream += `${definition.id}|${definition.pathD}|${definition.compositeMode ?? definition.mode}|${definition.opacity}|${definition.feather}|${definition.expansion};`;
+    return key;
+  });
+};
+
 export const layerMaskId = (partId: string, maskId: string): string => `kcs-layer-mask-${partId}-${maskId}`;
 export const layerMaskFilterId = (maskId: string): string => `kcs-layer-mask-filter-${maskId}`;
 

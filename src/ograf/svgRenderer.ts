@@ -241,7 +241,7 @@ function renderLayerMaskDefinitions(scene: OGrafEvaluatedScene, target: Evaluate
         ? `<path d="${escapeXml(definition.pathD)}" fill="white" fill-opacity="${svgNumber(definition.opacity)}" mask="url(#${escapeXml(previousId)})"${filterAttribute} />`
         : `<rect x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" fill="white" mask="url(#${escapeXml(previousId)})" /><path d="${escapeXml(definition.pathD)}" fill="black" fill-opacity="${svgNumber(definition.opacity)}"${filterAttribute} />`;
     }
-    definitions.push(`${filter}<mask id="${escapeXml(id)}" x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="alpha" data-mask-operation="${escapeXml(effectiveMode)}">${body}</mask>`);
+    definitions.push(`${filter}<mask id="${escapeXml(id)}" x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="luminance" data-mask-operation="${escapeXml(effectiveMode)}">${body}</mask>`);
     previousId = id;
   });
   return { defs: definitions.join(''), ids: previousId ? [previousId] : [] };

@@ -26,8 +26,6 @@ import { usePlayback } from '../hooks/usePlayback';
 import { duplicateKeyframeGroup as duplicateKeyframeGroupTrack } from '../utils/keyframeDuplicate';
 import { pasteKeyframeGroupData, type KeyframeCopyPayload } from '../utils/keyframeCopyPaste';
 import { useHistory, type HistoryDocumentState } from '../hooks/useHistory';
-import { retimeDocumentForFps } from '../utils/fpsRetime';
-import { sanitizeProjectFps } from '../utils/timebase';
 import { useBroadcast } from '../hooks/useBroadcast';
 import type { NamedSequenceRuntimeState } from '../utils/broadcastEngine';
 import { useToolbar } from '../hooks/useToolbar';
@@ -80,12 +78,6 @@ export interface AnimatorContextType {
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
   fps: number;
   setFps: (fps: number) => void;
-  /**
-   * C10 — the user's frame-rate change: keeps time (keys, sequence lengths,
-   * preset durations are rescaled) in ONE undoable step. `setFps` stays the
-   * raw setter used by load, import and history.
-   */
-  changeFps: (fps: number) => void;
   totalFrames: number;
   setTotalFrames: (frames: number) => void;
   isLooping: boolean;
@@ -650,32 +642,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
 
 
-  // C10 — the frame-rate change keeps time (see retimeDocumentForFps). Raw
-  // setters: a time change applies to locked layers too, like the rate itself.
-  const changeFps = useCallback((next: number) => {
-    const target = sanitizeProjectFps(next, fps);
-    if (target === fps) return;
-    const result = retimeDocumentForFps({
-      tracks: tracksRef.current,
-      characterParts: characterPartsRef.current,
-      motionTemplates,
-      totalFrames,
-      currentFrame,
-    }, fps, target);
-    startBatchInteraction();
-    setTracks(result.tracks);
-    setCharacterParts(result.characterParts);
-    setMotionTemplates(result.motionTemplates);
-    setTotalFrames(result.totalFrames);
-    setCurrentFrame(result.currentFrame);
-    setFps(target);
-    result.motionTemplates.forEach((template) => updateNamedSequenceDuration(template.id, template.durationFrames));
-    endBatchInteraction();
-    if (result.mergedKeys > 0) {
-      showToast(`${result.mergedKeys} keyframe${result.mergedKeys === 1 ? '' : 's'} merged: at ${target} fps ${result.mergedKeys === 1 ? 'it lands' : 'they land'} on the same frame as a later key of the same property. Undo restores ${result.mergedKeys === 1 ? 'it' : 'them'}.`, 'info');
-    }
-  }, [fps, tracksRef, characterPartsRef, motionTemplates, totalFrames, currentFrame, startBatchInteraction, setTracks, setCharacterParts, setMotionTemplates, setTotalFrames, setCurrentFrame, setFps, updateNamedSequenceDuration, endBatchInteraction, showToast]);
-
   const { copySelectedPart, pasteCopiedPart, duplicateSelectedPart, duplicateMirrored, pasteAnimationOntoSelected, clipboardData } = useClipboard({
     characterParts,
     tracks,
@@ -1092,7 +1058,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setIsPlaying,
         fps,
         setFps,
-        changeFps,
         totalFrames,
         setTotalFrames,
         isLooping,

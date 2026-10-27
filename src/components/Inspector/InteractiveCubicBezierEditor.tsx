@@ -209,14 +209,15 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
     const point = draggingPointRef.current;
     const svg = modalSvgRef.current;
     if (!point || !svg) return;
-    // The graph scales down to fit a narrow window, so its padding does too.
-    const rect = svg.getBoundingClientRect();
-    const padX = GRAPH.padX * (rect.width / GRAPH.width);
-    const padY = GRAPH.padY * (rect.height / GRAPH.height);
-    const innerWidth = rect.width - padX * 2;
-    const innerHeight = rect.height - padY * 2;
-    const mouseX = clientX - rect.left - padX;
-    const mouseY = clientY - rect.top - padY;
+    // The graph scales with the window (width and height), so the pointer is
+    // mapped through the SVG's own screen matrix into graph units.
+    const matrix = svg.getScreenCTM();
+    if (!matrix) return;
+    const local = new DOMPoint(clientX, clientY).matrixTransform(matrix.inverse());
+    const innerWidth = GRAPH.width - GRAPH.padX * 2;
+    const innerHeight = GRAPH.height - GRAPH.padY * 2;
+    const mouseX = local.x - GRAPH.padX;
+    const mouseY = local.y - GRAPH.padY;
     const xClamped = Math.max(0, Math.min(1, parseFloat((mouseX / innerWidth).toFixed(2))));
     const yNormalized = Math.max(0, Math.min(1, 1 - mouseY / innerHeight));
     const yMath = parseFloat((Y_MIN + yNormalized * Y_RANGE).toFixed(2));

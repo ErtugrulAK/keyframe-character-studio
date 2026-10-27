@@ -7,7 +7,7 @@
  * - the artboard border and the selection frame stay thin when zoomed out;
  * - a shape's border ignores the layer's own scale and zooms with the view;
  * - the X/Y axis badges stay on screen at every zoom;
- * - the redesigned Motion Curve Editor fits a phone; its graph drags true;
+ * - the redesigned Motion Curve Editor fits laptop heights without scrolling and a phone; its graph drags true;
  * - a Track Matte source shows no "No track matte on this layer" line;
  * - changing the frame rate keeps the frame numbers (C10's retime reverted).
  */
@@ -289,7 +289,7 @@ test.describe('C12 — QA fixes', () => {
     expect(y.y - top.y).toBeLessThan(8);
   });
 
-  for (const size of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+  for (const size of [{ width: 1440, height: 900 }, { width: 1536, height: 730 }, { width: 1366, height: 650 }, { width: 390, height: 844 }]) {
     test(`the Motion Curve Editor fits ${size.width} px; a handle dragged on its graph lands under the pointer`, async ({ page }) => {
       await seed(page, {
         version: 1, coordinateSystem: 'project-unit-center-v1', width: 1920, height: 1080, fps: 30, totalFrames: 60,
@@ -312,6 +312,13 @@ test.describe('C12 — QA fixes', () => {
       expect(graphBox.x).toBeGreaterThanOrEqual(0);
       expect(graphBox.x + graphBox.width).toBeLessThanOrEqual(size.width);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(size.width);
+      // On a laptop-height browser the whole editor is on screen: no scrolling
+      // inside the dialog (a phone stacks the columns and may scroll).
+      if (size.width > 860) {
+        const card = await page.locator('.ce-dialog').evaluate((node) => ({ client: node.clientHeight, content: node.scrollHeight }));
+        expect(card.content).toBeLessThanOrEqual(card.client);
+        await expect(page.getByRole('button', { name: 'Apply', exact: true })).toBeInViewport({ ratio: 1 });
+      }
 
       // The unit box's middle (0.5, 0.5), from the drawn unit box itself.
       const unit = await page.locator('.ce-curve-unit').boundingBox();

@@ -1167,8 +1167,22 @@ button:disabled {
   background: var(--kcs-bg-graph);
 }
 
-/* Full size where it fits; scaled down (never clipped) in a narrow window. */
-.ce-curve-svg { max-width: 100%; height: auto; }
+/* Full size where it fits; scaled down (never clipped) in a narrow window.
+   C12 — the height also follows the window, so the editor opens without
+   scrolling on a laptop-height browser. */
+/* What the window leaves after everything that is not a graph (header,
+   number rows, keyframe rows, paddings and the dialog margin) is shared
+   60/40 between the curve and the value graph. */
+.ce-dialog { --ce-graph-room: calc(100vh - 390px); }
+
+.ce-curve-svg { max-width: 100%; width: auto; height: clamp(130px, calc(var(--ce-graph-room) * .6), 300px); }
+
+.ce-value-graph .temporal-graph-svg { height: clamp(80px, calc(var(--ce-graph-room) * .4), 175px); }
+
+@media (max-height: 820px) {
+  .ce-dialog { --ce-graph-room: calc(100vh - 372px); }
+  .ce-value-graph .temporal-graph-helper { display: none; }
+}
 
 .ce-curve-overshoot { fill: rgba(148, 163, 184, .035); }
 .ce-curve-limit { stroke: rgba(148, 163, 184, .18); stroke-width: 1; stroke-dasharray: 2 4; }

@@ -46,11 +46,12 @@ test.describe('Stroke Alignment V2', () => {
     // A green stroke, so it cannot be mistaken for the dark stage behind it.
     const greenStroke = scene();
     greenStroke.layers[0].strokeColor = '#20ff20';
-    // 20 units: an INSIDE band of 20 leaves the 60-unit-high rectangle a clear
-    // middle (C10: the band scales with the layer, so 40 would fill it).
+    // 20 stage units: the bands stay clear of each other and of the axis on
+    // the scaled-up rectangle.
     greenStroke.layers[0].strokeWidth = 20;
-    // Scaled up so a row clear of both stroke bands and the axis exists. C10:
-    // the stroke scales with the layer and the view like the geometry does.
+    // Scaled up, and unevenly. C12: the stroke ignores the layer's own scale
+    // (it zooms with the view only), so it measures 20 STAGE units on every
+    // side; under C10's layer-scaled stroke this row read 40.
     Object.assign(greenStroke.layers[0], { scaleX: 2, scaleY: 4 });
     await seed(page, greenStroke);
     await page.locator('.actor-node', { hasText: 'Stroke Shape' }).click();
@@ -64,8 +65,9 @@ test.describe('Stroke Alignment V2', () => {
 
     // Measured, not assumed: along a row through the shape, how many stroke
     // pixels lie outside the fill's left edge and how many inside it, in
-    // authored units: the screen run divided by the shape's own horizontal
-    // screen scale (C10: the stroke scales with it).
+    // stage units: the screen run divided by the stage's screen pixels per
+    // unit (C12: the view scale, not the shape's own).
+    const viewScale = () => page.locator('.stage-svg').first().evaluate((svg) => Number(getComputedStyle(svg).getPropertyValue('--kcs-stroke-scale')));
     const profile = async () => {
       const stage = await page.locator('.stage-canvas-container').boundingBox();
       if (!stage) throw new Error('no stage');
@@ -78,13 +80,14 @@ test.describe('Stroke Alignment V2', () => {
         const rect = node as SVGRectElement;
         const ctm = rect.getScreenCTM()!;
         const x = rect.x.baseVal.value;
-        // 42 % down: below the top stroke band (it scales with the layer too)
-        // and above the X axis at the centre.
+        // 42 % down: below the top stroke band and above the X axis at the centre.
         const y = rect.y.baseVal.value + rect.height.baseVal.value * 0.42;
         const point = new DOMPoint(x, y).matrixTransform(ctm);
-        return { x: point.x, y: point.y, scale: ctm.a };
+        return { x: point.x, y: point.y };
       });
-      const half = Math.ceil(45 * edge.scale) + 10;
+      const scale = await viewScale();
+      expect(scale).toBeGreaterThan(0);
+      const half = Math.ceil(45 * scale) + 10;
       const clip = { x: Math.round(edge.x) - half, y: Math.round(edge.y), width: 2 * half, height: 1 };
       const png = (await page.screenshot({ clip })).toString('base64');
       const columns = await page.evaluate(async (data) => {
@@ -116,9 +119,9 @@ test.describe('Stroke Alignment V2', () => {
       const edgeColumn = Math.round(edge.x) - clip.x;
       const outside = run(edgeColumn - 1, -1);
       const inside = run(edgeColumn, 1);
-      return { outside: outside / edge.scale, inside: inside / edge.scale, scale: edge.scale };
+      return { outside: outside / scale, inside: inside / scale, scale };
     };
-    // ± 2 screen pixels (the anti-aliased edge), in authored units.
+    // ± 2 screen pixels (the anti-aliased edge), in stage units.
     const near = (value: { outside: number; inside: number; scale: number }, side: 'outside' | 'inside', expected: number) =>
       expect(Math.abs(value[side] - expected), `${side}: ${value[side].toFixed(2)} units, expected ${expected} ± ${(2 / value.scale).toFixed(2)}`).toBeLessThanOrEqual(2 / value.scale);
 

@@ -38,7 +38,19 @@ const getShapeDashProps = (part: CharacterPart, totalPerimeter: number) => {
   return getStrokeDashProps(part, totalPerimeter);
 };
 
-type SvgShapeProps = Record<string, string | number | undefined>;
+type SvgShapeProps = Record<string, unknown>;
+
+/**
+ * C12 — an authored stroke width in stage units, independent of the layer's
+ * own scale: non-scaling, times the stage's screen pixels per unit (the
+ * `--kcs-stroke-scale` StageCanvas sets), so it still zooms with the view.
+ */
+const authoredStrokeWidth = (width: number): SvgShapeProps => ({
+  // The attribute keeps the authored value readable; the style is what paints.
+  strokeWidth: width,
+  vectorEffect: 'non-scaling-stroke',
+  style: { strokeWidth: `calc(${width}px * var(--kcs-stroke-scale, 1))` },
+});
 
 const renderModernGeometry = (
   part: CharacterPart,
@@ -94,10 +106,11 @@ const renderModernShape = (
     fillOpacity: appearance.fillOpacity,
     stroke,
     strokeOpacity: appearance.strokeOpacity,
-    // C10 — the authored stroke scales with the layer and the view, as in
-    // After Effects (it used to be non-scaling: a 10-unit border stayed 10
-    // screen px on a shrunken layer or a zoomed-out stage).
-    strokeWidth: appearance.strokeWidth,
+    // C10 made the stroke zoom with the view (it used to stay N screen px).
+    // C12 — but not with the layer's scale: a shape drawn by dragging is a
+    // scaled canonical shape, so its 1.5-unit border painted 6 px thick (and
+    // thicker on two sides when the drag was not square).
+    ...authoredStrokeWidth(appearance.strokeWidth),
     ...dashProps,
   };
 
@@ -113,11 +126,11 @@ const renderModernShape = (
   // shared.
   const alignment = appearance.strokeAlignment;
   const maskId = `${alignment}-stroke-${part.id.replace(/[^a-zA-Z0-9_-]/g, '_')}${isGhost ? '-ghost' : ''}`;
-  const fillProps: SvgShapeProps = { ...common, stroke: 'none', strokeWidth: 0 };
+  const fillProps: SvgShapeProps = { ...common, stroke: 'none', style: undefined, vectorEffect: undefined, strokeWidth: 0 };
   const strokeProps: SvgShapeProps = {
     ...common,
     fill: 'none',
-    strokeWidth: appearance.strokeWidth * 2,
+    ...authoredStrokeWidth(appearance.strokeWidth * 2),
     mask: `url(#${maskId})`,
   };
   const maskGeometry = renderModernGeometry(part, geo, {

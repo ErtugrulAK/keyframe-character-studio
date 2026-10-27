@@ -56,8 +56,10 @@ describe('native SVG shape appearance rendering', () => {
   it.each(['custom_circle', 'custom_triangle', 'custom_star', 'custom_diamond', 'custom_parallelogram', 'custom_capsule'] as BodyPartType[])('uses native appearance for %s', (type) => {
     const html = render(type);
     expect(html).toContain('stroke-width="8"');
-    // C10 — the authored stroke scales with the layer and the view.
-    expect(html).not.toContain('non-scaling-stroke');
+    // C12 — the authored stroke ignores the layer's own scale (non-scaling)
+    // but zooms with the view through the stage's --kcs-stroke-scale.
+    expect(html).toContain('vector-effect="non-scaling-stroke"');
+    expect(html).toContain('stroke-width:calc(8px * var(--kcs-stroke-scale, 1))');
   });
 
   it('renders modern freeform fill and stroke on its canonical path', () => {

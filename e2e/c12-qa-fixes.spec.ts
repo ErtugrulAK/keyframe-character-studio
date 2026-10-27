@@ -5,6 +5,7 @@
  *   its old shape until mask editing was left and entered again);
  * - double-clicking a mask point twice: handles out, then retracted;
  * - the artboard border and the selection frame stay thin when zoomed out;
+ * - a shape's border ignores the layer's own scale and zooms with the view;
  * - a Track Matte source shows no "No track matte on this layer" line;
  * - changing the frame rate keeps the frame numbers (C10's retime reverted).
  */
@@ -193,6 +194,53 @@ test.describe('C12 — QA fixes', () => {
     await expect(frame).toHaveAttribute('vector-effect', 'non-scaling-stroke');
     await expect(frame).toHaveAttribute('stroke-width', '1.5');
     await expect(frame).toHaveAttribute('stroke-dasharray', '5 4');
+  });
+
+  test('a big drawn shape gets the same thin border as a small one; the border still zooms with the view', async ({ page }) => {
+    await seed(page, { version: 1, layers: [], tracks: [], fps: 30, totalFrames: 60, projectResolution: { width: 1920, height: 1080 } });
+    const stage = await page.locator('.stage-canvas-container').boundingBox();
+    if (!stage) throw new Error('stage has no box');
+    // A small and a large (and not square) rectangle, drawn by dragging.
+    for (const [x, y, width, height] of [[60, 160, 60, 40], [240, 70, 380, 300]]) {
+      // The tool stays armed after a shape; a second click would disarm it.
+      const tool = page.getByRole('button', { name: 'Add rectangle' });
+      if (await tool.getAttribute('aria-pressed') !== 'true') await tool.click();
+      await page.mouse.move(stage.x + x, stage.y + y);
+      await page.mouse.down();
+      await page.mouse.move(stage.x + x + width, stage.y + y + height, { steps: 8 });
+      await page.mouse.up();
+    }
+    await expect(page.locator('.stage-svg g[data-part-id]')).toHaveCount(2);
+    const borders = () => page.evaluate(() => {
+      const view = Number(getComputedStyle(document.querySelector('.stage-svg')!).getPropertyValue('--kcs-stroke-scale'));
+      return {
+        view,
+        layers: [...document.querySelectorAll('.stage-svg g[data-part-id] rect')].map((rect) => ({
+          scale: Math.abs((rect as SVGRectElement).getScreenCTM()!.a),
+          screen: Number.parseFloat(getComputedStyle(rect).strokeWidth),
+          nonScaling: getComputedStyle(rect).vectorEffect === 'non-scaling-stroke',
+        })),
+      };
+    });
+    const fitted = await borders();
+    // The large rectangle is a scaled canonical one: its own scale is several
+    // times the small one's, its border is not.
+    expect(fitted.layers[1].scale / fitted.layers[0].scale).toBeGreaterThan(3);
+    for (const layer of fitted.layers) {
+      expect(layer.nonScaling).toBe(true);
+      expect(layer.screen).toBeCloseTo(1.5 * fitted.view, 3);
+    }
+
+    const centre = await stageCentre(page);
+    await page.mouse.move(centre.x, centre.y);
+    for (let step = 0; step < 6; step += 1) {
+      await page.keyboard.down('Control');
+      await page.mouse.wheel(0, 200);
+      await page.keyboard.up('Control');
+    }
+    await expect.poll(async () => (await borders()).view).toBeLessThan(fitted.view * 0.7);
+    const zoomed = await borders();
+    for (const layer of zoomed.layers) expect(layer.screen).toBeCloseTo(1.5 * zoomed.view, 3);
   });
 
   test('a Track Matte source shows which layer it is the matte of, and no "No track matte" line', async ({ page }) => {

@@ -169,6 +169,9 @@ function renderShape(layer: EvaluatedLayer): string {
     stroke: appearance.strokeEnabled ? appearance.strokeColor : 'none',
     'stroke-opacity': appearance.strokeOpacity,
     'stroke-width': appearance.strokeWidth,
+    // C12 — as in the editor, the stroke is in scene units whatever the
+    // layer's own scale (the document is drawn at one unit per pixel).
+    'vector-effect': 'non-scaling-stroke',
     ...renderTrim(content),
   };
   const geometry = renderGeometry(layer.type, content, common);

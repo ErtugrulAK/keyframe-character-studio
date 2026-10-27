@@ -1442,6 +1442,18 @@ export const StageCanvas: React.FC = () => {
       height: editSurface.height / cameraScale,
     }
     : null;
+  /*
+   * C12 — screen pixels per stage unit. An authored shape stroke is drawn
+   * non-scaling (so the layer's own scale, uniform or not, never thickens it:
+   * a large rectangle is drawn as a scaled 120-unit one) and multiplied by
+   * this, so it still zooms with the view. It is a CSS variable on the SVG:
+   * a zoom step restyles it without re-rendering a single part.
+   */
+  const strokeViewScale = appMode === 'broadcast'
+    ? (stageBox ? getStageFitScale(stageBox, projectResolution) : 1)
+    : cameraScale > 0
+      ? cameraScale
+      : (stageBox ? getStageFitScale(stageBox, EDITOR_CAMERA_VIEWBOX) : 1);
   const cameraTransform = editViewBox && cameraView && stageBox
     ? {
       translateX: cameraView.center.x - stageBox.left - surfaceHalfX,
@@ -1631,6 +1643,7 @@ export const StageCanvas: React.FC = () => {
           transformOrigin: '0 0',
           ...(editViewBox ? { width: `${editSurface.width}px`, height: `${editSurface.height}px` } : {}),
           cursor: isDrawToolArmed ? 'crosshair' : undefined,
+          ['--kcs-stroke-scale' as string]: String(strokeViewScale),
         }}
       >
         <defs>

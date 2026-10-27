@@ -211,9 +211,15 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
     if (!point || !svg) return;
     // The graph scales with the window (width and height), so the pointer is
     // mapped through the SVG's own screen matrix into graph units.
-    const matrix = svg.getScreenCTM();
-    if (!matrix) return;
-    const local = new DOMPoint(clientX, clientY).matrixTransform(matrix.inverse());
+    // Without a screen matrix (no layout engine), the graph's box stands in.
+    const matrix = typeof svg.getScreenCTM === 'function' ? svg.getScreenCTM() : null;
+    const rect = svg.getBoundingClientRect();
+    const local = matrix
+      ? new DOMPoint(clientX, clientY).matrixTransform(matrix.inverse())
+      : {
+        x: ((clientX - rect.left) / Math.max(rect.width, 1)) * GRAPH.width,
+        y: ((clientY - rect.top) / Math.max(rect.height, 1)) * GRAPH.height,
+      };
     const innerWidth = GRAPH.width - GRAPH.padX * 2;
     const innerHeight = GRAPH.height - GRAPH.padY * 2;
     const mouseX = local.x - GRAPH.padX;

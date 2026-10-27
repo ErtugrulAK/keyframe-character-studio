@@ -11,6 +11,8 @@ interface CanvasCoordinateOverlayProps {
   height: number;
   origin: CoordinatePoint;
   zScale: number;
+  /** The camera-space rectangle the stage shows; the axis badges stay inside it. */
+  visibleRect?: { left: number; right: number; top: number; bottom: number } | null;
   selectedTransform?: (Transform & { affine?: WorldAffine }) | null;
 }
 
@@ -30,11 +32,19 @@ export const CanvasCoordinateOverlay: React.FC<CanvasCoordinateOverlayProps> = (
   height,
   origin,
   zScale,
+  visibleRect = null,
   selectedTransform,
 }) => {
-  const arrowWing = 4 * zScale;
-  const xEnd = artX + width;
-  const yEnd = artY;
+  const badgeRadius = 7.5 * zScale;
+  const badgeInset = 6 * zScale;
+  // Each badge sits at the visible end of its positive half-axis: the
+  // artboard edge, or the window's edge when the artboard runs past it.
+  const xEnd = Math.min(artX + width, visibleRect?.right ?? Infinity) - badgeRadius - badgeInset;
+  const yEnd = Math.max(artY, visibleRect?.top ?? -Infinity) + badgeRadius + badgeInset;
+  const badges = [
+    { axis: 'x', cx: xEnd, cy: origin.y, color: 'var(--accent-red)', letter: 'X', shown: xEnd > origin.x + 2 * badgeRadius },
+    { axis: 'y', cx: origin.x, cy: yEnd, color: 'var(--accent-green)', letter: 'Y', shown: yEnd < origin.y - 2 * badgeRadius },
+  ] as const;
   const selectedAffine = selectedTransform ? worldAffineOf(selectedTransform) : null;
   const selectedX = selectedAffine ? origin.x + selectedAffine.e : 0;
   const selectedY = selectedAffine ? origin.y + selectedAffine.f : 0;
@@ -98,46 +108,35 @@ export const CanvasCoordinateOverlay: React.FC<CanvasCoordinateOverlayProps> = (
       />
 
       {/* Positive directions: X right, Y up to match the Inspector's inverted Y.
-          C10 — the arrowheads and letters sit at the artboard's edges, where
-          the axes end, instead of on top of the artwork at the centre. */}
-      <path
-        d={`M ${xEnd - arrowWing * 1.6} ${origin.y - arrowWing} L ${xEnd} ${origin.y} L ${xEnd - arrowWing * 1.6} ${origin.y + arrowWing} Z`}
-        fill="var(--accent-red)"
-        fillOpacity={0.9}
-      />
-      <path
-        d={`M ${origin.x - arrowWing} ${yEnd + arrowWing * 1.6} L ${origin.x} ${yEnd} L ${origin.x + arrowWing} ${yEnd + arrowWing * 1.6} Z`}
-        fill="var(--accent-green)"
-        fillOpacity={0.9}
-      />
-      <text
-        className="canvas-coordinate-label canvas-coordinate-label-x"
-        x={xEnd - 4 * zScale}
-        y={origin.y - 9 * zScale}
-        fill="var(--accent-red)"
-        fontSize={11 * zScale}
-        fontWeight={800}
-        textAnchor="end"
-        stroke="rgba(4, 9, 16, 0.9)"
-        strokeWidth={3 * zScale}
-        paintOrder="stroke"
-      >
-        X
-      </text>
-      <text
-        className="canvas-coordinate-label canvas-coordinate-label-y"
-        x={origin.x + 9 * zScale}
-        y={yEnd + 14 * zScale}
-        fill="var(--accent-green)"
-        fontSize={11 * zScale}
-        fontWeight={800}
-        textAnchor="start"
-        stroke="rgba(4, 9, 16, 0.9)"
-        strokeWidth={3 * zScale}
-        paintOrder="stroke"
-      >
-        Y
-      </text>
+          C12 — each axis ends in a small coloured disc carrying its letter
+          (the convention of 3D view gizmos) at the visible end of the
+          positive half-axis: readable over any artwork, on screen at every
+          zoom, and never over the centre. */}
+      {badges.filter((badge) => badge.shown).map((badge) => (
+        <g key={badge.axis} className="canvas-coordinate-badge" data-testid={`coordinate-axis-badge-${badge.axis}`}>
+          <circle
+            cx={badge.cx}
+            cy={badge.cy}
+            r={badgeRadius}
+            fill={badge.color}
+            stroke="rgba(4, 9, 16, 0.85)"
+            strokeWidth={1.5}
+            vectorEffect="non-scaling-stroke"
+          />
+          <text
+            className={`canvas-coordinate-label canvas-coordinate-label-${badge.axis}`}
+            x={badge.cx}
+            y={badge.cy}
+            dy="0.36em"
+            fill="#0b1018"
+            fontSize={9.5 * zScale}
+            fontWeight={800}
+            textAnchor="middle"
+          >
+            {badge.letter}
+          </text>
+        </g>
+      ))}
 
       {/* Origin crosshair (C10: no "0,0" caption over the artwork). */}
       <g data-testid="coordinate-origin">

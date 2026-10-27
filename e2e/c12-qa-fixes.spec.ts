@@ -6,6 +6,7 @@
  * - double-clicking a mask point twice: handles out, then retracted;
  * - the artboard border and the selection frame stay thin when zoomed out;
  * - a shape's border ignores the layer's own scale and zooms with the view;
+ * - the X/Y axis badges stay on screen at every zoom;
  * - a Track Matte source shows no "No track matte on this layer" line;
  * - changing the frame rate keeps the frame numbers (C10's retime reverted).
  */
@@ -241,6 +242,50 @@ test.describe('C12 — QA fixes', () => {
     await expect.poll(async () => (await borders()).view).toBeLessThan(fitted.view * 0.7);
     const zoomed = await borders();
     for (const layer of zoomed.layers) expect(layer.screen).toBeCloseTo(1.5 * zoomed.view, 3);
+  });
+
+  test('the X and Y axis badges are on screen at the opening zoom and at the artboard edges zoomed out', async ({ page }) => {
+    await seed(page, { version: 1, layers: [], tracks: [], fps: 30, totalFrames: 60, projectResolution: { width: 1920, height: 1080 } });
+    const stage = await page.locator('.stage-canvas-container').boundingBox();
+    if (!stage) throw new Error('stage has no box');
+    const box = async (axis: 'x' | 'y') => {
+      const found = await page.getByTestId(`coordinate-axis-badge-${axis}`).boundingBox();
+      if (!found) throw new Error(`no ${axis} badge`);
+      return found;
+    };
+    // The opening camera shows less than the artboard: the badges sit at the
+    // stage's own right and top edges, on their axes.
+    for (const axis of ['x', 'y'] as const) {
+      const badge = await box(axis);
+      expect(badge.x).toBeGreaterThanOrEqual(stage.x);
+      expect(badge.y).toBeGreaterThanOrEqual(stage.y);
+      expect(badge.x + badge.width).toBeLessThanOrEqual(stage.x + stage.width);
+      expect(badge.y + badge.height).toBeLessThanOrEqual(stage.y + stage.height);
+    }
+    expect(stage.x + stage.width - ((await box('x')).x + (await box('x')).width)).toBeLessThan(12);
+    expect((await box('y')).y - stage.y).toBeLessThan(12);
+    await expect(page.getByTestId('coordinate-axis-badge-x')).toContainText('X');
+    await expect(page.getByTestId('coordinate-axis-badge-y')).toContainText('Y');
+
+    const centre = await stageCentre(page);
+    await page.mouse.move(centre.x, centre.y);
+    for (let step = 0; step < 12; step += 1) {
+      await page.keyboard.down('Control');
+      await page.mouse.wheel(0, 200);
+      await page.keyboard.up('Control');
+    }
+    // Zoomed out, the whole artboard is on screen: the badges sit just inside
+    // its edges (a 6 px inset, plus the outlines).
+    const border = page.locator('.stage-canvas-container svg line[stroke="#00d2ff"]');
+    const top = await border.nth(0).boundingBox();
+    const right = await border.nth(3).boundingBox();
+    if (!top || !right) throw new Error('artboard border has no box');
+    await expect.poll(async () => right.x - ((await box('x')).x + (await box('x')).width)).toBeLessThan(8);
+    const x = await box('x');
+    expect(x.x + x.width).toBeLessThanOrEqual(right.x + 1);
+    const y = await box('y');
+    expect(y.y).toBeGreaterThanOrEqual(top.y - 1);
+    expect(y.y - top.y).toBeLessThan(8);
   });
 
   test('a Track Matte source shows which layer it is the matte of, and no "No track matte" line', async ({ page }) => {

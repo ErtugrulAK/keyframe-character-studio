@@ -1454,6 +1454,16 @@ export const StageCanvas: React.FC = () => {
     : cameraScale > 0
       ? cameraScale
       : (stageBox ? getStageFitScale(stageBox, EDITOR_CAMERA_VIEWBOX) : 1);
+  // C12 — the part of the camera space the stage box shows (the axis badges
+  // sit at the visible end of each axis, not past the window's edge).
+  const visibleCameraRect = cameraView && stageBox && cameraScale > 0
+    ? {
+      left: EDITOR_CAMERA_CENTER.x + (stageBox.left - cameraView.center.x) / cameraScale,
+      right: EDITOR_CAMERA_CENTER.x + (stageBox.left + stageBox.width - cameraView.center.x) / cameraScale,
+      top: EDITOR_CAMERA_CENTER.y + (stageBox.top - cameraView.center.y) / cameraScale,
+      bottom: EDITOR_CAMERA_CENTER.y + (stageBox.top + stageBox.height - cameraView.center.y) / cameraScale,
+    }
+    : null;
   const cameraTransform = editViewBox && cameraView && stageBox
     ? {
       translateX: cameraView.center.x - stageBox.left - surfaceHalfX,
@@ -1742,6 +1752,7 @@ export const StageCanvas: React.FC = () => {
                   height={projectResolution.height}
                   origin={EDITOR_CAMERA_CENTER}
                   zScale={zScale}
+                  visibleRect={visibleCameraRect}
                   selectedTransform={selectedTransform}
                 />
               )}

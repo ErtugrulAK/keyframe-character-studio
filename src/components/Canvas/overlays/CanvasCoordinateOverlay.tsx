@@ -184,7 +184,7 @@ export const CanvasCoordinateOverlay: React.FC<CanvasCoordinateOverlayProps> = (
             stroke="var(--accent-cyan)"
             strokeOpacity={0.8}
             strokeWidth={1.2}
-            strokeDasharray={`${2 * zScale} ${3 * zScale}`}
+            strokeDasharray="2 3"
             vectorEffect="non-scaling-stroke"
           />
           <line

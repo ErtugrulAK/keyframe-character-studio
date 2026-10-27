@@ -1823,7 +1823,7 @@ export const StageCanvas: React.FC = () => {
                 height={projectResolution.height}
                 fill="none"
                 stroke={appMode === 'broadcast' ? 'none' : 'rgba(255, 255, 255, 0.15)'}
-                strokeWidth={2 * zScale}
+                strokeWidth={2}
                 vectorEffect="non-scaling-stroke"
                 pointerEvents="none"
               />

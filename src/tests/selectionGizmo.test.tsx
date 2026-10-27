@@ -263,12 +263,18 @@ describe('SelectionGizmo — layer group frame', () => {
     expect(keyline.getAttribute('pointer-events')).toBe('none');
     // The light half of the pair is the contrast partner of the dark core.
     expect(keyline.getAttribute('style')).toContain('var(--kcs-selection-keyline)');
-    // Decorative strokes never scale with zoom, so their widths must compensate.
-    // The pair is thinner than the single black band it replaced (3 + 1 < 2 x 3.5).
-    expect(keyline.getAttribute('stroke-width')).toBe('6');
-    expect(halo.getAttribute('stroke-width')).toBe('2');
+    // C12 — the frame strokes are non-scaling, so their widths are already
+    // screen pixels: they must NOT be multiplied by the zoom compensation as
+    // well (at this 0.5 zoom that doubled them; zoomed far out, the dashed
+    // frame painted 5 px thick). The pair is thinner than the single black
+    // band it replaced (3 + 1 < 2 x 3.5).
+    for (const stroke of [keyline, halo]) expect(stroke.getAttribute('vector-effect')).toBe('non-scaling-stroke');
+    expect(keyline.getAttribute('stroke-width')).toBe('3');
+    expect(halo.getAttribute('stroke-width')).toBe('1');
     expect(accent.getAttribute('pointer-events')).toBe('none');
-    expect(accent.getAttribute('stroke-width')).toBe('3');
+    expect(accent.getAttribute('vector-effect')).toBe('non-scaling-stroke');
+    expect(accent.getAttribute('stroke-width')).toBe('1.5');
+    expect(accent.getAttribute('stroke-dasharray')).toBe('5 4');
     // The light keyline frames the dark core, and the accent dash rides on top.
     expect([...box.querySelectorAll('rect')].indexOf(keyline)).toBeLessThan(
       [...box.querySelectorAll('rect')].indexOf(halo),

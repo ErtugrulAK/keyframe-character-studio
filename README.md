@@ -63,11 +63,9 @@ The code is layered: a React-free core does the maths, hooks own the editor's do
 
 ```mermaid
 flowchart TB
-    UI["🖱️ React components<br/>header, toolbar, stage,<br/>Inspector, timeline, director"]
-    CTX["🔌 AnimatorContext<br/>wires the hooks into one editor state"]
-    HOOKS["⚙️ Domain hooks<br/>playback, history, timeline,<br/>presets, broadcast, saving"]
-    CORE["🧮 Pure core: src/utils<br/>evaluation, easing, geometry,<br/>masks, validation"]
-    UI --> CTX --> HOOKS --> CORE
+    UI["🖱️ React components<br/>header, toolbar, stage, Inspector, timeline"] --> CTX["🔌 AnimatorContext<br/>wires the hooks together"]
+    CTX --> HOOKS["⚙️ Domain hooks<br/>playback, history, presets, saving"]
+    HOOKS --> CORE["🧮 Pure core<br/>evaluation, easing, geometry, masks"]
 ```
 
 | Question | Answer |

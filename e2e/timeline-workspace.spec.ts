@@ -608,9 +608,6 @@ test('R4-02 — the outliner divider matches the timeline resize-handle language
   const hovered = await painted();
   expect(hovered.pillShadow).toBe('none');
 
-  // The accent is the editor's TEAL, never a purple/indigo glow.
-  const channels = (hovered.accent.match(/\d+/g) ?? []).map(Number);
-  expect(channels).toHaveLength(3);
-  expect(channels[1]).toBeGreaterThan(channels[0]);
-  expect(channels[1]).toBeGreaterThan(channels[2]);
+  // The accent is the editor's blue (--kcs-accent), never a purple/indigo glow.
+  expect(hovered.accent).toBe('rgb(74, 143, 231)');
 });

@@ -18,20 +18,20 @@
 
 :root {
   /* Keyframes Studio Adult Professional Dark Theme */
-  --bg-darkest: #12141a;
-  --bg-dark: #171922;
-  --bg-panel: #1d202c;
-  --bg-panel-hover: #272b3c;
-  --bg-input: #0f1118;
-  --border-color: #2b3044;
-  --border-light: #3e4560;
-  --border-accent: rgba(20, 184, 166, 0.4);
+  --bg-darkest: #232323;
+  --bg-dark: #272727;
+  --bg-panel: #2c2c2c;
+  --bg-panel-hover: #343434;
+  --bg-input: #212121;
+  --border-color: #373737;
+  --border-light: #4d4d4d;
+  --border-accent: rgba(29, 114, 226, 0.4);
   
   /* Keyframes Studio Signature Teal & Cyan Accents */
-  --accent-teal: #14b8a6;
-  --accent-teal-dark: #0d9488;
-  --accent-teal-glow: rgba(20, 184, 166, 0.35);
-  --accent-cyan: #38bdf8;
+  --accent-teal: #4a8fe7;
+  --accent-teal-dark: #3b7ac9;
+  --accent-teal-glow: rgba(29, 114, 226, 0.35);
+  --accent-cyan: #76aaed;
   --accent-indigo: #6366f1;
   --accent-gold: #fbbf24;
   --accent-gold-glow: rgba(251, 191, 36, 0.35);
@@ -40,11 +40,11 @@
   --accent-green: #10b981;
 
   /* Typography Colors */
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
+  --text-primary: #fafafa;
+  --text-secondary: #d6d6d6;
+  --text-muted: #a6a6a6;
 
-  --font-main: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
   /* ── Typography Scale Tokens ── */
@@ -93,16 +93,16 @@
   --kcs-bg-canvas: var(--bg-darkest);
   --kcs-bg-panel: var(--bg-dark);
   --kcs-bg-surface: var(--bg-panel);
-  --kcs-bg-elevated: #222735;
+  --kcs-bg-elevated: #303030;
   --kcs-bg-hover: var(--bg-panel-hover);
-  --kcs-bg-active: rgba(20, 184, 166, 0.14);
-  --kcs-border-subtle: rgba(148, 163, 184, 0.16);
+  --kcs-bg-active: rgba(29, 114, 226, 0.14);
+  --kcs-border-subtle: rgba(166, 166, 166, 0.16);
   --kcs-border-default: var(--border-color);
   /* D2/U3: `--kcs-border-focus` has exactly ONE definition — kcsEditorTheme.css
    * (imported unconditionally by App). The previous redefinition here to
    * `var(--accent-cyan)` lost the cascade in every measured run and only made
    * the resolved colour depend on bundle order; the computed value at every
-   * consumer is unchanged (#52e2c7, verified against the running app). */
+   * consumer is unchanged (#79acee, verified against the running app). */
   --kcs-text-primary: var(--text-primary);
   --kcs-text-secondary: var(--text-secondary);
   --kcs-text-muted: var(--text-muted);
@@ -116,13 +116,13 @@
 }
 
 /* ── Typography Utility Classes ── */
-h1, .text-h1 { font-family: var(--font-main); font-size: var(--font-size-h1); line-height: var(--line-height-tight); letter-spacing: var(--letter-spacing-h1); font-weight: 800; color: var(--text-primary); }
-h2, .text-h2 { font-family: var(--font-main); font-size: var(--font-size-h2); line-height: var(--line-height-tight); letter-spacing: var(--letter-spacing-h2); font-weight: 700; color: var(--text-primary); }
-h3, .text-h3 { font-family: var(--font-main); font-size: var(--font-size-h3); line-height: var(--line-height-normal); font-weight: 700; color: var(--text-primary); }
+h1, .text-h1 { font-family: var(--font-main); font-size: var(--font-size-h1); line-height: var(--line-height-tight); letter-spacing: var(--letter-spacing-h1); font-weight: 600; color: var(--text-primary); }
+h2, .text-h2 { font-family: var(--font-main); font-size: var(--font-size-h2); line-height: var(--line-height-tight); letter-spacing: var(--letter-spacing-h2); font-weight: 500; color: var(--text-primary); }
+h3, .text-h3 { font-family: var(--font-main); font-size: var(--font-size-h3); line-height: var(--line-height-normal); font-weight: 500; color: var(--text-primary); }
 h4, .text-h4 { font-family: var(--font-main); font-size: var(--font-size-h4); line-height: var(--line-height-normal); font-weight: 600; color: var(--text-primary); }
 .body-lg      { font-family: var(--font-main); font-size: var(--font-size-body-lg); line-height: var(--line-height-normal); font-weight: 500; color: var(--text-primary); }
 .body-regular { font-family: var(--font-main); font-size: var(--font-size-body); line-height: var(--line-height-normal); font-weight: 400; color: var(--text-secondary); }
-.caption      { font-family: var(--font-main); font-size: var(--font-size-caption); line-height: var(--line-height-normal); letter-spacing: var(--letter-spacing-uppercase); font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+.caption      { font-family: var(--font-main); font-size: var(--font-size-caption); line-height: var(--line-height-normal); letter-spacing: var(--letter-spacing-uppercase); font-weight: 500; text-transform: uppercase; color: var(--text-muted); }
 .code-mono    { font-family: var(--font-mono); font-size: var(--font-size-mono); line-height: var(--line-height-normal); font-weight: 500; }
 
 /* ── Radial Gradient Utility Classes ── */
@@ -130,7 +130,7 @@ h4, .text-h4 { font-family: var(--font-main); font-size: var(--font-size-h4); li
   background-color: var(--bg-darkest);
   background-image: 
     radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.07) 1px, transparent 0),
-    radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.05) 0%, rgba(18, 20, 26, 0.95) 100%);
+    radial-gradient(circle at 50% 50%, rgba(118, 170, 237, 0.05) 0%, rgba(35, 35, 35, 0.95) 100%);
   background-size: 24px 24px, 100% 100%;
   background-position: 0 0, center center;
 }
@@ -142,9 +142,9 @@ h4, .text-h4 { font-family: var(--font-main); font-size: var(--font-size-h4); li
   z-index: 40;
   background: radial-gradient(
     circle var(--focus-radius, 250px) at var(--focus-x, 50%) var(--focus-y, 50%),
-    rgba(15, 23, 42, 0.15) 0%,
-    rgba(9, 11, 16, 0.82) 75%,
-    rgba(9, 11, 16, 0.94) 100%
+    rgba(39, 39, 39, 0.15) 0%,
+    rgba(27, 27, 27, 0.82) 75%,
+    rgba(27, 27, 27, 0.94) 100%
   );
   backdrop-filter: blur(2px);
   transition: opacity 0.25s ease-out;
@@ -163,7 +163,7 @@ h4, .text-h4 { font-family: var(--font-main); font-size: var(--font-size-h4); li
   inset: -1px;
   background: radial-gradient(
     180px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-    rgba(56, 189, 248, 0.2),
+    rgba(118, 170, 237, 0.2),
     transparent 80%
   );
   opacity: 0;
@@ -324,7 +324,7 @@ button:disabled {
 .btn-icon.active {
   background: var(--accent-teal-dark);
   color: #ffffff;
-  box-shadow: 0 0 14px var(--accent-teal-glow);
+  box-shadow: none;
 }
 
 .btn-secondary {
@@ -342,15 +342,15 @@ button:disabled {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+  background: linear-gradient(135deg, #2b4971 0%, #1d72e2 100%);
   color: #ffffff;
-  font-weight: 700;
+  font-weight: 500;
   padding: var(--space-xs) var(--space-md);
   border-radius: var(--radius-pill);
   box-shadow: 0 4px 14px var(--accent-teal-glow);
 }
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #14b8a6 0%, #2dd4bf 100%);
+  background: linear-gradient(135deg, #1d72e2 0%, #4c90e8 100%);
   transform: translateY(-1px);
   box-shadow: 0 6px 18px var(--accent-teal-glow);
 }
@@ -447,7 +447,7 @@ input[type="color"]::-moz-color-swatch {
 
 input[type="color"]:hover {
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 8px var(--accent-teal-glow);
+  box-shadow: none;
 }
 
 /* Custom Dark Checkbox */
@@ -472,7 +472,7 @@ input[type="checkbox"] {
 input[type="checkbox"]:checked {
   background: var(--accent-teal);
   border-color: var(--accent-teal);
-  box-shadow: 0 0 10px var(--accent-teal-glow);
+  box-shadow: none;
 }
 
 input[type="checkbox"]:checked::after {
@@ -497,7 +497,7 @@ input[type=number] {
 
 input[type="number"]:focus, input[type="text"]:focus, select:focus {
   border-color: var(--accent-indigo);
-  background: #090c12;
+  background: #1c1c1c;
   box-shadow: 0 0 0 2px var(--accent-indigo-glow);
 }
 
@@ -521,7 +521,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
 .input-label, .form-label {
   font-size: var(--font-size-caption);
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-muted);
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -553,14 +553,14 @@ input[type="number"].input-control, .input-control.center-text {
 }
 
 .input-control:hover, .select-control:hover, .textarea-control:hover {
-  border-color: rgba(56, 189, 248, 0.4);
-  background-color: #12151e;
+  border-color: rgba(118, 170, 237, 0.4);
+  background-color: #242424;
 }
 
 .input-control:focus, .select-control:focus, .textarea-control:focus {
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
-  background-color: #0b0d12;
+  box-shadow: 0 0 0 2px rgba(118, 170, 237, 0.15);
+  background-color: #1d1d1d;
 }
 
 /* Hide Webkit Spinners globally */
@@ -606,10 +606,10 @@ input[type="number"] {
 /* V3.3 semantic editor palette aliases. */
 :root {
   --kcs-shell: var(--kcs-bg-app);
-  --kcs-rail: #0e131a;
+  --kcs-rail: #212121;
   --kcs-panel: var(--kcs-bg-panel);
   --kcs-panel-elevated: var(--kcs-bg-elevated);
-  --kcs-panel-subtle: #151b23;
+  --kcs-panel-subtle: #272727;
   --kcs-border-quiet: var(--kcs-border-subtle);
   --kcs-border-strong: var(--kcs-border-default);
   --kcs-text-primary: var(--text-primary);
@@ -624,7 +624,7 @@ input[type="number"] {
   --kcs-warning: var(--accent-gold);
   /* Contrast partner of --bg-darkest on the canvas selection frame: the light
      half of the paired outline, so the frame reads over dark artwork too. */
-  --kcs-selection-keyline: rgba(248, 250, 252, 0.9);
+  --kcs-selection-keyline: rgba(250, 250, 250, 0.9);
 }
 
 /* WP-05 — derived display ordinal of a layer row (a position, not an ID). */
@@ -633,10 +633,10 @@ input[type="number"] {
   min-width: 18px;
   padding: 0 4px;
   border-radius: 4px;
-  background: rgba(148, 163, 184, 0.14);
-  color: #cbd5e1;
+  background: rgba(166, 166, 166, 0.14);
+  color: #d6d6d6;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   line-height: 16px;
   text-align: center;

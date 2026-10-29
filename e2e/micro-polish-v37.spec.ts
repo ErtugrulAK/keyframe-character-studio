@@ -20,7 +20,8 @@ import { test, expect, type Page } from '@playwright/test';
  *  6. the side handles and the timeline handle are one visual family.
  */
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
-const KCS_RING_COLOUR = 'rgb(82, 226, 199)';
+// --kcs-focus (#4a8fe7).
+const KCS_RING_COLOUR = 'rgb(74, 143, 231)';
 
 const channel = () => ({
   x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [],

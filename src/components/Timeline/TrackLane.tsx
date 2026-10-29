@@ -5,6 +5,7 @@ import { CHANNEL_META, CHANNEL_ROW_HEIGHT, KEYFRAME_DRAG_THRESHOLD_PX, KEYFRAME_
 import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/channelKeyframeGroups';
 import { hasChannelDataForTemplate, resolveConnectorSegments } from '../../utils/timelineMetrics';
 import { resolveLaneRows, type LaneContext } from './timelineLaneLayout';
+import { usePointerMenuPlacement } from '../../hooks/usePointerMenuPlacement';
 
 interface TrackLaneProps {
   track: Track;
@@ -167,6 +168,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
     onDelete: () => void;
   } | null>(null);
   const kfMenuRef = useRef<HTMLDivElement | null>(null);
+  const kfMenuPlacement = usePointerMenuPlacement(kfMenuRef, kfMenu);
   useEffect(() => {
     if (!kfMenu) return;
     const handleGlobalClick = (e: MouseEvent) => {
@@ -189,6 +191,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
   // math here). Only offered when the timeline keyframe clipboard holds data.
   const [pasteMenu, setPasteMenu] = useState<{ frame: number; x: number; y: number } | null>(null);
   const pasteMenuRef = useRef<HTMLDivElement | null>(null);
+  const pasteMenuPlacement = usePointerMenuPlacement(pasteMenuRef, pasteMenu);
   useEffect(() => {
     if (!pasteMenu) return;
     const handleGlobalClick = (e: MouseEvent) => {
@@ -281,7 +284,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
     const baseMeta = !ch.includes(':') ? CHANNEL_META[ch as TrackChannel] : undefined;
     const meta = baseMeta ?? {
       label: `Mask ${ch.split(':').slice(1).join(' ')}`,
-      color: isPathChannel ? '#38bdf8' : '#f59e0b',
+      color: isPathChannel ? '#76aaed' : '#f59e0b',
       shortLabel: isPathChannel ? 'P' : 'M',
     };
     const source = isPathChannel
@@ -511,29 +514,15 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
           ref={kfMenuRef}
           role="menu"
           aria-label="Keyframe actions"
-          style={{
-            position: 'fixed',
-            left: kfMenu.x,
-            top: kfMenu.y,
-            zIndex: 1000,
-            minWidth: 160,
-            background: '#1e2430',
-            border: '1px solid #39415a',
-            borderRadius: 6,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-            padding: '4px 0',
-          }}
+          className="editor-context-menu timeline-context-menu"
+          style={{ position: 'fixed', left: kfMenuPlacement?.left ?? kfMenu.x, top: kfMenuPlacement?.top ?? kfMenu.y, zIndex: 1000, minWidth: 160 }}
         >
           <button
             type="button"
             role="menuitem"
             aria-label="Copy Keyframes"
             title="Copy the whole keyframe group at this frame to the timeline clipboard"
-            className="timeline-menu-item"
-            style={{
-              display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none',
-              color: '#dbe3f0', fontSize: 11, fontWeight: 600, padding: '6px 12px', cursor: 'pointer',
-            }}
+            className="timeline-menu-item editor-context-menu-item"
             onClick={() => {
               onCopyKeyframes(kfMenu.trackId, kfMenu.frame);
               setKfMenu(null);
@@ -546,11 +535,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
             role="menuitem"
             aria-label="Duplicate Keyframes"
             title="Duplicate the whole keyframe group at this frame (frame + 1)"
-            className="timeline-menu-item"
-            style={{
-              display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none',
-              color: '#dbe3f0', fontSize: 11, fontWeight: 600, padding: '6px 12px', cursor: 'pointer',
-            }}
+            className="timeline-menu-item editor-context-menu-item"
             onClick={() => {
               onDuplicateKeyframeGroup(kfMenu.trackId, kfMenu.frame);
               setKfMenu(null);
@@ -563,11 +548,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
             role="menuitem"
             aria-label="Delete Keyframe"
             title="Delete the keyframe(s) at this frame"
-            className="timeline-menu-item"
-            style={{
-              display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none',
-              color: '#f87171', fontSize: 11, fontWeight: 600, padding: '6px 12px', cursor: 'pointer',
-            }}
+            className="timeline-menu-item editor-context-menu-item is-danger"
             onClick={() => {
               kfMenu.onDelete();
               setKfMenu(null);
@@ -584,29 +565,15 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
           ref={pasteMenuRef}
           role="menu"
           aria-label="Timeline actions"
-          style={{
-            position: 'fixed',
-            left: pasteMenu.x,
-            top: pasteMenu.y,
-            zIndex: 1000,
-            minWidth: 160,
-            background: '#1e2430',
-            border: '1px solid #39415a',
-            borderRadius: 6,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-            padding: '4px 0',
-          }}
+          className="editor-context-menu timeline-context-menu"
+          style={{ position: 'fixed', left: pasteMenuPlacement?.left ?? pasteMenu.x, top: pasteMenuPlacement?.top ?? pasteMenu.y, zIndex: 1000, minWidth: 160 }}
         >
           <button
             type="button"
             role="menuitem"
             aria-label="Paste Keyframes"
             title="Paste the copied keyframe group at this frame"
-            className="timeline-menu-item"
-            style={{
-              display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none',
-              color: '#dbe3f0', fontSize: 11, fontWeight: 600, padding: '6px 12px', cursor: 'pointer',
-            }}
+            className="timeline-menu-item editor-context-menu-item"
             onClick={() => {
               onPasteKeyframes(track.id, pasteMenu.frame);
               setPasteMenu(null);

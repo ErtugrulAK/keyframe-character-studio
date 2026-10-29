@@ -17,6 +17,7 @@ import { useRetainedUiState } from '../../hooks/useRetainedUiState';
 import {
   Sliders,
   Lock,
+  MousePointerClick,
 } from 'lucide-react';
 
 /** C7 — the Details tabs: what the layer looks like, what cuts it, how it relates and animates. */
@@ -220,6 +221,8 @@ export const DetailsPanel: React.FC = () => {
         </div>
       ) : (
         <div className="details-empty-state">
+          <span className="details-empty-icon" aria-hidden="true"><MousePointerClick size={18} /></span>
+          <strong className="details-empty-title">No layer selected</strong>
           <span>Select an element on Canvas or Outliner to view details</span>
         </div>
       )}

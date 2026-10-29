@@ -365,7 +365,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
           <button
             type="button"
             className="btn-secondary"
-            style={{ height: 24, fontSize: 10, fontWeight: 700, padding: '0 8px', borderRadius: 4 }}
+            style={{ height: 24, fontSize: 10, fontWeight: 500, padding: '0 8px', borderRadius: 4 }}
             title="Save current animation as a custom preset"
             onClick={() => openSavePreset(which)}
           >
@@ -375,7 +375,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
             <button
               type="button"
               className="btn-secondary"
-              style={{ height: 24, fontSize: 10, fontWeight: 700, padding: '0 8px', borderRadius: 4 }}
+              style={{ height: 24, fontSize: 10, fontWeight: 500, padding: '0 8px', borderRadius: 4 }}
               title="Edit this custom animation preset"
               aria-label="Edit Animation Preset"
               onClick={() => openEditPreset(which, preset)}
@@ -387,7 +387,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
             <button
               type="button"
               className="btn-secondary"
-              style={{ height: 24, fontSize: 10, fontWeight: 700, padding: '0 8px', borderRadius: 4, color: '#f87171' }}
+              style={{ height: 24, fontSize: 10, fontWeight: 500, padding: '0 8px', borderRadius: 4, color: '#f87171' }}
               title="Delete this custom animation preset"
               aria-label="Delete Animation Preset"
               onClick={() => onDeletePreset(preset)}
@@ -404,7 +404,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
             role="dialog"
             aria-label="Save Animation Preset"
           >
-            <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-primary)' }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-primary)' }}>
               Save Animation Preset ({isIn ? 'IN' : 'OUT'})
             </span>
             <input
@@ -428,7 +428,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
               <button
                 type="button"
                 className="btn-secondary"
-                style={{ height: 22, fontSize: 10, fontWeight: 700, padding: '0 8px', borderRadius: 4 }}
+                style={{ height: 22, fontSize: 10, fontWeight: 500, padding: '0 8px', borderRadius: 4 }}
                 onClick={closeSavePreset}
               >
                 Cancel
@@ -436,7 +436,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
               <button
                 type="button"
                 className="btn-secondary"
-                style={{ height: 22, fontSize: 10, fontWeight: 700, padding: '0 8px', borderRadius: 4 }}
+                style={{ height: 22, fontSize: 10, fontWeight: 500, padding: '0 8px', borderRadius: 4 }}
                 disabled={saveName.trim().length === 0}
                 onClick={handleSave}
               >
@@ -452,7 +452,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
             role="dialog"
             aria-label="Edit Animation Preset"
           >
-            <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-primary)' }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-primary)' }}>
               Edit Animation Preset
             </span>
             <input
@@ -497,7 +497,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
   return (
     <div className="panel-card" style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ fontSize: 9, fontWeight: 700, color: '#64748b', letterSpacing: '0.6px', marginBottom: 2 }}>
+        <div style={{ fontSize: 9, fontWeight: 500, color: '#787878', letterSpacing: '0.6px', marginBottom: 2 }}>
           ANIMATION IN / OUT
         </div>
 
@@ -511,7 +511,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
           <button
             type="button"
             className="btn-secondary"
-            style={{ height: 24, fontSize: 10, fontWeight: 700, padding: '0 8px', borderRadius: 4 }}
+            style={{ height: 24, fontSize: 10, fontWeight: 500, padding: '0 8px', borderRadius: 4 }}
             title="Export custom animation presets"
             aria-label="Export Animation Presets"
             onClick={handleExport}
@@ -521,7 +521,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
           <button
             type="button"
             className="btn-secondary"
-            style={{ height: 24, fontSize: 10, fontWeight: 700, padding: '0 8px', borderRadius: 4 }}
+            style={{ height: 24, fontSize: 10, fontWeight: 500, padding: '0 8px', borderRadius: 4 }}
             title="Import custom animation presets"
             aria-label="Import Animation Presets"
             onClick={() => importFileRef.current?.click()}
@@ -551,7 +551,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
             <button
               type="button"
               className="btn-secondary"
-              style={{ height: 24, fontSize: 10, fontWeight: 700, padding: '0 8px', borderRadius: 4 }}
+              style={{ height: 24, fontSize: 10, fontWeight: 500, padding: '0 8px', borderRadius: 4 }}
               title="Copy animation from this element"
               aria-label="Copy Animation"
               data-lock-exempt
@@ -562,7 +562,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
             <button
               type="button"
               className="btn-secondary"
-              style={{ height: 24, fontSize: 10, fontWeight: 700, padding: '0 8px', borderRadius: 4 }}
+              style={{ height: 24, fontSize: 10, fontWeight: 500, padding: '0 8px', borderRadius: 4 }}
               title="Paste animation onto selected element"
               aria-label="Paste Animation"
               disabled={!clipboardSourceId || clipboardSourceId === selectedPart.id}
@@ -574,7 +574,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
               <button
                 type="button"
                 className="btn-secondary"
-                style={{ height: 24, fontSize: 10, fontWeight: 700, padding: '0 8px', borderRadius: 4, color: '#f87171' }}
+                style={{ height: 24, fontSize: 10, fontWeight: 500, padding: '0 8px', borderRadius: 4, color: '#f87171' }}
                 title="Clear animation (IN/OUT presets, durations and keyframes)"
                 aria-label="Clear Animation"
                 onClick={onClearAnimation}

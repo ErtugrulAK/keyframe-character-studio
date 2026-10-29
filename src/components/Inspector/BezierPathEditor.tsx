@@ -220,7 +220,7 @@ export const BezierPathEditor: React.FC<BezierPathEditorProps> = ({
         onPointerCancel={endVertexDrag}
         onLostPointerCapture={endVertexDrag}
       >
-        <rect x={0} y={0} width={width} height={height} fill="rgba(15,23,42,0.65)" stroke="var(--border-color)" />
+        <rect x={0} y={0} width={width} height={height} fill="rgba(39, 39, 39, 0.65)" stroke="var(--border-color)" />
         {/* The layer's own 0..1 box, so geometry past the edge reads as such. */}
         <rect
           x={(VIEW_MARGIN / span) * width}
@@ -228,11 +228,11 @@ export const BezierPathEditor: React.FC<BezierPathEditorProps> = ({
           width={(1 / span) * width}
           height={(1 / span) * height}
           fill="none"
-          stroke="rgba(148,163,184,0.35)"
+          stroke="rgba(166, 166, 166, 0.35)"
           strokeDasharray="4 3"
           pointerEvents="none"
         />
-        <path d={pathD} fill="rgba(56,189,248,0.12)" stroke="#38bdf8" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+        <path d={pathD} fill="rgba(118, 170, 237, 0.12)" stroke="#76aaed" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
         {path.points.map((point, index) => {
           const viewPoint = viewPoints[index];
           const handleIn = point.handleIn ? toView(point.handleIn) : null;
@@ -254,8 +254,8 @@ export const BezierPathEditor: React.FC<BezierPathEditorProps> = ({
                 cx={viewPoint.x}
                 cy={viewPoint.y}
                 r={7}
-                fill={index === selectedIndex ? '#f8fafc' : '#38bdf8'}
-                stroke="#0f172a"
+                fill={index === selectedIndex ? '#fafafa' : '#76aaed'}
+                stroke="#272727"
                 strokeWidth={1.5}
                 tabIndex={0}
                 role="button"

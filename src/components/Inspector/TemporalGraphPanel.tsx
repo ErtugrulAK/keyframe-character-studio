@@ -176,7 +176,7 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
         </span>
       </div>
       {sorted.length < 2 ? (
-        <div style={{ color: '#94a3b8', fontSize: 11 }}>Add at least two keyframes to display this graph.</div>
+        <div style={{ color: '#a6a6a6', fontSize: 11 }}>Add at least two keyframes to display this graph.</div>
       ) : (
         <svg
           className={`temporal-graph-svg temporal-graph-svg-${mode}`}
@@ -194,23 +194,23 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
           onMouseLeave={endPointDrag}
           onPointerCancel={endPointDrag}
           onLostPointerCapture={endPointDrag}
-          style={{ width: '100%', maxWidth: WIDTH, background: '#111827', border: '1px solid #293548', borderRadius: 4 }}
+          style={{ width: '100%', maxWidth: WIDTH, background: '#272727', border: '1px solid #383838', borderRadius: 4 }}
         >
-          <line x1={PAD_LEFT} y1={HEIGHT - PAD} x2={WIDTH - PAD} y2={HEIGHT - PAD} stroke="#334155" aria-hidden="true" />
-          <line x1={PAD_LEFT} y1={PAD} x2={PAD_LEFT} y2={HEIGHT - PAD} stroke="#334155" aria-hidden="true" />
+          <line x1={PAD_LEFT} y1={HEIGHT - PAD} x2={WIDTH - PAD} y2={HEIGHT - PAD} stroke="#414141" aria-hidden="true" />
+          <line x1={PAD_LEFT} y1={PAD} x2={PAD_LEFT} y2={HEIGHT - PAD} stroke="#414141" aria-hidden="true" />
           {/* D1 Increment 1: readable axes. Decorative for AT (the helper text
            * states the interaction contract); the numbers mirror the domain
            * the curve was drawn with. C8: the value labels sit in the left
            * gutter level with their gridline, the unit above the plot, and
            * the segment badges on the frame row under the axis, so no label
            * lies on a point or on the curve. */}
-          <text className="temporal-graph-axis-label" x={PAD_LEFT - 10} y={PAD + 3} fontSize={9} fill="#94a3b8" textAnchor="end" aria-hidden="true">{fmt(maxValue)}</text>
-          <text className="temporal-graph-axis-label" x={PAD_LEFT - 10} y={HEIGHT - PAD + 3} fontSize={9} fill="#94a3b8" textAnchor="end" aria-hidden="true">{fmt(minValue)}</text>
-          <text className="temporal-graph-axis-label" x={PAD_LEFT} y={12} fontSize={9} fill="#64748b" aria-hidden="true">
+          <text className="temporal-graph-axis-label" x={PAD_LEFT - 10} y={PAD + 3} fontSize={9} fill="#a6a6a6" textAnchor="end" aria-hidden="true">{fmt(maxValue)}</text>
+          <text className="temporal-graph-axis-label" x={PAD_LEFT - 10} y={HEIGHT - PAD + 3} fontSize={9} fill="#a6a6a6" textAnchor="end" aria-hidden="true">{fmt(minValue)}</text>
+          <text className="temporal-graph-axis-label" x={PAD_LEFT} y={12} fontSize={9} fill="#787878" aria-hidden="true">
             {mode === 'value' ? 'value units' : 'value units / frame'}
           </text>
-          <text className="temporal-graph-axis-label" x={PAD_LEFT} y={HEIGHT - 8} fontSize={8} fill="#64748b" aria-hidden="true">F{startFrame}</text>
-          <text className="temporal-graph-axis-label" x={WIDTH - PAD} y={HEIGHT - 8} fontSize={8} fill="#64748b" textAnchor="end" aria-hidden="true">F{endFrame}</text>
+          <text className="temporal-graph-axis-label" x={PAD_LEFT} y={HEIGHT - 8} fontSize={8} fill="#787878" aria-hidden="true">F{startFrame}</text>
+          <text className="temporal-graph-axis-label" x={WIDTH - PAD} y={HEIGHT - 8} fontSize={8} fill="#787878" textAnchor="end" aria-hidden="true">F{endFrame}</text>
           {/* One badge per segment, named by the branch the authority ACTUALLY
            * takes (V6 full precedence): HOLD > complete handle pair > stored
            * controlPoints > autoBezier > named. The classification comes from
@@ -235,7 +235,7 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
                 x={toSvg((keyframe.frame + next.frame) / 2, minValue).x}
                 y={HEIGHT - 8}
                 fontSize={8}
-                fill="#64748b"
+                fill="#787878"
                 textAnchor="middle"
                 role="img"
                 aria-label={`Segment frame ${keyframe.frame} to ${next.frame}: ${badgeText === 'IN/OUT' ? 'ease in out' : badgeText}`}
@@ -244,7 +244,7 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
               </text>
             );
           })}
-          <path d={pathD} fill={mode === 'speed' ? 'rgba(148,163,184,.12)' : 'none'} stroke={mode === 'value' ? '#22d3ee' : '#94a3b8'} strokeWidth={2} strokeDasharray={mode === 'speed' ? '6 5' : undefined} aria-hidden="true" />
+          <path d={pathD} fill={mode === 'speed' ? 'rgba(166, 166, 166, .12)' : 'none'} stroke={mode === 'value' ? '#5a98e9' : '#a6a6a6'} strokeWidth={2} strokeDasharray={mode === 'speed' ? '6 5' : undefined} aria-hidden="true" />
           {mode === 'value' && sorted.map((keyframe) => {
             const point = toSvg(keyframe.frame, keyframe.value);
             return (
@@ -253,8 +253,8 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
                 cx={point.x}
                 cy={point.y}
                 r={5}
-                fill="#f8fafc"
-                stroke="#22d3ee"
+                fill="#fafafa"
+                stroke="#5a98e9"
                 strokeWidth={2}
                 tabIndex={0}
                 role="button"
@@ -273,7 +273,7 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
       )}
       {mode === 'value' && onChangeKeyframeHandles && sorted.map((keyframe) => (
         <div key={`${keyframe.id}-handles`} style={{ display: 'grid', gridTemplateColumns: 'auto repeat(4, 1fr) minmax(96px, 1.3fr)', gap: 4, alignItems: 'center', marginTop: 4 }}>
-          <span style={{ fontSize: 10, color: '#94a3b8' }}>F{keyframe.frame}</span>
+          <span style={{ fontSize: 10, color: '#a6a6a6' }}>F{keyframe.frame}</span>
           {(['bezierIn', 'bezierOut'] as const).flatMap((handleName) => (['x', 'y'] as const).map((axis) => (
             <NumberField
               key={`${keyframe.id}-${handleName}-${axis}`}

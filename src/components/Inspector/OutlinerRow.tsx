@@ -110,7 +110,7 @@ const stackButtonStyle = (disabled: boolean): React.CSSProperties => ({
   padding: '1px 3px',
   background: 'transparent',
   border: 'none',
-  color: '#94a3b8',
+  color: '#a6a6a6',
   cursor: disabled ? 'default' : 'pointer',
   display: 'flex',
   alignItems: 'center',
@@ -181,7 +181,7 @@ export const OutlinerRow: React.FC<OutlinerRowProps> = React.memo(({
       )}
 
       <span title="Drag to reorder; drop on the middle of a layer to nest it" style={{ display: 'flex', alignItems: 'center', cursor: 'grab', marginRight: 4 }}>
-        <GripVertical size={12} className="track-drag-grip" style={{ color: '#64748b' }} />
+        <GripVertical size={12} className="track-drag-grip" style={{ color: '#787878' }} />
       </span>
 
       {/* C5 — a real switch (named, pressed state, disabled with a reason);

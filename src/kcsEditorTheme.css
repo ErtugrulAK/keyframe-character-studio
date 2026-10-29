@@ -1685,3 +1685,120 @@ button:disabled {
 .app-container .outliner-header > :not(.outliner-title-group) {
   align-self: center;
 }
+
+/*
+ * Dialogs: a title band and an action band, each split from the body by a
+ * line. The main action is a filled accent button; a destructive one is a red
+ * tint that fills on intent. Classes are doubled because dialogs are portaled
+ * and some load in lazy chunks whose CSS lands after this file.
+ */
+:root {
+  --kcs-on-accent: #101b2a;
+}
+.confirmation-dialog.confirmation-dialog,
+.lottie-report-dialog.lottie-report-dialog,
+.new-item-modal-card.new-item-modal-card {
+  padding: 0;
+  overflow: hidden;
+  background: var(--kcs-bg-panel);
+  border: 1px solid var(--kcs-border-default);
+  border-radius: var(--kcs-radius-panel);
+  box-shadow: var(--kcs-shadow-dialog);
+}
+:is(.confirmation-dialog, .lottie-report-dialog) > h2 {
+  margin: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--kcs-border-default);
+  color: var(--kcs-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+:is(.confirmation-dialog, .lottie-report-dialog) > :not(h2, .confirmation-dialog-actions, .lottie-report-actions) {
+  margin-right: 16px;
+  margin-left: 16px;
+}
+:is(.confirmation-dialog, .lottie-report-dialog) > h2 + * {
+  margin-top: 12px;
+}
+.confirmation-dialog-actions.confirmation-dialog-actions,
+.lottie-report-actions.lottie-report-actions,
+.modal-footer.modal-footer {
+  margin: 16px 0 0;
+  padding: 10px 16px;
+  background: var(--kcs-bg-app);
+  border-top: 1px solid var(--kcs-border-default);
+}
+.modal-header.modal-header {
+  margin: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--kcs-border-default);
+}
+.modal-body.modal-body {
+  gap: 0;
+  padding: 0;
+}
+/* Side space is padding: the input wrapper is full width, so a margin would overflow the card. */
+.new-item-modal-card :is(.modal-subtitle, .input-wrapper) {
+  margin: 12px 0 0;
+  padding: 0 16px;
+}
+.gif-export-header.gif-export-header {
+  margin: -12px -12px 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--kcs-border-default);
+}
+
+/* Secondary: the panel fill with a line. */
+:is(.confirmation-dialog-cancel, .lottie-report-cancel, .btn-cancel, .gif-export-cancel):is(.confirmation-dialog-cancel, .lottie-report-cancel, .btn-cancel, .gif-export-cancel) {
+  min-height: 28px;
+  background: var(--kcs-bg-panel);
+  border: 1px solid var(--kcs-border-default);
+  border-radius: var(--kcs-radius-control);
+  color: var(--kcs-text-primary);
+  font-size: 11px;
+  font-weight: 500;
+}
+:is(.confirmation-dialog-cancel, .lottie-report-cancel, .btn-cancel, .gif-export-cancel):hover:not(:disabled) {
+  background: var(--kcs-bg-elevated);
+  border-color: var(--kcs-border-strong);
+}
+
+/* Primary: filled accent. */
+:is(.ograf-capability-export, .lottie-report-confirm, .btn-confirm, .gif-export-run, .btn-primary):is(.ograf-capability-export, .lottie-report-confirm, .btn-confirm, .gif-export-run, .btn-primary) {
+  min-height: 28px;
+  background: var(--kcs-accent);
+  border: 1px solid var(--kcs-accent);
+  border-radius: var(--kcs-radius-control);
+  box-shadow: none;
+  color: var(--kcs-on-accent);
+  font-size: 11px;
+  font-weight: 600;
+  transform: none;
+}
+:is(.ograf-capability-export, .lottie-report-confirm, .btn-confirm, .gif-export-run, .btn-primary):hover:not(:disabled) {
+  background: var(--kcs-accent-hover);
+  border-color: var(--kcs-accent-hover);
+  color: var(--kcs-on-accent);
+}
+:is(.ograf-capability-export, .lottie-report-confirm, .btn-confirm, .gif-export-run, .btn-primary):disabled {
+  background: var(--kcs-bg-elevated);
+  border-color: var(--kcs-border-default);
+  color: var(--kcs-text-disabled);
+  opacity: 1;
+}
+
+/* Destructive: a red tint at rest, solid red on intent. */
+.confirmation-dialog-confirm.confirmation-dialog-confirm:not(.ograf-capability-export) {
+  min-height: 28px;
+  background: rgba(241, 111, 120, .14);
+  border: 1px solid rgba(241, 111, 120, .45);
+  border-radius: var(--kcs-radius-control);
+  color: var(--kcs-danger);
+  font-size: 11px;
+  font-weight: 600;
+}
+.confirmation-dialog-confirm.confirmation-dialog-confirm:not(.ograf-capability-export):is(:hover, :focus-visible) {
+  background: var(--kcs-danger);
+  border-color: var(--kcs-danger);
+  color: var(--kcs-on-accent);
+}

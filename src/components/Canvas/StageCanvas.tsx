@@ -1626,7 +1626,7 @@ export const StageCanvas: React.FC = () => {
     >
       {isDropTargetHover && (
         <div className="canvas-drop-zone-overlay">
-          <div style={{ color: 'var(--accent-teal)', fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ color: 'var(--accent-teal)', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
             <Sparkles size={18} />
             <span>RELEASE TO DROP ELEMENT ONTO STAGE CANVAS</span>
           </div>

@@ -1655,3 +1655,33 @@ button:disabled {
 .editor-context-menu-item.is-danger {
   color: var(--kcs-danger);
 }
+
+/*
+ * Panel headers are dock tab strips: a darker band with the panel's name as
+ * its active tab, which joins the panel body and carries a blue top line.
+ * The header keeps its height; the search field stays on the right.
+ */
+.app-container :is(.outliner-header, .details-header) {
+  align-items: stretch;
+  padding-left: 0;
+  background: var(--kcs-bg-app);
+  border-bottom: 1px solid var(--kcs-border-default);
+}
+.app-container :is(.outliner-title-group, .details-title-group) {
+  position: relative;
+  align-self: stretch;
+  margin-bottom: -1px;
+  padding: 0 12px;
+  background: var(--kcs-bg-panel);
+  border-right: 1px solid var(--kcs-border-default);
+  box-shadow: inset 0 2px var(--kcs-accent);
+}
+.app-container :is(.outliner-title-group, .details-title-group) > svg {
+  color: var(--kcs-text-secondary);
+}
+.app-container :is(.outliner-title, .details-title) {
+  color: var(--kcs-text-primary);
+}
+.app-container .outliner-header > :not(.outliner-title-group) {
+  align-self: center;
+}

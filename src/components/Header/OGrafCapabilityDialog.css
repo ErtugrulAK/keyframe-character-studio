@@ -19,7 +19,7 @@
   margin: 0 0 6px;
   color: var(--kcs-text-primary);
   font-size: var(--font-size-caption);
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -56,7 +56,7 @@
 
 .ograf-capability-name {
   color: var(--kcs-text-primary);
-  font-weight: 700;
+  font-weight: 500;
   overflow-wrap: anywhere;
 }
 
@@ -81,7 +81,7 @@
   margin-right: 6px;
   padding: 0 5px;
   border-radius: 3px;
-  background: rgba(148, 163, 184, 0.16);
+  background: rgba(166, 166, 166, 0.16);
   color: var(--kcs-text-primary);
   font-family: var(--font-mono);
 }

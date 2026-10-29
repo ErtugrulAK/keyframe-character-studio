@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-md);
-  background: rgba(7, 10, 16, 0.68);
+  background: rgba(26, 26, 26, 0.68);
   backdrop-filter: blur(3px);
 }
 
@@ -23,7 +23,7 @@
   margin: 0;
   color: var(--kcs-text-primary);
   font-size: var(--font-size-body-lg);
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .confirmation-dialog p {
@@ -66,7 +66,7 @@
   border: 1px solid var(--kcs-danger);
   background: transparent;
   color: var(--kcs-danger);
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .confirmation-dialog-confirm:hover,

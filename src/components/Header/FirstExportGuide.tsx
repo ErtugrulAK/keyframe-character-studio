@@ -37,7 +37,7 @@ export const FirstExportGuide: React.FC<FirstExportGuideProps> = ({ onCheckReadi
       color: 'var(--text-muted)',
     }}
   >
-    <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.6px', color: 'var(--accent-cyan)', marginBottom: 6 }}>
+    <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.6px', color: 'var(--accent-cyan)', marginBottom: 6 }}>
       FIRST OGRAF EXPORT
     </div>
     <ol style={{ margin: '0 0 8px 16px', padding: 0 }}>

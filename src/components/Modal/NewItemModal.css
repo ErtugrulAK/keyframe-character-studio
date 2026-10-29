@@ -4,7 +4,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(8, 10, 16, 0.75);
+  background: rgba(27, 27, 27, 0.75);
   backdrop-filter: blur(6px);
   z-index: 99999;
   display: flex;
@@ -51,14 +51,14 @@
 
 .modal-title {
   font-size: var(--font-size-body-lg);
-  font-weight: 700;
+  font-weight: 500;
   color: var(--kcs-text-primary);
   margin: 0;
   letter-spacing: 0.2px;
 }
 
 .text-cyan {
-  color: #38bdf8;
+  color: #76aaed;
 }
 
 /* The title mark follows this dialog's feature accent, not the shared utility hue. */
@@ -153,7 +153,7 @@
   padding: var(--space-xs) var(--space-md);
   border-radius: var(--kcs-radius-control);
   font-size: var(--font-size-mono);
-  font-weight: 700;
+  font-weight: 500;
   background: var(--kcs-accent);
   border: 1px solid var(--kcs-accent);
   color: var(--kcs-bg-app);

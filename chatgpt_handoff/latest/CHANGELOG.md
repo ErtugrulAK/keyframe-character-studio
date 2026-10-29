@@ -8,6 +8,13 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## [Unreleased]
 
+### Changed
+- A new editor look ("Neutral Pro"): neutral greys instead of the blue-black and teal shell, one blue accent, Inter, sharper corners and no glows. Buttons, chips, tabs and inputs share one style; panel and section titles are small uppercase labels; Inspector sections are flat and divided by lines; labels are lighter. The empty artboard stays black.
+- With nothing selected, the Inspector shows a "No layer selected" panel.
+
+### Fixed
+- A timeline keyframe menu opened near the right edge of the window no longer runs off-screen; the timeline menus look like the stage menu.
+
 ## [1.1.0-rc.3] - 2026-10-27
 
 The third release candidate of 1.1.0: the `feature/motion/kcs-master-implementation`

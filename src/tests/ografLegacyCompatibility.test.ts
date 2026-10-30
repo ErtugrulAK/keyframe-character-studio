@@ -142,6 +142,14 @@ describe('legacy OGraf asset compatibility', () => {
 
     const blocked = compileOGrafPackage(scene);
     expect(blocked.status).toBe('blocked');
-    expect(blocked.diagnostics.find((diagnostic) => diagnostic.code === 'OGRAF_FONT_UNVERIFIED')?.message).toContain('Display Layer uses Inter');
+    expect(blocked.diagnostics.find((diagnostic) => diagnostic.code === 'OGRAF_FONT_UNVERIFIED')?.message).toContain('Text layer Layer uses Inter');
+  });
+
+  test('reports each scene problem once', () => {
+    const scene = makeScene(makeLayer({ type: 'custom_text', imageUrl: undefined, textValue: 'Title', fontFamily: 'Inter' }));
+    const blocked = compileOGrafPackage(scene);
+    const keys = blocked.diagnostics.map((diagnostic) => `${diagnostic.code}|${diagnostic.layerId}|${diagnostic.message}`);
+    expect(keys.filter((key) => key.startsWith('OGRAF_FONT_UNVERIFIED|'))).toHaveLength(1);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });

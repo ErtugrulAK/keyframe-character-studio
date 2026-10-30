@@ -229,7 +229,7 @@ describe('HeaderBar OGraf export integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
     await waitFor(() => expect(context.showToast).toHaveBeenCalledTimes(1));
-    expect(context.showToast.mock.calls[0][0]).toContain('Display Title uses Inter');
+    expect(context.showToast.mock.calls[0][0]).toContain('Text layer Title uses Inter');
   });
 
 

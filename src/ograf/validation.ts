@@ -421,7 +421,7 @@ function validateFont(
     diagnostics.push(diagnostic(
       'OGRAF_FONT_UNVERIFIED',
       options.requirePortableAssets ? 'ERROR' : 'WARNING',
-      `Display ${describeOGrafValueForDiagnostics(layer.name)} uses ${describeOGrafValueForDiagnostics(layer.fontFamily)}, but KCS has no portable font file for this font. Import/upload the font file or choose a portable font before OGraf export.`,
+      `Text layer ${describeOGrafValueForDiagnostics(layer.name)} uses ${describeOGrafValueForDiagnostics(layer.fontFamily)}, but KCS has no portable font file for this font. Import/upload the font file or choose a portable font before OGraf export.`,
       layer,
       'font',
     ));

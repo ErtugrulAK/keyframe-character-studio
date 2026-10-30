@@ -1,0 +1,80 @@
+/* The graphic library: bounded by the window, the list scrolls and the
+   footer stays on screen. */
+.graphic-library-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+
+.graphic-library-save {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.graphic-library-save .input-control {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.graphic-library-status {
+  margin: 0 0 10px;
+  font-size: var(--font-size-caption);
+}
+
+.graphic-library-status.is-error { color: #f87171; }
+
+.graphic-library-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 0 16px;
+}
+
+.graphic-library-body ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.graphic-library-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--kcs-border-subtle);
+  border-radius: var(--kcs-radius-control);
+  margin-bottom: 6px;
+}
+
+.graphic-library-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.graphic-library-name {
+  color: var(--kcs-text-primary);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.graphic-library-detail,
+.graphic-library-empty,
+.graphic-library-ask {
+  color: var(--kcs-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.graphic-library-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.graphic-library-actions .is-danger {
+  color: #f87171;
+}

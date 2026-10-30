@@ -66,6 +66,8 @@ export interface EditorShortcutCommands {
   openShortcutReference?: () => void;
   /** C4 — locks the selected layers, or unlocks them when all are locked. */
   toggleSelectionLock?: () => void;
+  /** F9 — Easy Ease on the selected keyframes; false when none is selected. */
+  easySelectedKeyframes?: () => boolean;
   /** C4 — unlocks every layer. */
   unlockAllLayers?: () => void;
   /**
@@ -155,6 +157,7 @@ export const useKeyboardShortcuts = ({
   appMode,
   openShortcutReference,
   toggleSelectionLock,
+  easySelectedKeyframes,
   unlockAllLayers,
   beginNudge,
   endNudge,
@@ -350,6 +353,10 @@ export const useKeyboardShortcuts = ({
           event.preventDefault();
           window.dispatchEvent(new CustomEvent('canvas-viewport-command', { detail: { type: 'zoom-out' } }));
           return;
+        case 'easy-ease':
+          if (appMode === 'broadcast' || !easySelectedKeyframes) return;
+          if (easySelectedKeyframes()) event.preventDefault();
+          return;
         case 'lock-layers':
           if (!toggleSelectionLock) return;
           event.preventDefault();
@@ -422,6 +429,7 @@ export const useKeyboardShortcuts = ({
     appMode,
     openShortcutReference,
     toggleSelectionLock,
+    easySelectedKeyframes,
     unlockAllLayers,
   ]);
 };

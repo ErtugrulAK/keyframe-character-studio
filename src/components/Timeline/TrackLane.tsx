@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { Track, TrackChannel, AnimationChannel, LayerMaskChannel, LayerMaskPathChannel, PropertyKeyframe, PathKeyframe, Transform } from '../../types/animator';
+import type { EasingType, Track, TrackChannel, AnimationChannel, LayerMaskChannel, LayerMaskPathChannel, PropertyKeyframe, PathKeyframe, Transform } from '../../types/animator';
+import { QUICK_EASINGS } from '../../utils/keyframeEasing';
 import type { KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, KEYFRAME_DRAG_THRESHOLD_PX, KEYFRAME_GLYPH_GAP_PX, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/channelKeyframeGroups';
@@ -48,6 +49,8 @@ interface TrackLaneProps {
   onUpdateMaskPathKeyframeFrame: (trackId: string, channel: LayerMaskPathChannel, keyframeId: string, frame: number) => void;
   onDeleteMaskPathKeyframe: (trackId: string, channel: LayerMaskPathChannel, keyframeId: string) => void;
   onDuplicateKeyframeGroup: (trackId: string, frame: number) => void;
+  /** Quick easing for the keyframe group at `frame` (one undo entry). */
+  onSetKeyframeGroupEasing: (trackId: string, frame: number, easing: EasingType) => void;
   kfClipboard: KeyframeCopyPayload | null;
   onCopyKeyframes: (trackId: string, frame: number) => void;
   onPasteKeyframes: (trackId: string, frame: number) => void;
@@ -150,6 +153,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
   onUpdateMaskPathKeyframeFrame: _onUpdateMaskPathKeyframeFrame,
   onDeleteMaskPathKeyframe,
   onDuplicateKeyframeGroup,
+  onSetKeyframeGroupEasing,
   kfClipboard,
   onCopyKeyframes,
   onPasteKeyframes,
@@ -543,6 +547,24 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
           >
             Duplicate Keyframes
           </button>
+          <div className="editor-context-menu-separator" role="separator" />
+          {QUICK_EASINGS.map(({ easing, label }) => (
+            <button
+              key={easing}
+              type="button"
+              role="menuitem"
+              title={`Set the easing of the keyframes at this frame to ${label}`}
+              className="timeline-menu-item editor-context-menu-item"
+              onClick={() => {
+                onSetKeyframeGroupEasing(kfMenu.trackId, kfMenu.frame, easing);
+                setKfMenu(null);
+              }}
+            >
+              {label}
+              {easing === 'easeInOut' && <span className="editor-context-menu-shortcut">F9</span>}
+            </button>
+          ))}
+          <div className="editor-context-menu-separator" role="separator" />
           <button
             type="button"
             role="menuitem"

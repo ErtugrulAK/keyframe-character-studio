@@ -1,8 +1,8 @@
 /**
- * M3 — KeyframesTab channel model tests
+ * M3 — frame-grouped channel keyframe model tests
  *
- * Verifies the frame-grouped channel keyframe model that KeyframesTab now
- * consumes, plus the add/delete/move semantics against canonical channels.
+ * Verifies the frame-grouped channel keyframe model, plus the
+ * add/delete/move semantics against canonical channels.
  */
 
 import { describe, test, expect } from 'vitest';
@@ -35,7 +35,7 @@ const pk = (id: string, frame: number, value: number, templateId?: string): Prop
   id, frame, value, easing: 'linear', ...(templateId ? { templateId } : {}),
 } as PropertyKeyframe);
 
-describe('M3 — groupChannelKeyframesByFrame (KeyframesTab data model)', () => {
+describe('M3 — groupChannelKeyframesByFrame', () => {
 
   test('1: channel keyframes visible grouped by frame', () => {
     const track = makeTrack({
@@ -103,11 +103,11 @@ describe('M3 — groupChannelKeyframesByFrame (KeyframesTab data model)', () => 
   });
 });
 
-describe('M3 — channel CRUD semantics used by KeyframesTab', () => {
+describe('M3 — channel CRUD semantics', () => {
 
   test('add snapshot writes 6 channels at same frame (no loss)', () => {
     let track = makeTrack({});
-    // Simulate KeyframesTab handleAdd: one addPropertyKeyframe per channel
+    // Add: one addPropertyKeyframe per channel
     const values = { x: 1, y: 2, rotation: 3, scaleX: 4, scaleY: 5, opacity: 0.5 };
     for (const [ch, val] of Object.entries(values)) {
       track = addPropertyKeyframeMutator([track], 'trk_1', ch as TrackChannel, 45, val as number, 'easeInOut', 'Sequence')[0];
@@ -125,7 +125,7 @@ describe('M3 — channel CRUD semantics used by KeyframesTab', () => {
       y: [pk('y0', 30, 7)],
     });
 
-    // Simulate KeyframesTab handleDelete for frame 30
+    // Delete frame 30
     const groups = groupChannelKeyframesByFrame(track.channels, 'Sequence');
     const g30 = groups.find((g) => g.frame === 30)!;
     let updated = track;
@@ -146,7 +146,7 @@ describe('M3 — channel CRUD semantics used by KeyframesTab', () => {
       rotation: [pk('r0', 30, 90)],
     });
 
-    // Simulate KeyframesTab handleFrameChange 30 → 75
+    // Move frame 30 → 75
     const groups = groupChannelKeyframesByFrame(track.channels, 'Sequence');
     const g30 = groups[0];
     let updated = track;

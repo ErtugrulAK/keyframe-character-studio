@@ -118,7 +118,7 @@ export function groupChannelKeyframesByFrame(
 /**
  * M7: snapshot an evaluated transform into the 6 canonical channel values at
  * the current frame (used by the Outliner "Add Composite Keyframe" button —
- * same data KeyframesTab handleAdd writes).
+ * same data the keyframe add command writes).
  */
 export type SnapshotTransform = Pick<
   Record<TrackChannel, number>,

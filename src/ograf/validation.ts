@@ -468,8 +468,6 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
     diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_BOOLEAN', 'ERROR', 'Boolean groups are not supported by OGraf Export V1 yet.', layer, 'boolean'));
   }
 
-  if (layer.imageUrl && layer.type !== 'custom_image') {
-  }
   if (layer.imageUrl) {
     const asset = validateAsset(layer.imageUrl, 'image', options, diagnostics, layer);
     if (asset) assets.push(asset);

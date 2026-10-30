@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { openInspectorCard } from './fixtures/inspectorTabs';
 
 /**
  * C8 #3 — at 200 % browser zoom the right sidebar's Details pane was ~134 CSS
@@ -53,6 +54,10 @@ test.describe('200 % zoom (720 × 450 CSS px at 2× pixels)', () => {
 
   test('the short Details pane scrolls as one column down to its last control', async ({ page }) => {
     await seed(page);
+    // Cards start closed: open the one that holds the tab's last control, then
+    // start from the top of the pane again.
+    await openInspectorCard(page, 'SHAPE GEOMETRY');
+    await page.evaluate(() => { (document.querySelector('.details-container') as HTMLElement).scrollTop = 0; });
     const before = await scrollState(page);
     expect(before.pane).toBeLessThan(180);
     expect(before.containerScrolls).toBe(true);

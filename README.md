@@ -5,7 +5,7 @@
 **A 2D keyframe and motion-design editor that runs in the browser.**
 Draw, mask and animate vector scenes, then export them as broadcast graphics (OGraf), animated GIFs or project files.
 
-[![Version](https://img.shields.io/badge/version-1.1.0--rc.3-35c8b0)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0--rc.6-35c8b0)](CHANGELOG.md)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
@@ -128,10 +128,12 @@ gitGraph
     commit id: "paths + workspace"
     commit id: "QA rounds C1-C12"
     checkout main
-    merge feature id: "v1.1.0-rc.3 (next)" type: HIGHLIGHT
+    merge feature id: "v1.1.0-rc.3"
+    commit id: "v1.1.0-rc.4 Neutral Pro"
+    commit id: "v1.1.0-rc.6 (next)" type: HIGHLIGHT
 ```
 
-Versions follow [Semantic Versioning](https://semver.org/). Each candidate is QA'd by hand, and the accepted one becomes the final release. See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASING.md](docs/RELEASING.md).
+Versions follow [Semantic Versioning](https://semver.org/). Each candidate is QA'd by hand, and the accepted one becomes the final release. See [CHANGELOG.md](CHANGELOG.md), [docs/RELEASING.md](docs/RELEASING.md) and the [documentation index](docs/README.md).
 
 ## 🧭 Project status
 

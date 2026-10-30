@@ -1,6 +1,6 @@
 /**
- * C4 — the layer lock and the mask lock, end to end (behaviour table in
- * reports/.../c4-continuation/08_C4_RESULTS.md).
+ * C4 — the layer lock and the mask lock, end to end (behaviour table in the C4
+ * results record, docs/history/ENGINEERING_LOG.md).
  *
  * Layer lock: the canvas does not pick a locked layer (clicks reach the layer
  * beneath), the box and Select All leave it out; it can still be selected in the

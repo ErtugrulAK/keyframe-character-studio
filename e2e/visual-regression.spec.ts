@@ -7,7 +7,7 @@ import { test, expect, type Page } from '@playwright/test';
  * regions, strict thresholds, and NO dynamic surfaces (no timestamps, no
  * autosave text, no hover states, no transitions in frame). Adding a region
  * here requires it to pass the determinism checklist in
- * docs/KCS_VISUAL_QA.md first.
+ * docs/guides/VISUAL_QA.md first.
  *
  * Baselines live per-platform (see snapshotPathTemplate in
  * playwright.config.ts): a Windows baseline is never asserted on Linux.

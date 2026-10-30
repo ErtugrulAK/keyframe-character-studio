@@ -6,7 +6,7 @@ import type { LottieImportDiagnostic } from './diagnostics';
  * Lottie describes a *segment* between two keyframes with `o` (outgoing) and `i`
  * (incoming) Bezier control points; KCS describes a *keyframe* with `bezierIn`
  * and `bezierOut`. One Lottie pair therefore splits across the two keyframes it
- * connects — see `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` §6.
+ * connects — see `docs/specs/LOTTIE_IMPORT_MAPPING.md` §6.
  *
  * The importer preserves the document frame rate as the scene frame rate, so
  * Lottie frame units and scene frames are the same unit and the time mapping is

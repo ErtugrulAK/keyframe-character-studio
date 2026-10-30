@@ -2,7 +2,7 @@
  * Derived per-channel velocity (speed) math.
  *
  * V6+ roadmap item: the Speed Graph is a DERIVED view "backed by the shared
- * evaluator" (docs/V6_PLUS_ANIMATION_ROADMAP.md). This module therefore adds
+ * evaluator" (docs/roadmap/ANIMATION_ROADMAP_V6.md). This module therefore adds
  * NO parallel interpolation: every sample is taken from `interpolateChannel`,
  * the single scalar-channel authority (segment scan, hold semantics, bezier
  * control points, temporal handles, auto-Bezier derivation all stay there).

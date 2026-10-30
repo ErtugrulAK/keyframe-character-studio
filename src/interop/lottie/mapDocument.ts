@@ -11,7 +11,7 @@ import { mapLottieKeyframes, mapLottieSegmentTiming, type LottieHandleComponent,
  * Lottie import core (Milestone F, item 10).
  *
  * Implements the document- and layer-level mapping of
- * `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` for the constructs the imported
+ * `docs/specs/LOTTIE_IMPORT_MAPPING.md` for the constructs the imported
  * slices cover — document timing, shape/solid/null layers, transforms, paths,
  * primitives, fill/stroke/trim, layer masks and track mattes — and **reports**
  * everything the slices do not convert (precomps, text, images, effects,

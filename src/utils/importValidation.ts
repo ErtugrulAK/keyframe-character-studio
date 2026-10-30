@@ -13,8 +13,8 @@ import { effectsValidationError } from './colorCorrection';
  * of handing an unvalidated object to the serializer. It replaces parsing
  * straight into `any` and narrowing afterwards.
  *
- * See `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` §4 (item 12, security half)
- * and `reports/progress_119_kcs_import_boundary.md` for the decision record.
+ * See `docs/specs/INTEROP_STUDY.md` §4 (item 12, security half)
+ * and progress report 119 (docs/history/ENGINEERING_LOG.md) for the decision record.
  */
 
 /** One reason an import was refused, shaped like the export diagnostics. */

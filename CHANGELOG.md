@@ -8,6 +8,12 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## [Unreleased]
 
+## [1.1.0-rc.6] - 2026-10-30
+
+The sixth release candidate of 1.1.0: rc.5 with the fixes from its manual QA,
+the rotation handle turning a layer about its own origin, and a dead-code
+cleanup. No scene-format changes.
+
 ### Changed
 - The rotation handle turns a layer about its own origin (the crosshair the coordinate axes mark), as a keyframed rotation does; only the rotation changes, not the position. The toolbar's ±90° commands still turn a selection about its common centre.
 - Inspector sections start closed; Hierarchy, Animation Data, Shape Geometry, Path Points and Colour Correction no longer open by themselves. A section you open stays open for the session.

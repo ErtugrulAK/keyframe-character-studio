@@ -69,7 +69,7 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
   const hasStrokeAlignmentControl = supportsStrokeAlignment(selectedPart.type);
 
   return (
-    <StyleCard title="APPEARANCE" collapsible defaultOpen={false} retainKey="appearance">
+    <StyleCard title="APPEARANCE" collapsible retainKey="appearance">
       {hasCornerRadiusControl && (
         <div className="appearance-group appearance-group-corner-radius">
           <div className="appearance-group-header">

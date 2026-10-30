@@ -420,13 +420,12 @@ export const DetailsPanel: React.FC = () => {
 
             <Tabs.Content className="details-tab-panel" value="layer">
               {!selectedPart.booleanGroupId && (
-                <StyleCard title="HIERARCHY" collapsible defaultOpen retainKey="layer-hierarchy">
+                <StyleCard title="HIERARCHY" collapsible retainKey="layer-hierarchy">
                   <LayerParentField part={selectedPart} characterParts={characterParts} tracks={tracks} />
                 </StyleCard>
               )}
               <AnimationDataCard
                 partId={selectedPart.id}
-                defaultOpen
                 onCopyAnimation={handleCopyAnimation}
                 onPasteAnimation={handlePasteAnimation}
                 onClearAnimation={() => setPendingClear(true)}

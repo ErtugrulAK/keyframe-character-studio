@@ -10,6 +10,7 @@
  *   the path; a shape that cannot be converted says why.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openInspectorCard } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const emptyChannels = () => ({
@@ -100,6 +101,7 @@ test('Rectangle → path keeps the picture and every relation; add a point, make
   const pixelsBefore = await stagePixels(page);
 
   await selectPanel(page);
+  await openInspectorCard(page, 'SHAPE GEOMETRY');
   await expect(page.getByTestId('path-geometry-kind')).toContainText('Rectangle: a parametric shape');
   await page.getByRole('button', { name: 'Convert to editable path' }).click();
   await expect(page.getByText('PATH POINTS (4)')).toBeVisible();
@@ -180,6 +182,7 @@ test('Rectangle → path keeps the picture and every relation; add a point, make
 test('a shape that cannot be converted says why, and nothing changes', async ({ page }) => {
   await seed(page, { trimPathEnabled: true, trimPathStart: 0, trimPathEnd: 0.6, trimPathOffset: 0 });
   await selectPanel(page);
+  await openInspectorCard(page, 'SHAPE GEOMETRY');
   const convert = page.getByRole('button', { name: 'Convert to editable path' });
   await expect(convert).toBeDisabled();
   await expect(page.locator('.path-geometry-reason')).toContainText('Trim Path');

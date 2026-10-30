@@ -47,5 +47,5 @@ export const StyleEffectsSection: React.FC<StyleEffectsSectionProps> = ({
       )}
     </>
   );
-  return embedded ? controls : <StyleCard title="EFFECTS" collapsible defaultOpen={false} retainKey="effects">{controls}</StyleCard>;
+  return embedded ? controls : <StyleCard title="EFFECTS" collapsible retainKey="effects">{controls}</StyleCard>;
 };

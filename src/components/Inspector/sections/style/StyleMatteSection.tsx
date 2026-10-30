@@ -368,7 +368,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
 
   return (
     <>
-    <StyleCard title="LAYER MASKS" collapsible defaultOpen={false} retainKey="layer-masks">
+    <StyleCard title="LAYER MASKS" collapsible retainKey="layer-masks">
       <div className="matte-control-grid">
         {/* C3 — one compact row per mask (order, name, mode, off state); the
             selected row is the mask the settings below edit. C5/C10 — each row
@@ -559,7 +559,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
         onSelectTarget={onSelectMatteTarget}
       />
     )}
-    <StyleCard title="TRACK MATTE" collapsible defaultOpen={false} retainKey="track-matte" badge={trackMatte && !trackMatteSourceMissing ? (trackMatte.enabled !== false ? 'On' : 'Off') : undefined}>
+    <StyleCard title="TRACK MATTE" collapsible retainKey="track-matte" badge={trackMatte && !trackMatteSourceMissing ? (trackMatte.enabled !== false ? 'On' : 'Off') : undefined}>
       <p className="matte-section-intro" data-testid="track-matte-intro">
         Shows this layer only where another layer is (its alpha) or as bright as it is (its luminance).
         This is the matte to use for new work.
@@ -627,7 +627,6 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
     <StyleCard
       title="LEGACY CLIP MATTE"
       collapsible
-      defaultOpen={false}
       retainKey={matte ? 'legacy-clip-matte' : 'legacy-clip-matte-unused'}
       badge={!matte ? 'Advanced' : trackMatte && trackMatte.enabled !== false ? 'Kept · not applied' : matte.enabled === false ? 'Off' : 'In use'}
       tone={matte ? 'default' : 'quiet'}

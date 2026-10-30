@@ -9,7 +9,7 @@
  *   when a layer has one. Looking at it never changes data.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { openDetailsTab } from './fixtures/inspectorTabs';
+import { openDetailsTab, openInspectorCard } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const E = () => ({ x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [] });
@@ -69,6 +69,7 @@ test('header and Parent row: plain kind, long names contained, group vs parent s
 
   // C7 — the Parent row lives on the Inspector's Layer tab.
   await openDetailsTab(page, 'Layer');
+  await openInspectorCard(page, 'HIERARCHY');
   const relation = page.getByTestId('layer-parent-relation');
   await expect(relation).toContainText('In group “Characters”');
   await expect(page.locator('.layer-parent-field')).toHaveAttribute('data-relation', 'group');

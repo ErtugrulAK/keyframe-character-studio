@@ -82,6 +82,9 @@ describe('C7 Details tabs', () => {
     act(() => { fireEvent.mouseDown(tab(/^Layer/)); });
     // C10: no DUPLICATE card (duplicate is Ctrl+D; flipping is the toolbar's).
     expect(cardTitles()).toEqual(['HIERARCHY', 'ANIMATION DATA']);
+    // Cards start closed; the Parent field is one click away.
+    expect(screen.queryByLabelText('Parent')).toBeNull();
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Expand HIERARCHY' })); });
     expect(screen.getByLabelText('Parent')).toBeTruthy();
   });
 

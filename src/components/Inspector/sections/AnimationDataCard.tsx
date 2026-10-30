@@ -7,7 +7,6 @@ interface AnimationDataCardProps {
   onPasteAnimation?: () => void;
   onClearAnimation?: () => void;
   clipboardSourceId?: string | null;
-  defaultOpen?: boolean;
 }
 
 /**
@@ -22,9 +21,8 @@ export const AnimationDataCard: React.FC<AnimationDataCardProps> = ({
   onPasteAnimation,
   onClearAnimation,
   clipboardSourceId,
-  defaultOpen = false,
 }) => (
-  <StyleCard title="ANIMATION DATA" collapsible defaultOpen={defaultOpen} retainKey="animation-data">
+  <StyleCard title="ANIMATION DATA" collapsible retainKey="animation-data">
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
       <button
         type="button"

@@ -49,7 +49,7 @@ export const TransformVertexEditor: React.FC<TransformVertexEditorProps> = ({ se
   };
 
   return (
-    <StyleCard title={`FREE DRAW VERTICES (${points.length})`} collapsible defaultOpen={false} retainKey="free-draw-vertices">
+    <StyleCard title={`FREE DRAW VERTICES (${points.length})`} collapsible retainKey="free-draw-vertices">
       <div style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 6 }}>
         Same coordinates as POS X / POS Y (canvas center = 0). Numbered markers on the canvas show which vertex is which.
       </div>

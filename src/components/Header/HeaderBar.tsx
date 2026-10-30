@@ -330,7 +330,7 @@ export const HeaderBar: React.FC = () => {
   useEffect(() => {
     if (autosaveError && autosaveErrorAnnouncedRef.current !== autosaveError.at) {
       autosaveErrorAnnouncedRef.current = autosaveError.at;
-      showToast(`Auto-save failed: browser storage ${autosaveError.kind === 'quota' ? 'is full' : 'is unavailable'}. Your changes are kept in memory — export the project to keep them. Autosave retries every 10 seconds.`, 'error', { title: 'Save failed' });
+      showToast(`Auto-save failed: browser storage ${autosaveError.kind === 'quota' ? 'is full' : 'is unavailable'}. Your changes are kept in memory — ${autosaveError.kind === 'quota' ? 'save the graphic to the Library (it has far more room) or export it' : 'export the project'} to keep them. Autosave retries every 10 seconds.`, 'error', { title: 'Save failed' });
     }
   }, [autosaveError, showToast]);
   /**

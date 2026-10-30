@@ -2265,12 +2265,22 @@
   color: var(--text-primary);
 }
 
+/* The reading wraps inside its own column, so a longer reading (" · Inverted")
+   never pushes the button onto a new line. */
 .track-matte-summary-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
+}
+
+.track-matte-summary-row > span {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.track-matte-summary-row > button {
+  flex: 0 0 auto;
 }
 
 .track-matte-summary-row strong {

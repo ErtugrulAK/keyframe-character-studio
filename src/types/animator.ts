@@ -469,6 +469,9 @@ export interface CharacterPart {
   anchorOffsetX?: number;
   anchorOffsetY?: number;
 
+  /** Where the text's origin sits: absent = on the baseline (every older text). See utils/textOrigin. */
+  textOrigin?: import('../utils/textOrigin').TextOrigin;
+
   // ── Feature 3: Text Stagger Animation ──
   textAnimMode?: TextAnimMode;
   textStaggerDelay?: number;   // ms between each char/word/line

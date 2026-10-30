@@ -542,8 +542,8 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
     return (
       <g transform={affineSvgTransform(worldAffineOf(t), t, outputOrigin)}>
         <text
-          x={0}
-          y={0}
+          x={mask.text.x}
+          y={mask.text.y}
           textAnchor={mask.text.textAnchor}
           fontSize={mask.text.fontSize}
           fontWeight={mask.text.fontWeight}

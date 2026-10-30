@@ -1,4 +1,5 @@
 import { describeOGrafValueForDiagnostics } from './diagnostics';
+import { textBaselineOffset } from '../utils/textOrigin';
 import type { CharacterPart } from '../types/animator';
 import type { EvaluatedLayer, LayerContent } from '../types/composition';
 import { buildBezierPathD } from '../utils/bezierPath';
@@ -100,7 +101,7 @@ function renderText(layer: EvaluatedLayer, props: SvgAttributes = {}): string {
   const strokeColor = stroke === undefined ? authoredStroke : String(stroke);
   const fillColor = fill === undefined ? (appearance.fillEnabled ? appearance.fillColor : 'none') : String(fill);
   const resolvedFillOpacity = fillOpacity === undefined ? appearance.fillOpacity : Number(fillOpacity);
-  return `<text x="0" y="0" text-anchor="middle" fill="${escapeXml(fillColor || 'none')}" fill-opacity="${svgNumber(resolvedFillOpacity ?? 1)}" stroke="${escapeXml(strokeColor || 'none')}" stroke-opacity="${svgNumber(appearance.strokeOpacity)}" stroke-width="${svgNumber(appearance.strokeWidth)}" font-size="${svgNumber(content.fontSize || 24)}" font-weight="bold" font-family="${escapeXml(content.fontFamily || 'Outfit')}"${attributes(rest)}>${escapeXml(text)}</text>`;
+  return `<text x="0" y="${svgNumber(textBaselineOffset(content))}" text-anchor="middle" fill="${escapeXml(fillColor || 'none')}" fill-opacity="${svgNumber(resolvedFillOpacity ?? 1)}" stroke="${escapeXml(strokeColor || 'none')}" stroke-opacity="${svgNumber(appearance.strokeOpacity)}" stroke-width="${svgNumber(appearance.strokeWidth)}" font-size="${svgNumber(content.fontSize || 24)}" font-weight="bold" font-family="${escapeXml(content.fontFamily || 'Outfit')}"${attributes(rest)}>${escapeXml(text)}</text>`;
 }
 
 function renderImage(layer: EvaluatedLayer, options: OGrafSvgRenderOptions, props: SvgAttributes = {}): string {

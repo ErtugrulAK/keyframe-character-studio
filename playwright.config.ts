@@ -39,7 +39,7 @@ export default defineConfig({
   ],
   webServer: {
     command: isIsolatedQaRun
-      ? `concurrently "node server/index.js" "vite --host ${qaHost} --port ${qaPort}"`
+      ? `vite --host ${qaHost} --port ${qaPort}`
       : 'npm run dev',
     url: `http://${qaHost}:${qaPort}`,
     reuseExistingServer: isIsolatedQaRun ? false : true,

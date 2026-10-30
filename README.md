@@ -81,7 +81,7 @@ flowchart TB
 git clone https://github.com/ErtugrulAK/keyframe-character-studio.git
 cd keyframe-character-studio
 npm install
-npm run dev:frontend      # editor only → http://localhost:5173
+npm run dev               # the editor → http://localhost:5173
 ```
 
 <details>
@@ -89,14 +89,14 @@ npm run dev:frontend      # editor only → http://localhost:5173
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Editor plus the optional Express API (SQLite by default) |
+| `npm run dev` | The editor (Vite dev server) |
 | `npm run build` | Type-check and production build |
 | `npm run check` | Lint, type check, unit tests and build |
 | `npx vitest run` | Unit and component tests |
 | `npm run test:e2e` | Playwright end-to-end tests in Chromium |
 | `npm run validate:ograf` | Validate the OGraf fixture offline |
 
-Requires Node.js `^22.22.2 || ^24.15.0 || >=26.0.0`. The editor runs entirely in the browser; the API in `server/` (projects and presets, SQLite or PostgreSQL) is optional.
+Requires Node.js `^22.22.2 || ^24.15.0 || >=26.0.0`. The editor runs entirely in the browser: projects autosave in its storage and the Library keeps graphics in IndexedDB.
 </details>
 
 ## 🧪 Quality

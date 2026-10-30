@@ -15,6 +15,7 @@ the rotation handle turning a layer about its own origin, and a dead-code
 cleanup. No scene-format changes.
 
 ### Changed
+- A new text layer's origin (its crosshair) sits in the middle of the text, as for a rectangle, so it is placed, turned and scaled about its middle. Text layers made before keep their origin on the baseline and do not move.
 - The rotation handle turns a layer about its own origin (the crosshair the coordinate axes mark), as a keyframed rotation does; only the rotation changes, not the position. The toolbar's ±90° commands still turn a selection about its common centre.
 - Inspector sections start closed; Hierarchy, Animation Data, Shape Geometry, Path Points and Colour Correction no longer open by themselves. A section you open stays open for the session.
 - A new group's timeline row starts closed, like every other new layer.

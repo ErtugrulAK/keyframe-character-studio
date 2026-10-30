@@ -473,8 +473,9 @@ export function matteMaskGradientSuffix(
 
 /** M18 — render-only text mask content, mapped from the SOURCE part's runtime
  *  fields (mirrors TextAndClonerRenderers exactly: `textValue || 'TEXT'`,
- *  `fontSize || 24`, hardcoded bold, `fontFamily || 'Outfit'`, centered at the
- *  local origin with middle/middle anchor). No new persistent fields — the
+ *  `fontSize || 24`, hardcoded bold, `fontFamily || 'Outfit'`, centred
+ *  horizontally on the local origin with the baseline on it, as the stage
+ *  draws the text). No new persistent fields — the
  *  source part stays the single source of truth. */
 export interface MatteTextContent {
   content: string;
@@ -482,7 +483,6 @@ export interface MatteTextContent {
   fontWeight: string;
   fontFamily: string;
   textAnchor: 'middle';
-  dominantBaseline: 'middle';
   x: 0;
   y: 0;
 }
@@ -497,7 +497,6 @@ export function textMaskContent(
     fontWeight: 'bold',
     fontFamily: sourcePart.fontFamily || 'Outfit',
     textAnchor: 'middle',
-    dominantBaseline: 'middle',
     x: 0,
     y: 0,
   };

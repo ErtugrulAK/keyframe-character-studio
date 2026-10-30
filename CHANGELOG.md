@@ -8,6 +8,9 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## [Unreleased]
 
+### Fixed
+- A text layer used as a track matte now cuts exactly where its letters are drawn; the mask sat about a quarter of a line lower. GIF and OGraf exports put text where the editor shows it instead of lower, and text with a character or word animation no longer jumps down when the animation is switched on.
+
 ## [1.1.0-rc.4] - 2026-10-30
 
 The fourth release candidate of 1.1.0: rc.3 with the "Neutral Pro" editor look

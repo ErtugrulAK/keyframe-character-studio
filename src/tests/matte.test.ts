@@ -776,7 +776,8 @@ describe('matte — M18 text matte (data/pure)', () => {
     expect(d.fontFamily).toBe('Arial');
     expect(d.fontWeight).toBe('bold'); // renderer hardcodes bold
     expect(d.textAnchor).toBe('middle');
-    expect(d.dominantBaseline).toBe('middle');
+    // The stage draws text on its baseline (no dominant-baseline); the mask must too.
+    expect(d).not.toHaveProperty('dominantBaseline');
     expect(d.x).toBe(0);
     expect(d.y).toBe(0);
     // renderer fallbacks: textValue || "TEXT", fontSize || 24, fontFamily || "Outfit"

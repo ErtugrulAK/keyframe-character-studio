@@ -42,7 +42,6 @@ export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, current
             x={0}
             y={0}
             textAnchor="middle"
-            dominantBaseline="middle"
             fill={textFill}
             fillOpacity={appearance.fillOpacity}
             {...textStrokeProps}

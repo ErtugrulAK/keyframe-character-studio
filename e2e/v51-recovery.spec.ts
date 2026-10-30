@@ -33,7 +33,7 @@ async function seed(page: Page) {
 }
 
 test.describe('KCS V5.1 consolidated recovery', () => {
-  test('text selection bounds follow the rendered SVG text', async ({ page }) => {
+  test('text selection bounds hug the rendered SVG text', async ({ page }) => {
     await seed(page);
     await page.locator('.actor-node', { hasText: 'Headline' }).click();
     const geometry = await page.evaluate(() => {
@@ -47,10 +47,14 @@ test.describe('KCS V5.1 consolidated recovery', () => {
       };
     });
     expect(geometry).not.toBeNull();
-    expect(Math.abs(geometry!.selection.x - geometry!.text.x)).toBeLessThan(2);
-    expect(Math.abs(geometry!.selection.y - geometry!.text.y)).toBeLessThan(2);
-    expect(Math.abs(geometry!.selection.width - geometry!.text.width)).toBeLessThan(2);
-    expect(Math.abs(geometry!.selection.height - geometry!.text.height)).toBeLessThan(2);
+    // The frame hugs the letters (their ink), so it sits inside the SVG text's
+    // em box and is shorter than it; e2e/text-baseline-parity pins it to the ink.
+    const { selection, text } = geometry!;
+    expect(selection.x).toBeGreaterThanOrEqual(text.x - 1);
+    expect(selection.x + selection.width).toBeLessThanOrEqual(text.x + text.width + 1);
+    expect(selection.y).toBeGreaterThanOrEqual(text.y - 1);
+    expect(selection.y + selection.height).toBeLessThanOrEqual(text.y + text.height + 1);
+    expect(selection.height).toBeLessThan(text.height - 2);
   });
 
   test('ruler, playhead, and tracks share one horizontal scroll coordinate', async ({ page }) => {

@@ -58,6 +58,8 @@ fix after a candidate is the next candidate.
 - `v1.1.0-rc.3`: prepared on 2026-10-27; from here on the package metadata
   matches the tag.
 - `v1.1.0-rc.4`: prepared on 2026-10-30; rc.3 plus the Neutral Pro editor look.
+- `v1.1.0-rc.5`: prepared on 2026-10-30; rc.4 plus text matte and exported text
+  on the editor's baseline.
 - On 2026-10-27 the remote was cleaned: 75 merged, integrated or stale branches
   were deleted; the 18 that were not ancestors of `main` are kept as
   `archive/<branch>` tags (list and SHAs in the local workspace manifest).

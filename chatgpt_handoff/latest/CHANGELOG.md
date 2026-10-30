@@ -8,6 +8,11 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## [Unreleased]
 
+## [1.1.0-rc.5] - 2026-10-30
+
+The fifth release candidate of 1.1.0: rc.4 with text matte and exported text
+placed on the baseline the editor draws (#70). No scene-format changes.
+
 ### Fixed
 - A text layer used as a track matte now cuts exactly where its letters are drawn; the mask sat about a quarter of a line lower. GIF and OGraf exports put text where the editor shows it instead of lower, and text with a character or word animation no longer jumps down when the animation is switched on.
 

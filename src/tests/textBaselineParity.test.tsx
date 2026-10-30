@@ -85,5 +85,13 @@ describe('text sits on its baseline in every renderer', () => {
     expect(tag).toContain('text-anchor="middle"');
     expect(tag).toContain('y="0"');
     expect(tag).not.toContain('dominant-baseline');
+    // Bold like the stage and the static renderer: a regular-weight host
+    // render was narrower than the text the user authored.
+    expect(tag).toContain('font-weight="bold"');
+  });
+
+  it('the stage and the OGraf/GIF static renderer draw the text bold', () => {
+    expect(textTag(stageText({}))).toContain('font-weight="bold"');
+    expect(textTag(renderOGrafSvg(evaluateOGrafScene(scene, 0)))).toContain('font-weight="bold"');
   });
 });

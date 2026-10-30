@@ -1,0 +1,41 @@
+# V6 Lottie and OGraf Mapping
+
+## Purpose
+
+This document defines the interoperability boundary for KCS V6 Motion Core and Compositing. KCS remains the canonical authoring format. Importers and exporters must preserve unsupported data rather than silently reinterpret it.
+
+## Canonical KCS fields
+
+| `BezierPath` (`version: 1`, `coordinateSpace`, `closed`, ordered vertex IDs) | `src/utils/bezierPath.ts` | Maps to shape path vertices and tangents when topology is compatible | Supported for evaluated freeform SVG output |
+| `LayerMask[]` | `src/utils/layerMasks.ts` and `StagePartLayers` | Maps conceptually to ordered mask shapes and mask modes | Supported for the V6 SVG adapter; generated-runtime parity is covered by focused tests |
+| `TrackMatteV2` | `StagePartLayers` and `validateScene` | Maps to alpha/luma track matte relationships and inversion | Supported for the V6 alpha/luminance adapter; disabled relationships are ignored |
+| `maskChannels` | `trackMutations`, `useTimeline`, `interpolateChannel` | Maps to animated mask opacity/feather/expansion where the target supports them | Preserved and evaluated by the V6 adapter/runtime |
+| `PropertyKeyframe.bezierIn/bezierOut` | `interpolateChannel` and `TemporalGraphPanel` | Maps to temporal easing handles; target-specific conversion required | Preserved in scene data and evaluated by the generated runtime |
+| `hold` easing | `applyEasing` | Maps to a hold/step segment | Preserved and evaluated by KCS and the generated runtime |
+## Current OGraf implementation boundary
+
+- `evaluateOGrafScene` now carries the canonical freeform path into evaluated content.
+- `renderOGrafSvg` prefers `LayerContent.path` and falls back to legacy `points` for old scenes.
+- Primitive geometry, text, images, trim path, stroke alignment, hierarchy, and deterministic channel evaluation remain supported by the existing OGraf SVG adapter.
+- Legacy clip mattes remain conditionally supported; legacy alpha/luminance feather, strength, and gradient combinations that cannot be emitted faithfully produce validation errors.
+- Alpha/luminance Track Matte V2, inverted polarity, same-layer masks, and animated mask properties are emitted by the V6 adapter/runtime; browser semantic parity remains guarded by focused tests.
+
+## Lossless export policy
+
+Every V6 field remains in `scene.kcs`. The OGraf package runtime is an adapter, not a second scene authority. Unsupported V6 features therefore remain inspectable in the packaged scene and are reported before runtime generation.
+
+## Import policy
+
+- Preserve path vertex order and IDs.
+- Preserve explicit topology changes as holds; do not infer vertex correspondence.
+- Preserve mask and track-matte relationships even when the target adapter cannot render them.
+- Preserve temporal handles and `hold` easing when the target format has no direct equivalent; report conversion requirements instead of flattening silently.
+
+## Implementation references
+
+- KCS path authority: `src/utils/bezierPath.ts`
+- KCS V6 migration: `src/utils/v6Migration.ts`
+- OGraf evaluation: `src/ograf/evaluation.ts`
+- OGraf SVG adapter: `src/ograf/svgRenderer.ts`
+- OGraf capability diagnostics: `src/ograf/validation.ts`
+- Lottie and reference-format research: `docs/research/MOTION_COMPOSITING_RESEARCH_V6.md`

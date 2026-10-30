@@ -27,7 +27,7 @@ Use this priority when sources disagree:
 3. Current types and domain models
 4. Current package, TypeScript, Vitest, Vite, and Playwright configuration
 5. Current README and repository documentation
-6. Git history and historical wiki/log entries
+6. Git history and the engineering log (`docs/history/ENGINEERING_LOG.md`)
 
 Historical milestone test counts and “pending commit” notes are not current-state authority. Mark claims as `UNVERIFIED` when the current repository cannot prove them.
 
@@ -342,9 +342,9 @@ Use normal fast-forward synchronization only when explicitly approved. Never pus
 
 ## 24. Documentation Sources
 
-Use `README.md`, `skills/keyframe-studio/`, `skills/keyframe-studio/kcs-track-matte/SKILL.md`, `wiki/entities/keyframe-character-studio.md`, `wiki/log.md`, current tests/E2E specs, and git history for orientation and history.
+Use `README.md`, `docs/README.md`, `skills/keyframe-studio/`, `skills/keyframe-studio/kcs-track-matte/SKILL.md`, current tests/E2E specs, and git history for orientation and history.
 
-The wiki and skill contain valuable milestone contracts, but some historical entries may still say “commit/push pending” after the commits were later created. Current git history is authoritative for repository state.
+The skills contain the milestone contracts. Earlier milestone reports and the former wiki are indexed in `docs/history/ENGINEERING_LOG.md` and preserved at the tag `archive/docs-history-2026-10-31`; they are history, and current git history is authoritative for repository state.
 
 ## 25. Current Roadmap Status
 

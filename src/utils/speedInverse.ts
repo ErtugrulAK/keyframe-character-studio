@@ -1,7 +1,7 @@
 /**
  * F5a — Endpoint-slope ↔ temporal-handle conversion (pure math, spec §3/§5).
  *
- * Companion to `docs/KCS_F5_SPEED_GRAPH_INVERSE_SPEC.md` (PR #55): arbitrary
+ * Companion to `docs/specs/SPEED_GRAPH_INVERSE_SPEC.md` (PR #55): arbitrary
  * speed-graph editing is NOT losslessly representable in the authored model,
  * but a 2-DOF-per-segment endpoint-slope subset is, in closed form. This
  * module is the math only — no UI, no SceneData writes, no second evaluator.

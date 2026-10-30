@@ -64,7 +64,7 @@ Use this as diagnostic vocabulary, not a mandatory process. Do not rename KCS ar
 
 When editing agent-facing documents, keep one owner per rule, use pointers instead of repeated rule bodies, disclose branch-specific detail progressively, state concise activation conditions, provide observable completion criteria, and prune duplication that adds no trigger, rationale, or guardrail. Verify paths, headings, links, and scope.
 
-Preserve the existing ownership map: `AGENTS.md` is repository-wide authority; `.agents/AGENTS.md` is the detailed constitution; `.omp/RULES.md` is short harness safety guidance; `.omp/commands/*` owns procedural workflows; `skills/keyframe-studio/*` owns reusable KCS guidance; and `reports/DEVELOPMENT_REPORTING_POLICY.md` owns permanent report structure. Do not rewrite all instruction files or create a router/meta-skill.
+Preserve the existing ownership map: `AGENTS.md` is repository-wide authority; `.agents/AGENTS.md` is the detailed constitution; `.omp/RULES.md` is short harness safety guidance; `.omp/commands/*` owns procedural workflows; `skills/keyframe-studio/*` owns reusable KCS guidance; and `docs/history/REPORTING.md` owns how engineering work is recorded. Do not rewrite all instruction files or create a router/meta-skill.
 
 ### Adapter precedence
 

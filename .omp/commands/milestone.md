@@ -26,7 +26,7 @@ Do not route every milestone phase through a specialist model. Specialist model 
 ## 1. Discovery and safety
 
 - Read repository-root `AGENTS.md` first; it is the main engineering authority.
-- Read `reports/DEVELOPMENT_REPORTING_POLICY.md` before planning or implementing a meaningful milestone. It is the single canonical reporting policy; do not duplicate it in other workflow files.
+- Read `docs/history/REPORTING.md` before planning or implementing a meaningful milestone. It is the single canonical reporting policy; do not duplicate it in other workflow files.
 - Confirm the user-approved package and boundaries from `$ARGUMENTS` and the conversation. Do not invent milestone numbering or begin unrelated roadmap work.
 - Inspect branch, HEAD, upstream, ahead/behind, staged/unstaged changes, and untracked files. Existing unrelated `.hermes/desktop-attachments/` files are local artifacts only and must never be touched. Stop for any other unexpected user change.
 - Do not create/switch branches, commit, push, merge, rebase, reset, or stash.
@@ -91,14 +91,14 @@ For browser-only behavior, reproduce in the browser first and test the stable po
 - After each phase, run focused unit/component/integration tests and relevant Playwright scenarios for the changed contract.
 - Run `/regression` after implementation when the package reaches full-regression scope. Classify failures; never weaken assertions or hide failures with skips, retries, sleeps, thresholds, tolerances, or fallbacks.
 - Audit the final diff, public contracts, compatibility paths, generated artifacts, and Git scope. Stop for unexpected user changes.
-- During final scope audit, create `reports/progress_XXX.md` using the next sequential number and the canonical reporting policy. A meaningful milestone is incomplete until the report exists and is verified.
+- During final scope audit, write the milestone record the reporting policy asks for (pull request description, CHANGELOG entry, one engineering-log line). A meaningful milestone is incomplete until that record exists and is verified.
 ## Final report
 
 Before the short terminal response:
 
-- Verify the required numbered development report exists and was not written over an earlier report.
-- Record exact commands, test paths, outcomes, known limitations, Git state, and remaining risks in the report. Never claim unrun checks.
-- Keep chat output short; the permanent technical record belongs in `reports/progress_XXX.md`.
+- Verify the milestone record (pull request description, CHANGELOG entry, engineering-log line) exists.
+- Record exact commands, test paths, outcomes, known limitations, Git state, and remaining risks in the pull request description. Never claim unrun checks.
+- Keep chat output short; the permanent technical record belongs in the pull request.
 
 Return:
 

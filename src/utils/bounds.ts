@@ -77,6 +77,37 @@ export const getTextMetrics = (text: string, fontSize: number, fontFamily?: stri
   }
 };
 
+/** A box around the drawn glyphs, relative to the text's anchor on its baseline. */
+type TextInkBox = { minX: number; maxX: number; minY: number; maxY: number };
+
+/**
+ * The box the glyphs actually cover (the ink), as the stage draws them: bold,
+ * centred on the anchor, baseline at y = 0. `null` where the browser cannot
+ * measure it (no DOM, no ink metrics, nothing visible) — callers then use the
+ * em box from `getTextMetrics`.
+ */
+const getTextInkBox = (text: string, fontSize: number, fontFamily?: string): TextInkBox | null => {
+  if (typeof document === 'undefined') return null;
+  try {
+    const context = document.createElement('canvas').getContext('2d');
+    if (!context) return null;
+    context.font = `bold ${fontSize}px ${fontFamily || 'Outfit'}`;
+    context.textAlign = 'center';
+    context.textBaseline = 'alphabetic';
+    const measured = context.measureText(text);
+    const box = {
+      minX: -measured.actualBoundingBoxLeft,
+      maxX: measured.actualBoundingBoxRight,
+      minY: -measured.actualBoundingBoxAscent,
+      maxY: measured.actualBoundingBoxDescent,
+    };
+    const finite = Object.values(box).every(Number.isFinite);
+    return finite && box.maxX > box.minX && box.maxY > box.minY ? box : null;
+  } catch {
+    return null;
+  }
+};
+
 /**
  * Axis-aligned bounds in the part's authored local coordinate space.
  * `offsetX/Y` describe the visual geometry center relative to the transform
@@ -206,8 +237,21 @@ export const getPartLocalBounds = (
       case 'text':
       case 'heading':
       case 'title': {
-        const metrics = getTextMetrics(part.textValue || part.name || 'TEXT', part.fontSize || 24, part.fontFamily);
-        const centreY = metrics.offsetY + textBaselineOffset(part);
+        // The frame hugs the letters the user sees (as After Effects does);
+        // the em box is the fallback where the glyphs cannot be measured.
+        const text = part.textValue || part.name || 'TEXT';
+        const fontSize = part.fontSize || 24;
+        const baselineY = textBaselineOffset(part);
+        const ink = getTextInkBox(text, fontSize, part.fontFamily);
+        if (ink) {
+          bounds = boundsFromPoints([
+            { x: ink.minX, y: ink.minY + baselineY },
+            { x: ink.maxX, y: ink.maxY + baselineY },
+          ]);
+          break;
+        }
+        const metrics = getTextMetrics(text, fontSize, part.fontFamily);
+        const centreY = metrics.offsetY + baselineY;
         bounds = boundsFromPoints([
           { x: -metrics.halfW, y: centreY - metrics.halfH },
           { x: metrics.halfW, y: centreY + metrics.halfH },

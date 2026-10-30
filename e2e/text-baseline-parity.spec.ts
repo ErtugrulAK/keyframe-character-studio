@@ -51,9 +51,8 @@ async function seed(page: Page, layers: Record<string, unknown>[]): Promise<void
 type InkBox = { x0: number; x1: number; y0: number; y1: number };
 
 /** The screen box of the pure-red (stage text) or pure-green (matted target) pixels on the stage. */
-async function inkBox(page: Page, channel: 'red' | 'green'): Promise<InkBox | null> {
-  const stage = page.locator('.stage-svg').first();
-  const png = await stage.screenshot();
+async function inkBox(page: Page, channel: 'red' | 'green', area: 'stage' | 'viewport' = 'stage'): Promise<InkBox | null> {
+  const png = area === 'viewport' ? await page.screenshot() : await page.locator('.stage-svg').first().screenshot();
   return page.evaluate(async ([base64, wanted]) => {
     const image = new Image();
     image.src = `data:image/png;base64,${base64}`;
@@ -151,3 +150,23 @@ test('a centre-origin text sits with its box centred on the origin; a baseline t
   expect(Math.abs(await glyphCentreY('center')), 'centred text box centre').toBeLessThanOrEqual(3);
   expect(await glyphCentreY('baseline'), 'baseline text box centre').toBeLessThan(-20);
 });
+
+for (const origin of ['center', 'baseline'] as const) {
+  test(`the selection frame of a ${origin}-origin text hugs its letters`, async ({ page }) => {
+    await seed(page, [textSource({ textOrigin: origin })]);
+    // Both measured in viewport pixels.
+    const letters = await inkBox(page, 'red', 'viewport');
+    await page.locator('[role="tree"] [data-layer-id="txt"]').click();
+    const frame = await page.evaluate(() => {
+      const drawn = [...document.querySelectorAll('[data-testid="transform-gizmo"] rect')].find((rect) => rect.getAttribute('stroke') === '#4a8fe7');
+      const box = drawn!.getBoundingClientRect();
+      return { x0: box.left, x1: box.right, y0: box.top, y1: box.bottom };
+    });
+    expect(letters, 'the stage drew no text').not.toBeNull();
+    // Within a few pixels of the ink on every side (the old em box ran a quarter
+    // of a line above the capitals and below the baseline).
+    for (const edge of ['x0', 'x1', 'y0', 'y1'] as const) {
+      expect(Math.abs(frame[edge] - letters![edge]), `frame ${edge} vs ink ${edge}`).toBeLessThanOrEqual(3);
+    }
+  });
+}

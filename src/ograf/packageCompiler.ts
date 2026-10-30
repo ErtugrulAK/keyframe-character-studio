@@ -93,7 +93,7 @@ function packageAssetDiagnostics(sceneData: SceneData, options: OGrafExportOptio
  * element, where the renderer uses it.
  */
 const fontFaceFamily = (source: string): string => {
-  const familyList = source.slice('font:'.length);
+  const familyList = source.slice('font:'.length).replace(/#\d+$/u, '');
   const primary = (familyList.split(',')[0] ?? '').trim();
   return primary.replace(/^(['"])(.*)\1$/u, '$2').trim() || familyList;
 };
@@ -107,10 +107,15 @@ function generatedFiles(
 ): OGrafPackageFile[] {
   const graphicName = sanitizeOGrafId(options.name?.trim() || sceneData.name?.trim() || 'graphic');
   const imageReferences = Object.fromEntries(assets.filter((asset) => asset.kind === 'image').map((asset) => [asset.source, asset.packagedPath]));
-  const fontReferences = Object.fromEntries(assets.filter((asset) => asset.kind === 'font').map((asset) => [
-    fontFaceFamily(asset.source),
-    asset.packagedPath,
-  ]));
+  // One family may be several faces (character subsets), each with its range.
+  const fontReferences: Record<string, Array<{ path: string; unicodeRange?: string; fontWeight?: string }>> = {};
+  for (const asset of assets.filter((candidate) => candidate.kind === 'font')) {
+    (fontReferences[fontFaceFamily(asset.source)] ??= []).push({
+      path: asset.packagedPath,
+      ...(asset.unicodeRange ? { unicodeRange: asset.unicodeRange } : {}),
+      ...(asset.fontWeight ? { fontWeight: asset.fontWeight } : {}),
+    });
+  }
   const runtime = generateGraphicModule(
     sceneData,
     publicControls.textFields,

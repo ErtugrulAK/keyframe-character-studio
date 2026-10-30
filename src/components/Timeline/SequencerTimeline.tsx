@@ -142,6 +142,7 @@ export const SequencerTimeline: React.FC = () => {
     deletePropertyKeyframe,
     duplicateKeyframeGroup,
     duplicateKeyframeGroupAt,
+    setKeyframeGroupEasing,
     showToast,
     pasteKeyframeClipboard,
     updateKeyframeBezierPoints,
@@ -1098,7 +1099,7 @@ export const SequencerTimeline: React.FC = () => {
     toggleTrackLock, addKeyframeToTrack, currentFrame, handleAddChannelKeyframe, handleToggleChannelAnimation,
     toggleSubGroup, setCurrentFrame, setSelectedKeyframeId, selectKeyframes, beginKeyframePress, deleteKeyframe,
     deletePropertyKeyframe, deleteKeyframeFrameGroup, updateMaskPathKeyframeFrame, deleteMaskPathKeyframe,
-    duplicateKeyframeGroup, handleCopyKeyframes, handlePasteKeyframes, getFrameFromMouse,
+    duplicateKeyframeGroup, setKeyframeGroupEasing, handleCopyKeyframes, handlePasteKeyframes, getFrameFromMouse,
   });
   useLayoutEffect(() => {
     rowLatest.current = {
@@ -1106,7 +1107,7 @@ export const SequencerTimeline: React.FC = () => {
       toggleTrackLock, addKeyframeToTrack, currentFrame, handleAddChannelKeyframe, handleToggleChannelAnimation,
       toggleSubGroup, setCurrentFrame, setSelectedKeyframeId, selectKeyframes, beginKeyframePress, deleteKeyframe,
       deletePropertyKeyframe, deleteKeyframeFrameGroup, updateMaskPathKeyframeFrame, deleteMaskPathKeyframe,
-      duplicateKeyframeGroup, handleCopyKeyframes, handlePasteKeyframes, getFrameFromMouse,
+      duplicateKeyframeGroup, setKeyframeGroupEasing, handleCopyKeyframes, handlePasteKeyframes, getFrameFromMouse,
     };
   });
   const rowActions = useMemo(() => {
@@ -1138,6 +1139,7 @@ export const SequencerTimeline: React.FC = () => {
       onUpdateMaskPathKeyframeFrame: (...args: Parameters<typeof updateMaskPathKeyframeFrame>) => latest().updateMaskPathKeyframeFrame(...args),
       onDeleteMaskPathKeyframe: (...args: Parameters<typeof deleteMaskPathKeyframe>) => latest().deleteMaskPathKeyframe(...args),
       onDuplicateKeyframeGroup: (...args: Parameters<typeof duplicateKeyframeGroup>) => latest().duplicateKeyframeGroup(...args),
+      onSetKeyframeGroupEasing: (...args: Parameters<typeof setKeyframeGroupEasing>) => latest().setKeyframeGroupEasing(...args),
       onCopyKeyframes: (...args: Parameters<typeof handleCopyKeyframes>) => latest().handleCopyKeyframes(...args),
       onPasteKeyframes: (...args: Parameters<typeof handlePasteKeyframes>) => latest().handlePasteKeyframes(...args),
       onFrameFromClientX: (clientX: number) => latest().getFrameFromMouse(clientX),
@@ -1576,6 +1578,7 @@ export const SequencerTimeline: React.FC = () => {
                 onUpdateMaskPathKeyframeFrame={rowActions.onUpdateMaskPathKeyframeFrame}
                 onDeleteMaskPathKeyframe={rowActions.onDeleteMaskPathKeyframe}
                 onDuplicateKeyframeGroup={rowActions.onDuplicateKeyframeGroup}
+                onSetKeyframeGroupEasing={rowActions.onSetKeyframeGroupEasing}
                 kfClipboard={kfClipboard}
                 onCopyKeyframes={rowActions.onCopyKeyframes}
                 onPasteKeyframes={rowActions.onPasteKeyframes}

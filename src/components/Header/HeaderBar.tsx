@@ -305,7 +305,7 @@ export const HeaderBar: React.FC = () => {
   useEffect(() => {
     if (autosaveError && autosaveErrorAnnouncedRef.current !== autosaveError.at) {
       autosaveErrorAnnouncedRef.current = autosaveError.at;
-      showToast(`Auto-save failed: browser storage ${autosaveError.kind === 'quota' ? 'is full' : 'is unavailable'}. Your changes are kept in memory — export the project to keep them. Autosave retries every 10 seconds.`, 'error', { title: 'Save failed' });
+      showToast(`Auto-save failed: browser storage ${autosaveError.kind === 'quota' ? 'is full' : 'is unavailable'}. Your changes are kept in memory — ${autosaveError.kind === 'quota' ? 'save the graphic to the Library (Project panel; it has far more room) or export it' : 'export the project'} to keep them. Autosave retries every 10 seconds.`, 'error', { title: 'Save failed' });
     }
   }, [autosaveError, showToast]);
   /**
@@ -418,9 +418,10 @@ export const HeaderBar: React.FC = () => {
         default: {
           const result = importProject(text, fileNameWithoutExt);
           if (result.ok) {
-            // A successful import shows as its new Template tab; it can still
-            // carry warnings (for example the legacy migration notice), and
-            // those are shown.
+            // A successful import replaces the active template's content (a
+            // legacy project document opens as a new tab); it can still carry
+            // warnings (for example the legacy migration notice), and those
+            // are shown.
             const [notice] = result.diagnostics;
             if (notice) showToast(notice.message, 'info', { title: notice.code, action: notice.action });
             return;

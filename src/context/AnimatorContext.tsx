@@ -24,6 +24,7 @@ import { useClipboard } from '../hooks/useClipboard';
 import { useSelection } from '../hooks/useSelection';
 import { usePlayback } from '../hooks/usePlayback';
 import { duplicateKeyframeGroup as duplicateKeyframeGroupTrack } from '../utils/keyframeDuplicate';
+import { setKeyframeGroupEasing as setKeyframeGroupEasingTrack } from '../utils/keyframeEasing';
 import { pasteKeyframeGroupData, type KeyframeCopyPayload } from '../utils/keyframeCopyPaste';
 import { useHistory, type HistoryDocumentState } from '../hooks/useHistory';
 import { useBroadcast } from '../hooks/useBroadcast';
@@ -223,6 +224,8 @@ export interface AnimatorContextType {
   // M27 — duplicate the keyframe frame-group at `frame` of `trackId` (27A pure helper)
   duplicateKeyframeGroup: (trackId: string, frame: number) => void;
   duplicateKeyframeGroupAt: (trackId: string, sourceFrame: number, targetFrame: number) => boolean;
+  /** Quick easing: the keyframe group at `frame` of `trackId` in the active sequence. One undo entry. */
+  setKeyframeGroupEasing: (trackId: string, frame: number, easing: EasingType) => void;
   // M28 — paste a copied keyframe frame-group onto `trackId` at `frame` (28A pure helper)
   pasteKeyframeClipboard: (trackId: string, frame: number, payload: KeyframeCopyPayload) => void;
   applyMotionTransition: (partId: string, transitionType: string) => void;
@@ -886,7 +889,42 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLayersLocked(locked, false);
   }, [setLayersLocked, tracks]);
 
+  // Quick easing (timeline menu, F9): the keyframe groups of the active
+  // sequence through the pure helper, as ONE undo entry.
+  const easeKeyframeGroups = useCallback((framesByTrack: ReadonlyMap<string, number[]>, easing: EasingType): boolean => {
+    if (framesByTrack.size === 0) return false;
+    startBatchInteraction();
+    editSetTracks((prev) => prev.map((track) => {
+      const frames = framesByTrack.get(track.id);
+      return frames ? setKeyframeGroupEasingTrack(track, frames, activeTemplateId, easing).track : track;
+    }));
+    endBatchInteraction();
+    return true;
+  }, [activeTemplateId, editSetTracks, startBatchInteraction, endBatchInteraction]);
+  const setKeyframeGroupEasing = useCallback((trackId: string, frame: number, easing: EasingType) => {
+    easeKeyframeGroups(new Map([[trackId, [frame]]]), easing);
+  }, [easeKeyframeGroups]);
+  /** F9 — Easy Ease on the frames of the selected keyframes. */
+  const easySelectedKeyframes = useCallback((): boolean => {
+    if (selectedKeyframeIds.length === 0) return false;
+    const selected = new Set(selectedKeyframeIds);
+    const framesByTrack = new Map<string, number[]>();
+    for (const track of tracks) {
+      const frames = new Set<number>();
+      const lists: Array<Array<{ id: string; frame: number }>> = [
+        ...Object.values(track.channels ?? {}),
+        ...Object.values(track.maskChannels ?? {}),
+        ...Object.values(track.maskPathChannels ?? {}),
+        track.keyframes ?? [],
+      ];
+      for (const list of lists) for (const keyframe of list ?? []) if (selected.has(keyframe.id)) frames.add(keyframe.frame);
+      if (frames.size > 0) framesByTrack.set(track.id, [...frames]);
+    }
+    return easeKeyframeGroups(framesByTrack, 'easeInOut');
+  }, [easeKeyframeGroups, selectedKeyframeIds, tracks]);
+
   useKeyboardShortcuts({
+    easySelectedKeyframes,
     toggleSelectionLock,
     unlockAllLayers,
     beginNudge,
@@ -1193,6 +1231,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         clipboardData,
         duplicateKeyframeGroup,
         duplicateKeyframeGroupAt,
+        setKeyframeGroupEasing,
         pasteKeyframeClipboard,
         appMode,
         setAppMode,

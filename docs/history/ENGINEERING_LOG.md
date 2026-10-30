@@ -20,6 +20,8 @@ New milestones are recorded in `CHANGELOG.md` and in their pull requests; see
 |---|---|---|
 | 2026-10-31 | #72 | Release candidate 1.1.0-rc.6: rc.5 QA fixes, origin rotation, dead-code cleanup |
 | 2026-10-31 | #73 | A new text layer's origin sits in the middle of its text |
+| 2026-10-31 | #74 | Text frame on the ink, long-list test fix, repository tidy |
+| 2026-10-31 | (this PR) | Quick easing, README screenshots, bundled fonts and OGraf font packaging, graphic library |
 
 ## Progress reports (reports/)
 

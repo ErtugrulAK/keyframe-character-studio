@@ -229,7 +229,7 @@ function validateLayerInput(layer: SceneLayer, diagnostics: OGrafExportDiagnosti
     layer,
     'layer',
   );
-  for (const field of ['id', 'name', 'type', 'fillColor', 'strokeColor', 'textValue', 'fontFamily', 'imageUrl', 'videoUrl']) {
+  for (const field of ['id', 'name', 'type', 'fillColor', 'strokeColor', 'textValue', 'fontFamily', 'textOrigin', 'imageUrl', 'videoUrl']) {
     if (record[field] !== undefined && typeof record[field] !== 'string') {
       invalidProject(diagnostics, `Layer field "${field}" must be a string.`, layer, 'layer');
     }

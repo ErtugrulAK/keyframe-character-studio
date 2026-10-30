@@ -19,6 +19,7 @@
  * here. `custom_freeform` (and non-shape types) return null → no clip.
  */
 import type { BodyPartType, CharacterPart, MatteMode, PartMatte, TrackMatteV2 } from '../types/animator';
+import { textBaselineOffset } from './textOrigin';
 import { buildBezierPathD, legacyFreeformPointsToPath } from './bezierPath';
 import { applyAffine, invertAffine, worldAffineOf, type WorldAffine } from './containerMath';
 import type { WorldTransform } from '../types/composition';
@@ -474,8 +475,8 @@ export function matteMaskGradientSuffix(
 /** M18 — render-only text mask content, mapped from the SOURCE part's runtime
  *  fields (mirrors TextAndClonerRenderers exactly: `textValue || 'TEXT'`,
  *  `fontSize || 24`, hardcoded bold, `fontFamily || 'Outfit'`, centred
- *  horizontally on the local origin with the baseline on it, as the stage
- *  draws the text). No new persistent fields — the
+ *  horizontally on the local origin with the baseline where the stage draws
+ *  it — see utils/textOrigin). No new persistent fields — the
  *  source part stays the single source of truth. */
 export interface MatteTextContent {
   content: string;
@@ -484,11 +485,12 @@ export interface MatteTextContent {
   fontFamily: string;
   textAnchor: 'middle';
   x: 0;
-  y: 0;
+  /** The baseline, below the origin by `textBaselineOffset` (0 for a baseline-origin text). */
+  y: number;
 }
 
 export function textMaskContent(
-  sourcePart: Pick<CharacterPart, 'textValue' | 'fontSize' | 'fontFamily'> | undefined,
+  sourcePart: Pick<CharacterPart, 'textValue' | 'fontSize' | 'fontFamily' | 'textOrigin'> | undefined,
 ): MatteTextContent | undefined {
   if (!sourcePart) return undefined;
   return {
@@ -498,7 +500,7 @@ export function textMaskContent(
     fontFamily: sourcePart.fontFamily || 'Outfit',
     textAnchor: 'middle',
     x: 0,
-    y: 0,
+    y: textBaselineOffset(sourcePart),
   };
 }
 

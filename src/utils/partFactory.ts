@@ -40,6 +40,8 @@ export const createCustomPart = (
     parentId: extraProps?.parentId !== undefined ? extraProps.parentId : undefined,
     baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
     textValue: type === 'custom_text' ? 'NEW TEXT' : type === 'custom_banner' ? 'CARD LABEL' : undefined,
+    // A new text is placed, turned and scaled about its middle, like a shape.
+    ...(type === 'custom_text' ? { textOrigin: 'center' as const } : {}),
     fontSize: 20,
     cardCategory: type === 'custom_card' ? 'STUDIO CARD' : undefined,
     cardTitle: type === 'custom_card' ? 'MOTION GRAPHIC' : undefined,

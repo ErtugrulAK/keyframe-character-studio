@@ -1,6 +1,7 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
 import { resolveShapeAppearance } from '../../../../utils/shapeAppearance';
+import { textBaselineOffset } from '../../../../utils/textOrigin';
 
 interface TextAndClonerProps {
   part: CharacterPart;
@@ -15,6 +16,7 @@ export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, current
     const textStr = part.textValue || 'TEXT';
     const isStaggered = part.textAnimMode && part.textAnimMode !== 'none';
     const appearance = resolveShapeAppearance(part);
+    const baselineY = textBaselineOffset(part);
     const textFill = appearance.fillEnabled ? fill : 'none';
     // Authored paint wins: the `stroke` prop carries the legacy selection
     // highlight, so it is only used as the unset-colour fallback, and as the
@@ -40,7 +42,7 @@ export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, current
         <g>
           <text
             x={0}
-            y={0}
+            y={baselineY}
             textAnchor="middle"
             fill={textFill}
             fillOpacity={appearance.fillOpacity}
@@ -75,7 +77,7 @@ export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, current
         <g>
           <text
             x={0}
-            y={0}
+            y={baselineY}
             textAnchor="middle"
             fill={textFill}
             fillOpacity={appearance.fillOpacity}

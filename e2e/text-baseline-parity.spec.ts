@@ -113,3 +113,41 @@ test('the OGraf/GIF renderer puts the text where the stage does', async ({ page 
   expect(Math.abs(boxes.exported.y - boxes.stage.y), 'export vs stage glyph top').toBeLessThanOrEqual(1);
   expect(Math.abs(boxes.exported.height - boxes.stage.height)).toBeLessThanOrEqual(1);
 });
+
+for (const origin of ['center', 'baseline'] as const) {
+  test(`a ${origin}-origin text: its matte cut and its OGraf render match the stage`, async ({ page }) => {
+    await seed(page, [textSource({ textOrigin: origin })]);
+    const letters = await inkBox(page, 'red');
+    const boxes = await page.evaluate(async () => {
+      const stage = document.querySelector<SVGTextElement>('.stage-svg [data-part-id="txt"] text')!.getBBox();
+      const { evaluateSceneFrame } = await import('/src/ograf/evaluation.ts');
+      const { renderOGrafSvg } = await import('/src/ograf/svgRenderer.ts');
+      const host = document.createElement('div');
+      host.innerHTML = renderOGrafSvg(evaluateSceneFrame(JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5')!), 0));
+      document.body.appendChild(host);
+      const exported = host.querySelector<SVGTextElement>('text')!.getBBox();
+      host.remove();
+      return { stage: { y: stage.y, height: stage.height }, exported: { y: exported.y, height: exported.height } };
+    });
+    expect(Math.abs(boxes.exported.y - boxes.stage.y), 'export vs stage glyph top').toBeLessThanOrEqual(1);
+
+    await seed(page, [textSource({ textOrigin: origin, visible: false }), coveringTarget()]);
+    const cut = await inkBox(page, 'green');
+    for (const edge of ['x0', 'x1', 'y0', 'y1'] as const) {
+      expect(Math.abs(cut![edge] - letters![edge]), `matte ${edge} vs stage ${edge}`).toBeLessThanOrEqual(2);
+    }
+  });
+}
+
+test('a centre-origin text sits with its box centred on the origin; a baseline text sits above it', async ({ page }) => {
+  const glyphCentreY = async (origin: 'center' | 'baseline') => {
+    await seed(page, [textSource({ textOrigin: origin })]);
+    return page.evaluate(() => {
+      const box = document.querySelector<SVGTextElement>('.stage-svg [data-part-id="txt"] text')!.getBBox();
+      return box.y + box.height / 2;
+    });
+  };
+  // Local units, origin at 0: the em box centre of 80px text is 0.346 em above its baseline.
+  expect(Math.abs(await glyphCentreY('center')), 'centred text box centre').toBeLessThanOrEqual(3);
+  expect(await glyphCentreY('baseline'), 'baseline text box centre').toBeLessThan(-20);
+});

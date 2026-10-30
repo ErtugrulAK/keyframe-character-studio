@@ -1,4 +1,5 @@
 import type { CharacterPart, Transform } from '../types/animator';
+import { textBaselineOffset } from './textOrigin';
 import { applyAffine, worldAffineOf, type WorldAffine } from './containerMath';
 import { getShapeGeometry } from './shapeGeometry';
 import { resolveShapeAppearance } from './shapeAppearance';
@@ -206,9 +207,10 @@ export const getPartLocalBounds = (
       case 'heading':
       case 'title': {
         const metrics = getTextMetrics(part.textValue || part.name || 'TEXT', part.fontSize || 24, part.fontFamily);
+        const centreY = metrics.offsetY + textBaselineOffset(part);
         bounds = boundsFromPoints([
-          { x: -metrics.halfW, y: metrics.offsetY - metrics.halfH },
-          { x: metrics.halfW, y: metrics.offsetY + metrics.halfH },
+          { x: -metrics.halfW, y: centreY - metrics.halfH },
+          { x: metrics.halfW, y: centreY + metrics.halfH },
         ]);
         break;
       }

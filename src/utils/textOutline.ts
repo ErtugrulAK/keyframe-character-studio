@@ -1,5 +1,6 @@
 import type { CharacterPart } from '../types/animator';
 import { getTextMetrics } from './bounds';
+import { textBaselineOffset } from './textOrigin';
 
 /**
  * Text outline tracing — the geometry a Boolean operand needs for a text layer
@@ -391,10 +392,18 @@ export const getTextOutlinePolygons = (part: CharacterPart): OutlinePolygon[] | 
   // loading continues the provisional raster is reused (no per-frame thrash);
   // once loading has settled it is retraced ONCE and kept, so the geometry
   // matches what the renderer now draws.
-  if (cached && (cached.settled || !settled)) return cached.polygons;
+  // The trace (and its cache) is baseline-relative; the layer's origin may sit
+  // above the baseline (utils/textOrigin).
+  const toLayer = (polygons: OutlinePolygon[] | null): OutlinePolygon[] | null => {
+    const baselineY = textBaselineOffset(part);
+    return polygons && baselineY !== 0
+      ? polygons.map((polygon) => polygon.map((ring) => ring.map(([x, y]): [number, number] => [x, y + baselineY])))
+      : polygons;
+  };
+  if (cached && (cached.settled || !settled)) return toLayer(cached.polygons);
 
   const traced = traceText(text, fontSize, fontFamily);
-  if (!traced) return cached?.polygons ?? null;
+  if (!traced) return toLayer(cached?.polygons ?? null);
   rememberOutline(key, { polygons: traced, settled });
-  return traced;
+  return toLayer(traced);
 };

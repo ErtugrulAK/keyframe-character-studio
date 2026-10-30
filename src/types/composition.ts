@@ -135,6 +135,8 @@ export interface SceneLayer {
   textValue?: string;
   fontSize?: number;
   fontFamily?: string;
+  /** Absent = the origin sits on the baseline. See utils/textOrigin. */
+  textOrigin?: import('../utils/textOrigin').TextOrigin;
   imageUrl?: string;
   videoUrl?: string;
   /** Freeform polygon vertices (center-relative) */
@@ -262,6 +264,8 @@ export interface LayerContent {
   textValue?: string;
   fontSize?: number;
   fontFamily?: string;
+  /** Absent = the origin sits on the baseline. See utils/textOrigin. */
+  textOrigin?: import('../utils/textOrigin').TextOrigin;
   imageUrl?: string;
   videoUrl?: string;
   /** V6 same-layer mask stack. */

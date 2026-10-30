@@ -152,6 +152,7 @@ function extractContent(
     textValue: layer.textValue,
     fontSize: layer.fontSize,
     fontFamily: layer.fontFamily,
+    ...(layer.textOrigin !== undefined ? { textOrigin: layer.textOrigin } : {}),
     imageUrl: layer.imageUrl,
     videoUrl: layer.videoUrl,
     points: layer.points,

@@ -135,6 +135,24 @@ export const HeaderBar: React.FC = () => {
   const [ografStage, setOgrafStage] = useState<'compile' | 'package' | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState<boolean>(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+  // The menu closes on a press anywhere outside it (capture phase: canvas and
+  // panel handlers that stop or prevent the event still close it) and on Escape.
+  useEffect(() => {
+    if (!isExportMenuOpen) return undefined;
+    const closeOnOutsidePress = (event: PointerEvent) => {
+      if (!exportMenuRef.current?.contains(event.target as Node)) setIsExportMenuOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsExportMenuOpen(false);
+    };
+    window.addEventListener('pointerdown', closeOnOutsidePress, true);
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      window.removeEventListener('pointerdown', closeOnOutsidePress, true);
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [isExportMenuOpen]);
   /** SAFE-03-A: reset waits for an explicit confirmation whenever the document has content. */
   const [pendingResetConfirmation, setPendingResetConfirmation] = useState<boolean>(false);
   /** The scene snapshot the GIF panel summarises and exports, taken when it opens. */
@@ -614,7 +632,7 @@ export const HeaderBar: React.FC = () => {
           </button>
           <input ref={fileInputRef} type="file" accept=".json,.kcs,.lottie.json,.ograf.json,.zip,.ograf" aria-label="Choose a KCS project, legacy project, Lottie file, or OGraf manifest/package to import" style={{ display: 'none' }} onChange={handleImportFile} />
 
-          <div style={{ position: 'relative' }}>
+          <div ref={exportMenuRef} style={{ position: 'relative' }}>
             <button
               className="header-action-btn export-btn"
               onClick={() => setIsExportMenuOpen((open) => !open)}

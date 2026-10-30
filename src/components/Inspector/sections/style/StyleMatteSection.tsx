@@ -70,7 +70,7 @@ const selectStyle: React.CSSProperties = {
   borderRadius: 4,
   color: '#fff',
   fontSize: 11,
-  fontWeight: 700,
+  fontWeight: 500,
   padding: '0 6px',
 };
 const compactSelectStyle: React.CSSProperties = {
@@ -691,14 +691,14 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
                 aria-label="Inverted"
                 checked={invertedValue}
                 onChange={onToggleInverted}
-                style={{ accentColor: '#00d2ff' }}
+                style={{ accentColor: '#4a8fe8' }}
               />
             </div>
 
             <div className="matte-field">
               <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>FEATHER</span>
-                <span style={{ color: '#00d2ff', fontWeight: 800, opacity: featherDisabled ? 0.45 : 1 }}>{featherValue}px</span>
+                <span style={{ color: '#4a8fe8', fontWeight: 600, opacity: featherDisabled ? 0.45 : 1 }}>{featherValue}px</span>
               </label>
               <input
                 {...rangeGesture}
@@ -717,7 +717,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             <div className="matte-field">
               <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>STRENGTH</span>
-                <span style={{ color: '#00d2ff', fontWeight: 800, opacity: strengthDisabled ? 0.45 : 1 }}>{strengthValue}%</span>
+                <span style={{ color: '#4a8fe8', fontWeight: 600, opacity: strengthDisabled ? 0.45 : 1 }}>{strengthValue}%</span>
               </label>
               <input
                 {...rangeGesture}
@@ -741,7 +741,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
                 checked={gradientEnabled}
                 disabled={gradientDisabled}
                 onChange={onToggleGradient}
-                style={{ accentColor: '#00d2ff' }}
+                style={{ accentColor: '#4a8fe8' }}
               />
             </div>
 
@@ -766,7 +766,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
               <div className="matte-field">
                 <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>ANGLE</span>
-                  <span style={{ color: '#00d2ff', fontWeight: 800, opacity: gradientDisabled ? 0.45 : 1 }}>{angleValue}°</span>
+                  <span style={{ color: '#4a8fe8', fontWeight: 600, opacity: gradientDisabled ? 0.45 : 1 }}>{angleValue}°</span>
                 </label>
                 <input
                   {...rangeGesture}
@@ -841,13 +841,13 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
               </div>
             )}
 
-            <label className="matte-toggle-field matte-span-full" style={{ fontSize: 11, color: '#cbd5e1', cursor: 'pointer' }}>
+            <label className="matte-toggle-field matte-span-full" style={{ fontSize: 11, color: '#d6d6d6', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 aria-label="Enabled"
                 checked={matte.enabled !== false}
                 onChange={onToggleEnabled}
-                style={{ accentColor: '#00d2ff' }}
+                style={{ accentColor: '#4a8fe8' }}
               />
               Enabled
             </label>

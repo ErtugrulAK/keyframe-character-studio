@@ -44,13 +44,13 @@
 
 .director-item-name {
   font-size: var(--font-size-body);
-  font-weight: 700;
+  font-weight: 500;
   color: #fff;
 }
 
 .director-item-status {
   font-size: var(--font-size-caption);
-  font-weight: 800;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: var(--space-2xs);
@@ -77,13 +77,13 @@
   background: transparent;
   color: var(--accent-cyan);
   font-size: var(--font-size-caption);
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .btn-director:hover:not(:disabled) {
-  background: rgba(0, 210, 255, 0.1);
+  background: rgba(74, 143, 232, 0.1);
 }
 
 .btn-director.active {

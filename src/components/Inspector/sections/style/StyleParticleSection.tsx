@@ -52,7 +52,7 @@ export const StyleParticleSection: React.FC<StyleParticleSectionProps> = ({ sele
             borderRadius: 4,
             color: '#fff',
             fontSize: 11,
-            fontWeight: 700,
+            fontWeight: 500,
             padding: '0 6px',
           }}
         >

@@ -168,7 +168,7 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
     const mask = partMasks.find((m) => m.id === maskId);
     return {
       label: `${mask?.name ?? maskId} ${property}`,
-      color: property === 'path' ? '#38bdf8' : '#f59e0b',
+      color: property === 'path' ? '#76aaed' : '#f59e0b',
       shortLabel: property === 'path' ? 'P' : 'M',
     };
   };
@@ -311,7 +311,7 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
         onClick={(e) => onSelect(track.partId, e.shiftKey)}
       >
         {isChildLayer && (
-          <span style={{ fontSize: 10, color: 'var(--accent-cyan)', fontWeight: 800, marginRight: -2 }}>└─</span>
+          <span style={{ fontSize: 10, color: 'var(--accent-cyan)', fontWeight: 600, marginRight: -2 }}>└─</span>
         )}
 
         <button
@@ -465,19 +465,15 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
           ref={channelMenuRef}
           role="menu"
           aria-label={`${channelMenu.label} of ${displayName}`}
-          className="timeline-channel-menu"
-          style={{
-            position: 'fixed', left: channelMenu.x, top: channelMenu.y, zIndex: 1000, minWidth: 180,
-            background: '#1e2430', border: '1px solid #39415a', borderRadius: 6, boxShadow: '0 4px 16px rgba(0,0,0,0.5)', padding: '4px 0',
-          }}
+          className="editor-context-menu timeline-channel-menu"
+          style={{ position: 'fixed', left: channelMenu.x, top: channelMenu.y, zIndex: 1000, minWidth: 180 }}
         >
           <button
             type="button"
             role="menuitem"
-            className="timeline-menu-item"
+            className="timeline-menu-item editor-context-menu-item"
             autoFocus
             title={`Delete every ${channelMenu.label} keyframe of ${displayName} in this sequence (asks first)`}
-            style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#dbe3f0', fontSize: 11, fontWeight: 600, padding: '6px 12px', cursor: 'pointer' }}
             onClick={() => {
               const { channel } = channelMenu;
               setChannelMenu(null);

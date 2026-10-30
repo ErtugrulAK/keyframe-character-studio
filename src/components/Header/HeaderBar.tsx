@@ -594,7 +594,7 @@ export const HeaderBar: React.FC = () => {
               borderRadius: 4,
               color: 'var(--accent-cyan)',
               fontSize: 11,
-              fontWeight: 700,
+              fontWeight: 500,
               padding: '3px 4px',
               height: 26,
               cursor: 'pointer',

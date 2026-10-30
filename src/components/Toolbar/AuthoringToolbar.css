@@ -112,8 +112,8 @@
 .authoring-toolbar-group[aria-label="Canvas tools"] .authoring-toolbar-button.active,
 .authoring-toolbar-group[aria-label="Create"] .authoring-toolbar-button.active {
   position: relative;
-  background: rgba(53, 200, 176, 0.24);
-  border-color: rgba(53, 200, 176, 0.7);
+  background: rgba(73, 141, 231, 0.24);
+  border-color: rgba(73, 141, 231, 0.7);
   color: var(--kcs-accent);
 }
 
@@ -154,8 +154,8 @@
    way an active tool does: the strip never has to be read twice to know which
    band owns the floating menu. */
 .authoring-toolbar-button.is-open {
-  background: rgba(53, 200, 176, 0.14);
-  border-color: rgba(53, 200, 176, 0.38);
+  background: rgba(73, 141, 231, 0.14);
+  border-color: rgba(73, 141, 231, 0.38);
   color: var(--kcs-text-primary);
 }
 
@@ -253,8 +253,8 @@
   background:
     linear-gradient(to right, var(--kcs-bg-shell) 40%, rgba(0, 0, 0, 0)) left center / 28px 100% no-repeat local,
     linear-gradient(to left, var(--kcs-bg-shell) 40%, rgba(0, 0, 0, 0)) right center / 28px 100% no-repeat local,
-    radial-gradient(farthest-side at 0 50%, rgba(34, 211, 238, 0.45), rgba(0, 0, 0, 0)) left center / 12px 100% no-repeat scroll,
-    radial-gradient(farthest-side at 100% 50%, rgba(34, 211, 238, 0.45), rgba(0, 0, 0, 0)) right center / 12px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 0 50%, rgba(90, 152, 233, 0.45), rgba(0, 0, 0, 0)) left center / 12px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(90, 152, 233, 0.45), rgba(0, 0, 0, 0)) right center / 12px 100% no-repeat scroll,
     var(--kcs-bg-shell);
 }
 
@@ -273,9 +273,9 @@
   margin-left: auto;
   padding-left: 12px;
   font-size: 10px;
-  font-weight: 700;
-  color: var(--kcs-text-muted, #94a3b8);
+  font-weight: 500;
+  color: var(--kcs-text-muted, #a6a6a6);
 }
 .authoring-toolbar-menu-item.is-checked .authoring-toolbar-menu-check {
-  color: var(--kcs-accent, #22d3ee);
+  color: var(--kcs-accent, #5a98e9);
 }

@@ -33,7 +33,7 @@
   margin: 0;
   color: var(--kcs-text-primary);
   font-size: var(--font-size-body);
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .gif-export-close {
@@ -89,7 +89,7 @@
 .gif-export-summary dd {
   margin: 0;
   color: var(--kcs-text-primary);
-  font-weight: 700;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
@@ -191,7 +191,7 @@
   border: 1px solid var(--kcs-accent);
   background: transparent;
   color: var(--kcs-accent);
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .gif-export-run:disabled {

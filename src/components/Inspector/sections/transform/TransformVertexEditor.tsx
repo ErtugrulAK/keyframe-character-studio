@@ -59,7 +59,7 @@ export const TransformVertexEditor: React.FC<TransformVertexEditorProps> = ({ se
           const display = freeformVertexToDisplay(point, transform);
           return (
             <div key={index} className="form-field-group" style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-color)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', justifyContent: 'space-between', margin: 0 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, color, width: 54, flexShrink: 0 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 500, color, width: 54, flexShrink: 0 }}>
                 <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, display: 'inline-block' }} />#{index + 1}
               </span>
               <div style={{ display: 'flex', gap: 6, flex: 1 }}>

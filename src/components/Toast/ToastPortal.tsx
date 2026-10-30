@@ -63,7 +63,7 @@ export const ToastPortal: React.FC<ToastPortalProps> = ({ toasts, removeToast })
               {t.type === 'error' && <AlertCircle size={18} className="text-red" style={{ color: accent }} />}
               {t.type === 'info' && <Sparkles size={18} className="text-cyan" style={{ color: accent }} />}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {t.title && <span style={{ fontSize: 13, fontWeight: 700 }}>{t.title}</span>}
+                {t.title && <span style={{ fontSize: 13, fontWeight: 500 }}>{t.title}</span>}
                 <span style={{ fontSize: t.title ? 12 : 13, fontWeight: t.title ? 600 : 700, opacity: t.title ? 0.92 : 1 }}>
                   {t.message}
                 </span>

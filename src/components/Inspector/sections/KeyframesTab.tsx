@@ -42,7 +42,7 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Diamond size={14} className="text-teal" />
-          <span style={{ fontSize: 11, fontWeight: 800, color: '#f8fafc', letterSpacing: '0.4px' }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: '#fafafa', letterSpacing: '0.4px' }}>
             LAYER KEYFRAMES ({groups.length})
           </span>
         </div>
@@ -53,19 +53,19 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
       {groups.length === 0 ? (
         <div
           style={{
-            background: '#0b0d10',
-            border: '1px dashed #232734',
+            background: '#1c1c1c',
+            border: '1px dashed #303030',
             borderRadius: 8,
             padding: '24px 16px',
             textAlign: 'center',
-            color: '#64748b',
+            color: '#787878',
           }}
         >
           <Diamond size={24} style={{ opacity: 0.3, marginBottom: 8 }} />
-          <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', margin: '0 0 4px 0' }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#a6a6a6', margin: '0 0 4px 0' }}>
             No keyframes on &quot;{selectedPart.name}&quot;
           </p>
-          <p style={{ fontSize: 10, color: '#64748b', margin: 0 }}>
+          <p style={{ fontSize: 10, color: '#787878', margin: 0 }}>
             Use the timeline property controls to author keyframes.
           </p>
         </div>
@@ -78,8 +78,8 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
               <div
                 key={group.frame}
                 style={{
-                  background: isCurrent ? 'rgba(20, 184, 166, 0.15)' : '#10131a',
-                  border: `1px solid ${isCurrent ? 'var(--accent-teal)' : '#1e2433'}`,
+                  background: isCurrent ? 'rgba(29, 114, 226, 0.15)' : '#222222',
+                  border: `1px solid ${isCurrent ? 'var(--accent-teal)' : '#2e2e2e'}`,
                   borderRadius: 6,
                   padding: '8px 10px',
                   display: 'flex',
@@ -95,8 +95,8 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
                       display: 'flex',
                       alignItems: 'center',
                       gap: 4,
-                      background: '#0e1118',
-                      border: `1px solid ${isCurrent ? 'rgba(20, 184, 166, 0.5)' : '#23293a'}`,
+                      background: '#212121',
+                      border: `1px solid ${isCurrent ? 'rgba(29, 114, 226, 0.5)' : '#323232'}`,
                       borderRadius: 6,
                       padding: '2px 6px',
                     }}
@@ -105,19 +105,19 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
                       className="btn-icon"
                       onClick={() => setCurrentFrame(group.frame)}
                       title={`Jump playhead to Frame ${group.frame}`}
-                      style={{ width: 18, height: 18, padding: 0, color: isCurrent ? '#14b8a6' : '#94a3b8' }}
+                      style={{ width: 18, height: 18, padding: 0, color: isCurrent ? '#1d72e2' : '#a6a6a6' }}
                     >
                       <Play size={10} fill="currentColor" />
                     </button>
-                    <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8' }}>F{group.frame}</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: '#a6a6a6' }}>F{group.frame}</span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: '#cbd5e1' }}>
+                    <span style={{ fontSize: 10, fontWeight: 500, color: '#d6d6d6' }}>
                       {formatTime(group.frame)}
                     </span>
                     {/* Channel tags + representative easing */}
-                    <span style={{ fontSize: 9, color: '#64748b', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: 9, color: '#787878', fontFamily: 'monospace' }}>
                       {group.channels.join(', ')}
                       {' · '}
                       {group.easing === 'cubic_bezier' && group.bezierControlPoints

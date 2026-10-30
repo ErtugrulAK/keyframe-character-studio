@@ -150,7 +150,7 @@ describe('TransformGizmo — the affine frame of a layer whose map is not a TRS'
       { x: bounds.minX, y: bounds.maxY },
       { x: bounds.maxX, y: bounds.maxY },
     ];
-    const handles = [...rendered.container.querySelectorAll('rect[fill="#00d2ff"]')];
+    const handles = [...rendered.container.querySelectorAll('rect[fill="#4a8fe7"]')];
     expect(handles).toHaveLength(4);
     handles.forEach((handle, index) => {
       const onFrame = applyAffine(affine, corners[index]);
@@ -171,7 +171,7 @@ describe('TransformGizmo — the affine frame of a layer whose map is not a TRS'
     const topEdge = applyAffine(affine, { x: boxCenter.x, y: bounds.minY });
     expect(Number(stem.getAttribute('x1'))).toBeCloseTo(topEdge.x, 6);
     expect(Number(stem.getAttribute('y1'))).toBeCloseTo(topEdge.y, 6);
-    const leftHandle = rendered.container.querySelector('circle[fill="#38bdf8"]')!;
+    const leftHandle = rendered.container.querySelector('circle[fill="#4a8fe7"]')!;
     const leftMid = applyAffine(affine, { x: bounds.minX, y: boxCenter.y });
     expect(Number(leftHandle.getAttribute('cx'))).toBeCloseTo(leftMid.x, 6);
     expect(Number(leftHandle.getAttribute('cy'))).toBeCloseTo(leftMid.y, 6);
@@ -205,7 +205,7 @@ describe('TransformGizmo — the affine frame of a layer whose map is not a TRS'
     const halo = rendered.getByTestId('selection-frame-halo');
     expect(halo.getAttribute('width')).toBe(String(bounds.maxX - bounds.minX));
     expect(halo.getAttribute('height')).toBe(String(bounds.maxY - bounds.minY));
-    const [firstCorner] = [...rendered.container.querySelectorAll('rect[fill="#00d2ff"]')];
+    const [firstCorner] = [...rendered.container.querySelectorAll('rect[fill="#4a8fe7"]')];
     const onFrame = applyAffine(affine, { x: bounds.minX, y: bounds.minY });
     expect(centerOf(firstCorner).x).toBeCloseTo(onFrame.x, 6);
     expect(centerOf(firstCorner).y).toBeCloseTo(onFrame.y, 6);
@@ -230,7 +230,7 @@ describe('TransformGizmo — the affine frame of a layer whose map is not a TRS'
     const halo = rendered.getByTestId('selection-frame-halo');
     expect(halo.getAttribute('x')).toBe(String(bounds.minX * 2));
     expect(halo.getAttribute('width')).toBe(String((bounds.maxX - bounds.minX) * 2));
-    const [firstCorner] = [...rendered.container.querySelectorAll('rect[fill="#00d2ff"]')];
+    const [firstCorner] = [...rendered.container.querySelectorAll('rect[fill="#4a8fe7"]')];
     expect(centerOf(firstCorner).x).toBeCloseTo(bounds.minX * 2, 6);
     expect(centerOf(firstCorner).y).toBeCloseTo(bounds.minY * 0.5, 6);
   });

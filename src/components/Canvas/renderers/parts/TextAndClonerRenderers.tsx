@@ -21,7 +21,7 @@ export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, current
     // highlight while the outline itself is switched off.
     const textStroke = appearance.strokeEnabled
       ? (appearance.strokeColor || stroke)
-      : (isSelected ? '#38bdf8' : 'none');
+      : (isSelected ? '#4a8fe7' : 'none');
     const textStrokeProps = {
       stroke: textStroke,
       strokeOpacity: appearance.strokeOpacity,

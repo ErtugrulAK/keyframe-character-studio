@@ -41,7 +41,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
           y1={artY}
           x2={artX + width}
           y2={artY}
-          stroke="#00d2ff"
+          stroke="#4a8fe7"
           strokeWidth={2}
           vectorEffect="non-scaling-stroke"
         />
@@ -51,7 +51,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
           y1={artY + height}
           x2={artX + width}
           y2={artY + height}
-          stroke="#00d2ff"
+          stroke="#4a8fe7"
           strokeWidth={2}
           vectorEffect="non-scaling-stroke"
         />
@@ -61,7 +61,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
           y1={artY}
           x2={artX}
           y2={artY + height}
-          stroke="#00d2ff"
+          stroke="#4a8fe7"
           strokeWidth={2}
           vectorEffect="non-scaling-stroke"
         />
@@ -71,7 +71,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
           y1={artY}
           x2={artX + width}
           y2={artY + height}
-          stroke="#00d2ff"
+          stroke="#4a8fe7"
           strokeWidth={2}
           vectorEffect="non-scaling-stroke"
         />
@@ -88,7 +88,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
             cx={corner.x}
             cy={corner.y}
             r={3.5 * Math.min(2.5, zScale)}
-            fill="#00d2ff"
+            fill="#4a8fe7"
             stroke="#ffffff"
             strokeWidth={1.5 * zScale}
           />

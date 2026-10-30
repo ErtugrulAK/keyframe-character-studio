@@ -85,7 +85,7 @@ export function renderShapeOutline(
   overrideMaskShape?: string
 ): React.ReactNode {
   const commonProps: OutlineStyleProps = {
-    stroke: '#00d2ff',
+    stroke: '#4a8fe7',
     strokeWidth: 1.5 * zScale,
     strokeDasharray: `${5 * zScale} ${4 * zScale}`,
     vectorEffect: 'non-scaling-stroke',

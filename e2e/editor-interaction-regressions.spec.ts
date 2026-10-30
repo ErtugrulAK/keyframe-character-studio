@@ -33,7 +33,7 @@ test('a horizontal flip keeps the selection gizmo aligned with a parallelogram',
   const gizmo = page.locator('[data-testid="transform-gizmo"]');
   await expect(gizmo).toBeVisible();
   await expect(gizmo.locator(':scope > g')).toHaveAttribute('transform', 'scale(-1, 1)');
-  await expect(gizmo.locator('rect[stroke="#00d2ff"][stroke-dasharray]')).toBeVisible();
+  await expect(gizmo.locator('rect[stroke="#4a8fe7"][stroke-dasharray]')).toBeVisible();
 });
 
 test('drawing a Parallelogram keeps the editor mounted without runtime errors', async ({ page }) => {

@@ -150,7 +150,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         height={rect.height}
         fill="none"
         pointerEvents="none"
-        stroke="#00d2ff"
+        stroke="#4a8fe7"
         strokeWidth={1.5}
         strokeDasharray="5 4"
         vectorEffect="non-scaling-stroke"
@@ -166,7 +166,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         y={point.y - metrics.cornerSize / 2}
         width={metrics.cornerSize}
         height={metrics.cornerSize}
-        fill="#00d2ff"
+        fill="#4a8fe7"
         stroke="#ffffff"
         strokeWidth={1.5 * zScale}
         style={{ cursor: corner.cursor, pointerEvents: 'auto' }}
@@ -202,7 +202,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         y1={stemStart.y}
         x2={point.x}
         y2={point.y}
-        stroke="#00d2ff"
+        stroke="#4a8fe7"
         strokeWidth={2}
         vectorEffect="non-scaling-stroke"
       />
@@ -275,8 +275,8 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
           {!isGroup && (
             <>
               {renderRotationHandle(topEdgeCenter, applyAffine(affine, { x: boxCenterX, y: box.minY - rotationOffsetLocal }))}
-              {renderEdgeHandle(applyAffine(affine, { x: box.minX, y: boxCenterY }), 'ew-resize', 'scale_left', '#38bdf8')}
-              {renderEdgeHandle(applyAffine(affine, { x: box.maxX, y: boxCenterY }), 'ew-resize', 'scale_right', '#38bdf8')}
+              {renderEdgeHandle(applyAffine(affine, { x: box.minX, y: boxCenterY }), 'ew-resize', 'scale_left', '#4a8fe7')}
+              {renderEdgeHandle(applyAffine(affine, { x: box.maxX, y: boxCenterY }), 'ew-resize', 'scale_right', '#4a8fe7')}
               {renderEdgeHandle(topEdgeCenter, 'ns-resize', 'scale_top', '#c084fc')}
               {renderEdgeHandle(applyAffine(affine, { x: boxCenterX, y: box.maxY }), 'ns-resize', 'scale_bottom', '#c084fc')}
             </>
@@ -309,8 +309,8 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         {!isGroup && (
           <>
             {renderRotationHandle({ x: centerX, y: top }, { x: centerX, y: rotationY })}
-            {renderEdgeHandle({ x: left, y: centerY }, 'ew-resize', 'scale_left', '#38bdf8')}
-            {renderEdgeHandle({ x: right, y: centerY }, 'ew-resize', 'scale_right', '#38bdf8')}
+            {renderEdgeHandle({ x: left, y: centerY }, 'ew-resize', 'scale_left', '#4a8fe7')}
+            {renderEdgeHandle({ x: right, y: centerY }, 'ew-resize', 'scale_right', '#4a8fe7')}
             {renderEdgeHandle({ x: centerX, y: top }, 'ns-resize', 'scale_top', '#c084fc')}
             {renderEdgeHandle({ x: centerX, y: bottom }, 'ns-resize', 'scale_bottom', '#c084fc')}
           </>

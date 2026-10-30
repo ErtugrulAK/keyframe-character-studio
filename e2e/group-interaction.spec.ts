@@ -68,7 +68,7 @@ const frame = (page: Page) => page.evaluate(() => {
   const rects = Array.from(box.querySelectorAll('rect'));
   // The accent dash is the frame geometry itself; the paired light/dark outline
   // shares its geometry but carries the wider light stroke.
-  const drawn = rects.find((rect) => rect.getAttribute('stroke') === '#00d2ff');
+  const drawn = rects.find((rect) => rect.getAttribute('stroke') === '#4a8fe7');
   if (!drawn) throw new Error('no drawn frame');
   const client = drawn.getBoundingClientRect();
   const gizmo = box.querySelector('[data-testid="transform-gizmo"]');
@@ -287,7 +287,7 @@ test('C — the geometryless group container emits no stray selection geometry',
       })
       .map((node) => ({ tag: node.tagName, fill: node.getAttribute('fill'), testid: node.getAttribute('data-testid') }));
     return {
-      centreMarkers: box.querySelectorAll('circle[fill="#00d2ff"]').length,
+      centreMarkers: box.querySelectorAll('circle:not([data-testid="gizmo-hit-target"]):not([fill="#4a8fe7"]):not([fill="#c084fc"]):not([fill="#ffb700"])').length,
       stray,
       containerNode: document.querySelectorAll('[data-group-id] [data-part-id]').length,
       gizmoCount: document.querySelectorAll('[data-testid="transform-gizmo"]').length,
@@ -349,8 +349,8 @@ test('E — every edge handle anchors the opposite edge (unrotated)', async ({ p
   await groupPair(page);
 
   const cases = [
-    { edge: 'left', fill: '#38bdf8', index: 0, oppositeFill: '#38bdf8', oppositeIndex: 1, delta: { x: 60, y: 0 } },
-    { edge: 'right', fill: '#38bdf8', index: 1, oppositeFill: '#38bdf8', oppositeIndex: 0, delta: { x: -60, y: 0 } },
+    { edge: 'left', fill: '#4a8fe7', index: 0, oppositeFill: '#4a8fe7', oppositeIndex: 1, delta: { x: 60, y: 0 } },
+    { edge: 'right', fill: '#4a8fe7', index: 1, oppositeFill: '#4a8fe7', oppositeIndex: 0, delta: { x: -60, y: 0 } },
     { edge: 'top', fill: '#c084fc', index: 0, oppositeFill: '#c084fc', oppositeIndex: 1, delta: { x: 0, y: 40 } },
     { edge: 'bottom', fill: '#c084fc', index: 1, oppositeFill: '#c084fc', oppositeIndex: 0, delta: { x: 0, y: -40 } },
   ] as const;
@@ -396,8 +396,8 @@ test('E — a rotated group still anchors the opposite edge', async ({ page }) =
   await expect(page.getByTestId('transform-gizmo')).toHaveAttribute('transform', /rotate\(30\)/);
 
   const cases = [
-    { edge: 'left', fill: '#38bdf8', index: 0, delta: { x: 50, y: 29 } },
-    { edge: 'right', fill: '#38bdf8', index: 1, delta: { x: -50, y: -29 } },
+    { edge: 'left', fill: '#4a8fe7', index: 0, delta: { x: 50, y: 29 } },
+    { edge: 'right', fill: '#4a8fe7', index: 1, delta: { x: -50, y: -29 } },
     { edge: 'top', fill: '#c084fc', index: 0, delta: { x: -35, y: 20 } },
     { edge: 'bottom', fill: '#c084fc', index: 1, delta: { x: 35, y: -20 } },
   ] as const;
@@ -405,17 +405,17 @@ test('E — a rotated group still anchors the opposite edge', async ({ page }) =
   for (const item of cases) {
     const handle = await handleCentre(page, item.fill, item.index);
     const before = await Promise.all([
-      handleCentre(page, '#38bdf8', 0),
-      handleCentre(page, '#38bdf8', 1),
+      handleCentre(page, '#4a8fe7', 0),
+      handleCentre(page, '#4a8fe7', 1),
       handleCentre(page, '#c084fc', 0),
       handleCentre(page, '#c084fc', 1),
     ]);
     const oppositeIndex = item.index === 0 ? 1 : 0;
-    const oppositeKey = item.fill === '#38bdf8' ? (oppositeIndex === 0 ? 0 : 1) : (oppositeIndex === 0 ? 2 : 3);
+    const oppositeKey = item.fill === '#4a8fe7' ? (oppositeIndex === 0 ? 0 : 1) : (oppositeIndex === 0 ? 2 : 3);
     await dragHandle(page, handle, item.delta);
     const after = await Promise.all([
-      handleCentre(page, '#38bdf8', 0),
-      handleCentre(page, '#38bdf8', 1),
+      handleCentre(page, '#4a8fe7', 0),
+      handleCentre(page, '#4a8fe7', 1),
       handleCentre(page, '#c084fc', 0),
       handleCentre(page, '#c084fc', 1),
     ]);
@@ -423,7 +423,7 @@ test('E — a rotated group still anchors the opposite edge', async ({ page }) =
       Math.hypot(after[oppositeKey].x - before[oppositeKey].x, after[oppositeKey].y - before[oppositeKey].y),
       `${item.edge}: opposite edge moved on a rotated group`,
     ).toBeLessThanOrEqual(1.5);
-    const draggedKey = item.fill === '#38bdf8' ? (item.index === 0 ? 0 : 1) : (item.index === 0 ? 2 : 3);
+    const draggedKey = item.fill === '#4a8fe7' ? (item.index === 0 ? 0 : 1) : (item.index === 0 ? 2 : 3);
     expect(
       Math.hypot(after[draggedKey].x - handle.x, after[draggedKey].y - handle.y),
       `${item.edge}: dragged edge did not travel`,
@@ -445,7 +445,7 @@ const image = (id: string, name: string, x: number, y: number) => ({
 const frameCentre = (page: Page) => page.evaluate(() => {
   const box = document.querySelector('[data-testid="group-aggregate-box"]');
   if (!box) throw new Error('no aggregate box');
-  const drawn = Array.from(box.querySelectorAll('rect')).find((rect) => rect.getAttribute('stroke') === '#00d2ff');
+  const drawn = Array.from(box.querySelectorAll('rect')).find((rect) => rect.getAttribute('stroke') === '#4a8fe7');
   if (!drawn) throw new Error('no drawn frame');
   const rect = drawn.getBoundingClientRect();
   return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
@@ -581,7 +581,7 @@ test('G — a translated, already-rotated and nested group keeps the same pivot'
 const drawnFrames = (page: Page) => page.evaluate(() => Array.from(
   document.querySelectorAll('[data-testid="transform-gizmo"]'),
 ).map((gizmo) => {
-  const drawn = Array.from(gizmo.querySelectorAll('rect')).find((rect) => rect.getAttribute('stroke') === '#00d2ff');
+  const drawn = Array.from(gizmo.querySelectorAll('rect')).find((rect) => rect.getAttribute('stroke') === '#4a8fe7');
   if (!drawn) throw new Error('gizmo without a drawn frame');
   return {
     width: Number(drawn.getAttribute('width')),
@@ -633,8 +633,8 @@ test('H — no grouped selection ever draws the container placeholder square', a
   expect(coveredFrames).toHaveLength(2);
   expect(coveredFrames.every((frame) => frame.width !== 64 && frame.height !== 64)).toBe(true);
   expect(coveredFrames.every((frame) => frame.width < 300), 'a duplicate container envelope was drawn').toBe(true);
-  // And no pivot marker anywhere in the multi-selection.
-  expect(await page.locator('[data-testid="transform-gizmo"] circle[fill="#00d2ff"]').count()).toBe(0);
+  // And no pivot marker anywhere in the multi-selection: only handles are circles.
+  expect(await page.locator('[data-testid="transform-gizmo"] circle:not([data-testid="gizmo-hit-target"]):not([fill="#4a8fe7"]):not([fill="#c084fc"]):not([fill="#ffb700"])').count()).toBe(0);
 
   // Selecting a nested container's own row still frames it by its children.
   await page.locator('.actor-node[data-group-container="true"]').first().click();
@@ -794,8 +794,8 @@ for (const rotation of [90, 30]) {
     await groupPair(page);
     const child = page.locator('[data-part-id="a"]').first();
     const before = (await child.boundingBox())!;
-    const left = await handleCentre(page, '#38bdf8', 0);
-    const right = await handleCentre(page, '#38bdf8', 1);
+    const left = await handleCentre(page, '#4a8fe7', 0);
+    const right = await handleCentre(page, '#4a8fe7', 1);
     const delta = 60;
     const ratio = (right.x - left.x + delta) / (right.x - left.x);
     await page.mouse.move(right.x, right.y);
@@ -804,7 +804,7 @@ for (const rotation of [90, 30]) {
     await page.mouse.move(right.x + delta, right.y, { steps: 8 });
     await page.mouse.up();
     const after = (await child.boundingBox())!;
-    const anchored = await handleCentre(page, '#38bdf8', 0);
+    const anchored = await handleCentre(page, '#4a8fe7', 0);
     expect(Math.abs(anchored.x - left.x)).toBeLessThanOrEqual(1);
     expect(Math.abs(anchored.y - left.y)).toBeLessThanOrEqual(1);
     expect(Math.abs(after.x - (left.x + (before.x - left.x) * ratio))).toBeLessThanOrEqual(1);

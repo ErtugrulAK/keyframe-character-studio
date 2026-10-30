@@ -73,7 +73,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
 
   const finalOpacity = isGhost ? 0.35 : el.opacity;
   const fill = (isGhost && ghostColor ? ghostColor : el.content.fillColor) || '#ffffff';
-  const stroke = (isGhost && ghostColor ? ghostColor : isSelected ? '#00d2ff' : el.content.strokeColor) || '#101218';
+  const stroke = (isGhost && ghostColor ? ghostColor : isSelected ? '#4a8fe7' : el.content.strokeColor) || '#101218';
   const filterId = !isGhost && el.content.shadowColor ? `drop-shadow-${part.id}` : undefined;
 
   // Build synthetic part for sub-renderers

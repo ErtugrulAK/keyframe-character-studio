@@ -789,7 +789,7 @@ describe('matte — M18 text matte (data/pure)', () => {
   });
 
   it('buildMatteTextMask: render-only mask — pathD null, text content, white/black fill', () => {
-    const m = buildMatteTextMask('txt', textMaskContent(textPart())!, 'alpha', false);
+    const m = buildMatteTextMask('txt', textMaskContent(textPart())!, 'alpha', false, '#404040');
     expect(m.id).toBe('kcs-mask-txt-alpha');
     expect(m.mode).toBe('alpha');
     expect(m.inverted).toBe(false);
@@ -797,10 +797,17 @@ describe('matte — M18 text matte (data/pure)', () => {
     expect(m.text!.content).toBe('HELLO');
     expect(m.fill).toBe('white');
     expect(m.feather).toBeUndefined();
-    const inv = buildMatteTextMask('txt', textMaskContent(textPart())!, 'luminance', true, 12, 0.5);
+    const inv = buildMatteTextMask('txt', textMaskContent(textPart())!, 'luminance', true, '#404040', 12, 0.5);
     expect(inv.fill).toBe('black'); // 4A: inverted text → black text + white rect (luminance structure)
     expect(inv.feather).toBe(12);
     expect(inv.strength).toBe(0.5);
+  });
+
+  it('buildMatteTextMask: a luminance mask paints the glyphs in the text colour, like a shape', () => {
+    const luma = buildMatteTextMask('txt', textMaskContent(textPart())!, 'luminance', false, '#404040');
+    expect(luma.fill).toBe('#404040');
+    const shape = buildMatteMaskFromPath('shape', 'M0 0Z', 'luminance', false, '#404040');
+    expect(luma.fill).toBe(shape.fill);
   });
 
   it('worldToLocal: identity — world point maps back to the same local point', () => {
@@ -878,7 +885,7 @@ describe('matte — M18 text matte (data/pure)', () => {
   });
 
   it('M8 integrity: text matte introduces NO channels/keyframes (mask data only)', () => {
-    const m = buildMatteTextMask('txt', textMaskContent(textPart())!, 'alpha', false);
+    const m = buildMatteTextMask('txt', textMaskContent(textPart())!, 'alpha', false, '#ffffff');
     const json = JSON.stringify(m);
     expect(json).not.toContain('channel');
     expect(json).not.toContain('keyframe');

@@ -776,11 +776,11 @@ describe('StagePartLayers — M18 text matte render (mask content <text>)', () =
     expect(html).not.toContain('<path d="M 270');
   });
 
-  it('B. text luminance: mask-type luminance + white text', () => {
-    const html = renderStage([textSource(), target({ sourcePartId: 'txt', mode: 'luminance' })]);
+  it('B. text luminance: mask-type luminance + the text in its own colour (as a shape source)', () => {
+    const html = renderStage([textSource({ fillColor: '#808080' }), target({ sourcePartId: 'txt', mode: 'luminance' })]);
     expect(html).toContain('<mask id="kcs-mask-txt-luminance"');
     expect(html).toContain('mask-type="luminance"');
-    expect(html).toContain('fill="white"');
+    expect(html).toMatch(/<mask id="kcs-mask-txt-luminance"[\s\S]*?<text[^>]*fill="#808080"/);
     expect(html).toContain('>HELLO</text>');
   });
 

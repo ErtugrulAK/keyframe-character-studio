@@ -630,7 +630,7 @@ export const createLayerGroup = (
     color: '#a78bfa',
     visible: true,
     locked: false,
-    expanded: true,
+    expanded: false,
     keyframes: [],
     channels: makeEmptyChannels(),
   };

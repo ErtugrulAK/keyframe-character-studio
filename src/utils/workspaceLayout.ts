@@ -1,5 +1,4 @@
 import { flushSync } from 'react-dom';
-import type { CSSProperties } from 'react';
 
 /**
  * THE workspace layout authority.
@@ -93,17 +92,6 @@ export const commitWorkspaceLayout = (apply: () => void): void => {
  * curve below, so opening and closing read as one soft slide.
  */
 export const PANEL_EDGE_TRANSITION_MS = 320;
-
-/**
- * How an eased docked edge is expressed while it travels: all three properties
- * the row reads for the panel's main size, in border-box pixels. Both docked
- * panels write their travelling width through this, so their geometry can never
- * be described two slightly different ways. `null` means at rest — the
- * stylesheet owns the width again, including the clamp it resolves it with.
- */
-export const panelEdgeStyle = (width: number | null): CSSProperties | undefined => (
-  width === null ? undefined : { width: `${width}px`, minWidth: `${width}px`, flexBasis: `${width}px` }
-);
 
 /**
  * Whether the user asked the system for reduced motion. Eased workspace edges

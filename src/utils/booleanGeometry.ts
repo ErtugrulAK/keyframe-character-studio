@@ -1,4 +1,4 @@
-import { difference, intersection, union, xor, type MultiPolygon, type Polygon, type Ring } from 'polygon-clipping';
+import { difference, intersection, union, xor, type MultiPolygon, type Polygon } from 'polygon-clipping';
 import type { CharacterPart, FreeformPoint, Track, Transform } from '../types/animator';
 import { getShapeGeometry } from './shapeGeometry';
 import { applyAffine, invertAffine, worldAffineOf, type WorldAffine } from './containerMath';
@@ -305,8 +305,3 @@ export const computeBooleanContours = (
   else result = union(subject, ...clippers);
   return flattenResult(result);
 };
-
-export const booleanRingArea = (ring: Ring): number => ring.reduce((area, [x1, y1], index) => {
-  const [x2, y2] = ring[(index + 1) % ring.length];
-  return area + (x1 * y2 - x2 * y1);
-}, 0) / 2;

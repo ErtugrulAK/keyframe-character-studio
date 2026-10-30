@@ -1,12 +1,54 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Library } from 'lucide-react';
 import { NumberField } from '../../Inspector/inputs/NumberField';
 import { useAnimator } from '../../../context/useAnimator';
+import { GraphicLibraryDialog } from '../../Header/GraphicLibraryDialog';
+import { validateImportedDocument } from '../../../utils/importValidation';
+import { createIndexedDbBackend, createProjectLibrary, type ProjectLibrary } from '../../../utils/projectLibrary';
 
 export const ProjectDrawer: React.FC = () => {
-  const { projectResolution, setProjectResolution } = useAnimator();
+  const { projectResolution, setProjectResolution, sceneTitle, exportProject, importProject, addProjectTemplate, showToast } = useAnimator();
+  /** The graphic library, created on first use (IndexedDB is opened only then). */
+  const [library, setLibrary] = useState<ProjectLibrary | null>(null);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  const openLibrary = () => {
+    setLibrary((current) => current ?? createProjectLibrary(createIndexedDbBackend()));
+    setIsLibraryOpen(true);
+  };
+  /**
+   * Opens a saved graphic in a NEW template tab: importing a scene replaces the
+   * active template's content, so a fresh tab is made first, and only for a
+   * document the import boundary accepts (no empty tab is left behind).
+   */
+  const openLibraryGraphic = (name: string, scene: string): boolean => {
+    if (!validateImportedDocument(scene).ok) return false;
+    addProjectTemplate(name);
+    const result = importProject(scene, name);
+    if (!result.ok) return false;
+    const [notice] = result.diagnostics;
+    if (notice) showToast(notice.message, 'info', { title: notice.code, action: notice.action });
+    return true;
+  };
 
   return (
     <div className="drawer-content project-drawer-content">
+      <div className="project-section">
+        <label className="form-label project-field-label">Library</label>
+        <button type="button" className="btn-secondary project-library-open" onClick={openLibrary} title="Graphics saved in this browser: save, open, duplicate, delete">
+          <Library size={14} aria-hidden="true" />
+          <span>Open Library…</span>
+        </button>
+        {library && isLibraryOpen && (
+          <GraphicLibraryDialog
+            isOpen={isLibraryOpen}
+            library={library}
+            currentName={sceneTitle}
+            exportCurrent={exportProject}
+            openGraphic={openLibraryGraphic}
+            onClose={() => setIsLibraryOpen(false)}
+          />
+        )}
+      </div>
       <div className="project-section">
         <label className="form-label project-field-label">
           Resolution Presets

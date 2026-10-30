@@ -29,11 +29,16 @@ async function seed(page: Page): Promise<void> {
 }
 
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Library' });
+/** The library lives in the left toolbar's Project drawer. */
+const openLibrary = async (page: Page) => {
+  await page.locator('.sidebar-nav-item', { hasText: 'Project' }).click();
+  await page.getByRole('button', { name: 'Open Library…' }).click();
+};
 const rows = (page: Page) => dialog(page).getByRole('list', { name: 'Saved graphics' }).getByRole('listitem');
 
 test('save the current graphic, find it after a reload, open it as a new tab, duplicate and delete', async ({ page }) => {
   await seed(page);
-  await page.getByRole('button', { name: 'Library' }).click();
+  await openLibrary(page);
   await expect(dialog(page)).toContainText('Nothing saved yet');
   await dialog(page).getByLabel('Name to save the current graphic under').fill('News lower third');
   await dialog(page).getByRole('button', { name: 'Save current graphic' }).click();
@@ -45,7 +50,7 @@ test('save the current graphic, find it after a reload, open it as a new tab, du
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
   const tabsBefore = await page.locator('.header-tab:not(.add-tab)').count();
   const firstTabName = (await page.locator('.header-tab:not(.add-tab)').first().innerText()).trim();
-  await page.getByRole('button', { name: 'Library' }).click();
+  await openLibrary(page);
   await expect(rows(page)).toHaveCount(1);
 
   await dialog(page).getByRole('button', { name: 'Duplicate News lower third' }).click();

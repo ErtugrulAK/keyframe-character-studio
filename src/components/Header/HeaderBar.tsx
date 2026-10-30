@@ -18,7 +18,6 @@ import {
   Plus,
   ChevronDown,
   Keyboard,
-  Library,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
@@ -36,12 +35,9 @@ import {
 import type { OGrafExportDiagnostic } from '../../ograf/types';
 import { buildOGrafCapabilityReport, type OGrafCapabilityReport } from '../../ograf/capabilityReport';
 import { OGrafCapabilityDialog } from './OGrafCapabilityDialog';
-import { GraphicLibraryDialog } from './GraphicLibraryDialog';
-import { createIndexedDbBackend, createProjectLibrary, type ProjectLibrary } from '../../utils/projectLibrary';
 import type { ToastOptions } from '../../hooks/useToast';
 import { ImportReportDialog } from '../Modal/ImportReportDialog';
 import { classifyImport } from '../../utils/importDispatch';
-import { validateImportedDocument } from '../../utils/importValidation';
 import { readOGrafPackage, type OGrafPackageReadResult } from '../../ograf/packageImport';
 import { importLottieDocument, type LottieImportResult } from '../../interop/lottie/mapDocument';
 import type { SceneData } from '../../types/composition';
@@ -222,27 +218,6 @@ export const HeaderBar: React.FC = () => {
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  /** The graphic library, created on first use (IndexedDB is opened only then). */
-  const [library, setLibrary] = useState<ProjectLibrary | null>(null);
-  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
-  const openLibrary = () => {
-    setLibrary((current) => current ?? createProjectLibrary(createIndexedDbBackend()));
-    setIsLibraryOpen(true);
-  };
-  /**
-   * Opens a saved graphic in a NEW template tab: importing a scene replaces the
-   * active template's content, so a fresh tab is made first, and only for a
-   * document the import boundary accepts (no empty tab is left behind).
-   */
-  const openLibraryGraphic = (name: string, scene: string): boolean => {
-    if (!validateImportedDocument(scene).ok) return false;
-    addProjectTemplate(name);
-    const result = importProject(scene, name);
-    if (!result.ok) return false;
-    const [notice] = result.diagnostics;
-    if (notice) showToast(notice.message, 'info', { title: notice.code, action: notice.action });
-    return true;
-  };
   /**
    * A parsed Lottie document waiting for the user to accept its report. It is
    * the only thing selecting a file changes: the project is untouched until
@@ -330,7 +305,7 @@ export const HeaderBar: React.FC = () => {
   useEffect(() => {
     if (autosaveError && autosaveErrorAnnouncedRef.current !== autosaveError.at) {
       autosaveErrorAnnouncedRef.current = autosaveError.at;
-      showToast(`Auto-save failed: browser storage ${autosaveError.kind === 'quota' ? 'is full' : 'is unavailable'}. Your changes are kept in memory — ${autosaveError.kind === 'quota' ? 'save the graphic to the Library (it has far more room) or export it' : 'export the project'} to keep them. Autosave retries every 10 seconds.`, 'error', { title: 'Save failed' });
+      showToast(`Auto-save failed: browser storage ${autosaveError.kind === 'quota' ? 'is full' : 'is unavailable'}. Your changes are kept in memory — ${autosaveError.kind === 'quota' ? 'save the graphic to the Library (Project panel; it has far more room) or export it' : 'export the project'} to keep them. Autosave retries every 10 seconds.`, 'error', { title: 'Save failed' });
     }
   }, [autosaveError, showToast]);
   /**
@@ -668,10 +643,6 @@ export const HeaderBar: React.FC = () => {
             <Upload size={14} />
             <span>Import</span>
           </button>
-          <button className="header-action-btn library-btn" onClick={openLibrary} title="Open the library of graphics saved in this browser">
-            <Library size={14} />
-            <span>Library</span>
-          </button>
           <input ref={fileInputRef} type="file" accept=".json,.kcs,.lottie.json,.ograf.json,.zip,.ograf" aria-label="Choose a KCS project, legacy project, Lottie file, or OGraf manifest/package to import" style={{ display: 'none' }} onChange={handleImportFile} />
 
           <div ref={exportMenuRef} style={{ position: 'relative' }}>
@@ -734,16 +705,6 @@ export const HeaderBar: React.FC = () => {
                   Check OGraf Export…
                 </button>
               </div>
-            )}
-            {library && isLibraryOpen && (
-              <GraphicLibraryDialog
-                isOpen={isLibraryOpen}
-                library={library}
-                currentName={sceneTitle}
-                exportCurrent={exportProject}
-                openGraphic={openLibraryGraphic}
-                onClose={() => setIsLibraryOpen(false)}
-              />
             )}
             <OGrafCapabilityDialog
               isOpen={ografCheck !== null}

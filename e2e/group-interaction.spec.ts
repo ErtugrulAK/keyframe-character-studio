@@ -479,37 +479,53 @@ const childSeparation = (page: Page) => page.evaluate(() => {
 });
 
 /**
- * Drags the rotation handle around the frame centre, sampling the drawn frame's
- * centre on every step. Returns the worst distance the pivot travelled.
+ * Where the selected layer's origin (the crosshair the coordinate overlay marks)
+ * is drawn: the gizmo group is translated to it.
  */
-async function dragRotation(page: Page, sweepRadians: number, steps = 14): Promise<{ worstPivotDrift: number; rotation: number }> {
-  const centre = await frameCentre(page);
+const originCentre = (page: Page) => page.evaluate(() => {
+  const gizmo = document.querySelector('[data-testid="transform-gizmo"]') as SVGGElement | null;
+  const ctm = gizmo?.getScreenCTM();
+  if (!ctm) throw new Error('no gizmo');
+  return { x: ctm.e, y: ctm.f };
+});
+
+/**
+ * Drags the rotation handle around the layer origin, sampling on every step how
+ * far the origin and the drawn frame centre travelled.
+ */
+async function dragRotation(page: Page, sweepRadians: number, steps = 14): Promise<{ worstPivotDrift: number; frameTravel: number; rotation: number }> {
+  const origin = await originCentre(page);
+  const frameStart = await frameCentre(page);
   const handle = await handleCentre(page, '#ffb700');
-  const radius = Math.hypot(handle.x - centre.x, handle.y - centre.y);
-  const startAngle = Math.atan2(handle.y - centre.y, handle.x - centre.x);
+  const radius = Math.hypot(handle.x - origin.x, handle.y - origin.y);
+  const startAngle = Math.atan2(handle.y - origin.y, handle.x - origin.x);
 
   await page.mouse.move(handle.x, handle.y);
   await page.mouse.down();
   let worst = 0;
   for (let step = 1; step <= steps; step += 1) {
     const angle = startAngle + (sweepRadians * step) / steps;
-    await page.mouse.move(centre.x + Math.cos(angle) * radius, centre.y + Math.sin(angle) * radius);
+    await page.mouse.move(origin.x + Math.cos(angle) * radius, origin.y + Math.sin(angle) * radius);
     await nextFrame(page);
-    const sample = await frameCentre(page);
-    worst = Math.max(worst, Math.hypot(sample.x - centre.x, sample.y - centre.y));
+    const sample = await originCentre(page);
+    worst = Math.max(worst, Math.hypot(sample.x - origin.x, sample.y - origin.y));
   }
   await page.mouse.up();
-  return { worstPivotDrift: worst, rotation: await renderedRotation(page) };
+  const frameEnd = await frameCentre(page);
+  return {
+    worstPivotDrift: worst,
+    frameTravel: Math.hypot(frameEnd.x - frameStart.x, frameEnd.y - frameStart.y),
+    rotation: await renderedRotation(page),
+  };
 }
 
-test('F — the rotation gesture turns the group about one fixed world pivot', async ({ page }) => {
+test('F — the rotation gesture turns the group about its own origin (the crosshair)', async ({ page }) => {
   // An asymmetric group: an image and a shape, neither centred on the container.
   await seed(page, [image('a', 'Alpha', -150, -60), shape('b', 'Beta', 130, 90)]);
   await groupPair(page);
 
   // Move ONE child after grouping, so the group's visible centre no longer sits
-  // where its transform origin is: this is the case a pivot re-derived from the
-  // rotating box gets wrong.
+  // where its transform origin is: the frame then visibly orbits the origin.
   await page.locator('.actor-node', { hasText: 'Beta' }).first().click();
   await page.getByRole('button', { name: 'Expand TRANSFORM' }).first().click();
   const childX = page.getByLabel('Position X').first();
@@ -521,17 +537,18 @@ test('F — the rotation gesture turns the group about one fixed world pivot', a
   const rotationBefore = await renderedRotation(page);
   const separationBefore = await childSeparation(page);
 
-  const { worstPivotDrift, rotation } = await dragRotation(page, Math.PI * 0.8);
+  const { worstPivotDrift, frameTravel, rotation } = await dragRotation(page, Math.PI * 0.8);
 
-  // The visible centre never leaves the point the drag started from — on ANY
-  // sampled frame, not just at the end.
-  expect(worstPivotDrift, 'the rotation pivot wandered during the gesture').toBeLessThanOrEqual(1);
+  // The origin never leaves its place — on ANY sampled frame, not just at the
+  // end — while the off-centre frame swings around it.
+  expect(worstPivotDrift, 'the layer origin moved during the rotation').toBeLessThanOrEqual(1);
+  expect(frameTravel, 'the frame turned about its own centre, not the origin').toBeGreaterThan(10);
   // It really was a rotation...
   expect(Math.abs(rotation - rotationBefore), 'the group did not rotate').toBeGreaterThan(20);
   // ...and a rigid one: the layers keep their mutual distance.
   expect(Math.abs(await childSeparation(page) - separationBefore), 'relative geometry changed').toBeLessThanOrEqual(1);
 
-  // ONE history entry: a single undo puts both the rotation and the position back.
+  // ONE history entry: a single undo puts the rotation back.
   await page.locator('.actor-node[data-group-container="true"]').first().click();
   await page.keyboard.press('Control+z');
   await nextFrame(page);
@@ -541,7 +558,7 @@ test('F — the rotation gesture turns the group about one fixed world pivot', a
   expect(await renderedRotation(page), 'redo did not restore the rotation').toBeCloseTo(rotation, 3);
 });
 
-test('G — a translated, already-rotated and nested group keeps the same pivot', async ({ page }) => {
+test('G — a translated, already-rotated and nested group turns about its own origin', async ({ page }) => {
   await seed(page, [image('a', 'Alpha', -150, -60), shape('b', 'Beta', 130, 90), shape('c', 'Gamma', 260)]);
   await groupPair(page);
 
@@ -565,7 +582,7 @@ test('G — a translated, already-rotated and nested group keeps the same pivot'
   expect(Math.abs(second.rotation - first.rotation), 'the second gesture did not rotate further').toBeGreaterThan(5);
 
   // Nested group: group the container together with a third layer and turn the
-  // OUTER box. Its pivot is still its own aggregate centre.
+  // OUTER box. It turns about its own origin too.
   await page.locator('.actor-node', { hasText: 'Gamma' }).first().click();
   await page.locator('.actor-node[data-group-container="true"]').first().click({ modifiers: ['Control'] });
   await page.getByRole('button', { name: 'Group layers', exact: true }).click();

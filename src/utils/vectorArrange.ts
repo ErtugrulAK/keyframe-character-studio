@@ -61,9 +61,10 @@ import { rotateAboutWorldPivot } from './rotationGesture';
  * ROTATE — ±90°, pivoting on the COLLECTIVE selection centre (a single target
  *   pivots on its own visual centre, of which the collective box is the same
  *   point). One pivot for the whole selection turns it as one rigid body, and
- *   every target's new place comes from `rotateAboutWorldPivot` — the same
- *   pivot-rotation authority the canvas gizmo uses — evaluated against the
- *   transform captured before the command, so the pivot cannot drift.
+ *   every target's new place comes from `rotateAboutWorldPivot`, evaluated
+ *   against the transform captured before the command, so the pivot cannot
+ *   drift. (The canvas rotation handle instead turns one layer about its own
+ *   origin, as a keyframed rotation does.)
  *
  * FLIP — about the COLLECTIVE selection centre, and world placement is
  *   preserved: a single target flips in place around its own visual centre, and

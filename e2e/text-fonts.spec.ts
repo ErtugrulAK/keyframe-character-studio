@@ -39,3 +39,40 @@ test('each offered text font loads from the app itself and draws differently fro
   }
   expect(fontHosts, 'no font CDN request').toEqual([]);
 });
+
+test('an OGraf export packages every bundled family with both subsets, its weights and licence', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  const result = await page.evaluate(async () => {
+    const { prepareLegacyOGrafExport } = await import('/src/ograf/legacyCompatibility.ts');
+    const { compileOGrafPackage } = await import('/src/ograf/packageCompiler.ts');
+    const families = ['Outfit', 'Inter', 'Roboto', 'Montserrat', "'Bebas Neue'", "'JetBrains Mono'"];
+    const scene = {
+      version: 1, coordinateSystem: 'project-unit-center-v1', name: 'Fonts', width: 1280, height: 720, fps: 30, totalFrames: 30,
+      layers: families.map((fontFamily, index) => ({
+        id: `t${index}`, name: `Text ${index}`, type: 'custom_text', x: 0, y: index * 60 - 150, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1,
+        visible: true, zIndex: index + 1, fillColor: '#ffffff', strokeColor: '#000000', textValue: 'Çağrı İŞĞ', fontSize: 40, fontFamily,
+      })),
+      tracks: [],
+    };
+    const prepared = await prepareLegacyOGrafExport(scene as never);
+    const built = compileOGrafPackage(prepared.sceneData, prepared.options);
+    const runtime = String(built.files.find((file) => file.kind === 'runtime')?.content ?? '');
+    return {
+      status: built.status,
+      errors: built.diagnostics.filter((d) => d.severity === 'ERROR').map((d) => d.code),
+      paths: built.files.map((file) => file.path).sort(),
+      runtimeHasRanges: runtime.includes('U+0100-02BA') && runtime.includes('U+0000-00FF'),
+      bebasWeight: runtime.includes('"assets/fonts/bebas-neue-latin.woff2","unicodeRange"') && runtime.includes('"fontWeight":"400"'),
+    };
+  });
+  expect(result.errors, 'no blocking diagnostic').toEqual([]);
+  expect(result.status).toBe('ready-to-materialize');
+  for (const slug of ['outfit', 'inter', 'roboto', 'montserrat', 'bebas-neue', 'jetbrains-mono']) {
+    expect(result.paths).toContain(`assets/fonts/${slug}-latin.woff2`);
+    expect(result.paths).toContain(`assets/fonts/${slug}-latin-ext.woff2`);
+    expect(result.paths).toContain(`assets/fonts/${slug}-latin.woff2.LICENSE.txt`);
+  }
+  expect(result.runtimeHasRanges, 'the runtime declares each subset with its unicode-range').toBe(true);
+  expect(result.bebasWeight, 'Bebas Neue keeps its single weight, as in the editor').toBe(true);
+});

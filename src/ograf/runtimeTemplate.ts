@@ -25,7 +25,7 @@ export function generateGraphicModule(
   imageFields: OGrafPublicImageField[] = [],
   colorFields: OGrafPublicColorField[] = [],
   imageReferences: Record<string, string> = {},
-  fontReferences: Record<string, string> = {},
+  fontReferences: Record<string, string | Array<{ path: string; unicodeRange?: string; fontWeight?: string }>> = {},
 ): string {
   const bindings = {
     text: Object.fromEntries(textFields.map((field) => [field.id, { layerId: field.layerId, property: 'textValue' }])),
@@ -109,7 +109,7 @@ const RUNTIME_ID_CACHE = Object.create(null); const RUNTIME_ID_OWNERS = Object.c
 function runtimeId(...parts) { const logical = JSON.stringify(parts); if (Object.prototype.hasOwnProperty.call(RUNTIME_ID_CACHE, logical)) return RUNTIME_ID_CACHE[logical]; const base = parts.filter((part) => part !== undefined && part !== null && part !== '').map((part) => { const safe = String(part).replace(/[^a-zA-Z0-9_-]/gu, '_'); return safe || '_'; }).join('-').replace(/^[0-9]/u, '_$&'); let id = base || '_'; let suffix = 2; while (Object.prototype.hasOwnProperty.call(RUNTIME_ID_OWNERS, id) && RUNTIME_ID_OWNERS[id] !== logical) id = base + '-' + suffix++; RUNTIME_ID_CACHE[logical] = id; RUNTIME_ID_OWNERS[id] = logical; return id; }
 function cssString(value) { return JSON.stringify(String(value)).split('<').join('\\\\u003c').split('>').join('\\\\u003e'); }
 function resourceUrl(value) { const text = String(value); return text.includes(':') || text.startsWith('//') ? text : new URL(text, import.meta.url).href; }
-function fontStyles() { return Object.keys(FONT_REFERENCES).map((family) => '@font-face{font-family:' + cssString(family) + ';src:url(' + cssString(resourceUrl(FONT_REFERENCES[family])) + ');}' ).join(''); }
+function fontStyles() { return Object.keys(FONT_REFERENCES).map((family) => [].concat(FONT_REFERENCES[family]).map((face) => { const path = typeof face === 'string' ? face : face.path; const range = typeof face === 'string' ? '' : String(face.unicodeRange || ''); const weight = typeof face === 'string' ? '' : String(face.fontWeight || ''); return '@font-face{font-family:' + cssString(family) + ';' + (/^[0-9]{3}( [0-9]{3})?$/u.test(weight) ? 'font-weight:' + weight + ';' : '') + 'src:url(' + cssString(resourceUrl(path)) + ');' + (/^[U+0-9A-Fa-f?, -]+$/u.test(range) ? 'unicode-range:' + range + ';' : '') + '}'; }).join('')).join(''); }
 function solveCubicBezier(x1, y1, x2, y2, input) {
   if (input <= 0) return 0; if (input >= 1) return 1;
   let t = input;

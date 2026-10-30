@@ -62,6 +62,12 @@ export interface OGrafAssetCatalogEntry {
   binaryContent?: Uint8Array;
   /** Original redistribution license, emitted beside the packaged asset. */
   licenseText?: string;
+  /** Font only: the characters this face covers (CSS unicode-range). */
+  unicodeRange?: string;
+  /** Font only: the weights the face provides (CSS font-weight, e.g. "100 900"), as the editor declares it. */
+  fontWeight?: string;
+  /** Font only: further faces of the same family (other character subsets). */
+  additionalFaces?: Array<{ packagedPath: string; binaryContent: Uint8Array; unicodeRange: string; fontWeight?: string }>;
 }
 
 export interface OGrafPublicTextField {
@@ -152,6 +158,10 @@ export interface OGrafAssetPlan {
   sourcePath?: string;
   binaryContent?: Uint8Array;
   licenseText?: string;
+  /** Font only: the characters this face covers (CSS unicode-range). */
+  unicodeRange?: string;
+  /** Font only: the weights the face provides (CSS font-weight). */
+  fontWeight?: string;
 }
 
 export interface OGrafPackagePlan {

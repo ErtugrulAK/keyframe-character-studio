@@ -437,6 +437,20 @@ function validateFont(
     ...(entry.sourcePath ? { sourcePath: entry.sourcePath } : {}),
     ...(entry.binaryContent ? { binaryContent: entry.binaryContent } : {}),
     ...(entry.licenseText ? { licenseText: entry.licenseText } : {}),
+    ...(entry.unicodeRange ? { unicodeRange: entry.unicodeRange } : {}),
+    ...(entry.fontWeight ? { fontWeight: entry.fontWeight } : {}),
+  });
+  // Further subsets of the same family travel as their own faces; `#n` keeps
+  // their sources distinct, and the package names them by family.
+  entry.additionalFaces?.forEach((face, index) => {
+    assets.push({
+      source: `${source}#${index + 1}`,
+      packagedPath: normalizePackagedPath(layer.fontFamily!, 'font', face.packagedPath),
+      kind: 'font',
+      binaryContent: face.binaryContent,
+      unicodeRange: face.unicodeRange,
+      ...(face.fontWeight ? { fontWeight: face.fontWeight } : {}),
+    });
   });
 }
 

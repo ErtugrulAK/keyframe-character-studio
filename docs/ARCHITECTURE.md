@@ -93,20 +93,21 @@ Utilities are deterministic, pure functions with zero React dependencies:
 
 ---
 
-## 4. Backend & Persistence Layer
+## 4. Persistence
 
-- **Express Server**: `server/index.js` listens on port `5000`.
-- **Database Fallback Strategy**:
-  1. Attempts connection to **PostgreSQL** pool (`server/db/index.js`).
-  2. If PostgreSQL is unavailable, automatically falls back to embedded **SQLite** database (`server/db/sqlite.js`).
-- **Endpoints**:
-  - `GET /api/health`: Database connection status.
-  - `GET /api/projects`: Fetch project list.
-  - `GET /api/projects/:id`: Fetch project payload.
-  - `POST /api/projects`: Save/update project.
-  - `DELETE /api/projects/:id`: Delete project.
-  - `GET /api/presets`: Fetch motion presets.
-  - `POST /api/presets`: Save motion preset.
+KCS has no server; everything is stored in the browser.
+
+- **Autosave** — the open project is one JSON document in `localStorage`
+  (`SEQUENCER_STUDIO_PRO_V5`), written by `useSerialization` every 10 s as a
+  compare-and-swap under a Web Lock, so concurrent tabs cannot overwrite each
+  other. Embedded images and videos travel inside it as data URLs.
+- **Library** — named graphics in IndexedDB (`kcs-library`, `utils/projectLibrary`).
+  Opening one goes through the validated import into a new template tab.
+- **Preset library** — user motion presets in `localStorage`
+  (`keyframe_custom_motion_presets`), outside the project; moved with preset
+  export/import.
+- **Files** — `.kcs`/JSON export and import (validated before anything
+  changes), OGraf packages, GIF.
 
 ---
 

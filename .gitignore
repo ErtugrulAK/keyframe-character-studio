@@ -33,4 +33,3 @@ test-results/
 .omp/backups/
 
 # Runtime-generated embedded database
-server/db/keyframe_studio.sqlite

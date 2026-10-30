@@ -25,6 +25,9 @@ field is added (`textOrigin`); scenes saved before open unchanged.
 - Inspector sections start closed; Hierarchy, Animation Data, Shape Geometry, Path Points and Colour Correction no longer open by themselves. A section you open stays open for the session.
 - A new group's timeline row starts closed, like every other new layer.
 
+### Removed
+- The unused Express/SQLite/PostgreSQL server (`server/`): the editor never called it. `npm run dev` now starts the editor alone; its dependencies (express, pg, sqlite3, cors, dotenv, concurrently) are gone.
+
 ### Fixed
 - Bebas Neue, Montserrat and Roboto were offered but never loaded, so the editor drew them with a fallback font; all seven text fonts are now bundled (no font CDN, works offline), and an OGraf export packages any of them (it used to be blocked for every font but Playfair Display).
 - A text layer's selection frame hugs its letters.

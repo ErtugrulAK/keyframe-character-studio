@@ -1666,7 +1666,7 @@ export const StageCanvas: React.FC = () => {
             x={EDITOR_CAMERA_CENTER.x}
             y={EDITOR_CAMERA_CENTER.y}
           >
-            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(56, 189, 248, 0.10)" strokeWidth="1" />
+            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
           </pattern>
           {/* Major grid: 100px lines anchored at the origin (1 cell = 100px = 1 unit) */}
           <pattern
@@ -1677,7 +1677,7 @@ export const StageCanvas: React.FC = () => {
             x={EDITOR_CAMERA_CENTER.x}
             y={EDITOR_CAMERA_CENTER.y}
           >
-            <path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(56, 189, 248, 0.22)" strokeWidth="1" />
+            <path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(255, 255, 255, 0.10)" strokeWidth="1" />
           </pattern>
           <clipPath id="artboard-clip">
             <rect

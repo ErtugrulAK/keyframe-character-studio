@@ -630,24 +630,13 @@ export const HeaderBar: React.FC = () => {
               <div
                 role="menu"
                 aria-label="Export options"
-                style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 6px)',
-                  right: 0,
-                  zIndex: 1000,
-                  minWidth: 150,
-                  padding: 4,
-                  background: 'var(--bg-panel)',
-                  border: '1px solid var(--border-light)',
-                  borderRadius: 6,
-                  boxShadow: '0 12px 28px rgba(0,0,0,0.4)',
-                }}
+                className="editor-context-menu header-export-menu"
+                style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 1000, minWidth: 150 }}
               >
                 <button
                   type="button"
                   role="menuitem"
-                  className="header-action-btn"
-                  style={{ width: '100%', justifyContent: 'flex-start' }}
+                  className="editor-context-menu-item"
                   onClick={() => {
                     setIsExportMenuOpen(false);
                     handleExport();
@@ -658,8 +647,7 @@ export const HeaderBar: React.FC = () => {
                 <button
                   type="button"
                   role="menuitem"
-                  className="header-action-btn"
-                  style={{ width: '100%', justifyContent: 'flex-start' }}
+                  className="editor-context-menu-item"
                   disabled={isOGrafExporting}
                   onClick={() => {
                     setIsExportMenuOpen(false);
@@ -671,8 +659,7 @@ export const HeaderBar: React.FC = () => {
                 <button
                   type="button"
                   role="menuitem"
-                  className="header-action-btn"
-                  style={{ width: '100%', justifyContent: 'flex-start' }}
+                  className="editor-context-menu-item"
                   onClick={handleOpenGifPanel}
                 >
                   Animated GIF
@@ -680,8 +667,7 @@ export const HeaderBar: React.FC = () => {
                 <button
                   type="button"
                   role="menuitem"
-                  className="header-action-btn"
-                  style={{ width: '100%', justifyContent: 'flex-start' }}
+                  className="editor-context-menu-item"
                   title="See, per layer, what an OGraf export supports, exports with warnings, or blocks — before exporting"
                   onClick={() => { void handleOpenOGrafCheck(); }}
                 >

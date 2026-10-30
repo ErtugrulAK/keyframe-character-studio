@@ -11,8 +11,13 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 ## [1.1.0-rc.6] - 2026-10-30
 
 The sixth release candidate of 1.1.0: rc.5 with the fixes from its manual QA,
-the rotation handle turning a layer about its own origin, and a dead-code
-cleanup. No scene-format changes.
+the rotation handle turning a layer about its own origin, centred text origins,
+bundled fonts, a graphic library and a dead-code cleanup. One optional scene
+field is added (`textOrigin`); scenes saved before open unchanged.
+
+### Added
+- A Library (left toolbar → Project → Open Library…) keeps graphics in this browser's IndexedDB: save the current template under a name, open one (in a new tab — the work on screen is never replaced), duplicate, delete.
+- Quick easing: right-click a keyframe for Linear, Ease In, Ease Out, Easy Ease or Hold; F9 applies Easy Ease to the selected keyframes.
 
 ### Changed
 - A new text layer's origin (its crosshair) sits in the middle of the text, as for a rectangle, so it is placed, turned and scaled about its middle. Text layers made before keep their origin on the baseline and do not move.
@@ -21,6 +26,8 @@ cleanup. No scene-format changes.
 - A new group's timeline row starts closed, like every other new layer.
 
 ### Fixed
+- Bebas Neue, Montserrat and Roboto were offered but never loaded, so the editor drew them with a fallback font; all seven text fonts are now bundled (no font CDN, works offline), and an OGraf export packages any of them (it used to be blocked for every font but Playfair Display).
+- A text layer's selection frame hugs its letters.
 - The Export menu closes on a click outside it or on Escape.
 - A luminance Track Matte with a text source follows the text's colour, as it does for shapes and in OGraf export; it used to behave exactly like Alpha.
 - The matte summary's "Select Source" button stays on its line when the reading grows (for example "· Inverted").

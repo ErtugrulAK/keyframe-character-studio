@@ -767,7 +767,8 @@ describe('StagePartLayers — M18 text matte render (mask content <text>)', () =
     expect(html).toContain('x="0"');
     expect(html).toContain('y="0"');
     expect(html).toContain('text-anchor="middle"');
-    expect(html).toContain('dominant-baseline="middle"');
+    // Baseline-anchored like the visible text, so the mask lands on the glyphs.
+    expect(html).not.toContain('dominant-baseline');
     expect(html).toContain('fill="white"');
     // transform bake = renderer inner-g math (identity world → canvas center)
     expect(html).toContain('translate(300, 240) rotate(0) scale(1, 1)');

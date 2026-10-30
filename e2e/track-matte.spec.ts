@@ -1341,8 +1341,9 @@ test.describe('M17 gradient matte — real browser pixel assertions', () => {
 });
 
 test.describe('M18 text matte — real browser pixel assertions (full 4E matrix)', () => {
-  // Text source: HHH @80px bold Arial — solid crossbar band at y≈240 (4A
-  // fixture); explicit Arial keeps the pixel tests font-deterministic.
+  // Text source: HHH @80px bold Arial, drawn on its baseline at y=240 like the
+  // stage text: caps span y≈182..239, solid crossbar band y≈204..213. Explicit
+  // Arial keeps the pixel tests font-deterministic.
   const textSource = (overrides: Record<string, unknown> = {}) =>
     makeLayer('txt', 'Source', 'custom_text', { zIndex: 1, fillColor: '#ff0000', textValue: 'HHH', fontSize: 80, fontFamily: 'Arial', ...overrides });
   // WIDE green target (scaleX 5 → world x∈(150,450)) so "outside the ink but
@@ -1350,7 +1351,7 @@ test.describe('M18 text matte — real browser pixel assertions (full 4E matrix)
   const wideTarget = (matte: Record<string, unknown>) =>
     makeLayer('tgt', 'Target', 'custom_circle', { zIndex: 2, fillColor: '#00ff00', scaleX: 5, scaleY: 3, matte });
 
-  const INK = { x0: 250, x1: 350, y0: 215, y1: 265 };
+  const INK = { x0: 250, x1: 350, y0: 194, y1: 244 };
 
   async function ready(page: Page) {
     await page.evaluate(async () => { await (document as any).fonts.ready; });
@@ -1429,8 +1430,8 @@ test.describe('M18 text matte — real browser pixel assertions (full 4E matrix)
     await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0 } })]);
     await ready(page);
     // Identity world → local endpoints ±100; ramp bright LEFT (x1=-100) → dark RIGHT
-    const left = await avgGreenWorld(page, 250, 280, 225, 255);
-    const right = await avgGreenWorld(page, 350, 380, 225, 255);
+    const left = await avgGreenWorld(page, 250, 280, 204, 234);
+    const right = await avgGreenWorld(page, 350, 380, 204, 234);
     expect(left).toBeGreaterThan(right + 25);
     expect(await page.evaluate(() => document.querySelector('linearGradient[id="kcs-mg-txt-0-alpha"]')?.getAttribute('x1'))).toBe('-100');
   });
@@ -1446,10 +1447,8 @@ test.describe('M18 text matte — real browser pixel assertions (full 4E matrix)
   test('V-T6 — text + strength 0.5: ink strength approximately halved', async ({ page }) => {
     await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', strength: 0.5 })]);
     await ready(page);
-    // NOTE: the app draws a cyan (#00d2ff) edit-mode center marker at the
-    // part's pivot (300,240) — probe the crossbar band BELOW it (y 243-258)
-    // for a clean 0.5-strength reading (crossbars ≈ 127).
-    const half = await maxGreen(page, 235, 278, 243, 258); // H1 crossbar — AWAY from the center marker (300,240)
+    // Probe the H1 crossbar band for a clean 0.5-strength reading (≈127).
+    const half = await maxGreen(page, 235, 278, 205, 212); // H1 crossbar
     const fo = await page.evaluate(() => document.querySelector('mask[id="kcs-mask-txt-alpha-s0.5"] text')?.getAttribute('fill-opacity'));
     expect(half).toBeGreaterThan(45);
     expect(half).toBeLessThan(160); // ≈127 not 255
@@ -1459,8 +1458,8 @@ test.describe('M18 text matte — real browser pixel assertions (full 4E matrix)
   test('V-T7 — text + gradient + feather + strength combo: ramp survives, defs clean', async ({ page }) => {
     await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', feather: 12, strength: 0.5, gradient: { angle: 0 } })]);
     await ready(page);
-    const left = await avgGreenWorld(page, 250, 280, 225, 255);
-    const right = await avgGreenWorld(page, 350, 380, 225, 255);
+    const left = await avgGreenWorld(page, 250, 280, 204, 234);
+    const right = await avgGreenWorld(page, 350, 380, 204, 234);
     expect(left).toBeGreaterThan(right + 15); // ramp survives feather
     expect(await page.evaluate(() => document.querySelectorAll('linearGradient[id^="kcs-mg-txt-"]').length)).toBe(1);
     expect(await page.evaluate(() => document.querySelectorAll('feGaussianBlur').length)).toBe(1);
@@ -1565,8 +1564,8 @@ test.describe('M18 text matte — real browser pixel assertions (full 4E matrix)
     await ready(page);
     // Local endpoints stay ±100 (the def is expressed in the source's local
     // space; the g scale stretches the visual ramp) — bright LEFT, dark RIGHT
-    const left = await avgGreenWorld(page, 170, 215, 225, 255);
-    const right = await avgGreenWorld(page, 425, 470, 225, 255);
+    const left = await avgGreenWorld(page, 170, 215, 204, 234);
+    const right = await avgGreenWorld(page, 425, 470, 204, 234);
     expect(left).toBeGreaterThan(right + 20);
     expect(await page.evaluate(() => document.querySelector('linearGradient[id="kcs-mg-txt-0-alpha"]')?.getAttribute('x1'))).toBe('-100');
   });
@@ -1583,9 +1582,9 @@ test.describe('M18 text matte — real browser pixel assertions (full 4E matrix)
     // Text gradient spans local ±100 → world 200..400 (frac = (x-200)/200).
     // MAX over the solid crossbar band (glyph gaps would dilute an average);
     // the mid box avoids x=300 (the app's cyan edit-mode center marker).
-    const left = await maxGreen(page, 250, 280, 240, 252);   // frac 0.25-0.4 → alpha ≈0.7 → ≈178
-    const mid = await maxGreen(page, 315, 340, 240, 252);    // frac 0.575-0.7 → alpha ≈0.37 → ≈94
-    const right = await maxGreen(page, 350, 380, 240, 252);  // frac 0.75-0.9 → max alpha 0.25 → ≈64
+    const left = await maxGreen(page, 250, 280, 205, 212);   // frac 0.25-0.4 → alpha ≈0.7 → ≈178
+    const mid = await maxGreen(page, 315, 340, 205, 212);    // frac 0.575-0.7 → alpha ≈0.37 → ≈94
+    const right = await maxGreen(page, 350, 380, 205, 212);  // frac 0.75-0.9 → max alpha 0.25 → ≈64
     expect(left).toBeGreaterThan(150);
     expect(mid).toBeGreaterThan(80);
     expect(mid).toBeLessThan(130);
@@ -1622,10 +1621,10 @@ test.describe('M18 text matte — real browser pixel assertions (full 4E matrix)
     // ramp via sequential seeds — rampA (1→0) bright, rampB (0.2→1) dim.
     await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops: rampA } })]);
     await ready(page);
-    const aLeft = await maxGreen(page, 230, 250, 240, 252); // frac 0.15-0.25 → alpha ≈0.85 → ≈217
+    const aLeft = await maxGreen(page, 230, 250, 205, 212); // frac 0.15-0.25 → alpha ≈0.85 → ≈217
     await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops: rampB } })]);
     await ready(page);
-    const bLeft = await maxGreen(page, 230, 250, 240, 252); // frac 0.15-0.25 → alpha ≈0.32 → ≈82
+    const bLeft = await maxGreen(page, 230, 250, 205, 212); // frac 0.15-0.25 → alpha ≈0.32 → ≈82
     console.log(`SPIKE-H aLeft=${aLeft} bLeft=${bLeft}`);
     expect(aLeft).toBeGreaterThan(150); // rampA: near-white left
     expect(bLeft).toBeLessThan(110);    // rampB: dim left
@@ -1666,7 +1665,7 @@ test.describe('M19 multi-stop gradient — real browser pixel assertions (5E mat
   const wideTarget = (matte: Record<string, unknown>) =>
     makeLayer('tgt', 'Target', 'custom_circle', { zIndex: 2, fillColor: '#00ff00', scaleX: 5, scaleY: 3, matte });
 
-  const INK = { x0: 250, x1: 350, y0: 215, y1: 265 };
+  const INK = { x0: 250, x1: 350, y0: 194, y1: 244 };
   const RAMP = (o: number, op: number) => ({ offset: o, color: '#ffffff', opacity: op });
 
   async function ready(page: Page) {
@@ -1702,10 +1701,10 @@ test.describe('M19 multi-stop gradient — real browser pixel assertions (5E mat
     const offsets = await page.evaluate(() => [...document.querySelectorAll('linearGradient[id^="kcs-mg-txt-0-s"] stop')].map((s) => s.getAttribute('offset')));
     expect(offsets).toEqual(['0%', '33%', '66%', '100%']);
     // Text ramp spans world 200..400: 4-segment monotonic descent
-    const s1 = await maxGreen(page, 220, 240, 240, 252); // frac 0.1-0.2 → ≈0.88 → ≈224
-    const s2 = await maxGreen(page, 270, 290, 240, 252); // frac 0.35-0.45 → ≈0.72 → ≈184
-    const s3 = await maxGreen(page, 320, 340, 240, 252); // frac 0.6-0.7 → ≈0.48 → ≈122
-    const s4 = await maxGreen(page, 370, 390, 240, 252); // frac 0.85-0.95 → ≈0.2 → ≈51
+    const s1 = await maxGreen(page, 220, 240, 205, 212); // frac 0.1-0.2 → ≈0.88 → ≈224
+    const s2 = await maxGreen(page, 270, 290, 205, 212); // frac 0.35-0.45 → ≈0.72 → ≈184
+    const s3 = await maxGreen(page, 320, 340, 205, 212); // frac 0.6-0.7 → ≈0.48 → ≈122
+    const s4 = await maxGreen(page, 370, 390, 205, 212); // frac 0.85-0.95 → ≈0.2 → ≈51
     expect(s1).toBeGreaterThan(190);
     expect(s2).toBeGreaterThan(150);
     expect(s3).toBeGreaterThan(90);
@@ -1722,10 +1721,10 @@ test.describe('M19 multi-stop gradient — real browser pixel assertions (5E mat
     const dim = [RAMP(0, 1), RAMP(0.5, 0.2), RAMP(1, 0)];
     await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops: bright } })]);
     await ready(page);
-    const bMid = await maxGreen(page, 320, 340, 240, 252); // frac 0.6-0.7 → alpha ≈0.62 → ≈158
+    const bMid = await maxGreen(page, 320, 340, 205, 212); // frac 0.6-0.7 → alpha ≈0.62 → ≈158
     await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops: dim } })]);
     await ready(page);
-    const dMid = await maxGreen(page, 320, 340, 240, 252); // frac 0.6-0.7 → alpha ≈0.42 → ≈107
+    const dMid = await maxGreen(page, 320, 340, 205, 212); // frac 0.6-0.7 → alpha ≈0.42 → ≈107
     console.log(`SPIKE-5E V-H4 bright=${bMid} dim=${dMid}`);
     expect(bMid).toBeGreaterThan(130);
     expect(dMid).toBeLessThan(130);
@@ -1736,8 +1735,8 @@ test.describe('M19 multi-stop gradient — real browser pixel assertions (5E mat
     const stops = [RAMP(0, 1), RAMP(0.5, 0.5), RAMP(1, 0)];
     await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', feather: 12, gradient: { angle: 0, stops } })]);
     await ready(page);
-    const left = await maxGreen(page, 250, 280, 240, 252);
-    const right = await maxGreen(page, 350, 380, 240, 252);
+    const left = await maxGreen(page, 250, 280, 205, 212);
+    const right = await maxGreen(page, 350, 380, 205, 212);
     expect(left).toBeGreaterThan(right + 40); // ramp direction survives feather
     expect(await page.evaluate(() => document.querySelector('feGaussianBlur')?.getAttribute('stdDeviation'))).toBe('6');
     expect(await page.evaluate(() => document.querySelector('mask[id*="-f12-g0-s"] text')?.getAttribute('filter'))).toContain('kcs-matte-feather');
@@ -1747,10 +1746,10 @@ test.describe('M19 multi-stop gradient — real browser pixel assertions (5E mat
     const stops = [RAMP(0, 1), RAMP(1, 0)];
     await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops } })]);
     await ready(page);
-    const full = await maxGreen(page, 235, 278, 243, 258); // H1 crossbar, away from center marker
+    const full = await maxGreen(page, 235, 278, 205, 212); // H1 crossbar
     await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', strength: 0.5, gradient: { angle: 0, stops } })]);
     await ready(page);
-    const half = await maxGreen(page, 235, 278, 243, 258);
+    const half = await maxGreen(page, 235, 278, 205, 212);
     console.log(`SPIKE-5E V-H6 full=${full} half=${half}`);
     expect(full).toBeGreaterThan(150);
     expect(half).toBeGreaterThan(45);
@@ -1800,8 +1799,8 @@ test.describe('M19 multi-stop gradient — real browser pixel assertions (5E mat
     expect(await maxGreen(page, 185, 235, INK.y0, INK.y1)).toBeGreaterThan(120); // frac 0.21-0.34 → bright
     expect(await maxGreen(page, 405, 455, INK.y0, INK.y1)).toBeGreaterThan(30);  // dimmed by the ramp
     // ramp across the stretched span: bright LEFT (world 100..), dim right (world ~500)
-    const left = await maxGreen(page, 170, 215, 240, 252);  // frac ≈0.18-0.29 → alpha ≈0.8
-    const right = await maxGreen(page, 425, 470, 240, 252); // frac ≈0.81-0.93 → alpha ≈0.15
+    const left = await maxGreen(page, 170, 215, 205, 212);  // frac ≈0.18-0.29 → alpha ≈0.8
+    const right = await maxGreen(page, 425, 470, 205, 212); // frac ≈0.81-0.93 → alpha ≈0.15
     expect(left).toBeGreaterThan(right + 40);
   });
 

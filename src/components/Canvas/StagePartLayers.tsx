@@ -531,8 +531,8 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
   // world-map spelling the app's text renderer uses (PartRenderer inner <g>,
   // via the shared affineSvgTransform: the historical
   // translate(CX+tx, CY+ty) rotate(r) scale(sx,sy) form whenever a TRS
-  // reproduces the layer's world map, the exact matrix otherwise; x=0/y=0
-  // middle/middle anchor). The evaluated world transform comes from
+  // reproduces the layer's world map, the exact matrix otherwise; x=0/y=0,
+  // centred on the baseline like the visible text). The evaluated world transform comes from
   // evaluatedFrame — the same pipeline that drives the geometry sources, so
   // parent composition / animation / negative scale are all preserved.
   // Content/fonts live on the source part (read at runtime via
@@ -545,7 +545,6 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
           x={0}
           y={0}
           textAnchor={mask.text.textAnchor}
-          dominantBaseline={mask.text.dominantBaseline}
           fontSize={mask.text.fontSize}
           fontWeight={mask.text.fontWeight}
           fontFamily={mask.text.fontFamily}

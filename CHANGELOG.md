@@ -8,11 +8,17 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## [Unreleased]
 
+## [1.1.0-rc.4] - 2026-10-30
+
+The fourth release candidate of 1.1.0: rc.3 with the "Neutral Pro" editor look
+(#67, #68). No scene-format or export changes.
+
 ### Changed
 - A new editor look ("Neutral Pro"): neutral greys instead of the blue-black and teal shell, one blue accent, Inter, sharper corners and no glows. Buttons, chips, tabs and inputs share one style; panel and section titles are small uppercase labels; Inspector sections are flat and divided by lines; labels are lighter. The empty artboard stays black.
 - With nothing selected, the Inspector shows a "No layer selected" panel.
 - The Layers and Details panel headers read as dock tabs; the Export menu uses the same menu sheet as the timeline and stage menus.
 - Dialogs have a title band and an action band; the main action is a filled blue button and a delete action is red.
+- The selection frame no longer draws a dot at its centre. It was not the pivot; the layer's origin (the dashed crosshair) is.
 
 ### Fixed
 - A timeline keyframe menu opened near the right edge of the window no longer runs off-screen; the timeline menus look like the stage menu.

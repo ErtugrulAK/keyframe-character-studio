@@ -164,16 +164,17 @@ describe('TransformGizmo — the affine frame of a layer whose map is not a TRS'
     expect(back.x).toBeCloseTo(bounds.minX, 6);
     expect(back.y).toBeCloseTo(bounds.minY, 6);
 
-    // The rotation stem starts on the frame's top edge and the pivot is its centre.
+    // The rotation stem starts on the frame's top edge and the left edge handle
+    // sits on the mapped midpoint of the left edge.
     const boxCenter = { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
     const stem = rendered.container.querySelector('line')!;
     const topEdge = applyAffine(affine, { x: boxCenter.x, y: bounds.minY });
     expect(Number(stem.getAttribute('x1'))).toBeCloseTo(topEdge.x, 6);
     expect(Number(stem.getAttribute('y1'))).toBeCloseTo(topEdge.y, 6);
-    const pivot = rendered.container.querySelector('circle')!;
-    const center = applyAffine(affine, boxCenter);
-    expect(Number(pivot.getAttribute('cx'))).toBeCloseTo(center.x, 6);
-    expect(Number(pivot.getAttribute('cy'))).toBeCloseTo(center.y, 6);
+    const leftHandle = rendered.container.querySelector('circle[fill="#38bdf8"]')!;
+    const leftMid = applyAffine(affine, { x: bounds.minX, y: boxCenter.y });
+    expect(Number(leftHandle.getAttribute('cx'))).toBeCloseTo(leftMid.x, 6);
+    expect(Number(leftHandle.getAttribute('cy'))).toBeCloseTo(leftMid.y, 6);
   });
 
   it('hands a corner drag the LOCAL box the frame drew', () => {
@@ -232,5 +233,23 @@ describe('TransformGizmo — the affine frame of a layer whose map is not a TRS'
     const [firstCorner] = [...rendered.container.querySelectorAll('rect[fill="#00d2ff"]')];
     expect(centerOf(firstCorner).x).toBeCloseTo(bounds.minX * 2, 6);
     expect(centerOf(firstCorner).y).toBeCloseTo(bounds.minY * 0.5, 6);
+  });
+});
+
+describe('TransformGizmo — no box-centre dot', () => {
+  // The frame's centre is not the pivot (the layer origin is, and the coordinate
+  // overlay marks it), so a dot there only competes with the real anchor.
+  const visibleCircles = (container: HTMLElement) => [...container.querySelectorAll('[data-testid="transform-gizmo"] circle')]
+    .filter((circle) => circle.getAttribute('data-testid') !== 'gizmo-hit-target');
+
+  it('draws only the four edge handles and the rotation handle on a TRS frame', () => {
+    const { rendered } = renderPart(plainRoot());
+    expect(visibleCircles(rendered.container)).toHaveLength(5);
+  });
+
+  it('draws only the four edge handles and the rotation handle on an affine frame', () => {
+    const { world, rendered } = renderPart(childOfGroup('sheared', 30));
+    expect(world.affine).toBeDefined();
+    expect(visibleCircles(rendered.container)).toHaveLength(5);
   });
 });

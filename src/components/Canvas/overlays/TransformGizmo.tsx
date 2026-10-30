@@ -58,12 +58,6 @@ interface TransformGizmoProps {
   affine?: WorldAffine;
   /** The LOCAL box the affine maps — the rect the affine frame draws. */
   affineBounds?: { minX: number; minY: number; maxX: number; maxY: number };
-  /**
-   * A geometryless container (a layer group) owns no geometry, so the gizmo must
-   * not invent one: no pivot/centre marker inside the frame, only the frame and
-   * its handles.
-   */
-  suppressPivotMarker?: boolean;
   outputOrigin?: CoordinatePoint;
 }
 
@@ -81,7 +75,6 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   overrideBounds,
   affine,
   affineBounds,
-  suppressPivotMarker = false,
   outputOrigin = EDITOR_CAMERA_CENTER,
 }) => {
   // A geometryless container (a layer group) owns no geometry: without the
@@ -263,7 +256,6 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
     // `hypot(c, d)` output units long per local unit.
     const upAxisLength = Math.hypot(affine.c, affine.d);
     const rotationOffsetLocal = upAxisLength > 0 ? metrics.rotationOffset / upAxisLength : metrics.rotationOffset;
-    const center = applyAffine(affine, { x: boxCenterX, y: boxCenterY });
 
     return (
       <g data-testid="transform-gizmo" style={{ pointerEvents: 'none' }}>
@@ -277,9 +269,6 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
                 applyAffine(affine, { x: corner.x === 0 ? box.minX : box.maxX, y: corner.y === 0 ? box.minY : box.maxY }),
                 corner,
               ))}
-              {!suppressPivotMarker && (
-                <circle cx={center.x} cy={center.y} r={metrics.centerRadius} fill="#00d2ff" stroke="#ffffff" strokeWidth={1.5 * zScale} />
-              )}
             </>
           )}
 
@@ -314,9 +303,6 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
               { x: corner.x === 0 ? left : right, y: corner.y === 0 ? top : bottom },
               corner,
             ))}
-            {!suppressPivotMarker && (
-              <circle cx={centerX} cy={centerY} r={metrics.centerRadius} fill="#00d2ff" stroke="#ffffff" strokeWidth={1.5 * zScale} />
-            )}
           </>
         )}
 

@@ -150,7 +150,6 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
         onRotateMouseDown={onRotateStart}
         onScaleMouseDown={onScaleStart}
         outputOrigin={outputOrigin}
-        suppressPivotMarker={selectedPart.isGroup === true}
         {...selectionFrameGizmoBounds(frameBounds, selectedTransform)}
       />
     );

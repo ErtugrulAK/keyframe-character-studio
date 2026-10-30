@@ -1,6 +1,5 @@
 export interface TransformGizmoMetrics {
   cornerSize: number;
-  centerRadius: number;
   edgeRadius: number;
   rotationRadius: number;
   rotationOffset: number;
@@ -17,7 +16,6 @@ export const getTransformGizmoMetrics = (boundsWidth: number, boundsHeight: numb
 
   return {
     cornerSize: visualUnit,
-    centerRadius: clampGizmoValue(visualScreenSize * 0.34, 2.2, 3.5) * safeZScale,
     edgeRadius: clampGizmoValue(visualScreenSize * 0.42, 2.2, 3.8) * safeZScale,
     rotationRadius: clampGizmoValue(visualScreenSize * 0.65, 3.2, 5.5) * safeZScale,
     rotationOffset: clampGizmoValue(Math.max(visualScreenSize * 2.2, visibleObjectSize * 0.16), 8, 28) * safeZScale,

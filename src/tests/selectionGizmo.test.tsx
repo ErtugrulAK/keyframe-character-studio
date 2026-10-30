@@ -469,7 +469,7 @@ const renderSelection = (parts: CharacterPart[], selectedIds: string[], onScaleS
 );
 
 describe('SelectionGizmo — a frame whose world map is not a TRS', () => {
-  it('draws the exact parallelogram, pivots on its centre, and drags the LOCAL box', () => {
+  it('draws the exact parallelogram, puts its edge handles on it, and drags the LOCAL box', () => {
     const child = rotatedChild('c30', 30);
     const parts = [anisotropicGroup, child];
     const onScaleStart = vi.fn();
@@ -494,11 +494,11 @@ describe('SelectionGizmo — a frame whose world map is not a TRS', () => {
     expect(halo.getAttribute('x')).toBe(String(bounds.minX));
     expect(halo.getAttribute('width')).toBe(String(bounds.maxX - bounds.minX));
 
-    // The pivot is the centre of the drawn parallelogram.
-    const center = applyAffine(affine, { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 });
-    const pivot = container.querySelector('circle')!;
-    expect(Number(pivot.getAttribute('cx'))).toBeCloseTo(center.x, 6);
-    expect(Number(pivot.getAttribute('cy'))).toBeCloseTo(center.y, 6);
+    // The left edge handle sits on the mapped midpoint of the drawn parallelogram's left edge.
+    const leftMid = applyAffine(affine, { x: bounds.minX, y: (bounds.minY + bounds.maxY) / 2 });
+    const leftHandle = container.querySelector('circle[fill="#38bdf8"]')!;
+    expect(Number(leftHandle.getAttribute('cx'))).toBeCloseTo(leftMid.x, 6);
+    expect(Number(leftHandle.getAttribute('cy'))).toBeCloseTo(leftMid.y, 6);
 
     // A handle lies on the frame, and the drag it starts still receives the box
     // the frame drew — the LOCAL box, never a pre-scaled one.

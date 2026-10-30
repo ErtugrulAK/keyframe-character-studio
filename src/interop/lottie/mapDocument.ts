@@ -3,7 +3,7 @@ import { layerMaskChannel, layerMaskPathChannel } from '../../types/animator';
 import type { SceneData, SceneLayer } from '../../types/composition';
 import { isPrototypeSensitiveKey } from '../../utils/pathSafety';
 import { KCS_DEFAULT_TEXT_FONT, matchTextFontFamily, normalizeTextFontName } from '../../utils/textFonts';
-import { isSupportedEmbeddedImage } from '../../ograf/legacyCompatibility';
+import { isSupportedEmbeddedImage } from '../../utils/embeddedImage';
 import { LOTTIE_IMPORT_LIMITS, lottieError, lottieWarning, type LottieImportDiagnostic } from './diagnostics';
 import { mapLottieKeyframes, mapLottieSegmentTiming, type LottieHandleComponent, type LottieKeyframe } from './temporal';
 

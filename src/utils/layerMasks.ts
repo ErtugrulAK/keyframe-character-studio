@@ -47,7 +47,7 @@ export const layerMaskRenderKeys = (stack: readonly LayerMaskSvgDefinition[]): s
   });
 };
 
-export const layerMaskId = (partId: string, maskId: string): string => `kcs-layer-mask-${partId}-${maskId}`;
+const layerMaskId = (partId: string, maskId: string): string => `kcs-layer-mask-${partId}-${maskId}`;
 export const layerMaskFilterId = (maskId: string): string => `kcs-layer-mask-filter-${maskId}`;
 
 /**

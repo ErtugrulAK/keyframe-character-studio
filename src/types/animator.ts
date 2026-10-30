@@ -108,10 +108,6 @@ export interface ColorCorrectionEffect {
   maskId?: string;
 }
 
-export interface LayerMaskStack {
-  masks: LayerMask[];
-}
-
 export interface TrackMatteV2 {
   sourceLayerId: string;
   mode: 'alpha' | 'luminance';

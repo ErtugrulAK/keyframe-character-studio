@@ -47,7 +47,7 @@ export const rasterizeSvgFrame = async (
 };
 
 /** The `@font-face` rules are placed INSIDE the rasterised document. */
-export const injectFontStyles = (svgMarkup: string, fontCss: string): string => {
+const injectFontStyles = (svgMarkup: string, fontCss: string): string => {
   const openTagEnd = svgMarkup.indexOf('>');
   if (openTagEnd < 0) return svgMarkup;
   return `${svgMarkup.slice(0, openTagEnd + 1)}<style>${fontCss}</style>${svgMarkup.slice(openTagEnd + 1)}`;

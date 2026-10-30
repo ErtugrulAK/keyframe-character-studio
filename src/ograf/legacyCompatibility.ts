@@ -12,7 +12,7 @@ const EMBEDDED_IMAGE_MIME_TYPES: Record<string, string> = {
   'image/webp': 'webp',
 };
 
-export interface LegacyOGrafPreparation {
+interface LegacyOGrafPreparation {
   sceneData: SceneData;
   options: OGrafExportOptions;
 }

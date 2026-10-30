@@ -28,9 +28,8 @@
  *   count × delay = wall-clock duration, independent of the encoding cadence.
  */
 
-/** The rates the editor offers; a new document starts at {@link DEFAULT_PROJECT_FPS}. */
-export const SUPPORTED_PROJECT_FPS = [24, 30, 60, 120] as const;
-export const DEFAULT_PROJECT_FPS = 60;
+/** The rate a new document starts at. */
+const DEFAULT_PROJECT_FPS = 60;
 
 /**
  * A usable project frame rate: a positive whole number of frames per second.

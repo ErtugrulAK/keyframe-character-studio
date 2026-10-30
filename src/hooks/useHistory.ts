@@ -19,7 +19,7 @@ export interface HistoryDocumentState {
   activeTemplateId: string;
 }
 
-export interface HistoryState {
+interface HistoryState {
   tracks: Track[];
   characterParts: CharacterPart[];
   motionTemplates?: MotionTemplate[];

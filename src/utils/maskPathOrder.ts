@@ -25,7 +25,7 @@ import { MIN_CLOSED_MASK_POINTS } from './maskPathCreation';
  */
 export type PathOrderCommand = 'close' | 'open' | 'reverse' | 'first' | 'earlier' | 'later';
 
-export interface PathOrderEdit {
+interface PathOrderEdit {
   /** Point ids in their new order. */
   order: string[];
   /** Swap every point's in/out handles (a reversed direction). */
@@ -33,7 +33,7 @@ export interface PathOrderEdit {
   closed: boolean;
 }
 
-export type PathOrderPlan =
+type PathOrderPlan =
   | { ok: true; edit: PathOrderEdit; /** Where the selected point ends up. */ selectedIndex: number | null }
   | { ok: false; reason: string };
 

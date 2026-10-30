@@ -2,7 +2,7 @@ import React from 'react';
 
 type NativeNumberProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'defaultValue' | 'onChange'>;
 
-export interface NumberFieldProps extends NativeNumberProps {
+interface NumberFieldProps extends NativeNumberProps {
   value: number;
   /** Receives every parsed number ('live') or the parsed number once on Enter/blur ('blur'). */
   onValue: (value: number) => void;

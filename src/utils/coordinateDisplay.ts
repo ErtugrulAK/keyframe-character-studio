@@ -13,7 +13,7 @@ export const getPositionDisplayScale = (coordinateSystem: SceneCoordinateSystem)
   coordinateSystem === 'project-unit-center-v1' ? 1 : 0.01
 );
 
-export interface InspectorPositionDisplay {
+interface InspectorPositionDisplay {
   x: number;
   y: number;
 }

@@ -17,12 +17,12 @@
  */
 
 /** The weights the KCS text renderer writes (`font-weight="bold"`). */
-export const KCS_RENDERED_TEXT_WEIGHTS = ['400', '700'];
+const KCS_RENDERED_TEXT_WEIGHTS = ['400', '700'];
 
 /** The unicode subsets worth embedding for a graphic's text; the rest are for other scripts. */
-export const EMBEDDED_FONT_SUBSETS = ['latin', 'latin-ext'];
+const EMBEDDED_FONT_SUBSETS = ['latin', 'latin-ext'];
 
-export interface FontFaceSource {
+interface FontFaceSource {
   family: string;
   /** The raw `font-weight` descriptor, e.g. `700` or `400 900`. */
   weight: string;
@@ -123,7 +123,7 @@ export const toBase64 = (bytes: Uint8Array): string => {
 const toFontFaceRule = (face: FontFaceSource, dataUrl: string): string =>
   `@font-face{font-family:"${face.family}";font-style:normal;font-weight:${face.weight || '400'};src:url("${dataUrl}")}`;
 
-export interface EmbeddedFontStyles {
+interface EmbeddedFontStyles {
   /** The stylesheet to place inside the rasterised SVG (empty when nothing was embedded). */
   css: string;
   /** The families that were embedded, so the caller can report what it managed. */

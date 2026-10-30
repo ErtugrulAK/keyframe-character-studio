@@ -798,7 +798,7 @@ const BASIC_LAYER_TYPES: Record<number, string> = {
 };
 
 /** Maps a Lottie document (already parsed) into a KCS scene plus a loss report. */
-export const mapLottieDocument = (document: unknown): LottieImportResult => {
+const mapLottieDocument = (document: unknown): LottieImportResult => {
   const diagnostics: LottieImportDiagnostic[] = [];
   const root = asRecord(document);
   if (!root) {

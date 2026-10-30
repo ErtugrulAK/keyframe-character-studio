@@ -45,7 +45,7 @@ export const REFIT_UNTOUCHED_CAMERA_COMMAND = 'refit-untouched-camera';
  */
 export const MIN_OPENING_STAGE_WIDTH = 400;
 
-export const shouldOpenWithLeftDockClosed = (stageWidth: number): boolean => (
+const shouldOpenWithLeftDockClosed = (stageWidth: number): boolean => (
   Number.isFinite(stageWidth) && stageWidth > 0 && stageWidth < MIN_OPENING_STAGE_WIDTH
 );
 
@@ -54,7 +54,7 @@ export const shouldOpenWithLeftDockClosed = (stageWidth: number): boolean => (
  * beside it (kcsEditorTheme.css uses the same 600 px breakpoint). Only there
  * does the inspector also open closed: it would cover the stage entirely.
  */
-export const PHONE_LAYOUT_QUERY = '(max-width: 600px)';
+const PHONE_LAYOUT_QUERY = '(max-width: 600px)';
 
 export const isPhoneLayout = (): boolean => (
   typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -198,7 +198,7 @@ const OUTLINER_MIN_HEIGHT = 72;
  * room is exactly what the user asked for. The caps above only shape the
  * untouched default.
  */
-export const DETAILS_HEADER_MIN_HEIGHT = 44;
+const DETAILS_HEADER_MIN_HEIGHT = 44;
 
 export const outlinerHeightBounds = (sidebarHeight: number | null): { min: number; max: number } => ({
   min: OUTLINER_MIN_HEIGHT,

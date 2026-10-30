@@ -30,7 +30,7 @@ import { makeEmptyChannels } from './defaults';
  * the exact-value tool). Per-mask animation (`Track.maskChannels`) is never
  * transferred either way: the target track keeps its own.
  */
-export interface AnimationTransferOptions {
+interface AnimationTransferOptions {
   targetBase?: Transform;
 }
 
@@ -38,7 +38,7 @@ type MotionProperty = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY';
 const OFFSET_PROPERTIES = new Set<string>(['x', 'y', 'rotation']);
 const SCALE_PROPERTIES = new Set<string>(['scaleX', 'scaleY']);
 
-export interface AnimationTransferResult {
+interface AnimationTransferResult {
   /** Target track carrying the copied animation (existing id+metadata, or a
    *  freshly created track when the target had none). */
   track: Track;

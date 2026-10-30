@@ -30,7 +30,7 @@ export const GIF_MAX_DISPLAY_FPS = 50;
 export const GIF_SCALE_OPTIONS = [1, 0.5, 0.25, 0.125];
 
 /** The widest/tallest GIF the default scale aims for. */
-export const GIF_DEFAULT_MAX_EDGE = 960;
+const GIF_DEFAULT_MAX_EDGE = 960;
 
 /** Hard ceiling on how many frames one export may encode. */
 export const GIF_MAX_FRAMES = 900;
@@ -61,7 +61,7 @@ const NON_BLOCKING_FOR_GIF = [
 ];
 
 /** True for an asset URL the isolated raster context can load (inline bytes only). */
-export const isInlineMediaUrl = (url: string): boolean => /^data:/iu.test(url);
+const isInlineMediaUrl = (url: string): boolean => /^data:/iu.test(url);
 
 /**
  * Whether the current scene can be GIF'd, in the editor's own diagnostic
@@ -102,7 +102,7 @@ export const resolveGifScale = (width: number, height: number): number => {
     ?? GIF_SCALE_OPTIONS[GIF_SCALE_OPTIONS.length - 1];
 };
 
-export interface GifDimensions {
+interface GifDimensions {
   width: number;
   height: number;
 }
@@ -146,7 +146,7 @@ export interface GifFramePlan {
   steps: GifFrameStep[];
 }
 
-export interface GifFramePlanInput {
+interface GifFramePlanInput {
   totalFrames: number;
   projectFps: number;
   exportFps: number;

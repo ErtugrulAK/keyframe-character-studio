@@ -13,7 +13,7 @@ import {
 /** Pointer travel (CSS px) after a press that turns it into a tangent drag. */
 export const PEN_DRAG_THRESHOLD_PX = 4;
 /** A press within this many CSS px of the first point closes the shape. */
-export const FREEFORM_CLOSE_RADIUS_PX = 10;
+const FREEFORM_CLOSE_RADIUS_PX = 10;
 /** A press within this many CSS px of the last point targets that point (a double-click lands twice). */
 const DUPLICATE_CLICK_PX = 3;
 

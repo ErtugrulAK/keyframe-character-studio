@@ -9,7 +9,7 @@ import { validateCritical, type LayerRef } from './validateScene';
  * scene as it would be after the pick — no second relationship rule set. The
  * relationship itself stays where it always lives: `target.trackMatte`.
  */
-export type TrackMattePickVerdict =
+type TrackMattePickVerdict =
   | { ok: true; sourceName: string }
   | { ok: false; reason: string };
 

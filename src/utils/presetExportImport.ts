@@ -25,14 +25,14 @@ import { generateId } from './idGenerator';
 export const PRESET_EXPORT_VERSION = 1;
 
 /** Export library size safety limit (whole-file reject above this). */
-export const MAX_IMPORT_PRESETS = 500;
+const MAX_IMPORT_PRESETS = 500;
 
 /** M25 authority: a preset is "user" iff its id is not one of the defaults. */
 export function isDefaultPresetId(id: string): boolean {
   return DEFAULT_INITIAL_PRESETS.some((d) => d.id === id);
 }
 
-export interface PresetExportPayload {
+interface PresetExportPayload {
   version: number;
   presets: CustomMotionPreset[];
 }
@@ -55,7 +55,7 @@ export function buildPresetExportPayload(customPresets: CustomMotionPreset[]): P
   };
 }
 
-export type PresetImportResult =
+type PresetImportResult =
   | { ok: true; presets: CustomMotionPreset[] }
   | { ok: false; error: string };
 

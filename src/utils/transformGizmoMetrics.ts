@@ -1,4 +1,4 @@
-export interface TransformGizmoMetrics {
+interface TransformGizmoMetrics {
   cornerSize: number;
   edgeRadius: number;
   rotationRadius: number;

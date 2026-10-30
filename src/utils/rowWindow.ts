@@ -16,7 +16,7 @@
 /** Lists with at least this many rows are windowed. */
 export const ROW_WINDOW_MIN_ROWS = 60;
 /** Rows within this distance (px) above and below the viewport stay mounted. */
-export const ROW_WINDOW_OVERSCAN_PX = 240;
+const ROW_WINDOW_OVERSCAN_PX = 240;
 
 export type RowWindowSegment =
   | { kind: 'rows'; start: number; end: number }

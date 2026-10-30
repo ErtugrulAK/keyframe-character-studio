@@ -9,19 +9,19 @@ import { sanitizeFilenameComponent } from '../utils/pathSafety';
 
 type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
 
-export interface GifExportProgressState {
+interface GifExportProgressState {
   completed: number;
   total: number;
 }
 
-export interface GifExportStartOptions {
+interface GifExportStartOptions {
   /** The scene SNAPSHOT the panel summarised; never re-read while rendering. */
   scene: SceneData;
   exportFps: number;
   scale: number;
 }
 
-export interface GifExportController {
+interface GifExportController {
   isExporting: boolean;
   progress: GifExportProgressState | null;
   /** The finished export, for the summary the panel keeps on screen. */

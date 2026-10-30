@@ -5,8 +5,8 @@ import { deriveBooleanGeometry } from './booleanGeometry';
 import { getShapeGeometry, type ShapeGeometry } from './shapeGeometry';
 import type { CoordinatePoint } from './projectCoordinates';
 /** Pure viewport / canvas math for the Stage canvas. */
-export const CANVAS_CENTER_X = 300;
-export const CANVAS_CENTER_Y = 240;
+const CANVAS_CENTER_X = 300;
+const CANVAS_CENTER_Y = 240;
 
 export const clampZoom = (zoom: number): number => Math.min(3, Math.max(0.3, zoom));
 
@@ -42,7 +42,7 @@ export const getStageFitScale = (
   viewBox: { width: number; height: number },
 ): number => Math.min(width / viewBox.width, height / viewBox.height) || 1;
 
-export interface StageCameraTransformInput {
+interface StageCameraTransformInput {
   view: StageCameraView;
   stage: StageBox;
   zoom: number;
@@ -65,7 +65,7 @@ export const getStageCameraTransform = ({
   scale: (zoom * view.baseScale) / getStageFitScale(stage, viewBox),
 });
 
-export interface ClientToCameraPointInput {
+interface ClientToCameraPointInput {
   view: StageCameraView;
   clientX: number;
   clientY: number;
@@ -99,7 +99,7 @@ export interface ShapeCreationBounds {
   centerY: number;
 }
 
-export interface ShapeCreationPlacement {
+interface ShapeCreationPlacement {
   x: number;
   y: number;
   scaleX: number;
@@ -183,7 +183,7 @@ export const getShapeCreationPlacement = (
   };
 };
 
-export interface CursorAnchoredCameraInput {
+interface CursorAnchoredCameraInput {
   view: StageCameraView;
   clientX: number;
   clientY: number;

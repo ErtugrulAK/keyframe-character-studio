@@ -35,7 +35,7 @@ export interface ImportDiagnostic {
  * on purpose — the consumer narrows each one (`typeof`, guards) instead of
  * trusting the document, which is what the previous `any` did.
  */
-export interface LegacyProjectDocument {
+interface LegacyProjectDocument {
   tracks: Track[];
   characterParts: CharacterPart[];
   fps?: unknown;
@@ -50,9 +50,9 @@ export interface LegacyProjectDocument {
 }
 
 /** A document the importer accepts: the current scene shape or the legacy project shape. */
-export type ImportedDocument = { kind: 'scene'; scene: SceneData } | { kind: 'legacy-project'; project: LegacyProjectDocument };
+type ImportedDocument = { kind: 'scene'; scene: SceneData } | { kind: 'legacy-project'; project: LegacyProjectDocument };
 
-export type ImportValidationResult =
+type ImportValidationResult =
   | { ok: true; document: ImportedDocument; diagnostics: ImportDiagnostic[] }
   | { ok: false; diagnostics: ImportDiagnostic[] };
 
@@ -70,7 +70,7 @@ export const MAX_IMPORT_CHARACTERS = 32 * 1024 * 1024;
 /** Refuse documents that declare more layers or tracks than this. */
 export const MAX_IMPORT_LAYERS = 5000;
 /** Bound the tree walk so a hostile document cannot make validation unbounded. */
-export const MAX_IMPORT_DEPTH = 64;
+const MAX_IMPORT_DEPTH = 64;
 
 const refuse = (code: string, path: string, message: string, action: string): ImportValidationResult => ({
   ok: false,

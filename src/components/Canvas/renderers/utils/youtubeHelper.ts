@@ -1,4 +1,4 @@
-export interface YouTubeEmbedResult {
+interface YouTubeEmbedResult {
   isYouTube: boolean;
   embedUrl: string;
 }

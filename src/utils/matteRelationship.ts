@@ -8,7 +8,7 @@ import { resolveMatteMode, resolveMatteSource, suppressedMatteSourceIds } from '
  * aggregation). It reads; it never migrates, merges or writes either raw
  * representation, so legacy and V2 data stay exactly as authored.
  */
-export interface EffectiveMatteRelationship {
+interface EffectiveMatteRelationship {
   /** Which stored representation is in effect. */
   kind: 'track' | 'legacy';
   sourceId: string;

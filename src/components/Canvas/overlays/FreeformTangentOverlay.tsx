@@ -44,7 +44,7 @@ interface DragState {
 /** Pointer travel (CSS px) before a press on a point becomes a drag of that point. */
 const VERTEX_DRAG_THRESHOLD_PX = 3;
 
-export interface FreeformTangentOverlayProps {
+interface FreeformTangentOverlayProps {
   part: CharacterPart;
   /** Evaluated world transform of the part at the current frame. */
   transform: Transform & { affine?: WorldAffine };

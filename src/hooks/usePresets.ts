@@ -45,7 +45,7 @@ export interface UpdatePresetInput {
   category?: string;
 }
 
-export interface UsePresetsOptions {
+interface UsePresetsOptions {
   /**
    * SAFE-03-B: called once per failed persistence attempt (never on mount,
    * never on success) so the editor can surface one honest visible warning.

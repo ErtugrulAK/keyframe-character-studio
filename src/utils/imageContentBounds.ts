@@ -18,7 +18,7 @@ import type { ImageContentBounds } from '../types/animator';
 export const VISIBLE_ALPHA_THRESHOLD = 1;
 
 /** Inclusive pixel-index rectangle of the visible pixels of a bitmap. */
-export interface VisibleContentRect {
+interface VisibleContentRect {
   minX: number;
   minY: number;
   /** Inclusive index of the last visible column, so the extent is `maxX - minX + 1`. */

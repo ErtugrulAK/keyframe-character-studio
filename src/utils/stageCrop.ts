@@ -56,7 +56,7 @@ export interface StageCropRect {
 }
 
 /** The uniform centre-relative shift cropping applies to the top-level layers. */
-export interface StageCropShift {
+interface StageCropShift {
   dx: number;
   dy: number;
 }

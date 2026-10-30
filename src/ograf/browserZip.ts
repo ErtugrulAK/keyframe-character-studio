@@ -4,7 +4,7 @@ import { isSafeOGrafPackagePath, sanitizeOGrafId } from './compiler';
 import { OGrafPackageWriteError, describeOGrafValueForDiagnostics } from './diagnostics';
 import type { OGrafGeneratedPackage } from './types';
 
-export interface OGrafBrowserZip {
+interface OGrafBrowserZip {
   fileName: string;
   bytes: Uint8Array;
 }

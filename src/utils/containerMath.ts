@@ -37,8 +37,8 @@ export interface WorldAffine {
 }
 
 /** The TRS part every affine consumer can also read off a world transform. */
-export type AffineSource = Pick<Transform, 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY'>;
-export type AffineCarrier = AffineSource & { affine?: WorldAffine };
+type AffineSource = Pick<Transform, 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY'>;
+type AffineCarrier = AffineSource & { affine?: WorldAffine };
 
 /** Self-contained source shared with generated runtimes, including after minification. */
 export const createWorldAffineAlgebra = () => {

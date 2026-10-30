@@ -9,7 +9,7 @@
  * C4 — "all" is everything the canvas can pick: locked layers (`lockedIds`)
  * are left out, as After Effects leaves locked layers out of a selection.
  */
-export interface LayerSelectionSetters {
+interface LayerSelectionSetters {
   setSelectedPartIds: (ids: string[]) => void;
   setSelectedPartId: (id: string | null) => void;
 }

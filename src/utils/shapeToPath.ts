@@ -22,7 +22,7 @@ import { getShapeGeometry } from './shapeGeometry';
 /** Cubic-Bézier circle constant: handle length / radius for a quarter arc. */
 export const BEZIER_ARC_KAPPA = 0.5522847498307936;
 
-export type ShapeToPathResult =
+type ShapeToPathResult =
   | { ok: true; part: CharacterPart; precision: 'exact' | 'bezier-arc' }
   | { ok: false; reason: string };
 
@@ -105,7 +105,7 @@ export const shapeToPathBlockReason = (part: CharacterPart, tracks: readonly Tra
 };
 
 /** The editable outline of a basic shape, in its own local space. */
-export const shapeOutlinePath = (part: CharacterPart): { path: BezierPath; precision: 'exact' | 'bezier-arc' } | null => {
+const shapeOutlinePath = (part: CharacterPart): { path: BezierPath; precision: 'exact' | 'bezier-arc' } | null => {
   const geometry = getShapeGeometry(part.type);
   if (!geometry) return null;
   if (geometry.kind === 'rect') {

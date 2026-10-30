@@ -20,7 +20,7 @@ export const KCS_TEXT_FONT_FAMILIES = [
   "'JetBrains Mono'",
 ] as const;
 
-export type KcsTextFontFamily = (typeof KCS_TEXT_FONT_FAMILIES)[number];
+type KcsTextFontFamily = (typeof KCS_TEXT_FONT_FAMILIES)[number];
 
 /**
  * Normalises a font name for comparison: drop CSS quotes, drop everything from a

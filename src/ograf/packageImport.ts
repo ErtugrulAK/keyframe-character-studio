@@ -119,7 +119,7 @@ export interface PackagePreflightProblem {
 }
 
 /** A central-directory entry as the archive reader hands it to the admission rule. */
-export interface PackageEntryHeader {
+interface PackageEntryHeader {
   name: string;
   /** Declared compressed size — the bytes a stored entry is copied from. */
   size: number;

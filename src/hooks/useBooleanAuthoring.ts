@@ -22,7 +22,7 @@ import {
  * interaction. The Inspector and the authoring toolbar both drive these same
  * functions, so there is exactly one Boolean write path.
  */
-export interface BooleanAuthoring {
+interface BooleanAuthoring {
   /** Boolean-eligible parts in the current selection (2+ enables creation). */
   booleanEligibleParts: CharacterPart[];
   /** The Boolean group the selection points at, when one is selected. */

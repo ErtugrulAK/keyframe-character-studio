@@ -21,7 +21,7 @@ import type { PropertyKeyframe } from '../types/animator';
 import { interpolateChannel } from './defaults';
 
 /** One measured frame position on a channel's speed curve. */
-export interface ChannelVelocitySample {
+interface ChannelVelocitySample {
   /** Frame the sample was taken at. */
   frame: number;
   /** Channel value at that frame, straight from the shared evaluator. */

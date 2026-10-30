@@ -22,7 +22,7 @@ export const selectionFrameCenterWorld = (
   bounds: PartLocalBounds,
 ): WorldPoint => applyAffine(worldAffineOf(transform), { x: bounds.offsetX, y: bounds.offsetY });
 
-export interface PivotRotationInput {
+interface PivotRotationInput {
   /** The layer's world transform, captured at pointerdown. */
   transform: Transform;
   /** The pivot, in world space, captured at pointerdown and held for the gesture. */

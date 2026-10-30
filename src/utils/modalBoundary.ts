@@ -13,7 +13,7 @@
  * Inspector's in/out preset popovers) declare `role="dialog"` without
  * `aria-modal`, so they are deliberately not matched.
  */
-export const BLOCKING_MODAL_SELECTOR = '[aria-modal="true"]';
+const BLOCKING_MODAL_SELECTOR = '[aria-modal="true"]';
 
 /** True while a blocking dialog is rendered. React-free and DOM-environment safe. */
 export const isBlockingModalOpen = (): boolean =>

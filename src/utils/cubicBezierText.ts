@@ -7,7 +7,7 @@
  * map to their defined curves. X values must lie in 0..1 (CSS requires it);
  * Y values are clamped to the editor's -1..2 range. Anything else is `null`.
  */
-export type CubicBezierPoints = [number, number, number, number];
+type CubicBezierPoints = [number, number, number, number];
 
 const KEYWORDS: Record<string, CubicBezierPoints> = {
   linear: [0, 0, 1, 1],

@@ -72,7 +72,7 @@ export function isSafeOGrafPackagePath(value: string): boolean {
   return isSafePackageRelativePath(value);
 }
 
-export interface OGrafManifestCompilation {
+interface OGrafManifestCompilation {
   manifest: OGrafManifest;
   diagnostics: OGrafExportDiagnostic[];
 }

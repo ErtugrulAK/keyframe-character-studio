@@ -6,7 +6,7 @@ export interface ContextMenuRequest {
   targetId: string | null;
 }
 
-export interface EditorContextMenuApi {
+interface EditorContextMenuApi {
   openContextMenu: (request: ContextMenuRequest) => void;
   closeContextMenu: () => void;
 }

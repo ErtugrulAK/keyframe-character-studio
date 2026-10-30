@@ -1,6 +1,6 @@
 import React from 'react';
 
-export interface SmartNumberInputProps {
+interface SmartNumberInputProps {
   value: number;
   min?: number;
   max?: number;

@@ -15,7 +15,7 @@ type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?
  * writes once inside a batch interaction, so one user action is one undo step.
  * A refused change writes nothing and says why.
  */
-export interface LayerParenting {
+interface LayerParenting {
   /** Drop `id` before/after `targetId` (as its sibling) or nest it into it. */
   dropLayer: (id: string, targetId: string, position: LayerDropPosition) => boolean;
   /** Give `id` a new parent (null = top level), keeping its place on screen. */
@@ -28,7 +28,7 @@ export interface LayerParenting {
   moveLayerAmongSiblings: (id: string, direction: -1 | 1) => boolean;
 }
 
-export interface LayerParentingDependencies {
+interface LayerParentingDependencies {
   currentFrame: number;
   activeTemplateId: string;
   characterParts: CharacterPart[];

@@ -6,7 +6,7 @@ import { sanitizeOGrafDiagnosticText } from '../../ograf/diagnostics';
  * The report entry every importer produces: the Lottie importer and the OGraf
  * package reader both shape their diagnostics this way, so the surface is one.
  */
-export interface ImportReportEntry {
+interface ImportReportEntry {
   code: string;
   severity: 'error' | 'warning';
   feature: string;
@@ -19,7 +19,7 @@ import './ImportReportDialog.css';
 /** How many diagnostics are rendered before the list is cut with a count. */
 const VISIBLE_DIAGNOSTIC_LIMIT = 40;
 
-export interface ImportReportDialogProps {
+interface ImportReportDialogProps {
   isOpen: boolean;
   fileName: string;
   /** Layers the parsed scene would add, or `undefined` when the import was refused. */

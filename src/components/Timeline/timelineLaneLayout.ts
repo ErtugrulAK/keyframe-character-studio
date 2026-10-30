@@ -18,9 +18,9 @@ import { hasChannelDataForTemplate } from '../../utils/timelineMetrics';
  */
 
 /** C7 — a property row's place in the tree: a layer property, or a member of a group. */
-export type LaneRowDepth = 1 | 2;
+type LaneRowDepth = 1 | 2;
 
-export type LaneRow =
+type LaneRow =
   | { kind: 'track' }
   | {
     kind: 'header';
@@ -97,7 +97,7 @@ export const resolveLaneRows = (track: Track, isGroupExpanded: GroupExpanded, co
   return rows;
 };
 
-export const laneRowHeight = (row: LaneRow): number => (row.kind === 'track' ? TRACK_ROW_HEIGHT : CHANNEL_ROW_HEIGHT);
+const laneRowHeight = (row: LaneRow): number => (row.kind === 'track' ? TRACK_ROW_HEIGHT : CHANNEL_ROW_HEIGHT);
 
 /** The height of one track's whole lane group. */
 export const laneGroupHeight = (track: Track, isGroupExpanded: GroupExpanded, context: LaneContext = {}): number => (
@@ -105,7 +105,7 @@ export const laneGroupHeight = (track: Track, isGroupExpanded: GroupExpanded, co
 );
 
 /** A keyframe glyph of the lane layout, in lane-group space (top of the layer row = 0). */
-export interface LaneKeyframe {
+interface LaneKeyframe {
   id: string;
   frame: number;
   /** Vertical centre of its row inside the lane group. */

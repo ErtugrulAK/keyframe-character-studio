@@ -37,7 +37,7 @@ export type CornerId = 'tl' | 'tr' | 'bl' | 'br';
 /** The local-space geometry bounds the gizmo drew the handles around. */
 export type CornerBounds = Pick<PartLocalBounds, 'minX' | 'minY' | 'maxX' | 'maxY'>;
 
-export interface CornerResizeInput {
+interface CornerResizeInput {
   /** World transform of the layer when the drag started. */
   transform: Pick<Transform, 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY'>;
   /** Local geometry bounds when the drag started (stroke-expanded like the gizmo). */
@@ -138,7 +138,7 @@ export const resolveCornerResize = ({
 /** The four edge handles of the transform gizmo. */
 export type EdgeId = 'left' | 'right' | 'top' | 'bottom';
 
-export interface EdgeResizeInput {
+interface EdgeResizeInput {
   /** World transform of the layer when the drag started. */
   transform: Pick<Transform, 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY'>;
   /** Local geometry bounds the gizmo drew the handles around (stroke-expanded like the gizmo). */

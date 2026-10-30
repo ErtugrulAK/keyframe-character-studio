@@ -2,7 +2,7 @@ import type { CharacterPart, Track } from '../types/animator';
 import { releaseChildrenOfDeletedParents } from './layerGrouping';
 import { resolveMatteSource } from './matte';
 
-export interface DeletePartsResult {
+interface DeletePartsResult {
   parts: CharacterPart[];
   tracks: Track[];
   deletedIds: string[];
@@ -93,7 +93,7 @@ const transformKeyCount = (track: Track | undefined): number => (
   TRANSFORM_CHANNELS.reduce((sum, channel) => sum + (track?.channels?.[channel]?.length ?? 0), 0)
 );
 
-export type PartDeletionPlan =
+type PartDeletionPlan =
   | (DeletePartsResult & { ok: true; releasedChildIds: string[]; bakeNotes?: string[]; bakedChildren: BakedChild[] })
   | { ok: false; reason: string };
 
@@ -175,7 +175,7 @@ export const matteDependentsOfDeletion = (
  * their place on screen (`keptChildren`). A Track Matte is a DISPLAY
  * relationship and never extends the delete (see `matteDependentsOfDeletion`).
  */
-export interface DeletionScope {
+interface DeletionScope {
   /** The layers the user asked to delete (that exist). */
   requested: CharacterPart[];
   /** Layers deleted only because a deleted container owns them. */

@@ -85,7 +85,7 @@ export type ArrangePatch = Partial<Pick<Transform, 'x' | 'y' | 'rotation' | 'sca
 /** The world-space patches of one command, keyed by layer id, in write order. */
 export type ArrangePlan = Record<string, ArrangePatch>;
 
-export interface ArrangeTarget {
+interface ArrangeTarget {
   id: string;
   /** The layer's evaluated world transform, captured before any write. */
   transform: Transform;
@@ -100,7 +100,7 @@ const POSITION_EPSILON = 1e-6;
  * The layers an arrange command acts on: the canonical selection, minus every
  * layer an also-selected ancestor already carries.
  */
-export const resolveArrangeTargets = (parts: CharacterPart[], ids: string[]): string[] => {
+const resolveArrangeTargets = (parts: CharacterPart[], ids: string[]): string[] => {
   const present: string[] = [];
   const seen = new Set<string>();
   ids.forEach((id) => {

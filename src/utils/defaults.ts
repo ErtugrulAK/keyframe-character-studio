@@ -1,15 +1,6 @@
 import type { CharacterPart, Track, Transform, EasingType, TrackChannel, PropertyKeyframe, PathKeyframe, BezierPath } from '../types/animator';
 import { interpolateBezierPath, legacyMaskPointsToPath, pathToLegacyMaskPoints } from './bezierPath';
 
-export const DEFAULT_TRANSFORM: Transform = {
-  x: 0,
-  y: 0,
-  rotation: 0,
-  scaleX: 1,
-  scaleY: 1,
-  opacity: 1,
-};
-
 export const DEFAULT_CHARACTER_PARTS: CharacterPart[] = [];
 
 export const DEFAULT_TRACKS: Track[] = [];
@@ -145,7 +136,7 @@ export function solveCubicBezier(x1: number, y1: number, x2: number, y2: number,
  * Presentation code uses this to describe a segment honestly; it is a
  * classification of the authority's branch order, not a second evaluator.
  */
-export type SegmentEasingAuthority = 'hold' | 'handles' | 'controlPoints' | 'autoBezier' | 'named';
+type SegmentEasingAuthority = 'hold' | 'handles' | 'controlPoints' | 'autoBezier' | 'named';
 
 export function effectiveSegmentAuthority(
   prev: { easing: EasingType; bezierControlPoints?: [number, number, number, number]; bezierOut?: { x: number; y: number } },

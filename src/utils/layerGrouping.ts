@@ -58,7 +58,7 @@ import { isRelationshipChainRelated, relationshipAncestorIds, relationshipParent
  */
 
 /** The container layer type: a freeform with no path or points draws nothing. */
-export const GROUP_CONTAINER_TYPE: CharacterPart['type'] = 'custom_freeform';
+const GROUP_CONTAINER_TYPE: CharacterPart['type'] = 'custom_freeform';
 
 /** The local transform channels a fold rewrites (opacity is never inherited). */
 const LOCAL_CHANNELS = ['x', 'y', 'rotation', 'scaleX', 'scaleY'] as const;
@@ -541,14 +541,14 @@ export const ungroupBlockReason = (parts: CharacterPart[], tracks: Track[], grou
 
 // ─── Group creation ───────────────────────────────────────────────────────
 
-export interface GroupCreationContext {
+interface GroupCreationContext {
   groupId: string;
   trackId: string;
   name: string;
   worldOf: WorldOf;
 }
 
-export type GroupCreationOutcome =
+type GroupCreationOutcome =
   | { ok: true; parts: CharacterPart[]; tracks: Track[]; groupId: string; parentId?: string; childIds: string[] }
   | { ok: false; reason: string };
 
@@ -647,7 +647,7 @@ export const createLayerGroup = (
 
 // ─── Ungroup ──────────────────────────────────────────────────────────────
 
-export type UngroupOutcome =
+type UngroupOutcome =
   | {
     ok: true;
     parts: CharacterPart[];
@@ -1131,7 +1131,7 @@ const dissolveContainer = (
 
 // ─── Deleting a plain parent ──────────────────────────────────────────────
 
-export type ParentReleaseOutcome =
+type ParentReleaseOutcome =
   | { ok: true; parts: CharacterPart[]; tracks: Track[]; releasedChildIds: string[]; bakeNotes?: string[] }
   | { ok: false; reason: string };
 
@@ -1240,7 +1240,7 @@ export interface RebasedChild {
   notes: string[];
 }
 
-export type RebaseOutcome =
+type RebaseOutcome =
   | { ok: true; parts: CharacterPart[]; tracks: Track[]; rebased: RebasedChild | null }
   | { ok: false; reason: string };
 

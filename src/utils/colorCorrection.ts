@@ -59,7 +59,7 @@ export const isEffectOnlyMask = (mask: Pick<LayerMask, 'affectsAlpha'>): boolean
 /** The masks that cut the layer's alpha (effect-only masks are excluded). */
 export const alphaMasks = <T extends Pick<LayerMask, 'affectsAlpha'>>(masks: readonly T[] | undefined): T[] => (masks ?? []).filter((mask) => !isEffectOnlyMask(mask));
 
-export type ColorCorrectionStatus =
+type ColorCorrectionStatus =
   | { kind: 'none' }
   | { kind: 'off'; effect: ColorCorrectionEffect }
   | { kind: 'neutral'; effect: ColorCorrectionEffect }

@@ -3,9 +3,9 @@
  * reports: a conflict pause, a failed write, a save in flight, unsaved changes,
  * or the time since the last SUCCESSFUL save. Pure, so every wording is tested.
  */
-export type SaveStatusState = 'paused' | 'failed' | 'saving' | 'unsaved' | 'saved' | 'never';
+type SaveStatusState = 'paused' | 'failed' | 'saving' | 'unsaved' | 'saved' | 'never';
 
-export interface SaveStatusInput {
+interface SaveStatusInput {
   conflict: boolean;
   error: 'quota' | 'unavailable' | null;
   saving: boolean;
@@ -15,7 +15,7 @@ export interface SaveStatusInput {
   now: number;
 }
 
-export interface SaveStatus {
+interface SaveStatus {
   state: SaveStatusState;
   /** Short badge text (the badge reserves room for the longest one). */
   label: string;

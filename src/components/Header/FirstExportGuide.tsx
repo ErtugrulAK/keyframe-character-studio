@@ -9,7 +9,7 @@ import React from 'react';
  * was written — only the export action can do that.
  */
 
-export interface FirstExportGuideProps {
+interface FirstExportGuideProps {
   /** Runs the existing OGraf pipeline as a pre-flight check. */
   onCheckReadiness: () => void;
   /** True while the readiness check is running. */

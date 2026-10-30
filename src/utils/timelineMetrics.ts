@@ -52,7 +52,7 @@ export interface CurveSegmentKeyframe {
 }
 
 /** The curve segment the Motion Curves modal shapes. */
-export interface CurveSegment {
+interface CurveSegment {
   /** Keyframe the segment starts at; it stores the segment's curve. */
   from: CurveSegmentKeyframe;
   /** Keyframe the segment arrives at (the one under the playhead). */
@@ -99,9 +99,6 @@ export function resolveCurveSegment(
 
   return { from: list[index - 1], to: list[index], list };
 }
-
-/** Channel display order (same as DISPLAY_CHANNELS in the editor panel) */
-export const TIMELINE_CHANNEL_ORDER: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'trimPathStart', 'trimPathEnd', 'trimPathOffset'];
 
 /**
  * The distinct frames a keyframe list animates in ONE template, ascending.
@@ -252,7 +249,7 @@ export function resolveAdjacentKeyframeFrame(
  * of THIS track owns the segment?" so the caller cannot fall back to another
  * layer. `channel` is `null` for the legacy composite-keyframe route.
  */
-export interface CurveTarget {
+interface CurveTarget {
   /** Canonical channel that owns the segment, or `null` for legacy keyframes. */
   channel: AnimationChannel | null;
   /** Active-sequence keyframes of that exact identity, in document order. */
@@ -311,7 +308,7 @@ export function resolveCurveTarget(
 /** K1 (contract D2) — the three stopwatch states, read from the channel a row
  * actually shows: keys OUTSIDE the active template scope are another
  * sequence's animation and must not light this sequence's stopwatch. */
-export type ChannelAnimationState = 'off' | 'animated' | 'keyed';
+type ChannelAnimationState = 'off' | 'animated' | 'keyed';
 
 export const resolveChannelAnimationState = (
   track: Track,

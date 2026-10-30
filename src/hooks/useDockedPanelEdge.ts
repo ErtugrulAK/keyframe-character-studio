@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { flushSync } from 'react-dom';
 import { PANEL_EDGE_TRANSITION_MS, commitWorkspaceLayout, createFrameEase, prefersReducedMotion, type FrameEase } from '../utils/workspaceLayout';
 
-export type DockSide = 'left' | 'right';
+type DockSide = 'left' | 'right';
 
-export interface DockedPanelEdge {
+interface DockedPanelEdge {
   /** The panel's target visibility (its class state), flipped on the toggle. */
   visible: boolean;
   /**

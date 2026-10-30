@@ -33,12 +33,12 @@ import { relationshipAncestorIds, relationshipParentId } from './partBinding';
  *
  * Pure: no React, no state; the caller writes the result in one history step.
  */
-export type ReparentOutcome =
+type ReparentOutcome =
   | { ok: true; parts: CharacterPart[]; unchanged: boolean; tracks?: Track[]; rebased?: RebasedChild | null }
   | { ok: false; reason: string };
 
 /** Whether the layer, or a layer of its old or new parent chain, animates its transform. */
-export const reparentInvolvesAnimation = (parts: CharacterPart[], tracks: Track[], childId: string, newParentId: string | null): boolean => {
+const reparentInvolvesAnimation = (parts: CharacterPart[], tracks: Track[], childId: string, newParentId: string | null): boolean => {
   const trackOf = (id: string) => tracks.find((track) => track.partId === id);
   const chain = [childId, ...relationshipAncestorIds(parts, childId), ...(newParentId ? [newParentId, ...relationshipAncestorIds(parts, newParentId)] : [])];
   return chain.some((id) => isLocalTransformAnimated(trackOf(id)));
@@ -181,7 +181,7 @@ export const moveLayerInOrder = (
   return { parts: reindexed, tracks: sortedTracks };
 };
 
-export type LayerDropOutcome =
+type LayerDropOutcome =
   | { ok: true; parts: CharacterPart[]; tracks: Track[]; parentChanged: boolean; unchanged: boolean; rebased?: RebasedChild | null }
   | { ok: false; reason: string };
 

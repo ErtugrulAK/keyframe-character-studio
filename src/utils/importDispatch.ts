@@ -15,7 +15,7 @@ import { MAX_IMPORT_CHARACTERS, validateImportedDocument } from './importValidat
  * deliberately refuses: OGraf manifests/packages (routed to their existing
  * messages) and Lottie documents (routed to the Lottie importer).
  */
-export type ImportKind =
+type ImportKind =
   | 'ograf-package'
   | 'ograf-manifest'
   | 'lottie'

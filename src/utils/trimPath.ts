@@ -1,7 +1,7 @@
 import type { AnimationTrackData, BodyPartType, CharacterPart } from '../types/animator';
 import { interpolateChannel } from './defaults';
 
-export interface ResolvedTrimPath {
+interface ResolvedTrimPath {
   enabled: boolean;
   start: number;
   end: number;
@@ -9,14 +9,14 @@ export interface ResolvedTrimPath {
   isModern: boolean;
 }
 
-export interface TrimPathDashProps {
+interface TrimPathDashProps {
   [key: string]: string | number | undefined;
   pathLength: 1;
   strokeDasharray?: string;
   strokeDashoffset?: number;
 }
 
-export const TRIM_PATH_ELIGIBLE_TYPES: ReadonlySet<BodyPartType> = new Set([
+const TRIM_PATH_ELIGIBLE_TYPES: ReadonlySet<BodyPartType> = new Set([
   'custom_rect',
   'custom_box',
   'custom_circle',

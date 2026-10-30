@@ -50,7 +50,7 @@ interface UseMaskEditingOptions {
 }
 
 /** The target, while the document and the selection still honour it. */
-export const resolveMaskEditTarget = (
+const resolveMaskEditTarget = (
   target: MaskEditTarget | null,
   characterParts: CharacterPart[],
   selectedPartId: string | null,

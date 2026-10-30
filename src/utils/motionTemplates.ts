@@ -1,7 +1,7 @@
 import type { MotionTemplate, PropertyKeyframe, Track } from '../types/animator';
 import { generateId } from './idGenerator';
 
-export const DEFAULT_SEQUENCE_DURATION_FRAMES = 60;
+const DEFAULT_SEQUENCE_DURATION_FRAMES = 60;
 
 export const normalizeSequenceDuration = (value: number | undefined): number => {
   if (!Number.isFinite(value)) return DEFAULT_SEQUENCE_DURATION_FRAMES;
@@ -30,7 +30,7 @@ export const normalizeMotionTemplates = (templates: MotionTemplate[] | undefined
   });
 };
 
-export const createUniqueSequenceName = (requestedName: string, existing: MotionTemplate[], fallback = 'New Sequence'): string => {
+const createUniqueSequenceName = (requestedName: string, existing: MotionTemplate[], fallback = 'New Sequence'): string => {
   const base = requestedName.trim() || fallback;
   const names = new Set(existing.map((template) => template.name.trim().toLowerCase()));
   if (!names.has(base.toLowerCase())) return base;

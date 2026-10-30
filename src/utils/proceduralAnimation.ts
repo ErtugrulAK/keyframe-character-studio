@@ -14,7 +14,7 @@ import { sampleCustomPreset } from './presetSampler';
 
 // ─── Public API ─────────────────────────────────────────────────────────
 
-export interface ProceduralDelta {
+interface ProceduralDelta {
   x: number;
   y: number;
   rotation: number;

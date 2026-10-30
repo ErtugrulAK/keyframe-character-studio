@@ -22,7 +22,7 @@ import { OGRAF_PACKAGE_LIMITS } from '../ograf/packageImport';
 export const PROJECT_IMPORT_MAX_FILE_BYTES = MAX_IMPORT_CHARACTERS * 2;
 export const PACKAGE_IMPORT_MAX_FILE_BYTES = OGRAF_PACKAGE_LIMITS.bytes;
 
-export interface FileAdmissionProblem {
+interface FileAdmissionProblem {
   message: string;
 }
 

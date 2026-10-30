@@ -61,9 +61,10 @@ import { rotateAboutWorldPivot } from './rotationGesture';
  * ROTATE — ±90°, pivoting on the COLLECTIVE selection centre (a single target
  *   pivots on its own visual centre, of which the collective box is the same
  *   point). One pivot for the whole selection turns it as one rigid body, and
- *   every target's new place comes from `rotateAboutWorldPivot` — the same
- *   pivot-rotation authority the canvas gizmo uses — evaluated against the
- *   transform captured before the command, so the pivot cannot drift.
+ *   every target's new place comes from `rotateAboutWorldPivot`, evaluated
+ *   against the transform captured before the command, so the pivot cannot
+ *   drift. (The canvas rotation handle instead turns one layer about its own
+ *   origin, as a keyframed rotation does.)
  *
  * FLIP — about the COLLECTIVE selection centre, and world placement is
  *   preserved: a single target flips in place around its own visual centre, and
@@ -85,7 +86,7 @@ export type ArrangePatch = Partial<Pick<Transform, 'x' | 'y' | 'rotation' | 'sca
 /** The world-space patches of one command, keyed by layer id, in write order. */
 export type ArrangePlan = Record<string, ArrangePatch>;
 
-export interface ArrangeTarget {
+interface ArrangeTarget {
   id: string;
   /** The layer's evaluated world transform, captured before any write. */
   transform: Transform;
@@ -100,7 +101,7 @@ const POSITION_EPSILON = 1e-6;
  * The layers an arrange command acts on: the canonical selection, minus every
  * layer an also-selected ancestor already carries.
  */
-export const resolveArrangeTargets = (parts: CharacterPart[], ids: string[]): string[] => {
+const resolveArrangeTargets = (parts: CharacterPart[], ids: string[]): string[] => {
   const present: string[] = [];
   const seen = new Set<string>();
   ids.forEach((id) => {

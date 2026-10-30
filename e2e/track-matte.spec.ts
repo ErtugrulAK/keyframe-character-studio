@@ -1401,11 +1401,26 @@ test.describe('M18 text matte — real browser pixel assertions (full 4E matrix)
   });
 
   test('V-T2 — text luminance: white text → luminance mask, outside masked', async ({ page }) => {
-    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'luminance' })]);
+    await seed(page, [textSource({ fillColor: '#ffffff' }), wideTarget({ sourcePartId: 'txt', mode: 'luminance' })]);
     await ready(page);
     expect(await maxGreen(page, INK.x0, INK.x1, INK.y0, INK.y1)).toBeGreaterThan(150);
     expect(await greenAtWorld(page, 165, 240)).toBeLessThan(45);
     expect(await page.evaluate(() => document.querySelector('mask[id="kcs-mask-txt-luminance"]')?.getAttribute('mask-type'))).toBe('luminance');
+  });
+
+  test('V-T2b — text luminance follows the text colour; alpha ignores it', async ({ page }) => {
+    // Grey glyphs are half as bright as white ones: the target shows through
+    // them only partly, as it does for a grey shape source.
+    await seed(page, [textSource({ fillColor: '#808080' }), wideTarget({ sourcePartId: 'txt', mode: 'luminance' })]);
+    await ready(page);
+    expect(await page.evaluate(() => document.querySelector('mask[id="kcs-mask-txt-luminance"] text')?.getAttribute('fill'))).toBe('#808080');
+    const grey = await maxGreen(page, INK.x0, INK.x1, INK.y0, INK.y1);
+    expect(grey).toBeGreaterThan(30);
+    expect(grey).toBeLessThan(200);
+
+    await seed(page, [textSource({ fillColor: '#808080' }), wideTarget({ sourcePartId: 'txt', mode: 'alpha' })]);
+    await ready(page);
+    expect(await maxGreen(page, INK.x0, INK.x1, INK.y0, INK.y1)).toBeGreaterThan(150);
   });
 
   test('V-T3 — inverted LUMINANCE text: white rect + black text → deterministic hole', async ({ page }) => {

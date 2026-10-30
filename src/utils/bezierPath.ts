@@ -200,9 +200,6 @@ export const interpolateBezierPath = (
   };
 };
 
-export const pathToLegacyFreeformPoints = (path: BezierPath | undefined): FreeformPoint[] | undefined =>
-  path?.points.map(({ x, y }) => ({ x, y }));
-
 export const pathToLegacyMaskPoints = (path: BezierPath | undefined): MaskPoint[] | undefined =>
   path?.points.map(({ x, y, handleIn, handleOut }) => ({
     x,

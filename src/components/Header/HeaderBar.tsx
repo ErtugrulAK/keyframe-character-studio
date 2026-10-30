@@ -135,6 +135,24 @@ export const HeaderBar: React.FC = () => {
   const [ografStage, setOgrafStage] = useState<'compile' | 'package' | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState<boolean>(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+  // The menu closes on a press anywhere outside it (capture phase: canvas and
+  // panel handlers that stop or prevent the event still close it) and on Escape.
+  useEffect(() => {
+    if (!isExportMenuOpen) return undefined;
+    const closeOnOutsidePress = (event: PointerEvent) => {
+      if (!exportMenuRef.current?.contains(event.target as Node)) setIsExportMenuOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsExportMenuOpen(false);
+    };
+    window.addEventListener('pointerdown', closeOnOutsidePress, true);
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      window.removeEventListener('pointerdown', closeOnOutsidePress, true);
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [isExportMenuOpen]);
   /** SAFE-03-A: reset waits for an explicit confirmation whenever the document has content. */
   const [pendingResetConfirmation, setPendingResetConfirmation] = useState<boolean>(false);
   /** The scene snapshot the GIF panel summarises and exports, taken when it opens. */
@@ -256,7 +274,19 @@ export const HeaderBar: React.FC = () => {
       showToast('Autosave paused: another tab changed the shared project. Reload to adopt it, or export this tab’s work — nothing here will be overwritten.', 'error', { title: 'Autosave paused' });
     }
   }, [autosaveConflict, showToast]);
-  /**   * SAFE-02: a manual save that never got the shared lock within its bounded   * wait is reported once per event. The edits stay in memory, autosave is   * NOT paused, and the next interval tick retries the write — so this is an   * info notice, deliberately not the conflict error.   */  const manualSaveRejectedAnnouncedRef = useRef<number | null>(null);  useEffect(() => {    if (typeof manualSaveRejectedAt === 'number' && manualSaveRejectedAnnouncedRef.current !== manualSaveRejectedAt) {      manualSaveRejectedAnnouncedRef.current = manualSaveRejectedAt;      showToast('Save not completed: another tab is writing the shared project. Your changes are kept; the next autosave tick will retry.', 'info', { title: 'Save deferred' });    }  }, [manualSaveRejectedAt, showToast]);
+  /**
+   * SAFE-02: a manual save that never got the shared lock within its bounded
+   * wait is reported once per event. The edits stay in memory, autosave is
+   * NOT paused, and the next interval tick retries the write — so this is an
+   * info notice, deliberately not the conflict error.
+   */
+  const manualSaveRejectedAnnouncedRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (typeof manualSaveRejectedAt === 'number' && manualSaveRejectedAnnouncedRef.current !== manualSaveRejectedAt) {
+      manualSaveRejectedAnnouncedRef.current = manualSaveRejectedAt;
+      showToast('Save not completed: another tab is writing the shared project. Your changes are kept; the next autosave tick will retry.', 'info', { title: 'Save deferred' });
+    }
+  }, [manualSaveRejectedAt, showToast]);
 
   const handleExport = () => {
     const json = exportProject();
@@ -614,7 +644,7 @@ export const HeaderBar: React.FC = () => {
           </button>
           <input ref={fileInputRef} type="file" accept=".json,.kcs,.lottie.json,.ograf.json,.zip,.ograf" aria-label="Choose a KCS project, legacy project, Lottie file, or OGraf manifest/package to import" style={{ display: 'none' }} onChange={handleImportFile} />
 
-          <div style={{ position: 'relative' }}>
+          <div ref={exportMenuRef} style={{ position: 'relative' }}>
             <button
               className="header-action-btn export-btn"
               onClick={() => setIsExportMenuOpen((open) => !open)}

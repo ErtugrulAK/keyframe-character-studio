@@ -421,7 +421,7 @@ function validateFont(
     diagnostics.push(diagnostic(
       'OGRAF_FONT_UNVERIFIED',
       options.requirePortableAssets ? 'ERROR' : 'WARNING',
-      `Display ${describeOGrafValueForDiagnostics(layer.name)} uses ${describeOGrafValueForDiagnostics(layer.fontFamily)}, but KCS has no portable font file for this font. Import/upload the font file or choose a portable font before OGraf export.`,
+      `Text layer ${describeOGrafValueForDiagnostics(layer.name)} uses ${describeOGrafValueForDiagnostics(layer.fontFamily)}, but KCS has no portable font file for this font. Import/upload the font file or choose a portable font before OGraf export.`,
       layer,
       'font',
     ));
@@ -468,8 +468,6 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
     diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_BOOLEAN', 'ERROR', 'Boolean groups are not supported by OGraf Export V1 yet.', layer, 'boolean'));
   }
 
-  if (layer.imageUrl && layer.type !== 'custom_image') {
-  }
   if (layer.imageUrl) {
     const asset = validateAsset(layer.imageUrl, 'image', options, diagnostics, layer);
     if (asset) assets.push(asset);

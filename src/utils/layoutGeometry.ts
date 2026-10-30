@@ -106,7 +106,7 @@ export interface SnapGuide {
   extent: SnapSpan;
 }
 
-export interface SnapResolution {
+interface SnapResolution {
   /** The world delta after snapping (unchanged per axis when nothing matched). */
   delta: { x: number; y: number };
   /** The target lines the move locked onto, one per snapped axis. */
@@ -158,7 +158,7 @@ export const collectStageSnapCandidates = (bounds: PartWorldBounds): SnapLine[] 
   ];
 };
 
-export interface LayerSnapCandidateContext {
+interface LayerSnapCandidateContext {
   parts: CharacterPart[];
   /** The layers the drag is moving (the resolved selection targets). */
   movingIds: string[];
@@ -218,7 +218,7 @@ export const collectLayerSnapCandidates = ({
   return lines;
 };
 
-export interface ResolveSnapInput {
+interface ResolveSnapInput {
   /** The moving item's world box at the START of the drag (before the delta). */
   movingBounds: PartWorldBounds;
   /** The raw world delta the pointer produced this move. */

@@ -40,7 +40,7 @@ export interface LayerGrouping {
  * from the context so the state provider can build the SAME actions for the
  * keyboard commands without a second implementation.
  */
-export interface LayerGroupingDependencies {
+interface LayerGroupingDependencies {
   currentFrame: number;
   selectedPartId: string | null;
   selectedPartIds: string[];

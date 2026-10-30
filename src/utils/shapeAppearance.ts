@@ -15,7 +15,7 @@ export interface ResolvedShapeAppearance {
 export type ShapeAppearancePatch = Partial<Pick<CharacterPart,
   'fillEnabled' | 'fillColor' | 'fillOpacity' | 'strokeEnabled' | 'strokeColor' | 'strokeWidth' | 'strokeOpacity' | 'strokeAlignment'>>;
 
-export const MODERN_SHAPE_APPEARANCE_TYPES: ReadonlySet<BodyPartType> = new Set([
+const MODERN_SHAPE_APPEARANCE_TYPES: ReadonlySet<BodyPartType> = new Set([
   'custom_rect',
   'custom_box',
   'custom_circle',

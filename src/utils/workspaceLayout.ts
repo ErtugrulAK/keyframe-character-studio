@@ -1,5 +1,4 @@
 import { flushSync } from 'react-dom';
-import type { CSSProperties } from 'react';
 
 /**
  * THE workspace layout authority.
@@ -46,7 +45,7 @@ export const REFIT_UNTOUCHED_CAMERA_COMMAND = 'refit-untouched-camera';
  */
 export const MIN_OPENING_STAGE_WIDTH = 400;
 
-export const shouldOpenWithLeftDockClosed = (stageWidth: number): boolean => (
+const shouldOpenWithLeftDockClosed = (stageWidth: number): boolean => (
   Number.isFinite(stageWidth) && stageWidth > 0 && stageWidth < MIN_OPENING_STAGE_WIDTH
 );
 
@@ -55,7 +54,7 @@ export const shouldOpenWithLeftDockClosed = (stageWidth: number): boolean => (
  * beside it (kcsEditorTheme.css uses the same 600 px breakpoint). Only there
  * does the inspector also open closed: it would cover the stage entirely.
  */
-export const PHONE_LAYOUT_QUERY = '(max-width: 600px)';
+const PHONE_LAYOUT_QUERY = '(max-width: 600px)';
 
 export const isPhoneLayout = (): boolean => (
   typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -93,17 +92,6 @@ export const commitWorkspaceLayout = (apply: () => void): void => {
  * curve below, so opening and closing read as one soft slide.
  */
 export const PANEL_EDGE_TRANSITION_MS = 320;
-
-/**
- * How an eased docked edge is expressed while it travels: all three properties
- * the row reads for the panel's main size, in border-box pixels. Both docked
- * panels write their travelling width through this, so their geometry can never
- * be described two slightly different ways. `null` means at rest — the
- * stylesheet owns the width again, including the clamp it resolves it with.
- */
-export const panelEdgeStyle = (width: number | null): CSSProperties | undefined => (
-  width === null ? undefined : { width: `${width}px`, minWidth: `${width}px`, flexBasis: `${width}px` }
-);
 
 /**
  * Whether the user asked the system for reduced motion. Eased workspace edges
@@ -210,7 +198,7 @@ const OUTLINER_MIN_HEIGHT = 72;
  * room is exactly what the user asked for. The caps above only shape the
  * untouched default.
  */
-export const DETAILS_HEADER_MIN_HEIGHT = 44;
+const DETAILS_HEADER_MIN_HEIGHT = 44;
 
 export const outlinerHeightBounds = (sidebarHeight: number | null): { min: number; max: number } => ({
   min: OUTLINER_MIN_HEIGHT,

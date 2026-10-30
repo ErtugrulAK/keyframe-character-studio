@@ -43,7 +43,7 @@ type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?
  * union over every visible layer equals the union over only the outermost ones
  * because a container's box IS the union of its children.
  */
-export interface StageCrop {
+interface StageCrop {
   /** Why this document cannot be cropped, or `null` when the commands can run. */
   blockReason: string | null;
   /** The region that encloses the current selection at the current frame. */
@@ -64,7 +64,7 @@ export interface StageCrop {
  * them to every caller — the Crop band and the stage overlay are two surfaces of
  * ONE implementation, and there is no second copy of the crop law.
  */
-export interface StageCropDependencies {
+interface StageCropDependencies {
   currentFrame: number;
   characterParts: CharacterPart[];
   tracks: Track[];

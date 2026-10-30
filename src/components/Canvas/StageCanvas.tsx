@@ -6,8 +6,6 @@ import type { BezierPath, CharacterPart, Transform } from '../../types/animator'
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { parseElementDropPayload } from '../../utils/elementDropPayload';
 import { getPartBounds } from '../../utils/bounds';
-import { getSelectionFrameBounds } from '../../utils/selectionFrame';
-import { rotateAboutWorldPivot, selectionFrameCenterWorld, type WorldPoint } from '../../utils/rotationGesture';
 import { resolveCornerResize, resolveEdgeResize, type CornerBounds, type CornerId, type EdgeId } from '../../utils/cornerResize';
 import {
   applyAffine,
@@ -400,7 +398,7 @@ export const StageCanvas: React.FC = () => {
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [shapeCreationStart, setShapeCreationStart] = useState<{ clientX: number; clientY: number; svgX: number; svgY: number } | null>(null);
   const [shapeCreationPreview, setShapeCreationPreview] = useState<{ type: NonNullable<typeof pendingShapeType>; bounds: ReturnType<typeof getShapeCreationBounds> } | null>(null);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; mediaCenter?: { x: number; y: number }; partId?: string; initialChildScaleX?: number; initialChildScaleY?: number; initialChildRot?: number; corner?: CornerId; localBounds?: CornerBounds; pivot?: WorldPoint; cropAnchor?: { x: number; y: number }; cropInitial?: StageCropRect; cropHandle?: StageCropHandle; solveFrame?: ResizeSolveFrame }>({
+  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; mediaCenter?: { x: number; y: number }; partId?: string; initialChildScaleX?: number; initialChildScaleY?: number; initialChildRot?: number; corner?: CornerId; localBounds?: CornerBounds; cropAnchor?: { x: number; y: number }; cropInitial?: StageCropRect; cropHandle?: StageCropHandle; solveFrame?: ResizeSolveFrame }>({
     x: 0,
     y: 0,
     initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
@@ -790,33 +788,20 @@ export const StageCanvas: React.FC = () => {
     setIsDragging(true);
     setDragMode('rotate');
 
-    // ONE pivot, taken at pointerdown and held for the whole gesture: the world
-    // centre of the box the frame draws right now (the group aggregate's centre
-    // for a container). Re-deriving it from the rotating bounds on every move
-    // would let the visible centre wander while the layer turns.
-    const frameBounds = getSelectionFrameBounds(selectedPart, {
-      characterParts,
-      getComputedTransform,
-      currentFrame,
-      transform: selectedTransform,
-    });
-    const worldPivot = frameBounds
-      ? selectionFrameCenterWorld(selectedTransform, frameBounds)
-      : { x: selectedTransform.x, y: selectedTransform.y };
-
+    // The layer turns about its own origin — the crosshair the coordinate
+    // overlay marks — exactly as a keyframed rotation does, so a gesture and
+    // an animation agree on where the layer turns. The angle is measured
+    // around that origin in the frame the gesture solves in.
     const solveFrame = resolveSolveFrame(selectedPart, selectedTransform);
-    const pivot = pointInSolveFrame(worldPivot, solveFrame);
-
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
     const pointer = pointInSolveFrame(svgPointToWorld({ x: svgX, y: svgY }), solveFrame);
-    const initialAngleRad = Math.atan2(pointer.y - pivot.y, pointer.x - pivot.x);
+    const initialAngleRad = Math.atan2(pointer.y - solveFrame.transform.y, pointer.x - solveFrame.transform.x);
 
     setDragInitialAngle(initialAngleRad);
     setDragStart({
       x: svgX,
       y: svgY,
       initialTransform: { ...selectedTransform },
-      pivot,
       solveFrame,
     });
   };
@@ -1013,24 +998,16 @@ export const StageCanvas: React.FC = () => {
       }
 
       if (dragMode === 'rotate') {
-        // The pivot was captured at pointerdown and never moves: the write
-        // authority turns the layer AND translates it so the frame's centre
-        // stays exactly where the user grabbed the rotation from. A sheared
-        // nesting is turned in its container frame for the same reason a resize
-        // is (see `ResizeSolveFrame`).
+        // Only the rotation changes: the layer turns about its own origin, so
+        // its position stays put. A sheared nesting is turned in its container
+        // frame for the same reason a resize is (see `ResizeSolveFrame`).
         const frame = dragStart.solveFrame ?? { transform: dragStart.initialTransform };
         const pointer = pointInSolveFrame(svgPointToWorld({ x: svgX, y: svgY }), frame);
-        const pivot = dragStart.pivot ?? { x: frame.transform.x, y: frame.transform.y };
-        const currentAngleRad = Math.atan2(pointer.y - pivot.y, pointer.x - pivot.x);
-        const deltaAngleRad = currentAngleRad - dragInitialAngle;
-        const deltaAngleDeg = (deltaAngleRad * 180) / Math.PI;
+        const currentAngleRad = Math.atan2(pointer.y - frame.transform.y, pointer.x - frame.transform.x);
+        const deltaAngleDeg = ((currentAngleRad - dragInitialAngle) * 180) / Math.PI;
 
         const rotation = Math.round(frame.transform.rotation + deltaAngleDeg);
-        updateCurrentTransform(solveFramePatchToWorld(rotateAboutWorldPivot({
-          transform: frame.transform,
-          pivot,
-          rotation,
-        }), frame));
+        updateCurrentTransform(solveFramePatchToWorld({ x: frame.transform.x, y: frame.transform.y, rotation }, frame));
       } else if (CORNER_BY_SCALE_MODE[dragMode]) {
         // ONE geometry authority: the pure corner solver keeps the diagonally
         // opposite corner fixed in world space and puts the dragged corner under
@@ -1666,7 +1643,7 @@ export const StageCanvas: React.FC = () => {
             x={EDITOR_CAMERA_CENTER.x}
             y={EDITOR_CAMERA_CENTER.y}
           >
-            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(56, 189, 248, 0.10)" strokeWidth="1" />
+            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
           </pattern>
           {/* Major grid: 100px lines anchored at the origin (1 cell = 100px = 1 unit) */}
           <pattern
@@ -1677,7 +1654,7 @@ export const StageCanvas: React.FC = () => {
             x={EDITOR_CAMERA_CENTER.x}
             y={EDITOR_CAMERA_CENTER.y}
           >
-            <path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(56, 189, 248, 0.22)" strokeWidth="1" />
+            <path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(255, 255, 255, 0.10)" strokeWidth="1" />
           </pattern>
           <clipPath id="artboard-clip">
             <rect

@@ -36,13 +36,13 @@
 import type { TemporalHandle } from '../types/animator';
 
 /** Minimum x-handle distance from 0/1 that a GESTURE may author (write policy). */
-export const X_SINGULARITY_TAU = 1e-6;
+const X_SINGULARITY_TAU = 1e-6;
 
 /** Storage envelope for y handles produced by a speed gesture (spec α=0.5). */
 export const SLOPE_ENVELOPE_MIN = -0.5;
 export const SLOPE_ENVELOPE_MAX = 1.5;
 
-export type SlopeKind = 'regular' | 'limit' | 'cusp';
+type SlopeKind = 'regular' | 'limit' | 'cusp';
 
 /**
  * One endpoint reading; `cusp` carries a signed Infinity for a true vertical
@@ -51,12 +51,12 @@ export type SlopeKind = 'regular' | 'limit' | 'cusp';
  * overflowing it, or underflowing a nonzero ratio all the way to zero.
  * NaN never asserts a vertical tangent — callers must not render it as one.
  */
-export interface SlopeReading {
+interface SlopeReading {
   kind: SlopeKind;
   value: number;
 }
 
-export interface EndpointSlopes {
+interface EndpointSlopes {
   entry: SlopeReading;
   exit: SlopeReading;
 }
@@ -187,12 +187,12 @@ export function endpointSlopesFromHandles(
   return { entry, exit };
 }
 
-export type HandleFromSlopesFailure =
+type HandleFromSlopesFailure =
   | 'non-finite-input'
   | 'out-x-not-representable'
   | 'in-x-not-representable';
 
-export type HandleFromSlopesResult =
+type HandleFromSlopesResult =
   | {
       ok: true;
       bezierOut: TemporalHandle;
@@ -280,7 +280,7 @@ export function handlesFromEndpointSlopes(request: {
   };
 }
 
-export type VelocityScale =
+type VelocityScale =
   | { ok: true; k: number; deltaFrames: number; deltaValue: number }
   | { ok: false; reason: 'non-finite-input' | 'zero-duration' | 'zero-displacement' | 'overflow-result' };
 

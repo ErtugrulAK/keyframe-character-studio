@@ -267,6 +267,11 @@ describe('layer group authoring', () => {
       expect(errors.filter((error) => error.severity === 'critical')).toEqual([]);
     });
 
+    it('adds the group track closed, like every new track', () => {
+      const outcome = groupOf(parts, tracks, ['a', 'b']);
+      expect(outcome.tracks.find((track) => track.partId === 'g')?.expanded).toBe(false);
+    });
+
     it('takes over the parent role when the selection is one parent\'s children', () => {
       const nested = [makePart('parent', 0), makePart('a', -50, { parentId: 'parent' }), makePart('b', 50, { parentId: 'parent' })];
       const before = ['a', 'b'].map((id) => evaluateTransform(nested, tracks.slice(0, 2), 'Sequence', id, 0).x);

@@ -184,7 +184,7 @@ test.describe('C12 — QA fixes', () => {
     })).toBeLessThan(0.35);
 
     // The artboard's top edge: count the painted cyan rows across it.
-    const border = await page.locator('.stage-canvas-container svg line[stroke="#00d2ff"]').first().boundingBox();
+    const border = await page.locator('.stage-canvas-container svg line[stroke="#4a8fe7"]').first().boundingBox();
     if (!border) throw new Error('artboard border has no box');
     const column = Array.from({ length: 21 }, (_, row) => ({ x: border.x + border.width / 3, y: border.y - 10 + row }));
     // Antialiased, so a row counts once it is clearly cyan-tinted.
@@ -192,7 +192,7 @@ test.describe('C12 — QA fixes', () => {
     expect(cyanRows).toBeGreaterThan(0);
     expect(cyanRows).toBeLessThanOrEqual(3);
 
-    const frame = page.getByTestId('transform-gizmo').first().locator('rect[stroke="#00d2ff"]').first();
+    const frame = page.getByTestId('transform-gizmo').first().locator('rect[stroke="#4a8fe7"]').first();
     await expect(frame).toHaveAttribute('vector-effect', 'non-scaling-stroke');
     await expect(frame).toHaveAttribute('stroke-width', '1.5');
     await expect(frame).toHaveAttribute('stroke-dasharray', '5 4');
@@ -277,7 +277,7 @@ test.describe('C12 — QA fixes', () => {
     }
     // Zoomed out, the whole artboard is on screen: the badges sit just inside
     // its edges (a 6 px inset, plus the outlines).
-    const border = page.locator('.stage-canvas-container svg line[stroke="#00d2ff"]');
+    const border = page.locator('.stage-canvas-container svg line[stroke="#4a8fe7"]');
     const top = await border.nth(0).boundingBox();
     const right = await border.nth(3).boundingBox();
     if (!top || !right) throw new Error('artboard border has no box');

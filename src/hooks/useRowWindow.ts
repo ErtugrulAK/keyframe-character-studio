@@ -28,7 +28,7 @@ interface UseRowWindowOptions {
   viewportOf: (scrollElement: HTMLElement) => RowViewport;
 }
 
-export interface RowWindow {
+interface RowWindow {
   /** False for a short list: every row is mounted. */
   windowed: boolean;
   segments: RowWindowSegment[];

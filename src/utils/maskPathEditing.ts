@@ -25,7 +25,7 @@ import { computeProceduralDelta } from './proceduralAnimation';
  * smallest singular value (|det| / Frobenius norm), so it means the same for a
  * normalized path (one unit = the whole layer) and a local one.
  */
-export const MASK_EDIT_MIN_SCALE = 1e-6;
+const MASK_EDIT_MIN_SCALE = 1e-6;
 
 export interface MaskPathFrame {
   /** Path space (normalized or layer-local) → project-relative world. */
@@ -128,7 +128,7 @@ export const moveMaskHandle = (initialPath: BezierPath, index: number, handle: B
 };
 
 /** Why the canvas cannot edit this mask right now, or `null` when it can. */
-export type MaskEditBlock =
+type MaskEditBlock =
   | { kind: 'locked'; message: string }
   | { kind: 'singular'; message: string }
   | { kind: 'procedural'; message: string }

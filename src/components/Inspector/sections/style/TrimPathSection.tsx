@@ -44,7 +44,7 @@ export const TrimPathSection: React.FC<TrimPathSectionProps> = ({
   ];
 
   return (
-    <StyleCard title="TRIM PATH" collapsible defaultOpen={false} retainKey="trim-path">
+    <StyleCard title="TRIM PATH" collapsible retainKey="trim-path">
       <label className="appearance-group-header">
         <span>ENABLE TRIM PATH</span>
         <input

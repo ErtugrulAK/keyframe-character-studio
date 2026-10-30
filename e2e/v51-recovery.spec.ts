@@ -38,7 +38,7 @@ test.describe('KCS V5.1 consolidated recovery', () => {
     await page.locator('.actor-node', { hasText: 'Headline' }).click();
     const geometry = await page.evaluate(() => {
       const text = [...document.querySelectorAll('.stage-svg text')].find((node) => node.textContent === 'NEW TEXT');
-      const selection = [...document.querySelectorAll('.stage-svg rect[stroke="#00d2ff"]')].at(-1);
+      const selection = [...document.querySelectorAll('.stage-svg rect[stroke="#4a8fe7"]')].at(-1);
       if (!text || !selection) return null;
       const textBox = text.getBBox();
       return {

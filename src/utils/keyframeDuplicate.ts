@@ -2,7 +2,7 @@ import type { Track, Keyframe, PropertyKeyframe, PathKeyframe } from '../types/a
 import { TRACK_CHANNELS } from '../types/animator';
 import { generateId } from './idGenerator';
 
-export interface DuplicateKeyframeGroupResult { track: Track; duplicated: boolean; }
+interface DuplicateKeyframeGroupResult { track: Track; duplicated: boolean; }
 
 export function duplicateKeyframeGroup(track: Track, sourceFrame: number, offset = 1, totalFrames?: number): DuplicateKeyframeGroupResult {
   const targetFrame = sourceFrame + offset;

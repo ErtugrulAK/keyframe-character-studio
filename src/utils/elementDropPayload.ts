@@ -41,7 +41,7 @@ export const ELEMENT_DROP_TYPES: readonly BodyPartType[] = Object.freeze([
   'custom_card',
 ]);
 
-export const ELEMENT_DROP_NAME_FALLBACK = 'Dropped Element';
+const ELEMENT_DROP_NAME_FALLBACK = 'Dropped Element';
 
 const DROP_NAME_MAX_LENGTH = 80;
 
@@ -54,7 +54,7 @@ const PROTOTYPE_SENSITIVE_KEYS: ReadonlySet<string> = new Set([
   'prototype',
 ]);
 
-export interface ElementDropPayload {
+interface ElementDropPayload {
   type: BodyPartType;
   name: string;
 }

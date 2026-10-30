@@ -27,7 +27,7 @@
  */
 
 /** The slice of `ServiceWorkerContainer` this guard needs. */
-export interface DevServiceWorkerHost {
+interface DevServiceWorkerHost {
   getRegistrations?: () => Promise<ReadonlyArray<{ unregister: () => Promise<boolean> }>>;
 }
 

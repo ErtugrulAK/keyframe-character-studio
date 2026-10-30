@@ -12,7 +12,7 @@ import { bindParts, isRelationshipChainRelated, resolveBondGroup, unbindPart } f
  * authoring surface (the toolbars and the editor context menu), so Details can
  * stay an information surface with no structural command of its own.
  */
-export interface PartBindingAuthoring {
+interface PartBindingAuthoring {
   /** The bond group of the selected layer (empty when it is not bonded). */
   bondGroupIds: string[];
   /** Whether the current selection can be bonded right now. */

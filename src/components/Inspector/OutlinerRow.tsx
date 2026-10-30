@@ -53,7 +53,7 @@ export interface OutlinerRowActions {
   dragEnd: () => void;
 }
 
-export interface OutlinerRowProps {
+interface OutlinerRowProps {
   part: CharacterPart;
   depth: number;
   hasChildren: boolean;

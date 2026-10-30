@@ -443,7 +443,7 @@ export const clearChannelAnimationMutator = (
       : { ...t, channels: { ...channelMap, [channel]: updated } as Track['channels'] };
   });
 };
-export interface DeleteSelectedKeyframeResult {
+interface DeleteSelectedKeyframeResult {
   tracks: Track[];
   deleted: boolean;
 }
@@ -451,10 +451,10 @@ export interface DeleteSelectedKeyframeResult {
 // ─── Keyframe location, frame groups and the timeline set move (R3-04) ──────
 
 /** The store inside a track a keyframe lives in. */
-export type KeyframeStore = 'channels' | 'maskChannels' | 'maskPathChannels' | 'keyframes';
+type KeyframeStore = 'channels' | 'maskChannels' | 'maskPathChannels' | 'keyframes';
 
 /** A keyframe's identity inside its track. */
-export interface LocatedKeyframe {
+interface LocatedKeyframe {
   store: KeyframeStore;
   /** Canonical channel name; '' for the legacy composite list. */
   channel: AnimationChannel | '';
@@ -556,7 +556,7 @@ export const deleteFrameGroupsMutator = (
 });
 
 /** One keyframe the timeline moves as part of a selection drag. */
-export interface KeyframeMoveTarget extends LocatedKeyframe {
+interface KeyframeMoveTarget extends LocatedKeyframe {
   trackId: string;
 }
 
@@ -598,7 +598,7 @@ export const resolveKeyframeMoveTargets = (
   return targets;
 };
 
-export interface KeyframeMoveOutcome {
+interface KeyframeMoveOutcome {
   tracks: Track[];
   /** The delta actually applied: clamped to the project range and to the first collision. */
   appliedDelta: number;

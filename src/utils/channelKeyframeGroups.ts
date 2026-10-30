@@ -22,7 +22,7 @@ const asMaskScalarChannel = (channel: string): string | null => {
   return (MASK_SCALAR_PROPERTIES as readonly string[]).includes(property) ? channel : null;
 };
 
-export interface ChannelKeyframeGroup {
+interface ChannelKeyframeGroup {
   /** Shared frame number */
   frame: number;
   /** Channels that have a keyframe at this frame */
@@ -118,7 +118,7 @@ export function groupChannelKeyframesByFrame(
 /**
  * M7: snapshot an evaluated transform into the 6 canonical channel values at
  * the current frame (used by the Outliner "Add Composite Keyframe" button —
- * same data KeyframesTab handleAdd writes).
+ * same data the keyframe add command writes).
  */
 export type SnapshotTransform = Pick<
   Record<TrackChannel, number>,
@@ -136,7 +136,7 @@ export function buildTransformSnapshot(t: {
 }
 
 /** Evaluated world transforms for a document — the app's `getComputedTransform`. */
-export interface EvaluatedPoseSource {
+interface EvaluatedPoseSource {
   /** Every layer, used to resolve the captured layer's relationship parent. */
   parts: CharacterPart[];
   /** Evaluated WORLD transform of a layer at a frame (`getComputedTransform`). */

@@ -74,7 +74,7 @@ export const ColorCorrectionCard: React.FC<ColorCorrectionCardProps> = ({
           : 'Not applied';
 
   return (
-    <StyleCard title="COLOR CORRECTION" collapsible defaultOpen retainKey="color-correction" badge={badge}>
+    <StyleCard title="COLOR CORRECTION" collapsible retainKey="color-correction" badge={badge}>
       {!effect ? (
         <>
           <p className="matte-section-intro">Brightness, contrast and saturation for this image, on the whole image or only inside a mask. The image itself is not changed.</p>

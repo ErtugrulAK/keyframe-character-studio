@@ -10,7 +10,7 @@ import { relationshipAncestorIds } from './partBinding';
  * query (case- and accent-insensitive) matches, and its ancestors are kept so
  * each match is shown in its place in the hierarchy.
  */
-export interface LayerSearchResult {
+interface LayerSearchResult {
   /** Layers whose name matches, in layer order. */
   matchIds: string[];
   /** Matches plus every ancestor of a match: the rows the filtered tree shows. */
@@ -19,7 +19,7 @@ export interface LayerSearchResult {
 
 const fold = (text: string): string => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase();
 
-export const normalizeLayerQuery = (query: string): string => fold(query.trim());
+const normalizeLayerQuery = (query: string): string => fold(query.trim());
 
 export const searchLayers = (parts: CharacterPart[], query: string): LayerSearchResult | null => {
   const needle = normalizeLayerQuery(query);

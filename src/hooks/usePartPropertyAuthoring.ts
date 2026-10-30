@@ -17,7 +17,7 @@ import { updateTrimPath, type TrimPathAuthoringPatch } from '../utils/trimPathAu
  * is a plain part patch. It was lifted out of `DetailsPanel` unchanged so the
  * authoring toolbar can reach the SAME write path instead of a second one.
  */
-export interface PartPropertyAuthoring {
+interface PartPropertyAuthoring {
   handlePartPropChange: (key: keyof CharacterPart, value: unknown) => void;
   handleDisplayedPartPropChange: (key: keyof CharacterPart, value: unknown) => void;
   handlePartColorChange: (key: 'fillColor' | 'strokeColor', color: string) => void;

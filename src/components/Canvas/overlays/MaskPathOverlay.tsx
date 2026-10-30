@@ -81,7 +81,7 @@ interface Gesture {
   alt: boolean;
 }
 
-export interface MaskPathOverlayProps {
+interface MaskPathOverlayProps {
   owner: CharacterPart;
   maskId: string;
   /** The mask path evaluated at the edit frame of the active sequence (what the renderer clips with). */

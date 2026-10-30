@@ -18,7 +18,7 @@ const makeText = (overrides: Partial<CharacterPart> = {}): CharacterPart => ({
 
 const render = (
   overrides: Partial<CharacterPart> = {},
-  { selected = false, stroke = '#00d2ff' } = {},
+  { selected = false, stroke = '#4a8fe7' } = {},
 ) => renderToString(
   renderTextOrClonerPart({
     part: makeText(overrides),
@@ -35,7 +35,7 @@ describe('native SVG text appearance rendering', () => {
     const html = render({}, { selected: true });
     expect(html).toContain('fill="#22d3ee"');
     expect(html).toContain('stroke="#101218"');
-    expect(html).not.toContain('#00d2ff');
+    expect(html).not.toContain('#4a8fe7');
   });
 
   it('defaults the text outline to the canonical 0.5 width', () => {
@@ -53,7 +53,7 @@ describe('native SVG text appearance rendering', () => {
   });
 
   it('keeps a selection highlight only while the outline is switched off', () => {
-    expect(render({ strokeEnabled: false }, { selected: true })).toContain('stroke="#38bdf8"');
+    expect(render({ strokeEnabled: false }, { selected: true })).toContain('stroke="#4a8fe7"');
     expect(render({ strokeEnabled: false }, { selected: false })).toContain('stroke="none"');
   });
 

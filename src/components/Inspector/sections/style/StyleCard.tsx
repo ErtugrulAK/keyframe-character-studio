@@ -4,7 +4,6 @@ import { useRetainedUiState } from '../../../../hooks/useRetainedUiState';
 interface StyleCardProps {
   title: string;
   collapsible?: boolean;
-  defaultOpen?: boolean;
   /**
    * A stable, unique name for this card kind (titles repeat, e.g. APPEARANCE).
    * With it, the open/closed state is session UI memory: it survives the
@@ -20,19 +19,19 @@ interface StyleCardProps {
 }
 
 /**
- * Shared Inspector section shell. Disclosure state is UI state only and is
+ * Shared Inspector section shell. A collapsible card starts closed; the user
+ * opens what they need. Disclosure state is UI state only and is
  * intentionally not connected to project data or history.
  */
 export const StyleCard: React.FC<StyleCardProps> = ({
   title,
   collapsible = false,
-  defaultOpen = true,
   retainKey,
   badge,
   tone = 'default',
   children,
 }) => {
-  const [isOpen, setIsOpen] = useRetainedUiState(retainKey ? `inspector-card:${retainKey}` : null, defaultOpen);
+  const [isOpen, setIsOpen] = useRetainedUiState(retainKey ? `inspector-card:${retainKey}` : null, false);
   const contentId = useId();
   const visible = !collapsible || isOpen;
 

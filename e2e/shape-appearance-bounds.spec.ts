@@ -37,7 +37,7 @@ test.describe('modern stroke-aware editor bounds', () => {
     const shapeBox = await shape.boundingBox();
     expect(shapeBox).not.toBeNull();
 
-    const outline = page.locator('.stage-svg rect[stroke="#00d2ff"][stroke-dasharray]').first();
+    const outline = page.locator('.stage-svg rect[stroke="#4a8fe7"][stroke-dasharray]').first();
     await expect(outline).toBeVisible();
     const outlineBox = await outline.boundingBox();
     expect(outlineBox).not.toBeNull();

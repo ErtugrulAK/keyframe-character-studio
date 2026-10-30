@@ -157,7 +157,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, isGhost, trimP
   const useModernAppearance = isShapeAppearanceEligible(part.type) && appearance.isModernAppearance && part.booleanContours === undefined;
   const isCustomStroke = Boolean(part.strokeColor && part.strokeColor !== '#101218' && part.strokeColor !== 'none' && part.strokeColor !== 'transparent');
   const hasStroke = (part.strokeProgress === undefined || part.strokeProgress > 0) && !isCustomStroke;
-  const strokeToUse = hasStroke ? stroke : (isSelected ? '#38bdf8' : 'none');
+  const strokeToUse = hasStroke ? stroke : (isSelected ? '#4a8fe7' : 'none');
 
   // M11 Step 2A: single source of truth for local-space shape geometry.
   const geo = getShapeGeometry(part.type);

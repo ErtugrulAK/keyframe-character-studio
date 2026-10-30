@@ -65,9 +65,9 @@ export const TIMELINE_COLLAPSED_HEIGHT = 39;
  * fixed 320 px; a very short window (a 200 %-zoomed browser) opens the timeline
  * collapsed to its strip — one click on the strip expands it.
  */
-export const TALL_WINDOW_MIN_HEIGHT = 860;
-export const SHORT_WINDOW_TIMELINE_RATIO = 0.34;
-export const COLLAPSED_OPENING_MAX_WINDOW_HEIGHT = 520;
+const TALL_WINDOW_MIN_HEIGHT = 860;
+const SHORT_WINDOW_TIMELINE_RATIO = 0.34;
+const COLLAPSED_OPENING_MAX_WINDOW_HEIGHT = 520;
 
 export const resolveOpeningTimelineHeight = (windowHeight: number): number => (
   windowHeight >= TALL_WINDOW_MIN_HEIGHT

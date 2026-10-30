@@ -256,7 +256,7 @@ describe('SelectionGizmo — layer group frame', () => {
     const box = screen.getByTestId('group-aggregate-box');
     const halo = box.querySelector('[data-testid="selection-frame-halo"]')!;
     const keyline = box.querySelector('[data-testid="selection-frame-keyline"]')!;
-    const [accent] = [...box.querySelectorAll('rect')].filter((rect) => rect.getAttribute('stroke') === '#00d2ff');
+    const [accent] = [...box.querySelectorAll('rect')].filter((rect) => rect.getAttribute('stroke') === '#4a8fe7');
 
     expect(halo.getAttribute('pointer-events')).toBe('none');
     expect(halo.getAttribute('style')).toContain('var(--bg-darkest)');
@@ -310,7 +310,7 @@ describe('SelectionGizmo — layer group frame', () => {
 
     const halo = screen.getByTestId('selection-frame-halo');
     const box = screen.getByTestId('group-aggregate-box');
-    const accent = [...box.querySelectorAll('rect')].find((rect) => rect.getAttribute('stroke') === '#00d2ff')!;
+    const accent = [...box.querySelectorAll('rect')].find((rect) => rect.getAttribute('stroke') === '#4a8fe7')!;
     // Box centre is the live aggregate centre (-100), not the container origin.
     expect(Number(accent.getAttribute('x')) + Number(accent.getAttribute('width')) / 2).toBe(-100);
     expect(halo.getAttribute('width')).toBe('500');
@@ -496,13 +496,13 @@ describe('SelectionGizmo — a frame whose world map is not a TRS', () => {
 
     // The left edge handle sits on the mapped midpoint of the drawn parallelogram's left edge.
     const leftMid = applyAffine(affine, { x: bounds.minX, y: (bounds.minY + bounds.maxY) / 2 });
-    const leftHandle = container.querySelector('circle[fill="#38bdf8"]')!;
+    const leftHandle = container.querySelector('circle[fill="#4a8fe7"]')!;
     expect(Number(leftHandle.getAttribute('cx'))).toBeCloseTo(leftMid.x, 6);
     expect(Number(leftHandle.getAttribute('cy'))).toBeCloseTo(leftMid.y, 6);
 
     // A handle lies on the frame, and the drag it starts still receives the box
     // the frame drew — the LOCAL box, never a pre-scaled one.
-    const handle = container.querySelector('rect[fill="#00d2ff"]')!;
+    const handle = container.querySelector('rect[fill="#4a8fe7"]')!;
     const onFrame = applyAffine(affine, { x: bounds.minX, y: bounds.minY });
     expect(Number(handle.getAttribute('x')) + Number(handle.getAttribute('width')) / 2).toBeCloseTo(onFrame.x, 6);
     expect(Number(handle.getAttribute('y')) + Number(handle.getAttribute('height')) / 2).toBeCloseTo(onFrame.y, 6);
@@ -527,7 +527,7 @@ describe('SelectionGizmo — a frame whose world map is not a TRS', () => {
     });
     // Decorative frames add no interactivity of their own.
     expect(container.querySelectorAll('[data-testid="gizmo-hit-target"]')).toHaveLength(0);
-    expect(container.querySelectorAll('rect[fill="#00d2ff"]')).toHaveLength(0);
+    expect(container.querySelectorAll('rect[fill="#4a8fe7"]')).toHaveLength(0);
   });
 
   it('keeps the historical TRS markup for a single selected layer whose map IS a TRS', () => {

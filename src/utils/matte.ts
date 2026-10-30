@@ -36,7 +36,7 @@ export function matteClipPathId(sourcePartId: string): string {
 }
 
 /** A matte source layer resolved from either relationship model. */
-export interface MatteSourceRef {
+interface MatteSourceRef {
   sourceId: string;
   /** `track` = Track Matte V2 (`trackMatte`), `legacy` = `matte`. */
   kind: 'track' | 'legacy';
@@ -100,7 +100,7 @@ export function isMatteSourceSuppressed(part: { matte?: PartMatte; trackMatte?: 
   return !!track && track.enabled !== false && track.sourceVisible === false;
 }
 
-export interface MatteSuppressionCarrier {
+interface MatteSuppressionCarrier {
   id?: string;
   matte?: PartMatte;
   trackMatte?: TrackMatteV2;
@@ -309,7 +309,7 @@ export function normalizeGradientType(value: unknown): 'linear' | 'radial' {
  *    own space (the def is consumed by the transformed text element; 4A).
  *
  *  Pure + deterministic; no cache, no random/time. */
-export interface MatteRadialGeometry {
+interface MatteRadialGeometry {
   cx: number;
   cy: number;
   r: number;
@@ -504,14 +504,16 @@ export function textMaskContent(
 
 /** M18 — build the render-data MatteMask for a TEXT source. pathD is null
  *  (text has no path geometry — buildMattePath stays untouched); the glyphs
- *  are the mask content via `text`. `fill` carries the TEXT fill: 'white'
- *  (normal) or 'black' (inverted — 4A decision: inverted text ALWAYS uses the
+ *  are the mask content via `text`. `fill` carries the TEXT fill, as for a
+ *  shape: 'white' for alpha, the source's own colour for luminance, and
+ *  'black' when inverted (4A decision: inverted text ALWAYS uses the
  *  luminance structure: white region rect + black text, mask-type luminance). */
 export function buildMatteTextMask(
   sourcePartId: string,
   content: MatteTextContent,
   mode: Exclude<MatteMode, 'clip'>,
   inverted: boolean,
+  fillColor: string,
   feather?: number,
   strength?: number,
 ): MatteMask {
@@ -520,7 +522,7 @@ export function buildMatteTextMask(
     mode,
     inverted,
     pathD: null,
-    fill: inverted ? 'black' : 'white',
+    fill: inverted ? 'black' : mode === 'alpha' ? 'white' : fillColor,
     text: content,
     ...(feather !== undefined ? { feather } : {}),
     ...(strength !== undefined ? { strength } : {}),
@@ -679,7 +681,7 @@ export function getDefaultGradientStops(mode: Exclude<MatteMode, 'clip'>): Matte
 }
 
 /** M17 — world-space gradient endpoints (linearGradient x1/y1/x2/y2). */
-export interface MatteGradientEndpoints {
+interface MatteGradientEndpoints {
   x1: number;
   y1: number;
   x2: number;

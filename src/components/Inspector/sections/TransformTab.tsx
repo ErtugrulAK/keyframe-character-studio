@@ -55,7 +55,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
 
   return (
     <>
-      <StyleCard title="TRANSFORM" collapsible defaultOpen={false} retainKey="transform">
+      <StyleCard title="TRANSFORM" collapsible retainKey="transform">
         <div className="transform-property-list">
           <TransformPositionCard
             transform={transform}
@@ -91,7 +91,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
       {/* 4 control points only make sense for regular shapes — hand-drawn
           freeform polygons use the per-vertex editor below instead */}
       {selectedPart.type !== 'custom_freeform' && (
-        <StyleCard title="CONTROL POINTS" collapsible defaultOpen={false} retainKey="control-points">
+        <StyleCard title="CONTROL POINTS" collapsible retainKey="control-points">
           <TransformControlPoints
             selectedPart={selectedPart}
             transform={transform}

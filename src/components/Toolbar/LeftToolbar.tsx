@@ -14,7 +14,7 @@ import './LeftToolbar.css';
 
 type ActiveNavCategory = 'project' | 'media' | 'texts' | 'shapes';
 
-export interface LeftToolbarProps {
+interface LeftToolbarProps {
   isHidden?: boolean;
   /**
    * The dock's inline style while it slides (lifted out of the row, see

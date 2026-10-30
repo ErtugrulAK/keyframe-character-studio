@@ -142,7 +142,7 @@ export type ShortcutCommandId =
   | 'lock-layers' | 'unlock-all-layers'
   | 'shortcut-reference';
 
-export interface ShortcutCommand {
+interface ShortcutCommand {
   id: ShortcutCommandId;
   /** Human label used by the reference UI (and only there). */
   label: string;
@@ -377,7 +377,7 @@ export const matchesShortcutGesture = (
  * two commands in the same scope (a unit test pins that), so the order only
  * decides which of two DIFFERENT gestures wins when an event matches both.
  */
-export const GLOBALLY_DISPATCHED_SCOPES: ShortcutScope[] = ['global', 'canvas'];
+const GLOBALLY_DISPATCHED_SCOPES: ShortcutScope[] = ['global', 'canvas'];
 
 export const resolveShortcutCommand = (
   event: KeyboardLike,

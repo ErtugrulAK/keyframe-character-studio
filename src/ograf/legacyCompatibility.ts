@@ -3,16 +3,9 @@ import type { OGrafExportOptions } from './types';
 import { matchTextFontFamily } from '../utils/textFonts';
 import playfairDisplayUrl from '../assets/fonts/playfair-display/PlayfairDisplay.ttf?url';
 import playfairDisplayLicense from '../assets/fonts/playfair-display/OFL.txt?raw';
+import { EMBEDDED_IMAGE_MIME_TYPES, decodeDataUrl, isSafeEmbeddedImage } from '../utils/embeddedImage';
 
-const EMBEDDED_IMAGE_MIME_TYPES: Record<string, string> = {
-  'image/gif': 'gif',
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/svg+xml': 'svg',
-  'image/webp': 'webp',
-};
-
-export interface LegacyOGrafPreparation {
+interface LegacyOGrafPreparation {
   sceneData: SceneData;
   options: OGrafExportOptions;
 }
@@ -33,40 +26,6 @@ function hashBytes(bytes: Uint8Array): string {
   }
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
-
-function bytesFromBinaryString(value: string): Uint8Array {
-  const bytes = new Uint8Array(value.length);
-  for (let index = 0; index < value.length; index += 1) bytes[index] = value.charCodeAt(index) & 0xff;
-  return bytes;
-}
-function isSafeEmbeddedImage(bytes: Uint8Array, mimeType: string): boolean {
-  if (mimeType !== 'image/svg+xml') return true;
-  const source = new TextDecoder().decode(bytes);
-  return !/<(?:script|iframe|object|foreignObject)\b|<!DOCTYPE\b|<!ENTITY\b|(?:on[a-z]+\s*=|(?:href|xlink:href)\s*=\s*["']?\s*(?:javascript:|data:))/iu.test(source);
-}
-
-function decodeDataUrl(source: string): { bytes: Uint8Array; mimeType: string } | undefined {
-  const match = source.match(/^data:([^;,]+)(;base64)?,([\s\S]*)$/iu);
-  if (!match) return undefined;
-  const mimeType = match[1].toLowerCase();
-  if (!Object.prototype.hasOwnProperty.call(EMBEDDED_IMAGE_MIME_TYPES, mimeType)) return undefined;
-  try {
-    const payload = match[2] ? atob(match[3]) : decodeURIComponent(match[3]);
-    const bytes = bytesFromBinaryString(payload);
-    return bytes.length > 0 && isSafeEmbeddedImage(bytes, mimeType) ? { bytes, mimeType } : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * True when `source` is a data URL whose MIME type and payload pass the
- * embedded-image policy (the allowlist above plus the SVG script check).
- *
- * The Lottie importer uses this instead of its own MIME list so a document can
- * never smuggle an image form the rest of the app refuses to embed.
- */
-export const isSupportedEmbeddedImage = (source: string): boolean => decodeDataUrl(source) !== undefined;
 
 async function readBlobUrl(source: string): Promise<{ bytes: Uint8Array; mimeType: string } | undefined> {
   if (!source.startsWith('blob:') || typeof fetch !== 'function') return undefined;

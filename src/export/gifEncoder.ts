@@ -18,7 +18,7 @@
 export const GIF_ALPHA_THRESHOLD = 128;
 
 /** The most colours a GIF palette can hold, one of which is the transparent key. */
-export const GIF_MAX_COLORS = 255;
+const GIF_MAX_COLORS = 255;
 
 /** How many pixels of a frame are sampled when the palette is built. */
 const PALETTE_SAMPLE_LIMIT = 32768;
@@ -29,7 +29,7 @@ export interface RgbaFrame {
   height: number;
 }
 
-export interface GifPalette {
+interface GifPalette {
   /** RGB triplets, one per palette slot, in slot order. */
   colors: Uint8Array;
   /** Palette slots: a power of two, 2…256. Slot 0 is the transparent key. */
@@ -280,7 +280,7 @@ const toSubBlocks = (compressed: Uint8Array): number[] => {
   return out;
 };
 
-export interface GifWriterOptions {
+interface GifWriterOptions {
   width: number;
   height: number;
   palette: GifPalette;

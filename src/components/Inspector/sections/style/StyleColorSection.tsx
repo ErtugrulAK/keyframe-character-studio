@@ -75,5 +75,5 @@ export const StyleColorSection: React.FC<StyleColorSectionProps> = ({
     </>
   );
 
-  return embedded ? controls : <StyleCard title="APPEARANCE" collapsible defaultOpen={false} retainKey="appearance-color">{controls}</StyleCard>;
+  return embedded ? controls : <StyleCard title="APPEARANCE" collapsible retainKey="appearance-color">{controls}</StyleCard>;
 };

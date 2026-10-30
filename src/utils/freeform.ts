@@ -76,7 +76,7 @@ export const freeformVertexToLocal = (
   return { x: (dx * cosR + dy * sinR) / sx, y: (-dx * sinR + dy * cosR) / sy };
 };
 
-export interface FreeformExtents {
+interface FreeformExtents {
   minX: number;
   minY: number;
   maxX: number;
@@ -190,7 +190,7 @@ export const simplifyFreeformPoints = (points: FreeformPoint[], minDist: number 
   return result;
 };
 
-export interface FreeformVertexWorld {
+interface FreeformVertexWorld {
   x: number;
   y: number;
 }

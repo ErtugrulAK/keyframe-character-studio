@@ -47,8 +47,3 @@ export const LOTTIE_IMPORT_LIMITS = {
   /** Refuse documents larger than this before parsing them. */
   characters: 32 * 1024 * 1024,
 } as const;
-
-export const summarizeLottieDiagnostics = (diagnostics: LottieImportDiagnostic[]): { errors: number; warnings: number } => ({
-  errors: diagnostics.filter((entry) => entry.severity === 'error').length,
-  warnings: diagnostics.filter((entry) => entry.severity === 'warning').length,
-});

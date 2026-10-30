@@ -45,14 +45,6 @@ export const dragPenTangent = (anchors: readonly PenAnchor[], index: number, poi
   return anchors.map((candidate, candidateIndex) => (candidateIndex === index ? next : candidate));
 };
 
-/**
- * The tangent drag on the FIRST anchor while closing: the closing segment
- * arrives through the first anchor's incoming handle, so the drag pulls that
- * handle the way the pointer moves (Illustrator/AE behaviour) and mirrors the
- * outgoing one.
- */
-export const dragPenClosingTangent = (anchors: readonly PenAnchor[], pointer: PathPoint): PenAnchor[] => dragPenTangent(anchors, 0, pointer);
-
 /** The draft as a canonical BezierPath (vertex ids are stable by index). */
 export const penAnchorsToPath = (anchors: readonly PenAnchor[], coordinateSpace: PathCoordinateSpace, closed: boolean): BezierPath => ({
   version: 1,

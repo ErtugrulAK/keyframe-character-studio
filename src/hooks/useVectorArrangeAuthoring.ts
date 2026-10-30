@@ -28,7 +28,7 @@ type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?
  * it works on animated and static layers alike. The toolbar and the keyboard
  * commands run the SAME actions, so no second geometry rule exists.
  */
-export interface VectorArrange {
+interface VectorArrange {
   /** How many measurable layers the current selection would arrange. */
   targetCount: number;
   /** Aligning needs two measurable layers. */
@@ -57,7 +57,7 @@ export interface VectorArrange {
  * from the context so the state provider can build the SAME actions for the
  * keyboard commands without a second implementation.
  */
-export interface VectorArrangeDependencies {
+interface VectorArrangeDependencies {
   currentFrame: number;
   selectedPartId: string | null;
   selectedPartIds: string[];

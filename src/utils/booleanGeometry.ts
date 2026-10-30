@@ -1,4 +1,4 @@
-import { difference, intersection, union, xor, type MultiPolygon, type Polygon, type Ring } from 'polygon-clipping';
+import { difference, intersection, union, xor, type MultiPolygon, type Polygon } from 'polygon-clipping';
 import type { CharacterPart, FreeformPoint, Track, Transform } from '../types/animator';
 import { getShapeGeometry } from './shapeGeometry';
 import { applyAffine, invertAffine, worldAffineOf, type WorldAffine } from './containerMath';
@@ -16,7 +16,7 @@ import { getTextOutlinePolygons, type OutlinePolygon } from './textOutline';
 type WorldTransformInput = Transform & { affine?: WorldAffine };
 
 export type BooleanOperation = 'union' | 'subtract' | 'intersect' | 'exclude';
-export type BooleanContours = FreeformPoint[][];
+type BooleanContours = FreeformPoint[][];
 
 const CLOSED_VECTOR_TYPES = new Set<CharacterPart['type']>([
   'custom_star', 'custom_circle', 'custom_box', 'custom_rect', 'custom_triangle',
@@ -189,7 +189,7 @@ export const createBooleanDisplayName = (
   return `Boolean ${number} · ${booleanOperationLabel(operation)}`;
 };
 
-export interface DerivedBooleanGeometry {
+interface DerivedBooleanGeometry {
   worldContours: BooleanContours;
   localContours: BooleanContours;
 }
@@ -247,7 +247,7 @@ export const partToWorldPolygons = (part: CharacterPart, transform?: WorldTransf
   )));
 };
 
-export interface BooleanOperandReadiness {
+interface BooleanOperandReadiness {
   /** True when every operand produced real geometry for this frame. */
   ready: boolean;
   /** Operands whose geometry could not be produced (e.g. a failed text trace). */
@@ -305,8 +305,3 @@ export const computeBooleanContours = (
   else result = union(subject, ...clippers);
   return flattenResult(result);
 };
-
-export const booleanRingArea = (ring: Ring): number => ring.reduce((area, [x1, y1], index) => {
-  const [x2, y2] = ring[(index + 1) % ring.length];
-  return area + (x1 * y2 - x2 * y1);
-}, 0) / 2;

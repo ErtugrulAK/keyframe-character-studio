@@ -356,11 +356,12 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
     // are read from the source at runtime (never persisted — sourcePartId is
     // the only persistent link).
     let mask: MatteMask;
+    const fillColor = sourceEl.content.fillColor ?? source.fillColor ?? '#ffffff';
     if (source.type === 'custom_text') {
       const content = textMaskContent(source);
       if (!content) continue;
       mask = buildMatteTextMask(
-        source.id, content, mode, inverted,
+        source.id, content, mode, inverted, fillColor,
         feather > 0 ? feather : undefined,
         strength < 1 ? strength : undefined,
       );
@@ -383,7 +384,6 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
         if (pathD === undefined) continue;
         maskPathCache.set(source.id, pathD);
       }
-      const fillColor = sourceEl.content.fillColor ?? source.fillColor ?? '#ffffff';
       mask = buildMatteMaskFromPath(
         source.id, pathD, mode, inverted, fillColor,
         feather > 0 ? feather : undefined,

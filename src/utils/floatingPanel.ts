@@ -13,12 +13,12 @@ export interface PanelAnchorRect {
   height: number;
 }
 
-export interface PanelSize {
+interface PanelSize {
   width: number;
   height: number;
 }
 
-export interface ViewportSize {
+interface ViewportSize {
   width: number;
   height: number;
 }
@@ -31,8 +31,8 @@ export interface FloatingPanelPlacement {
 }
 
 /** Space between the anchor and the panel, and the smallest allowed viewport inset. */
-export const FLOATING_PANEL_GAP = 6;
-export const FLOATING_PANEL_MARGIN = 8;
+const FLOATING_PANEL_GAP = 6;
+const FLOATING_PANEL_MARGIN = 8;
 
 /** Positions a panel along one axis, keeping it inside the viewport when it fits. */
 const clampAxis = (preferred: number, panelExtent: number, viewportExtent: number): number => {

@@ -13,7 +13,7 @@ import { getTrimPathDashProps, resolveTrimPath } from '../utils/trimPath';
 import { affineTrsReading, worldAffineOf } from '../utils/containerMath';
 import type { OGrafEvaluatedScene } from './evaluation';
 
-export interface OGrafSvgRenderOptions {
+interface OGrafSvgRenderOptions {
   imageReferences?: Record<string, string>;
 }
 

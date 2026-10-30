@@ -20,7 +20,7 @@ const MIN_BOX_PX = 4;
  * is measured on SCREEN against the first point's position right now, so pan,
  * zoom and resize never leave a stale target.
  */
-export const MASK_PEN_CLOSE_RADIUS_PX = 12;
+const MASK_PEN_CLOSE_RADIUS_PX = 12;
 /** A pen click within this many CSS px of the previous point adds nothing (a double-click lands twice). */
 const DUPLICATE_CLICK_PX = 3;
 const PREVIEW_COLOR = '#22d3ee';
@@ -32,7 +32,7 @@ export interface MaskPenDraftState {
   finish: () => void;
 }
 
-export interface MaskDrawOverlayProps {
+interface MaskDrawOverlayProps {
   owner: CharacterPart;
   shape: MaskDrawShape;
   /** The owner's evaluated world transform at the current frame. */

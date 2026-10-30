@@ -68,7 +68,7 @@ export const PathGeometryCard: React.FC<PathGeometryCardProps> = ({
     const path = resolveFreeformPath(selectedPart);
     if (!path || path.coordinateSpace !== 'local') return null;
     return (
-      <StyleCard title={`PATH POINTS (${path.points.length})`} collapsible defaultOpen retainKey="path-points">
+      <StyleCard title={`PATH POINTS (${path.points.length})`} collapsible retainKey="path-points">
         <p className="path-geometry-note" data-testid="path-geometry-kind">
           Editable path. On the canvas: drag a point or a handle, double-click the outline to add a point,
           double-click a point to switch Corner/Smooth, Delete removes the selected point.
@@ -90,7 +90,7 @@ export const PathGeometryCard: React.FC<PathGeometryCardProps> = ({
   const label = convertibleShapeLabel(selectedPart.type);
   const blocked = readOnlyReason ?? shapeToPathBlockReason(selectedPart, tracks);
   return (
-    <StyleCard title="SHAPE GEOMETRY" collapsible defaultOpen retainKey="shape-geometry">
+    <StyleCard title="SHAPE GEOMETRY" collapsible retainKey="shape-geometry">
       <p className="path-geometry-note" data-testid="path-geometry-kind">
         {isConvertibleShapeType(selectedPart.type) ? `${label}: a parametric shape. Its outline comes from its type; size it with Scale.` : 'A built-in graphic with text: its outline is fixed.'}
       </p>

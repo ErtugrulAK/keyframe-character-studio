@@ -18,7 +18,7 @@ export interface ToastItem {
   action?: string;
 }
 
-export const TOAST_DEFAULT_DURATION_MS = 3200;
+const TOAST_DEFAULT_DURATION_MS = 3200;
 
 export const useToast = () => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);

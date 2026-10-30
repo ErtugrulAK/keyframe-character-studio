@@ -33,7 +33,7 @@ const renderGizmo = () => render(
 );
 
 /** The visible corner handles, in the order the gizmo renders them. */
-const cornerCursors = (container: HTMLElement): string[] => Array.from(container.querySelectorAll('rect[fill="#00d2ff"]'))
+const cornerCursors = (container: HTMLElement): string[] => Array.from(container.querySelectorAll('rect[fill="#4a8fe7"]'))
   .map((handle) => (handle as SVGRectElement).style.cursor);
 
 describe('TransformGizmo corner cursors', () => {

@@ -8,6 +8,34 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## [Unreleased]
 
+## [1.1.0-rc.6] - 2026-10-30
+
+The sixth release candidate of 1.1.0: rc.5 with the fixes from its manual QA,
+the rotation handle turning a layer about its own origin, and a dead-code
+cleanup. No scene-format changes.
+
+### Changed
+- The rotation handle turns a layer about its own origin (the crosshair the coordinate axes mark), as a keyframed rotation does; only the rotation changes, not the position. The toolbar's ±90° commands still turn a selection about its common centre.
+- Inspector sections start closed; Hierarchy, Animation Data, Shape Geometry, Path Points and Colour Correction no longer open by themselves. A section you open stays open for the session.
+- A new group's timeline row starts closed, like every other new layer.
+
+### Fixed
+- The Export menu closes on a click outside it or on Escape.
+- A luminance Track Matte with a text source follows the text's colour, as it does for shapes and in OGraf export; it used to behave exactly like Alpha.
+- The matte summary's "Select Source" button stays on its line when the reading grows (for example "· Inverted").
+- The OGraf export check lists each problem once, and the font message reads "Text layer … uses …" instead of "Display … uses …".
+- An exported OGraf graphic draws text bold, as the editor does.
+- The OGraf export preparation (and the font licence it carries) is loaded only when exporting instead of with the editor.
+
+## [1.1.0-rc.5] - 2026-10-30
+
+The fifth release candidate of 1.1.0: rc.4 with text matte and exported text
+placed on the baseline the editor draws (#70), and the canvas selection
+chrome and grid in the Neutral Pro colours. No scene-format changes.
+
+### Changed
+- The selection frame, its handles, the artboard border and the selected-layer outline use the editor's blue accent instead of turquoise; the stage grid is neutral grey.
+
 ### Fixed
 - A text layer used as a track matte now cuts exactly where its letters are drawn; the mask sat about a quarter of a line lower. GIF and OGraf exports put text where the editor shows it instead of lower, and text with a character or word animation no longer jumps down when the animation is switched on.
 

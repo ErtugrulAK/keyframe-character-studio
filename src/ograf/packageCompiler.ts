@@ -149,8 +149,11 @@ function packageEntryDiagnostics(files: OGrafPackageFile[], diagnostics: OGrafEx
 }
 export function compileOGrafPackage(sceneData: SceneData, options: OGrafExportOptions = {}): OGrafGeneratedPackage {
   const packageOptions = { ...options, requirePortableAssets: true };
+  // This pass only plans the assets. Its scene diagnostics are reported once,
+  // by the manifest compile below, which validates again with the packaged
+  // catalog; keeping both listed every scene problem twice.
   const validated = validateSceneForOGraf(sceneData, packageOptions);
-  const diagnostics = [...validated.diagnostics];
+  const diagnostics: OGrafExportDiagnostic[] = [];
   const assets = uniqueAssetPlans(validated.assets, diagnostics);
   packageAssetDiagnostics(sceneData, packageOptions, assets, diagnostics);
   const packagedCatalog = Object.fromEntries(assets.map((asset) => [asset.source, {

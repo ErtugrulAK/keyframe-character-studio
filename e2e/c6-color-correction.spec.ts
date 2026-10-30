@@ -12,7 +12,7 @@
  * - OGraf export is blocked with the reason (not flattened, not dropped).
  */
 import { expect, test, type Page } from '@playwright/test';
-import { openDetailsTab, duplicateSelectedLayer } from './fixtures/inspectorTabs';
+import { openDetailsTab, openInspectorCard, duplicateSelectedLayer } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const E = () => ({ x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [] });
@@ -100,6 +100,7 @@ test('colour correction: whole layer, effect-only mask, alpha kept, undo, v3 sav
   expect((await savedScene(page)).version).toBe(2); // an untouched scene stays v2
 
   // ── Whole layer, saturation 0 ──
+  await openInspectorCard(page, 'COLOR CORRECTION');
   await page.getByRole('button', { name: 'Add color correction' }).click();
   await page.getByRole('slider', { name: 'Saturation' }).fill('0');
   await deselect(page);
@@ -241,6 +242,7 @@ test('colour correction: whole layer, effect-only mask, alpha kept, undo, v3 sav
 
 test('a duplicate keeps the correction pointing at the copy’s own mask', async ({ page }) => {
   await seed(page);
+  await openInspectorCard(page, 'COLOR CORRECTION');
   await page.getByRole('button', { name: 'Add color correction' }).click();
   await page.getByRole('slider', { name: 'Saturation' }).fill('0');
   await page.getByRole('button', { name: 'Draw rectangle effect mask' }).click();

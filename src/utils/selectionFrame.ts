@@ -19,7 +19,7 @@ import type { WorldAffine } from './containerMath';
  */
 
 /** The part as the frame must measure it: live Boolean contours, not persisted ones. */
-export const withCurrentBooleanGeometry = (
+const withCurrentBooleanGeometry = (
   part: CharacterPart,
   characterParts: CharacterPart[],
   getComputedTransform: (partId: string, frame: number) => Transform,
@@ -41,7 +41,7 @@ export const withCurrentBooleanGeometry = (
   };
 };
 
-export interface SelectionFrameContext {
+interface SelectionFrameContext {
   characterParts: CharacterPart[];
   getComputedTransform: (partId: string, frame: number) => Transform;
   currentFrame: number;
@@ -70,7 +70,7 @@ export const getSelectionFrameBounds = (
 };
 
 /** A box in a layer's own local units. */
-export interface SelectionFrameBox {
+interface SelectionFrameBox {
   minX: number;
   minY: number;
   maxX: number;
@@ -93,7 +93,7 @@ export interface SelectionFrameBox {
  * places every handle on the affine image of its local-box point); the TRS props
  * stay alongside it because the drag solvers keep working on the local box.
  */
-export interface SelectionFrameGizmoBounds {
+interface SelectionFrameGizmoBounds {
   overrideHalfW: number;
   overrideHalfH: number;
   overrideCenterX: number;

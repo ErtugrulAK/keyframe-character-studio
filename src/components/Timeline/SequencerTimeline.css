@@ -294,7 +294,7 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 
 .seq-tree-header-tabs {
   display: flex;
-  background: #212121;
+  background: var(--kcs-rail);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -345,7 +345,7 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 .seq-tree-search-box input {
   width: 100%;
   height: 22px;
-  background: #212121;
+  background: var(--kcs-rail);
   border: 1px solid #353535;
   border-radius: var(--radius-xs);
   color: #fff;
@@ -429,7 +429,7 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 }
 
 .scene-title-input {
-  background: #212121;
+  background: var(--kcs-rail);
   border: 1px solid var(--accent-cyan);
   border-radius: var(--radius-xs);
   color: #fff;
@@ -499,7 +499,7 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 /* ── HEADER ── */
 .timeline-header {
   height: 48px;
-  background: #222222;
+  background: var(--kcs-bg-rail);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -539,8 +539,8 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   box-shadow: 0 4px 14px rgba(29, 114, 226, 0.35);
   transition: all 0.2s;
 }
-.play-main-btn-teal:hover { background: #5a9cf5; }
-.play-main-btn-teal.playing { background: #3b7ac9; }
+.play-main-btn-teal:hover { background: var(--kcs-accent-hover); }
+.play-main-btn-teal.playing { background: var(--accent-teal-dark); }
 
 .transport-btn {
   width: 30px; height: 30px;
@@ -601,7 +601,7 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 
 .ue-outliner-ruler-spacer {
   height: 28px;
-  background: #222222;
+  background: var(--kcs-bg-rail);
   border-bottom: 1px solid #282828;
   display: flex;
   align-items: center;
@@ -643,7 +643,7 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   position: relative;
 }
 .ue-track-row:active { cursor: grabbing; }
-.ue-track-row:hover { background: #252525; }
+.ue-track-row:hover { background: var(--bg-panel); }
 .ue-track-row.selected {
   background: rgba(29, 114, 226, 0.08);
   border-left: 2px solid var(--accent-teal);
@@ -797,7 +797,7 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   background: transparent;
   transition: background 0.1s;
 }
-.ue-channel-row:hover { background: #222222; }
+.ue-channel-row:hover { background: var(--kcs-bg-rail); }
 
 .ue-channel-indent {
   width: 34px;
@@ -858,7 +858,7 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 /* ── RULER ── */
 .time-ruler {
   height: 28px;
-  background: #222222;
+  background: var(--kcs-bg-rail);
   border-bottom: 1px solid #282828;
   position: sticky;
   top: 0;
@@ -1112,7 +1112,7 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 .timeline-header {
   min-height: 42px;
   padding: 6px 10px;
-  background: #2a2a2a;
+  background: var(--kcs-bg-surface);
   border-bottom-color: #3c3c3c;
 }
 
@@ -1139,8 +1139,8 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 .fit-pill-btn {
   height: 28px;
   border-radius: 3px;
-  background: #252525;
-  border-color: #3a3a3a;
+  background: var(--bg-panel);
+  border-color: var(--kcs-border-default);
 }
 
 .transport-btn.active {
@@ -1155,7 +1155,7 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 
 .track-outliner.ue-outliner {
   border-right-color: #3c3c3c;
-  background: #222222;
+  background: var(--kcs-bg-rail);
 }
 
 .ue-outliner-ruler-spacer,
@@ -1235,7 +1235,7 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   justify-self: center;
   padding: 3px 6px;
   background: #232323;
-  border: 1px solid #3a3a3a;
+  border: 1px solid var(--kcs-border-default);
   border-radius: 4px;
 }
 
@@ -1253,7 +1253,7 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 
 .timeline-graph-pane {
   position: relative;
-  background-color: #1e1e1e;
+  background-color: var(--bg-input);
   background-image: linear-gradient(rgba(92, 154, 234, .06) 1px, transparent 1px), linear-gradient(90deg, rgba(92, 154, 234, .06) 1px, transparent 1px);
   background-size: 32px 28px;
 }

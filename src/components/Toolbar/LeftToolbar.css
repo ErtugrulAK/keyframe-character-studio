@@ -281,7 +281,7 @@
 }
 
 .text-preset-card.tone-gold .text-preset-icon {
-  color: #fbbf24;
+  color: var(--accent-gold);
   background: rgba(251, 191, 36, 0.14);
   border-color: rgba(251, 191, 36, 0.3);
 }
@@ -585,7 +585,7 @@
 
 .sidebar-nav-item:nth-child(3) {
   margin-top: 4px;
-  border-top: 1px solid #3a3a3a;
+  border-top: 1px solid var(--kcs-border-default);
   padding-top: 4px;
 }
 

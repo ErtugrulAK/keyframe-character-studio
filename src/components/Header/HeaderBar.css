@@ -43,8 +43,8 @@
 }
 
 .header-title-input {
-  background: #212121;
-  border: 1px solid #76aaed;
+  background: var(--kcs-rail);
+  border: 1px solid var(--accent-cyan);
   border-radius: var(--radius-xs);
   color: #fff;
   font-size: var(--font-size-mono);
@@ -67,7 +67,7 @@
   white-space: nowrap;
 }
 .header-title-text:hover {
-  color: #76aaed;
+  color: var(--accent-cyan);
 }
 
 /* Browser-tab style template tabs (Unified with Timeline Sequences) */
@@ -99,12 +99,12 @@
 .header-tab:hover {
   background: #2e2e2e;
   color: #f5f5f5;
-  border-color: #76aaed;
+  border-color: var(--accent-cyan);
 }
 .header-tab.active {
   background: #272727;
-  border-color: #76aaed;
-  color: #76aaed;
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
   font-weight: 500;
 }
 
@@ -128,13 +128,13 @@
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #76aaed;
+  color: var(--accent-cyan);
   flex-shrink: 0;
 }
 .header-tab.add-tab:hover {
   color: #ffffff;
   background: rgba(118, 170, 237, 0.15);
-  border-color: #76aaed;
+  border-color: var(--accent-cyan);
 }
 
 
@@ -198,7 +198,7 @@
   padding: var(--space-2xs) var(--space-sm);
   border-radius: var(--radius-lg);
   font-size: var(--font-size-mono);
-  color: #10b981;
+  color: var(--accent-green);
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -215,7 +215,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background-color: #10b981;
+  background-color: var(--accent-green);
   animation: pulse-dot 2s infinite ease-in-out;
 }
 
@@ -328,7 +328,7 @@
 }
 
 .text-green {
-  color: #10b981;
+  color: var(--accent-green);
 }
 
 .header-playback {

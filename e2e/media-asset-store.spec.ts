@@ -79,3 +79,59 @@ test('a saved name whose bytes are gone keeps its layer and its name', async ({ 
   await expect(page.locator('.actor-node', { hasText: 'noise.png' })).toHaveCount(1, { timeout: 15000 });
   expect((await savedLayer(page, 'noise.png')).imageUrl).toBe(reference);
 });
+
+const storedAssetCount = (page: Page) => page.evaluate(() => new Promise<number>((resolve, reject) => {
+  const open = indexedDB.open('kcs-assets', 1);
+  open.onupgradeneeded = () => { open.result.createObjectStore('assets'); };
+  open.onerror = () => reject(open.error);
+  open.onsuccess = () => {
+    const request = open.result.transaction('assets', 'readonly').objectStore('assets').count();
+    request.onsuccess = () => { open.result.close(); resolve(request.result); };
+    request.onerror = () => reject(request.error);
+  };
+}));
+
+/** Tabs holding an asset session (dev StrictMode mounts twice, so tabs are counted by client). */
+const sessionHolders = (page: Page) => page.evaluate(async () => new Set((await navigator.locks.query()).held?.filter((lock) => lock.name === 'kcs-assets-session').map((lock) => lock.clientId)).size);
+
+/** The saved scene stops naming the image, as after the layer was deleted and saved. */
+const forgetSavedLayer = (page: Page, name: string) => page.evaluate(([key, layerName]) => {
+  const scene = JSON.parse(localStorage.getItem(key) ?? '{}') as { layers?: { name?: string }[] };
+  scene.layers = (scene.layers ?? []).filter((layer) => layer.name !== layerName);
+  localStorage.setItem(key, JSON.stringify(scene));
+}, [STORAGE_KEY, name] as const);
+
+test('a stored image no saved scene names is deleted when the editor opens alone', async ({ page }) => {
+  await freshEditor(page);
+  await dropLargeImage(page, 'noise.png');
+  await expect.poll(async () => (await savedLayer(page, 'noise.png')).imageUrl, { timeout: 20000 }).toMatch(/^kcs-asset:/u);
+  expect(await storedAssetCount(page)).toBe(1);
+
+  await forgetSavedLayer(page, 'noise.png');
+  await page.reload();
+  await expect(page.locator('.stage-canvas-container')).toBeVisible({ timeout: 30000 });
+  await expect.poll(() => storedAssetCount(page), { timeout: 15000 }).toBe(0);
+});
+
+test('nothing is deleted while another editor tab is open', async ({ page, context }) => {
+  await freshEditor(page);
+  await dropLargeImage(page, 'noise.png');
+  await expect.poll(async () => (await savedLayer(page, 'noise.png')).imageUrl, { timeout: 20000 }).toMatch(/^kcs-asset:/u);
+
+  const other = await context.newPage();
+  await other.goto('/');
+  await expect(other.locator('.stage-canvas-container')).toBeVisible({ timeout: 30000 });
+
+  await forgetSavedLayer(page, 'noise.png');
+  await page.reload();
+  await expect(page.locator('.stage-canvas-container')).toBeVisible({ timeout: 30000 });
+  // Both tabs hold their asset session, so the reloaded tab has passed the point
+  // where it would sweep; the other tab may still hold the image in its undo history.
+  await expect.poll(() => sessionHolders(page), { timeout: 15000 }).toBe(2);
+  expect(await storedAssetCount(page)).toBe(1);
+
+  await other.close();
+  await page.reload();
+  await expect(page.locator('.stage-canvas-container')).toBeVisible({ timeout: 30000 });
+  await expect.poll(() => storedAssetCount(page), { timeout: 15000 }).toBe(0);
+});

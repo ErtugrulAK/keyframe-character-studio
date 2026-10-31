@@ -327,6 +327,9 @@ describe('SAFE-02 — the CAS critical section runs inside one lock grant', () =
     const manager = {
       async request(name: string, options: { ifAvailable?: boolean; signal?: AbortSignal }, cb: (lock: { name: string } | undefined) => Promise<unknown>): Promise<unknown> {
         names.push(name);
+        // Web Locks are per name: another lock (the asset session) never
+        // contends with the autosave lock this stub models.
+        if (name !== AUTOSAVE_LOCK_NAME) return cb({ name });
         if (options.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
         if (options.ifAvailable && held) {
           events.push('skip');

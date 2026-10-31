@@ -18,8 +18,8 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { AnimatorProvider, type AnimatorContextType } from '../context/AnimatorContext';
 import { useAnimator } from '../context/useAnimator';
 import { SequencerTimeline } from '../components/Timeline/SequencerTimeline';
-import { createLayerGroup } from '../utils/layerGrouping';
-import { generateId } from '../utils/idGenerator';
+import { createLayerGroup } from '../utils/layers/layerGrouping';
+import { generateId } from '../utils/layers/idGenerator';
 import type { CharacterPart } from '../types/animator';
 
 const Consumer = ({ onCtx }: { onCtx: (ctx: AnimatorContextType) => void }) => {

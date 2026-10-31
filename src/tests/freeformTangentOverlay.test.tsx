@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { FreeformTangentOverlay } from '../components/Canvas/overlays/FreeformTangentOverlay';
-import { EDITOR_CAMERA_CENTER } from '../utils/projectCoordinates';
-import { getFreeformVertexWorldPositions } from '../utils/freeform';
+import { EDITOR_CAMERA_CENTER } from '../utils/geometry/projectCoordinates';
+import { getFreeformVertexWorldPositions } from '../utils/geometry/freeform';
 import type { BezierPath, CharacterPart, Transform } from '../types/animator';
 
 const ORIGIN = { x: 0, y: 0 };

@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { useDialogFocusRestoration, useDialogFocusTrap } from '../../hooks/useDialogFocusRestoration';
-import type { BakedChild, DeletionDependent } from '../../utils/partDeletion';
+import type { BakedChild, DeletionDependent } from '../../utils/layers/partDeletion';
 import './ConfirmationDialog.css';
 
 interface DeleteDependentsDialogProps {

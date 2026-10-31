@@ -4,8 +4,8 @@ import type { EvaluatedLayer } from '../../../types/composition';
 import { renderShapePart } from './parts/ShapePartRenderers';
 import { renderMediaPart } from './parts/MediaPartRenderer';
 import { renderTextOrClonerPart } from './parts/TextAndClonerRenderers';
-import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
-import { affineSvgTransform, worldAffineOf } from '../../../utils/containerMath';
+import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/geometry/projectCoordinates';
+import { affineSvgTransform, worldAffineOf } from '../../../utils/geometry/containerMath';
 
 /** How one layer's colour correction is drawn (defs built by StagePartLayers). */
 export interface ColorCorrectionRender {

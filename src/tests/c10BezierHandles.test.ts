@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { altMoveVertexHandle, moveVertexHandle, pullVertexHandles, toggleVertexKind } from '../utils/bezierPath';
+import { altMoveVertexHandle, moveVertexHandle, pullVertexHandles, toggleVertexKind } from '../utils/geometry/bezierPath';
 import type { BezierPath, BezierVertex } from '../types/animator';
 
 const makePath = (): BezierPath => ({

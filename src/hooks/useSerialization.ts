@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AnimationTrackData, CharacterPart, Track, MotionTemplate, PropertyKeyframe } from '../types/animator';
 import type { PersistedTrackState, SceneCoordinateSystem, SceneData, SceneLayer } from '../types/composition';
-import { initializeIdCounter } from '../utils/idGenerator';
-import { makeEmptyChannels, DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../utils/defaults';
-import { convertLegacyKeyframesToChannels, fillChannelsFromLegacyKeyframes } from '../utils/legacyKeyframeConversion';
-import { resolveAuthoredBasePose } from '../utils/channelKeyframeGroups';
-import { AUTOSAVE_LOCK_NAME, AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
-import { DEFAULT_SCENE_COORDINATE_SYSTEM, isSceneCoordinateSystem, migrateSceneCoordinates } from '../utils/coordinateMigration';
-import { normalizeMotionTemplates } from '../utils/motionTemplates';
-import { migrateSceneLayerV6 } from '../utils/v6Migration';
-import { ASSET_REF_PREFIX, createAssetStore, createIndexedDbAssetBackend } from '../utils/assetStore';
+import { initializeIdCounter } from '../utils/layers/idGenerator';
+import { makeEmptyChannels, DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../utils/animation/defaults';
+import { convertLegacyKeyframesToChannels, fillChannelsFromLegacyKeyframes } from '../utils/animation/legacyKeyframeConversion';
+import { resolveAuthoredBasePose } from '../utils/animation/channelKeyframeGroups';
+import { AUTOSAVE_LOCK_NAME, AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/editor/constants';
+import { DEFAULT_SCENE_COORDINATE_SYSTEM, isSceneCoordinateSystem, migrateSceneCoordinates } from '../utils/persistence/coordinateMigration';
+import { normalizeMotionTemplates } from '../utils/animation/motionTemplates';
+import { migrateSceneLayerV6 } from '../utils/persistence/v6Migration';
+import { ASSET_REF_PREFIX, createAssetStore, createIndexedDbAssetBackend } from '../utils/persistence/assetStore';
 
 /**
  * Narrowing helpers for the legacy document's optional fields. The import
@@ -39,9 +39,9 @@ const readMotionTemplates = (value: unknown): MotionTemplate[] | undefined => {
     typeof entry === 'object' && entry !== null && typeof (entry as { id?: unknown }).id === 'string' && typeof (entry as { name?: unknown }).name === 'string');
   return templates.length > 0 ? templates : undefined;
 };
-import { normalizeBezierPath } from '../utils/bezierPath';
-import { SCENE_VERSION_WITH_EFFECTS, sceneUsesEffectFeatures } from '../utils/colorCorrection';
-import { validateImportedDocument, type ImportResult } from '../utils/importValidation';
+import { normalizeBezierPath } from '../utils/geometry/bezierPath';
+import { SCENE_VERSION_WITH_EFFECTS, sceneUsesEffectFeatures } from '../utils/layers/colorCorrection';
+import { validateImportedDocument, type ImportResult } from '../utils/persistence/importValidation';
 const noopSetCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>> = () => undefined;
 // A module-level stable default: a per-render inline default would join the
 // restore effect's dependencies and re-arm the one-shot sync on every render.
@@ -559,7 +559,7 @@ export const useSerialization = ({
   const [settleEpoch, setSettleEpoch] = useState(0);
 
   // The autosave keeps media in a content-addressed IndexedDB store and the
-  // stored scene names them (`utils/assetStore`): localStorage holds the scene,
+  // stored scene names them (`utils/persistence/assetStore`): localStorage holds the scene,
   // not the photos. Everything else keeps the data URLs.
   const [assetStore] = useState(() => createAssetStore(createIndexedDbAssetBackend()));
 

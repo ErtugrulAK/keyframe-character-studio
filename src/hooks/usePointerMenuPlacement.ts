@@ -1,5 +1,5 @@
 import { useLayoutEffect, useState } from 'react';
-import { placeFloatingPanel } from '../utils/floatingPanel';
+import { placeFloatingPanel } from '../utils/editor/floatingPanel';
 
 /**
  * Keeps a menu opened at a pointer position inside the viewport, with the same

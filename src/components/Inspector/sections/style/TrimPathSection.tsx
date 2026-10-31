@@ -1,7 +1,7 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
-import { normalizeTrimPathOffset } from '../../../../utils/trimPath';
+import { normalizeTrimPathOffset } from '../../../../utils/geometry/trimPath';
 import { StyleCard } from './StyleCard';
 
 /** The three keyframeable Trim Path channels. */

@@ -1,4 +1,4 @@
-import type { MatteGradientStop } from '../utils/matte';
+import type { MatteGradientStop } from '../utils/layers/matte';
 
 export type EasingType =
   | 'linear'
@@ -389,7 +389,7 @@ export interface CharacterPart {
   /**
    * Layers bonded to this one: a position change on either side moves both by
    * the same world-space delta. Mutual — the union of both lists is the
-   * authority (see `utils/partBinding`). Rotation, scale and opacity stay
+   * authority (see `utils/layers/partBinding`). Rotation, scale and opacity stay
    * independent, so this is not a parent-child transform.
    */
   boundPartIds?: string[];
@@ -397,7 +397,7 @@ export interface CharacterPart {
    * True for a layer that exists only as an authoring container: it owns no
    * geometry of its own and exists so that its `parentId` children move, scale
    * and rotate together through the ordinary parent-child transform
-   * (`utils/evaluateTransform`). It is not a Boolean group (`booleanOperandIds`)
+   * (`utils/animation/evaluateTransform`). It is not a Boolean group (`booleanOperandIds`)
    * and not a bond (`boundPartIds`): those keep their own contracts.
    *
    * Distinct from a Lottie-imported parent, whose `parentId` children are real
@@ -469,8 +469,8 @@ export interface CharacterPart {
   anchorOffsetX?: number;
   anchorOffsetY?: number;
 
-  /** Where the text's origin sits: absent = on the baseline (every older text). See utils/textOrigin. */
-  textOrigin?: import('../utils/textOrigin').TextOrigin;
+  /** Where the text's origin sits: absent = on the baseline (every older text). See utils/geometry/textOrigin. */
+  textOrigin?: import('../utils/geometry/textOrigin').TextOrigin;
 
   // ── Feature 3: Text Stagger Animation ──
   textAnimMode?: TextAnimMode;

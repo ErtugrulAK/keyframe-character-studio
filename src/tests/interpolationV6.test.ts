@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyEasing, deriveAutoBezierControlPoints, interpolateChannel } from '../utils/defaults';
+import { applyEasing, deriveAutoBezierControlPoints, interpolateChannel } from '../utils/animation/defaults';
 import type { PropertyKeyframe } from '../types/animator';
 
 const keyframe = (id: string, frame: number, value: number, easing: PropertyKeyframe['easing'], extra: Partial<PropertyKeyframe> = {}): PropertyKeyframe => ({

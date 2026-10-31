@@ -6,8 +6,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { BezierPath, CharacterPart, LayerMask } from '../types/animator';
-import { applyAffine, composeAffine, affineOfTransform } from '../utils/containerMath';
-import { buildLayerMaskPathD } from '../utils/layerMasks';
+import { applyAffine, composeAffine, affineOfTransform } from '../utils/geometry/containerMath';
+import { buildLayerMaskPathD } from '../utils/layers/layerMasks';
 import {
   maskPathDeltaFromWorld,
   maskPathPointToWorld,
@@ -16,7 +16,7 @@ import {
   resolveMaskEditBlock,
   resolveMaskPathFrame,
   translateMaskPath,
-} from '../utils/maskPathEditing';
+} from '../utils/geometry/maskPathEditing';
 
 const image = (overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id: 'img',

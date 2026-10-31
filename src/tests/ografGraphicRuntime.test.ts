@@ -6,12 +6,12 @@
 import { describe, expect, it } from 'vitest';
 import { createGraphicRuntime, type GraphicRuntimeEnvironment, type RuntimeScene } from '../ograf/runtime/graphicRuntime';
 import { runtimeGraphicFactory } from '../ograf/runtimeSnippets';
-import { compareByStackingOrder } from '../utils/stackingOrder';
-import { resolveMatteSource } from '../utils/matte';
-import { createWorldAffineAlgebra } from '../utils/containerMath';
-import { TEXT_BOX_CENTRE_EM } from '../utils/textOrigin';
-import { resolveShapeAppearance } from '../utils/shapeAppearance';
-import { describePaint, describeText } from '../utils/drawDescriptor';
+import { compareByStackingOrder } from '../utils/layers/stackingOrder';
+import { resolveMatteSource } from '../utils/layers/matte';
+import { createWorldAffineAlgebra } from '../utils/geometry/containerMath';
+import { TEXT_BOX_CENTRE_EM } from '../utils/geometry/textOrigin';
+import { resolveShapeAppearance } from '../utils/layers/shapeAppearance';
+import { describePaint, describeText } from '../utils/layers/drawDescriptor';
 
 class HostElement { innerHTML = ''; }
 

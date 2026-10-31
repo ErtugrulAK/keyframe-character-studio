@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { BezierPath, CharacterPart, Transform } from '../../../types/animator';
-import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
-import { getFreeformVertexWorldPositions, resolveFreeformPath } from '../../../utils/freeform';
-import { buildBezierPathD, altMoveVertexHandle, moveVertexHandle, pullVertexHandles, toggleVertexKind, type BezierHandleKind } from '../../../utils/bezierPath';
-import { isEditableElement, ownsShortcutScope } from '../../../utils/keyboardFocus';
-import { isBlockingModalOpen } from '../../../utils/modalBoundary';
-import { insertMaskVertex, nearestMaskPathSegment } from '../../../utils/maskPathCreation';
-import { worldAffineOf } from '../../../utils/containerMath';
-import { worldToLocal } from '../../../utils/matte';
-import type { WorldAffine } from '../../../utils/containerMath';
+import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/geometry/projectCoordinates';
+import { getFreeformVertexWorldPositions, resolveFreeformPath } from '../../../utils/geometry/freeform';
+import { buildBezierPathD, altMoveVertexHandle, moveVertexHandle, pullVertexHandles, toggleVertexKind, type BezierHandleKind } from '../../../utils/geometry/bezierPath';
+import { isEditableElement, ownsShortcutScope } from '../../../utils/editor/keyboardFocus';
+import { isBlockingModalOpen } from '../../../utils/editor/modalBoundary';
+import { insertMaskVertex, nearestMaskPathSegment } from '../../../utils/geometry/maskPathCreation';
+import { worldAffineOf } from '../../../utils/geometry/containerMath';
+import { worldToLocal } from '../../../utils/layers/matte';
+import type { WorldAffine } from '../../../utils/geometry/containerMath';
 
 /** Marker sizes, scaled by the canvas zScale so they stay screen-constant. */
 const VERTEX_RADIUS = 7;

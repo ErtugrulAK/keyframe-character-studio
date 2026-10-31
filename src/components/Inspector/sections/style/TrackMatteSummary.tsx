@@ -1,6 +1,6 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
-import { matteTargetsOfSource, resolveEffectiveMatteRelationship } from '../../../../utils/matteRelationship';
+import { matteTargetsOfSource, resolveEffectiveMatteRelationship } from '../../../../utils/layers/matteRelationship';
 
 interface TrackMatteSummaryProps {
   selectedPart: CharacterPart;

@@ -1,8 +1,8 @@
 import React from 'react';
 import type { Transform } from '../../../types/animator';
-import type { WorldAffine } from '../../../utils/containerMath';
-import { worldAffineOf } from '../../../utils/containerMath';
-import type { CoordinatePoint } from '../../../utils/projectCoordinates';
+import type { WorldAffine } from '../../../utils/geometry/containerMath';
+import { worldAffineOf } from '../../../utils/geometry/containerMath';
+import type { CoordinatePoint } from '../../../utils/geometry/projectCoordinates';
 
 interface CanvasCoordinateOverlayProps {
   artX: number;

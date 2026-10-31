@@ -1,6 +1,6 @@
 import type { CharacterPart, Transform } from '../types/animator';
 import type { EvaluatedFrame, EvaluatedLayer, RuntimeData, RuntimeTrackState, SceneData, SceneLayer } from '../types/composition';
-import { evaluateFrame } from '../utils/evaluateFrame';
+import { evaluateFrame } from '../utils/animation/evaluateFrame';
 import { validateSceneForOGraf } from './validation';
 import type { OGrafExportOptions } from './types';
 

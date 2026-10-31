@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Eye, EyeOff, Lock, PenLine, X } from 'lucide-react';
 import type { BezierPath, CharacterPart, LayerMask, MatteMode, PartMatte, Track } from '../../../../types/animator';
-import { maskPathTopologyLockReason } from '../../../../utils/maskPathCreation';
+import { maskPathTopologyLockReason } from '../../../../utils/geometry/maskPathCreation';
 import { BezierPathEditor } from '../../BezierPathEditor';
 import { NumberField } from '../../inputs/NumberField';
-import { pickedTrackMatte, trackMattePickVerdict } from '../../../../utils/trackMattePick';
-import { requestMaskPointsFocus } from '../../../../utils/maskPointFocus';
-import type { PathOrderCommand } from '../../../../utils/maskPathOrder';
+import { pickedTrackMatte, trackMattePickVerdict } from '../../../../utils/layers/trackMattePick';
+import { requestMaskPointsFocus } from '../../../../utils/geometry/maskPointFocus';
+import type { PathOrderCommand } from '../../../../utils/geometry/maskPathOrder';
 import type { MaskDrawShape } from '../../../../hooks/useMaskEditing';
-import { resolveMatteSource, resolveMatteMode, normalizeFeather, isMatteEligible, suppressedMatteSourceIds, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/matte';
-import type { MatteGradientStop } from '../../../../utils/matte';
+import { resolveMatteSource, resolveMatteMode, normalizeFeather, isMatteEligible, suppressedMatteSourceIds, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/layers/matte';
+import type { MatteGradientStop } from '../../../../utils/layers/matte';
 import { StyleCard } from './StyleCard';
 import { TrackMatteSummary } from './TrackMatteSummary';
 interface StyleMatteSectionProps {

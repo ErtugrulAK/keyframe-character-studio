@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, EasingType, PropertyKeyframe, Track } from '../types/animator';
-import { applyEasing, deriveAutoBezierControlPoints, interpolateChannel, lerp, makeEmptyChannels } from '../utils/defaults';
-import { createTransformEvaluator, evaluateTransform } from '../utils/evaluateTransform';
+import { applyEasing, deriveAutoBezierControlPoints, interpolateChannel, lerp, makeEmptyChannels } from '../utils/animation/defaults';
+import { createTransformEvaluator, evaluateTransform } from '../utils/animation/evaluateTransform';
 
 /**
  * The evaluator's lookups and searches were rewritten for speed (index instead

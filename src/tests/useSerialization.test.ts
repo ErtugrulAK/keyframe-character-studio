@@ -2,15 +2,15 @@ import { renderHook as renderHookBase, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useSerialization } from '../hooks/useSerialization';
 import type { UseSerializationApi } from '../hooks/useSerialization';
-import type { ImportResult } from '../utils/importValidation';
+import type { ImportResult } from '../utils/persistence/importValidation';
 import { AnimationProject, CharacterPart, Keyframe, Track, Transform, TrackChannel, PropertyKeyframe } from '../types/animator';
-import { makeEmptyChannels } from '../utils/defaults';
-import { evaluateTransform } from '../utils/evaluateTransform';
-import { applyTransitionToTrackCanonicalMutator } from '../utils/trackMutations';
-import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
-import { normalizeFeather, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../utils/matte';
-import { resolveFreeformPath } from '../utils/freeform';
-import { buildBezierPathD, initializeSmoothHandles } from '../utils/bezierPath';
+import { makeEmptyChannels } from '../utils/animation/defaults';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { applyTransitionToTrackCanonicalMutator } from '../utils/animation/trackMutations';
+import { generateTransitionChannelKeyframes } from '../utils/animation/motionTransitions';
+import { normalizeFeather, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../utils/layers/matte';
+import { resolveFreeformPath } from '../utils/geometry/freeform';
+import { buildBezierPathD, initializeSmoothHandles } from '../utils/geometry/bezierPath';
 
 /**
  * `useSerialization` stamps its saved-at state while it applies or saves a

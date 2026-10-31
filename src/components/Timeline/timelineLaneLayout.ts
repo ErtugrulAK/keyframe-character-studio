@@ -1,7 +1,7 @@
 import { layerMaskChannel, layerMaskPathChannel, type AnimationChannel, type Track, type TrackChannel, type Transform } from '../../types/animator';
 import { CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
-import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/channelKeyframeGroups';
-import { hasChannelDataForTemplate } from '../../utils/timelineMetrics';
+import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/animation/channelKeyframeGroups';
+import { hasChannelDataForTemplate } from '../../utils/editor/timelineMetrics';
 
 /**
  * The timeline lane layout as DATA.

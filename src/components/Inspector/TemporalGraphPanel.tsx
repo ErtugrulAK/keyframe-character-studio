@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { NumberField } from './inputs/NumberField';
 import type { PropertyKeyframe, TemporalHandle } from '../../types/animator';
-import { effectiveSegmentAuthority, interpolateChannel } from '../../utils/defaults';
+import { effectiveSegmentAuthority, interpolateChannel } from '../../utils/animation/defaults';
 import { PRESET_BEZIERS } from './easingPresets';
 
 interface TemporalHandlePatch {

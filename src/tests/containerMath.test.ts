@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Transform } from '../types/animator';
-import { worldToContainerLocal } from '../utils/containerMath';
+import { worldToContainerLocal } from '../utils/geometry/containerMath';
 
 const transform = (overrides: Partial<Transform>): Transform => ({
   x: 0,

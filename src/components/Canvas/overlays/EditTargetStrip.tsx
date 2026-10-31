@@ -1,5 +1,5 @@
 import React from 'react';
-import type { EditTarget } from '../../../utils/editTarget';
+import type { EditTarget } from '../../../utils/layers/editTarget';
 
 interface EditTargetStripProps {
   target: EditTarget;

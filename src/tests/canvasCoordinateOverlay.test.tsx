@@ -2,7 +2,7 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { Transform } from '../types/animator';
-import type { WorldAffine } from '../utils/containerMath';
+import type { WorldAffine } from '../utils/geometry/containerMath';
 import { CanvasCoordinateOverlay } from '../components/Canvas/overlays/CanvasCoordinateOverlay';
 import { CanvasCoordinateReadout } from '../components/Canvas/overlays/CanvasCoordinateReadout';
 

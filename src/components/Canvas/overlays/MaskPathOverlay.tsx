@@ -1,8 +1,8 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { BezierPath, CharacterPart, Transform } from '../../../types/animator';
-import type { WorldAffine } from '../../../utils/containerMath';
-import { altMoveVertexHandle, pullVertexHandles, toggleVertexKind, type BezierHandleKind, type PathPoint } from '../../../utils/bezierPath';
-import { buildLayerMaskPathD } from '../../../utils/layerMasks';
+import type { WorldAffine } from '../../../utils/geometry/containerMath';
+import { altMoveVertexHandle, pullVertexHandles, toggleVertexKind, type BezierHandleKind, type PathPoint } from '../../../utils/geometry/bezierPath';
+import { buildLayerMaskPathD } from '../../../utils/layers/layerMasks';
 import {
   maskPathDeltaFromWorld,
   maskPathPointToWorld,
@@ -11,12 +11,12 @@ import {
   resolveMaskPathFrame,
   translateMaskPath,
   type MaskPathFrame,
-} from '../../../utils/maskPathEditing';
+} from '../../../utils/geometry/maskPathEditing';
 import type { MaskGestureSnapshot } from '../../../hooks/useMaskEditing';
-import { isEditableElement, ownsShortcutScope } from '../../../utils/keyboardFocus';
-import { isBlockingModalOpen } from '../../../utils/modalBoundary';
-import { EDITOR_CAMERA_CENTER } from '../../../utils/projectCoordinates';
-import { consumeMaskPointsFocusRequest } from '../../../utils/maskPointFocus';
+import { isEditableElement, ownsShortcutScope } from '../../../utils/editor/keyboardFocus';
+import { isBlockingModalOpen } from '../../../utils/editor/modalBoundary';
+import { EDITOR_CAMERA_CENTER } from '../../../utils/geometry/projectCoordinates';
+import { consumeMaskPointsFocusRequest } from '../../../utils/geometry/maskPointFocus';
 
 /** Alt-drag from a vertex: new mirrored handles, the out handle at the pointer. */
 const pullMaskHandles = (initialPath: BezierPath, index: number, delta: PathPoint): BezierPath => ({

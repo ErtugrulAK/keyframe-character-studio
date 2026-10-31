@@ -1,5 +1,5 @@
 import { zipSync } from 'fflate';
-import { normalizePackagePath } from '../utils/pathSafety';
+import { normalizePackagePath } from '../utils/persistence/pathSafety';
 import { isSafeOGrafPackagePath, sanitizeOGrafId } from './compiler';
 import { OGrafPackageWriteError, describeOGrafValueForDiagnostics } from './diagnostics';
 import type { OGrafGeneratedPackage } from './types';

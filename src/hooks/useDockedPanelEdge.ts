@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { flushSync } from 'react-dom';
-import { PANEL_EDGE_TRANSITION_MS, commitWorkspaceLayout, createFrameEase, prefersReducedMotion, type FrameEase } from '../utils/workspaceLayout';
+import { PANEL_EDGE_TRANSITION_MS, commitWorkspaceLayout, createFrameEase, prefersReducedMotion, type FrameEase } from '../utils/editor/workspaceLayout';
 
 type DockSide = 'left' | 'right';
 

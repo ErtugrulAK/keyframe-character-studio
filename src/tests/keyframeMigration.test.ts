@@ -6,9 +6,9 @@
  */
 
 import { describe, test, expect } from 'vitest';
-import { updatePropertyKeyframeEasingMutator } from '../utils/trackMutations';
-import { convertLegacyKeyframesToChannels } from '../utils/legacyKeyframeConversion';
-import { evaluateTransform } from '../utils/evaluateTransform';
+import { updatePropertyKeyframeEasingMutator } from '../utils/animation/trackMutations';
+import { convertLegacyKeyframesToChannels } from '../utils/animation/legacyKeyframeConversion';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
 import type { Track, TrackChannel, Keyframe } from '../types/animator';
 
 function makeTrackWithChannels(channels: Partial<Record<TrackChannel, any[]>>): Track {

@@ -21,14 +21,14 @@ import {
   SquareDashed,
 } from 'lucide-react';
 import type { BodyPartType, CharacterPart } from '../../types/animator';
-import { booleanOperationLabel } from '../../utils/booleanGeometry';
-import { isMatteSourceSuppressed, resolveMatteSource } from '../../utils/matte';
-import type { LayerDropPosition } from '../../utils/layerParenting';
+import { booleanOperationLabel } from '../../utils/geometry/booleanGeometry';
+import { isMatteSourceSuppressed, resolveMatteSource } from '../../utils/layers/matte';
+import type { LayerDropPosition } from '../../utils/layers/layerParenting';
 import {
   SHAPE_ICON_MAP,
   SHAPE_ICON_SIZE,
   SHAPE_ICON_STROKE_WIDTH,
-} from '../../utils/shapeIconMap';
+} from '../../utils/editor/shapeIconMap';
 import { InlineRename } from '../Shared/InlineRename';
 
 /**

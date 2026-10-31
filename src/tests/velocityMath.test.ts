@@ -9,8 +9,8 @@
 
 import { describe, expect, it } from 'vitest';
 import type { PropertyKeyframe } from '../types/animator';
-import { channelVelocityAt, sampleChannelVelocity } from '../utils/velocityMath';
-import { interpolateChannel } from '../utils/defaults';
+import { channelVelocityAt, sampleChannelVelocity } from '../utils/animation/velocityMath';
+import { interpolateChannel } from '../utils/animation/defaults';
 
 const kf = (
   id: string,

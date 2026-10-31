@@ -2,7 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { useClipboard } from '../hooks/useClipboard';
 import type { CharacterPart, Track } from '../types/animator';
-import { makeEmptyChannels } from '../utils/defaults';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 
 describe('useClipboard Hook', () => {
   const mockShowToast = vi.fn();

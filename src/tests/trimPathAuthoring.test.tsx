@@ -16,8 +16,8 @@ const expandTrimPath = () => fireEvent.click(screen.getByRole('button', { name: 
 import { describe, expect, it, vi } from 'vitest';
 import { TrimPathSection } from '../components/Inspector/sections/style/TrimPathSection';
 import { useInspector } from '../hooks/useInspector';
-import { evaluateTrimPath } from '../utils/trimPath';
-import { makeEmptyChannels } from '../utils/defaults';
+import { evaluateTrimPath } from '../utils/geometry/trimPath';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 import type { CharacterPart, Track, PropertyKeyframe } from '../types/animator';
 
 const part = (overrides: Partial<CharacterPart> = {}): CharacterPart => ({

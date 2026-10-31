@@ -3,7 +3,7 @@ import type { CharacterPart } from '../../../../types/animator';
 import { ColorPickerPopover } from '../../inputs/ColorPickerPopover';
 import { StyleCard } from './StyleCard';
 import { StyleEffectsSection } from './StyleEffectsSection';
-import { isShapeAppearanceEligible } from '../../../../utils/shapeAppearance';
+import { isShapeAppearanceEligible } from '../../../../utils/layers/shapeAppearance';
 
 interface StyleColorSectionProps {
   selectedPart: CharacterPart;

@@ -1,6 +1,6 @@
 /**
  * The stage, the static SVG renderer and the OGraf runtime paint every layer
- * from the same draw descriptors (`utils/drawDescriptor`), so for one layer
+ * from the same draw descriptors (`utils/layers/drawDescriptor`), so for one layer
  * they write the same paint and text attributes.
  *
  * Before, the runtime wrote its own: text in sans-serif with a 1.5 outline

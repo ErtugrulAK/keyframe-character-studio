@@ -8,7 +8,7 @@ import {
   toAuthoringStrokeAlignment,
   toStrokeAlignmentControlValue,
   updateShapeAppearance,
-} from '../utils/shapeAppearance';
+} from '../utils/layers/shapeAppearance';
 
 const eligibleTypes: BodyPartType[] = [
   'custom_rect', 'custom_box', 'custom_circle', 'custom_triangle', 'custom_star',

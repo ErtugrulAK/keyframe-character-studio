@@ -1,7 +1,7 @@
 import type { AnimationTrackData, BezierPath, CharacterPart, LayerMask, PathKeyframe, PropertyKeyframe, TrackChannel } from '../src/types/animator';
 import { layerMaskChannel, layerMaskPathChannel } from '../src/types/animator';
 import type { RuntimeData, RuntimeTrackState } from '../src/types/composition';
-import { makeEmptyChannels } from '../src/utils/defaults';
+import { makeEmptyChannels } from '../src/utils/animation/defaults';
 
 /**
  * Deterministic scene builder for the evaluator profile.

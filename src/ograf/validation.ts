@@ -1,5 +1,5 @@
 import type { SceneData, SceneLayer } from '../types/composition';
-import { isPrototypeSensitiveKey, normalizePackagePath } from '../utils/pathSafety';
+import { isPrototypeSensitiveKey, normalizePackagePath } from '../utils/persistence/pathSafety';
 import {
   type OGrafAssetPlan,
   type OGrafDiagnosticCode,
@@ -13,7 +13,7 @@ import {
 } from './types';
 import { resolveOGrafPublicControls } from './publicControls';
 import { describeOGrafValueForDiagnostics } from './diagnostics';
-import { resolveMatteSource } from '../utils/matte';
+import { resolveMatteSource } from '../utils/layers/matte';
 const SUPPORTED_LAYER_TYPES: Record<string, true> = {
   custom_box: true,
   custom_rect: true,

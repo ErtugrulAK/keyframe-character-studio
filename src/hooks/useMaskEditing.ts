@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AppMode, BezierPath, CharacterPart, LayerMask, Track } from '../types/animator';
-import { layerMaskIdsReferencedByTrack, nextLayerMaskId } from '../utils/layerMasks';
-import { deleteMaskVertex, maskPathTopologyLockReason } from '../utils/maskPathCreation';
-import { applyPathOrderEditEverywhere, planPathOrderEdit, type PathOrderCommand } from '../utils/maskPathOrder';
+import { layerMaskIdsReferencedByTrack, nextLayerMaskId } from '../utils/layers/layerMasks';
+import { deleteMaskVertex, maskPathTopologyLockReason } from '../utils/geometry/maskPathCreation';
+import { applyPathOrderEditEverywhere, planPathOrderEdit, type PathOrderCommand } from '../utils/geometry/maskPathOrder';
 import { layerMaskPathChannel } from '../types/animator';
 
 /**

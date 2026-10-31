@@ -16,7 +16,7 @@ import React, { useEffect } from 'react';
 import { render, act, cleanup } from '@testing-library/react';
 import { AnimatorProvider, type AnimatorContextType } from '../context/AnimatorContext';
 import { useAnimator } from '../context/useAnimator';
-import { interpolateChannel } from '../utils/defaults';
+import { interpolateChannel } from '../utils/animation/defaults';
 import { PRESET_BEZIERS, type EasingPreset } from '../components/Inspector/easingPresets';
 import type { PropertyKeyframe, Track } from '../types/animator';
 

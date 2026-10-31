@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NumberField } from './inputs/NumberField';
-import { parseCubicBezierText } from '../../utils/cubicBezierText';
+import { parseCubicBezierText } from '../../utils/animation/cubicBezierText';
 import ReactDOM from 'react-dom';
 import { Copy, Check, X, Play, Pause } from 'lucide-react';
 import type { PropertyKeyframe, TemporalHandle } from '../../types/animator';
 import { TemporalGraphPanel } from './TemporalGraphPanel';
-import { solveCubicBezier } from '../../utils/defaults';
+import { solveCubicBezier } from '../../utils/animation/defaults';
 import { PRESET_BEZIERS } from './easingPresets';
 interface InteractiveCubicBezierEditorProps {
   controlPoints?: [number, number, number, number]; // [x1, y1, x2, y2]

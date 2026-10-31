@@ -5,7 +5,7 @@ import {
   isSafePackageRelativePath,
   normalizePackagePath,
   sanitizeFilenameComponent,
-} from '../utils/pathSafety';
+} from '../utils/persistence/pathSafety';
 
 describe('Windows path safety', () => {
   test('sanitizes invalid filename characters and trailing separators', () => {

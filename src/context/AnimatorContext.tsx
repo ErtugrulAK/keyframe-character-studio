@@ -23,12 +23,12 @@ import type { SceneCoordinateSystem } from '../types/composition';
 import { useClipboard } from '../hooks/useClipboard';
 import { useSelection } from '../hooks/useSelection';
 import { usePlayback } from '../hooks/usePlayback';
-import { duplicateKeyframeGroup as duplicateKeyframeGroupTrack } from '../utils/keyframeDuplicate';
-import { setKeyframeGroupEasing as setKeyframeGroupEasingTrack } from '../utils/keyframeEasing';
-import { pasteKeyframeGroupData, type KeyframeCopyPayload } from '../utils/keyframeCopyPaste';
+import { duplicateKeyframeGroup as duplicateKeyframeGroupTrack } from '../utils/animation/keyframeDuplicate';
+import { setKeyframeGroupEasing as setKeyframeGroupEasingTrack } from '../utils/animation/keyframeEasing';
+import { pasteKeyframeGroupData, type KeyframeCopyPayload } from '../utils/animation/keyframeCopyPaste';
 import { useHistory, type HistoryDocumentState } from '../hooks/useHistory';
 import { useBroadcast } from '../hooks/useBroadcast';
-import type { NamedSequenceRuntimeState } from '../utils/broadcastEngine';
+import type { NamedSequenceRuntimeState } from '../utils/animation/broadcastEngine';
 import { useToolbar } from '../hooks/useToolbar';
 import { useInspector } from '../hooks/useInspector';
 import { useTimeline, type KeyframeStretchSession } from '../hooks/useTimeline';
@@ -53,16 +53,16 @@ import { useMaskEditing, type MaskDrawSession, type MaskDrawShape, type MaskEdit
 import { createLayerGroupingActions } from '../hooks/useLayerGrouping';
 import { createVectorArrangeActions } from '../hooks/useVectorArrangeAuthoring';
 import { createStageCropActions } from '../hooks/useStageCropAuthoring';
-import type { StageCropRect } from '../utils/stageCrop';
-import { resolveOutermostGroupAncestor } from '../utils/layerGrouping';
-import { selectAllLayers } from '../utils/layerSelection';
+import type { StageCropRect } from '../utils/geometry/stageCrop';
+import { resolveOutermostGroupAncestor } from '../utils/layers/layerGrouping';
+import { selectAllLayers } from '../utils/layers/layerSelection';
 import { ShortcutReferenceDialog } from '../components/Shortcuts/ShortcutReferenceDialog';
 import { DeleteDependentsDialog } from '../components/Modal/DeleteDependentsDialog';
 import { ConfirmationDialog } from '../components/Modal/ConfirmationDialog';
-import { collectOwnedDeletionIds, describeDeletionScope, matteDependentsOfDeletion, planPartDeletion, type BakedChild, type DeletionDependent } from '../utils/partDeletion';
-import type { ImportResult } from '../utils/importValidation';
-import type { PathOrderCommand } from '../utils/maskPathOrder';
-import { lockedLayerIds, lockedLayerNames, lockedLayersMessage, lockedMaskChanges, lockedMasksMessage, lockedPartChanges, lockedTrackChanges, type LockedMaskHit } from '../utils/layerLocks';
+import { collectOwnedDeletionIds, describeDeletionScope, matteDependentsOfDeletion, planPartDeletion, type BakedChild, type DeletionDependent } from '../utils/layers/partDeletion';
+import type { ImportResult } from '../utils/persistence/importValidation';
+import type { PathOrderCommand } from '../utils/geometry/maskPathOrder';
+import { lockedLayerIds, lockedLayerNames, lockedLayersMessage, lockedMaskChanges, lockedMasksMessage, lockedPartChanges, lockedTrackChanges, type LockedMaskHit } from '../utils/layers/layerLocks';
 
 /** One confirmation the editor asks before a non-obvious edit. */
 export interface ConfirmationRequest {

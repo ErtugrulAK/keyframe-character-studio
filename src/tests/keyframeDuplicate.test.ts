@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { duplicateKeyframeGroup } from '../utils/keyframeDuplicate';
+import { duplicateKeyframeGroup } from '../utils/animation/keyframeDuplicate';
 import type { Track } from '../types/animator';
-import { makeEmptyChannels } from '../utils/defaults';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 
 /**
  * M27 27A — TIMELINE KEYFRAME FRAME-GROUP DUPLICATE (pure data layer).

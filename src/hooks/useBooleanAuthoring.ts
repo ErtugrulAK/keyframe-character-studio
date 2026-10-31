@@ -1,7 +1,7 @@
 import { useAnimatorAuthority } from '../context/useAnimator';
 import type { AnimatorContextType } from '../context/AnimatorContext';
-import { makeEmptyChannels } from '../utils/defaults';
-import { generateId } from '../utils/idGenerator';
+import { makeEmptyChannels } from '../utils/animation/defaults';
+import { generateId } from '../utils/layers/idGenerator';
 import type { CharacterPart } from '../types/animator';
 import {
   isBooleanEligible,
@@ -12,13 +12,13 @@ import {
   createBooleanDisplayName,
   isGeneratedBooleanName,
   type BooleanOperation,
-} from '../utils/booleanGeometry';
+} from '../utils/geometry/booleanGeometry';
 
 /**
  * The one Boolean authoring authority for the current selection.
  *
  * Lifted out of `DetailsPanel` unchanged: it reads the selection, traces the
- * operands through `utils/booleanGeometry` and writes the group through the
+ * operands through `utils/geometry/booleanGeometry` and writes the group through the
  * ordinary `setCharacterParts`/`setTracks` state setters inside a single batch
  * interaction. The Inspector and the authoring toolbar both drive these same
  * functions, so there is exactly one Boolean write path.

@@ -2,8 +2,8 @@ import React, { useRef } from 'react';
 import type { BezierPath, CharacterPart, Track } from '../../../../types/animator';
 import { StyleCard } from './StyleCard';
 import { BezierPathEditor } from '../../BezierPathEditor';
-import { resolveFreeformPath } from '../../../../utils/freeform';
-import { convertibleShapeLabel, isConvertibleShapeType, shapeToPathBlockReason } from '../../../../utils/shapeToPath';
+import { resolveFreeformPath } from '../../../../utils/geometry/freeform';
+import { convertibleShapeLabel, isConvertibleShapeType, shapeToPathBlockReason } from '../../../../utils/geometry/shapeToPath';
 
 interface PathGeometryCardProps {
   selectedPart: CharacterPart;

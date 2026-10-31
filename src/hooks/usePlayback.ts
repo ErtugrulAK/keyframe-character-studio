@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { sanitizeProjectFps } from '../utils/timebase';
+import { sanitizeProjectFps } from '../utils/animation/timebase';
 import { perfCount } from '../perf/perfMonitor';
 
 /**

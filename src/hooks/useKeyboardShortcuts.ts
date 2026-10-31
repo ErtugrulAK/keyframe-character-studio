@@ -1,14 +1,14 @@
 import { useEffect, useRef } from 'react';
 import type { AppMode, BodyPartType, ToolType } from '../types/animator';
-import { isBlockingModalOpen } from '../utils/modalBoundary';
-import { focusedShortcutScope, isEditableElement, ownsShortcutScope } from '../utils/keyboardFocus';
+import { isBlockingModalOpen } from '../utils/editor/modalBoundary';
+import { focusedShortcutScope, isEditableElement, ownsShortcutScope } from '../utils/editor/keyboardFocus';
 import {
   detectShortcutPlatform,
   resolveShortcutCommand,
   type ShortcutCommandId,
   type ShortcutPlatform,
-} from '../utils/shortcuts';
-import type { FlipAxis, RotateDirection } from '../utils/vectorArrange';
+} from '../utils/editor/shortcuts';
+import type { FlipAxis, RotateDirection } from '../utils/layers/vectorArrange';
 
 /**
  * The commands the editor's global keyboard handler can run. Callers provide
@@ -103,7 +103,7 @@ const canvasOwnsArrows = (): boolean => {
 
 /**
  * The editor's keyboard commands, driven by the ONE shortcut table
- * (`utils/shortcuts`).
+ * (`utils/editor/shortcuts`).
  *
  * The handler reads the keymap instead of listing gestures, so a binding and the
  * shortcut reference cannot disagree. Three rules decide whether a command runs:
@@ -125,7 +125,7 @@ const canvasOwnsArrows = (): boolean => {
  * mask editing, leave the Boolean operand edit, step out
  * of a grouped child onto its container, then clear the timeline keyframe
  * selection. It never clears the layer selection — several non-modal surfaces own
- * Escape while they are open (see the note in `utils/shortcuts`).
+ * Escape while they are open (see the note in `utils/editor/shortcuts`).
  */
 export const useKeyboardShortcuts = ({
   selectedPartId,

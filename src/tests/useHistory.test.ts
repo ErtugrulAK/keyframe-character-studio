@@ -2,7 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { useHistory, type HistoryDocumentState } from '../hooks/useHistory';
 import type { CharacterPart, MotionTemplate, Track } from '../types/animator';
-import { deleteParts } from '../utils/partDeletion';
+import { deleteParts } from '../utils/layers/partDeletion';
 
 /**
  * The document-level state every caller stores with a snapshot. Cases that are

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { generateTransitionKeyframes, generateTransitionChannelKeyframes } from '../utils/motionTransitions';
-import { applyTransitionChannelsMutator } from '../utils/trackMutations';
+import { generateTransitionKeyframes, generateTransitionChannelKeyframes } from '../utils/animation/motionTransitions';
+import { applyTransitionChannelsMutator } from '../utils/animation/trackMutations';
 import type { Transform, Track, TrackChannel, PropertyKeyframe } from '../types/animator';
 
 describe('MotionTransitions Utility', () => {

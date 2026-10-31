@@ -1,10 +1,10 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
-import { buildBezierPathD, legacyFreeformPointsToPath } from '../../../../utils/bezierPath';
-import { buildFreeformPath, getFreeformPerimeter, normalizeClosedPoints } from '../../../../utils/freeform';
-import { getShapeGeometry, polygonPointsToString } from '../../../../utils/shapeGeometry';
-import { isShapeAppearanceEligible, resolveShapeAppearance, type ResolvedShapeAppearance } from '../../../../utils/shapeAppearance';
-import { getTrimPathDashProps, resolveTrimPath } from '../../../../utils/trimPath';
+import { buildBezierPathD, legacyFreeformPointsToPath } from '../../../../utils/geometry/bezierPath';
+import { buildFreeformPath, getFreeformPerimeter, normalizeClosedPoints } from '../../../../utils/geometry/freeform';
+import { getShapeGeometry, polygonPointsToString } from '../../../../utils/geometry/shapeGeometry';
+import { isShapeAppearanceEligible, resolveShapeAppearance, type ResolvedShapeAppearance } from '../../../../utils/layers/shapeAppearance';
+import { getTrimPathDashProps, resolveTrimPath } from '../../../../utils/geometry/trimPath';
 
 interface ShapePartProps {
   part: CharacterPart;

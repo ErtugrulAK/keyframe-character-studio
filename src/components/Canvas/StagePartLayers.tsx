@@ -8,8 +8,8 @@ import type {
 } from '../../types/animator';
 import type { RuntimeData, BroadcastRuntime, RuntimeTrackState } from '../../types/composition';
 import { PartRenderer } from './renderers/PartRenderer';
-import { evaluateFrame } from '../../utils/evaluateFrame';
-import { validateCritical, hasCriticalErrors } from '../../utils/validateScene';
+import { evaluateFrame } from '../../utils/animation/evaluateFrame';
+import { validateCritical, hasCriticalErrors } from '../../utils/persistence/validateScene';
 import { perfCount } from '../../perf/perfMonitor';
 import {
   buildMattePath,
@@ -33,17 +33,17 @@ import {
   matteMaskId,
   isMatteActive,
   resolveMatteMode,
-} from '../../utils/matte';
-import type { MatteClipPath, MatteMask, MatteGradientStop, MatteImageContent } from '../../utils/matte';
-import { buildLayerMaskDefinition, layerMaskFilterId, layerMaskRenderKeys } from '../../utils/layerMasks';
-import { colorCorrectionFilter, colorCorrectionIds, isEffectOnlyMask, resolveColorCorrection, resolvedParameters } from '../../utils/colorCorrection';
+} from '../../utils/layers/matte';
+import type { MatteClipPath, MatteMask, MatteGradientStop, MatteImageContent } from '../../utils/layers/matte';
+import { buildLayerMaskDefinition, layerMaskFilterId, layerMaskRenderKeys } from '../../utils/layers/layerMasks';
+import { colorCorrectionFilter, colorCorrectionIds, isEffectOnlyMask, resolveColorCorrection, resolvedParameters } from '../../utils/layers/colorCorrection';
 import type { ColorCorrectionRender } from './renderers/PartRenderer';
-import type { LayerMaskSvgDefinition } from '../../utils/layerMasks';
+import type { LayerMaskSvgDefinition } from '../../utils/layers/layerMasks';
 import type { WorldTransform } from '../../types/composition';
-import type { NamedSequenceRuntimeState } from '../../utils/broadcastEngine';
-import { EDITOR_CAMERA_CENTER, getProjectCenter, type CoordinatePoint } from '../../utils/projectCoordinates';
-import { deriveBooleanGeometry } from '../../utils/booleanGeometry';
-import { affineSvgTransform, worldAffineOf } from '../../utils/containerMath';
+import type { NamedSequenceRuntimeState } from '../../utils/animation/broadcastEngine';
+import { EDITOR_CAMERA_CENTER, getProjectCenter, type CoordinatePoint } from '../../utils/geometry/projectCoordinates';
+import { deriveBooleanGeometry } from '../../utils/geometry/booleanGeometry';
+import { affineSvgTransform, worldAffineOf } from '../../utils/geometry/containerMath';
 
 interface StagePartLayersProps {
   sortedParts: CharacterPart[];

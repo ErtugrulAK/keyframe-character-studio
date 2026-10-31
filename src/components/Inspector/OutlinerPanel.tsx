@@ -3,16 +3,16 @@ import { ChevronDown, ChevronRight, Layers, Search, X } from 'lucide-react';
 import { useAnimatorSlice, useAnimatorReader } from '../../context/useAnimator';
 import { useEditorContextMenu } from '../../context/editorContextMenu';
 import type { CharacterPart } from '../../types/animator';
-import { resolveMatteSource } from '../../utils/matte';
-import { projectLayerOrdinals } from '../../utils/layerOrdinal';
-import { reparentBlockReason, type LayerDropPosition } from '../../utils/layerParenting';
-import { relationshipParentId } from '../../utils/partBinding';
+import { resolveMatteSource } from '../../utils/layers/matte';
+import { projectLayerOrdinals } from '../../utils/layers/layerOrdinal';
+import { reparentBlockReason, type LayerDropPosition } from '../../utils/layers/layerParenting';
+import { relationshipParentId } from '../../utils/layers/partBinding';
 import { createLayerParentingActions } from '../../hooks/useLayerParenting';
-import { OUTLINER_COMMAND_EVENT, type OutlinerCommand } from '../../utils/outlinerCommands';
+import { OUTLINER_COMMAND_EVENT, type OutlinerCommand } from '../../utils/layers/outlinerCommands';
 import { OutlinerRow, type OutlinerRowActions } from './OutlinerRow';
 import { useRetainedScrollTop, useRetainedUiState } from '../../hooks/useRetainedUiState';
 import { useRowWindow, type RowViewport } from '../../hooks/useRowWindow';
-import { searchLayers } from '../../utils/layerSearch';
+import { searchLayers } from '../../utils/layers/layerSearch';
 
 /** The row pitch assumed until a mounted row has been measured. */
 const OUTLINER_ROW_PITCH_ESTIMATE = 28;

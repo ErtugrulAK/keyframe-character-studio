@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, Transform } from '../types/animator';
-import { evaluateTransform } from '../utils/evaluateTransform';
-import { getPartBounds, getPartLocalBounds, getPartWorldBounds } from '../utils/bounds';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { getPartBounds, getPartLocalBounds, getPartWorldBounds } from '../utils/geometry/bounds';
 
 const makePart = (type: CharacterPart['type'] = 'custom_rect', overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id: 'bounds', type, name: type, zIndex: 1,

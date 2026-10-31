@@ -14,7 +14,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { usePresets } from '../hooks/usePresets';
 import { DEFAULT_INITIAL_PRESETS } from '../context/initialStateData';
-import { initializeIdCounter } from '../utils/idGenerator';
+import { initializeIdCounter } from '../utils/layers/idGenerator';
 import type { CustomMotionPreset } from '../types/animator';
 
 const STORAGE_KEY = 'keyframe_custom_motion_presets';

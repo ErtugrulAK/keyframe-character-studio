@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { BodyPartType, CharacterPart, ToolType, Track } from '../types/animator';
-import { createCustomPart } from '../utils/partFactory';
+import { createCustomPart } from '../utils/layers/partFactory';
 
 interface UseToolbarOptions {
   tracks: Track[];

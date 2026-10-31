@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mirrorTransform, mirrorChannelValue } from '../utils/mirror';
+import { mirrorTransform, mirrorChannelValue } from '../utils/animation/mirror';
 import type { Transform } from '../types/animator';
 
 const base: Transform = { x: 30, y: -40, rotation: 25, scaleX: 1.2, scaleY: 0.8, opacity: 1 };

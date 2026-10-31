@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { BezierPath, CharacterPart, Track } from '../types/animator';
 import type { ToastOptions } from './useToast';
-import { convertShapeToEditablePath } from '../utils/shapeToPath';
-import { deleteMaskVertex } from '../utils/maskPathCreation';
-import { resolveFreeformPath } from '../utils/freeform';
+import { convertShapeToEditablePath } from '../utils/geometry/shapeToPath';
+import { deleteMaskVertex } from '../utils/geometry/maskPathCreation';
+import { resolveFreeformPath } from '../utils/geometry/freeform';
 
 /** The selected point of an editable path layer (transient editor state, never scene data). */
 export interface PathVertexSelection {

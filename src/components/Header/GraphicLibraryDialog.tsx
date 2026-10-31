@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { useDialogFocusRestoration, useDialogFocusTrap } from '../../hooks/useDialogFocusRestoration';
-import type { LibraryEntrySummary, ProjectLibrary } from '../../utils/projectLibrary';
+import type { LibraryEntrySummary, ProjectLibrary } from '../../utils/persistence/projectLibrary';
 import '../Modal/ConfirmationDialog.css';
 import './GraphicLibraryDialog.css';
 

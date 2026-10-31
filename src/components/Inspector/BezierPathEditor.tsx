@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import type { BezierPath, BezierVertex } from '../../types/animator';
-import { buildBezierPathD } from '../../utils/bezierPath';
-import { generateId } from '../../utils/idGenerator';
-import { MIN_CLOSED_MASK_POINTS, MIN_OPEN_MASK_POINTS } from '../../utils/maskPathCreation';
-import { applyPathOrderEdit, planPathOrderEdit, type PathOrderCommand } from '../../utils/maskPathOrder';
+import { buildBezierPathD } from '../../utils/geometry/bezierPath';
+import { generateId } from '../../utils/layers/idGenerator';
+import { MIN_CLOSED_MASK_POINTS, MIN_OPEN_MASK_POINTS } from '../../utils/geometry/maskPathCreation';
+import { applyPathOrderEdit, planPathOrderEdit, type PathOrderCommand } from '../../utils/geometry/maskPathOrder';
 
 interface BezierPathEditorProps {
   path: BezierPath;

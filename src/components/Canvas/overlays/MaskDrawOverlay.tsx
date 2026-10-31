@@ -1,17 +1,17 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { BezierPath, CharacterPart, Transform } from '../../../types/animator';
-import type { WorldAffine } from '../../../utils/containerMath';
-import type { PathPoint } from '../../../utils/bezierPath';
-import { applyAffine } from '../../../utils/containerMath';
-import { buildLayerMaskPathD } from '../../../utils/layerMasks';
-import { resolveMaskPathFrame } from '../../../utils/maskPathEditing';
-import { createEllipseMaskPath, createRectangleMaskPath, MIN_CLOSED_MASK_POINTS } from '../../../utils/maskPathCreation';
-import { addPenAnchor, dragPenTangent, penAnchorsToPath, penAnchorIsSmooth, type PenAnchor } from '../../../utils/penDraft';
+import type { WorldAffine } from '../../../utils/geometry/containerMath';
+import type { PathPoint } from '../../../utils/geometry/bezierPath';
+import { applyAffine } from '../../../utils/geometry/containerMath';
+import { buildLayerMaskPathD } from '../../../utils/layers/layerMasks';
+import { resolveMaskPathFrame } from '../../../utils/geometry/maskPathEditing';
+import { createEllipseMaskPath, createRectangleMaskPath, MIN_CLOSED_MASK_POINTS } from '../../../utils/geometry/maskPathCreation';
+import { addPenAnchor, dragPenTangent, penAnchorsToPath, penAnchorIsSmooth, type PenAnchor } from '../../../utils/geometry/penDraft';
 import { PEN_DRAG_THRESHOLD_PX } from '../../../hooks/useFreeformDraw';
 import type { MaskDrawShape } from '../../../hooks/useMaskEditing';
 import type { DraftHistoryOwner } from '../../../context/AnimatorContext';
-import { isEditableElement } from '../../../utils/keyboardFocus';
-import { EDITOR_CAMERA_CENTER } from '../../../utils/projectCoordinates';
+import { isEditableElement } from '../../../utils/editor/keyboardFocus';
+import { EDITOR_CAMERA_CENTER } from '../../../utils/geometry/projectCoordinates';
 
 /** A drag shorter than this (CSS px, on either axis) is a degenerate box: nothing is created. */
 const MIN_BOX_PX = 4;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, Transform } from '../types/animator';
-import { evaluateTransform } from '../utils/evaluateTransform';
-import { getLayerWorldBounds } from '../utils/layerGrouping';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { getLayerWorldBounds } from '../utils/layers/layerGrouping';
 import {
   collectArrangeTargets,
   planAlign,
@@ -11,7 +11,7 @@ import {
   planRotate,
   planTranslate,
   type ArrangePlan,
-} from '../utils/vectorArrange';
+} from '../utils/layers/vectorArrange';
 
 /**
  * The vector arrange authority, measured in world space.

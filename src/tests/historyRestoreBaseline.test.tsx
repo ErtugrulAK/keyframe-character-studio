@@ -3,7 +3,7 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useHistory, type HistoryDocumentState } from '../hooks/useHistory';
 import { useSerialization } from '../hooks/useSerialization';
-import { AUTOSAVE_STORAGE_KEY } from '../utils/constants';
+import { AUTOSAVE_STORAGE_KEY } from '../utils/editor/constants';
 import type { CharacterPart, MotionTemplate, Track } from '../types/animator';
 import type { SceneCoordinateSystem } from '../types/composition';
 

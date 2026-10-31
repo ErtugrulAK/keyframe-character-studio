@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import type { CharacterPart, CustomMotionPreset } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
-import { builtinPresetToCustomKeyframes } from '../../../../utils/presetConversion';
+import { builtinPresetToCustomKeyframes } from '../../../../utils/animation/presetConversion';
 import type { SavePresetInput, UpdatePresetInput } from '../../../../hooks/usePresets';
-import { buildPresetExportPayload, validatePresetImportPayload, mergeImportedPresets, isDefaultPresetId } from '../../../../utils/presetExportImport';
+import { buildPresetExportPayload, validatePresetImportPayload, mergeImportedPresets, isDefaultPresetId } from '../../../../utils/animation/presetExportImport';
 
 interface TransformInOutPresetCardProps {
   selectedPart: CharacterPart;

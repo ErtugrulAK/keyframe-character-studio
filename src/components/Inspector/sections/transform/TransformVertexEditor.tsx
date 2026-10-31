@@ -3,7 +3,7 @@ import type { BezierPath, CharacterPart, FreeformPoint, Transform } from '../../
 import type { SceneCoordinateSystem } from '../../../../types/composition';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { StyleCard } from '../style/StyleCard';
-import { freeformVertexToDisplay, freeformVertexToLocal, resolveFreeformPath } from '../../../../utils/freeform';
+import { freeformVertexToDisplay, freeformVertexToLocal, resolveFreeformPath } from '../../../../utils/geometry/freeform';
 
 interface TransformVertexEditorProps {
   selectedPart: CharacterPart;

@@ -4,9 +4,9 @@ import { useAnimator } from '../../context/useAnimator';
 import { useEditorContextMenu } from '../../context/editorContextMenu';
 import type { BezierPath, CharacterPart, Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
-import { parseElementDropPayload } from '../../utils/elementDropPayload';
-import { getPartBounds } from '../../utils/bounds';
-import type { CornerBounds } from '../../utils/cornerResize';
+import { parseElementDropPayload } from '../../utils/editor/elementDropPayload';
+import { getPartBounds } from '../../utils/geometry/bounds';
+import type { CornerBounds } from '../../utils/geometry/cornerResize';
 import {
   CORNER_BY_SCALE_MODE,
   isCropGesture,
@@ -23,10 +23,10 @@ import {
   worldAffineOf,
   worldToContainerLocal,
   type WorldAffine,
-} from '../../utils/containerMath';
-import { stackingOrder } from '../../utils/stackingOrder';
-import { resolveMarqueeSelection, resolveStageSelectionTarget } from '../../utils/layerGrouping';
-import { collectArrangeTargets } from '../../utils/vectorArrange';
+} from '../../utils/geometry/containerMath';
+import { stackingOrder } from '../../utils/layers/stackingOrder';
+import { resolveMarqueeSelection, resolveStageSelectionTarget } from '../../utils/layers/layerGrouping';
+import { collectArrangeTargets } from '../../utils/layers/vectorArrange';
 import {
   collectLayerSnapCandidates,
   collectStageSnapCandidates,
@@ -35,8 +35,8 @@ import {
   SNAP_THRESHOLD_SCREEN_PX,
   type SnapGuide,
   type SnapLine,
-} from '../../utils/layoutGeometry';
-import type { PartWorldBounds } from '../../utils/bounds';
+} from '../../utils/geometry/layoutGeometry';
+import type { PartWorldBounds } from '../../utils/geometry/bounds';
 import {
   STAGE_CROP_HANDLES,
   editorPointToStageSpace,
@@ -44,31 +44,31 @@ import {
   isStagePointInsideRect,
   stageCropHandleCenters,
   stageSpaceToEditorRect,
-} from '../../utils/stageCrop';
-import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
-import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter, type CoordinatePoint } from '../../utils/projectCoordinates';
-import { REFIT_UNTOUCHED_CAMERA_COMMAND, REMEASURE_STAGE_BOX_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT } from '../../utils/workspaceLayout';
-import { normalizeFreeformPoints } from '../../utils/freeform';
-import { buildBezierPathD } from '../../utils/bezierPath';
-import { penAnchorsToPath } from '../../utils/penDraft';
-import { resolveBondGroup } from '../../utils/partBinding';
-import { lockedLayerIds, lockedLayersRefusal } from '../../utils/layerLocks';
+} from '../../utils/geometry/stageCrop';
+import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/geometry/viewportMath';
+import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter, type CoordinatePoint } from '../../utils/geometry/projectCoordinates';
+import { REFIT_UNTOUCHED_CAMERA_COMMAND, REMEASURE_STAGE_BOX_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT } from '../../utils/editor/workspaceLayout';
+import { normalizeFreeformPoints } from '../../utils/geometry/freeform';
+import { buildBezierPathD } from '../../utils/geometry/bezierPath';
+import { penAnchorsToPath } from '../../utils/geometry/penDraft';
+import { resolveBondGroup } from '../../utils/layers/partBinding';
+import { lockedLayerIds, lockedLayersRefusal } from '../../utils/layers/layerLocks';
 import { useFreeformDraw, type FreeformFinishReason } from '../../hooks/useFreeformDraw';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
 import { CanvasCoordinateOverlay } from './overlays/CanvasCoordinateOverlay';
 import { CanvasCoordinateReadout } from './overlays/CanvasCoordinateReadout';
 import { FreeformTangentOverlay } from './overlays/FreeformTangentOverlay';
-import { isFreeformTangentOverlayEligible } from '../../utils/freeformTangentEligibility';
+import { isFreeformTangentOverlayEligible } from '../../utils/geometry/freeformTangentEligibility';
 import { ShapeCreationPreview } from './ShapeCreationPreview';
 import { SelectionGizmo } from './SelectionGizmo';
 import { MaskPathOverlay } from './overlays/MaskPathOverlay';
 import { MaskDrawOverlay, type MaskPenDraftState } from './overlays/MaskDrawOverlay';
-import { insertMaskVertex, nearestMaskPathSegment } from '../../utils/maskPathCreation';
-import { evaluateLayerMasks } from '../../utils/evaluateLayerMasks';
-import { resolveMaskEditBlock, resolveMaskPathFrame } from '../../utils/maskPathEditing';
+import { insertMaskVertex, nearestMaskPathSegment } from '../../utils/geometry/maskPathCreation';
+import { evaluateLayerMasks } from '../../utils/animation/evaluateLayerMasks';
+import { resolveMaskEditBlock, resolveMaskPathFrame } from '../../utils/geometry/maskPathEditing';
 import { StagePartLayers } from './StagePartLayers';
 import { EditTargetStrip } from './overlays/EditTargetStrip';
-import { resolveEditTarget } from '../../utils/editTarget';
+import { resolveEditTarget } from '../../utils/layers/editTarget';
 import { Sparkles } from 'lucide-react';
 import './StageCanvas.css';
 

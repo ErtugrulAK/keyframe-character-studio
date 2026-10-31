@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateFrame } from '../utils/evaluateFrame';
-import { makeEmptyChannels } from '../utils/defaults';
+import { evaluateFrame } from '../utils/animation/evaluateFrame';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 import type { CharacterPart, Track } from '../types/animator';
 
 const layer: CharacterPart = {

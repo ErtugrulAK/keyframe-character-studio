@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Unlink } from 'lucide-react';
 import type { CharacterPart } from '../../types/animator';
 import { useLayerParenting } from '../../hooks/useLayerParenting';
-import { relationshipDescendantIds, reparentBlockReason } from '../../utils/layerParenting';
+import { relationshipDescendantIds, reparentBlockReason } from '../../utils/layers/layerParenting';
 import type { Track } from '../../types/animator';
 
 interface LayerParentFieldProps {

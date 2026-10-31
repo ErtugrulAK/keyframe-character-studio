@@ -4,8 +4,8 @@ import { ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Lock, Plus, Tv, Un
 import type { AnimationChannel, CharacterPart, LayerMaskChannel, LayerMaskPathChannel, Track, TrackChannel } from '../../types/animator';
 import { laneContextOf, resolveLaneRows } from './timelineLaneLayout';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
-import { resolveAdjacentKeyframeFrame, resolveChannelAnimationState, resolveChannelKeyframeFrames, resolveLayerKeyframeFrames } from '../../utils/timelineMetrics';
-import { resolveAuthoredBasePose } from '../../utils/channelKeyframeGroups';
+import { resolveAdjacentKeyframeFrame, resolveChannelAnimationState, resolveChannelKeyframeFrames, resolveLayerKeyframeFrames } from '../../utils/editor/timelineMetrics';
+import { resolveAuthoredBasePose } from '../../utils/animation/channelKeyframeGroups';
 import { InlineRename } from '../Shared/InlineRename';
 
 interface TrackOutlinerRowProps {

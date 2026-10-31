@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createFrameEase } from '../utils/workspaceLayout';
+import { createFrameEase } from '../utils/editor/workspaceLayout';
 
 /**
  * `createFrameEase` is the shared contract behind every eased workspace edge: one

@@ -6,12 +6,12 @@
  */
 
 import { describe, test, expect } from 'vitest';
-import { groupChannelKeyframesByFrame, buildTransformSnapshot, DISPLAY_CHANNELS } from '../utils/channelKeyframeGroups';
+import { groupChannelKeyframesByFrame, buildTransformSnapshot, DISPLAY_CHANNELS } from '../utils/animation/channelKeyframeGroups';
 import {
   addPropertyKeyframeMutator,
   deletePropertyKeyframeMutator,
   updatePropertyKeyframeFrameMutator,
-} from '../utils/trackMutations';
+} from '../utils/animation/trackMutations';
 import type { Track, TrackChannel, PropertyKeyframe } from '../types/animator';
 
 function makeTrack(channels: Partial<Record<TrackChannel, PropertyKeyframe[]>>): Track {

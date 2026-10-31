@@ -14,8 +14,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { interpolateChannel } from '../utils/defaults';
-import { applyTemporalHandlesToSegmentMutator } from '../utils/trackMutations';
+import { interpolateChannel } from '../utils/animation/defaults';
+import { applyTemporalHandlesToSegmentMutator } from '../utils/animation/trackMutations';
 import type { PropertyKeyframe } from '../types/animator';
 
 const EASE_IN_OUT = { out: { x: 0.42, y: 0 }, in: { x: 0.58, y: 1 } };

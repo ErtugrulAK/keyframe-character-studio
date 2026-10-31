@@ -1,9 +1,9 @@
 import React from 'react';
-import type { PathOrderCommand } from '../../../utils/maskPathOrder';
+import type { PathOrderCommand } from '../../../utils/geometry/maskPathOrder';
 import type { BezierPath, CharacterPart, Track, Transform } from '../../../types/animator';
 import { StyleColorSection } from './style/StyleColorSection';
 import { StyleAppearanceSection } from './style/StyleAppearanceSection';
-import { isShapeAppearanceEligible } from '../../../utils/shapeAppearance';
+import { isShapeAppearanceEligible } from '../../../utils/layers/shapeAppearance';
 import { StyleTextFields } from './style/StyleTextFields';
 import { StyleClonerSection } from './style/StyleClonerSection';
 import { StyleParticleSection } from './style/StyleParticleSection';
@@ -15,7 +15,7 @@ import type { SceneCoordinateSystem } from '../../../types/composition';
 import { StyleMatteSection } from './style/StyleMatteSection';
 import type { MaskDrawShape } from '../../../hooks/useMaskEditing';
 import { TrimPathSection, type TrimPathChannel } from './style/TrimPathSection';
-import { isTrimPathEligible } from '../../../utils/trimPath';
+import { isTrimPathEligible } from '../../../utils/geometry/trimPath';
 
 interface StyleTabProps {
   selectedPart: CharacterPart;

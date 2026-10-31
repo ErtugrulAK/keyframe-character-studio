@@ -1,6 +1,6 @@
 import type { SceneData } from '../types/composition';
 import type { OGrafPublicColorField, OGrafPublicImageField, OGrafPublicTextField } from './types';
-import { TEXT_BOX_CENTRE_EM } from '../utils/textOrigin';
+import { TEXT_BOX_CENTRE_EM } from '../utils/geometry/textOrigin';
 import {
   runtimeCompareByStackingOrder,
   runtimeDescribePaint,

@@ -4,8 +4,8 @@ import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { ColorPickerPopover } from '../../inputs/ColorPickerPopover';
 import { StyleCard } from './StyleCard';
 import { StyleEffectsSection } from './StyleEffectsSection';
-import { KCS_TEXT_FONT_FAMILIES } from '../../../../utils/textFonts';
-import { defaultStrokeWidth } from '../../../../utils/shapeAppearance';
+import { KCS_TEXT_FONT_FAMILIES } from '../../../../utils/layers/textFonts';
+import { defaultStrokeWidth } from '../../../../utils/layers/shapeAppearance';
 
 interface StyleTextFieldsProps {
   selectedPart: CharacterPart;

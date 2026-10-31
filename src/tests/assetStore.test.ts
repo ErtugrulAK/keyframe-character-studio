@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createAssetStore, createMemoryAssetBackend, isAssetRef } from '../utils/assetStore';
+import { createAssetStore, createMemoryAssetBackend, isAssetRef } from '../utils/persistence/assetStore';
 
 const photo = `data:image/png;base64,${'A'.repeat(4096)}`;
 const other = `data:image/png;base64,${'B'.repeat(4096)}`;

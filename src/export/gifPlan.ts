@@ -6,7 +6,7 @@
  * scene, so the browser only has to rasterise and encode what this module
  * decided.
  *
- * FPS/TIMEBASE CONTRACT (see `utils/timebase`): the requested rate is the
+ * FPS/TIMEBASE CONTRACT (see `utils/animation/timebase`): the requested rate is the
  * sampling grid, not a promise that GIF can display that many distinct frames.
  * GIF stores whole centiseconds; browsers expand delays <= 1cs to 100ms.
  * Displayed frames therefore receive at least 2cs, cumulatively rounded over
@@ -18,7 +18,7 @@
 import type { SceneData } from '../types/composition';
 import type { OGrafExportDiagnostic } from '../ograf/types';
 import { validateSceneForOGraf } from '../ograf/validation';
-import { frameToSeconds, sanitizeProjectFps, secondsToFrame } from '../utils/timebase';
+import { frameToSeconds, sanitizeProjectFps, secondsToFrame } from '../utils/animation/timebase';
 
 /** Requested sampling rates; the encoded playback plan respects GIF timing. */
 export const GIF_EXPORT_FPS_OPTIONS = [10, 12, 15, 20, 24, 25, 30, 50, 60, 120];

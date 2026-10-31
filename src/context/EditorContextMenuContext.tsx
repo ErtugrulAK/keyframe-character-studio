@@ -1,19 +1,19 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { isConvertibleShapeType, shapeToPathBlockReason } from '../utils/shapeToPath';
+import { isConvertibleShapeType, shapeToPathBlockReason } from '../utils/geometry/shapeToPath';
 import { useAnimatorSlice } from './useAnimator';
 import { EditorContextMenuContext, type ContextMenuRequest } from './editorContextMenu';
 import { useBooleanAuthoring } from '../hooks/useBooleanAuthoring';
 import { useLayerGrouping } from '../hooks/useLayerGrouping';
 import { EditorContextMenu, type ContextMenuGroup } from '../components/Canvas/EditorContextMenu';
-import { isBlockingModalOpen } from '../utils/modalBoundary';
-import { isEditableElement } from '../utils/keyboardFocus';
-import { detectShortcutPlatform, formatShortcutHint, type ShortcutCommandId } from '../utils/shortcuts';
-import { selectAllLayers } from '../utils/layerSelection';
-import { lockedLayerIds } from '../utils/layerLocks';
+import { isBlockingModalOpen } from '../utils/editor/modalBoundary';
+import { isEditableElement } from '../utils/editor/keyboardFocus';
+import { detectShortcutPlatform, formatShortcutHint, type ShortcutCommandId } from '../utils/editor/shortcuts';
+import { selectAllLayers } from '../utils/layers/layerSelection';
+import { lockedLayerIds } from '../utils/layers/layerLocks';
 import { useLayerParenting } from '../hooks/useLayerParenting';
-import { requestOutlinerCommand } from '../utils/outlinerCommands';
-import { relationshipParentId } from '../utils/partBinding';
-import { deletionCommandLabel, describeDeletionScope } from '../utils/partDeletion';
+import { requestOutlinerCommand } from '../utils/layers/outlinerCommands';
+import { relationshipParentId } from '../utils/layers/partBinding';
+import { deletionCommandLabel, describeDeletionScope } from '../utils/layers/partDeletion';
 
 /**
  * The one right-click menu of the editor, shared by the stage and the outliner.

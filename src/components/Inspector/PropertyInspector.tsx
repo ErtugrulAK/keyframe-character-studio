@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { outlinerHeightBounds, resolveOutlinerHeight } from '../../utils/workspaceLayout';
+import { outlinerHeightBounds, resolveOutlinerHeight } from '../../utils/editor/workspaceLayout';
 import { OutlinerPanel } from './OutlinerPanel';
 import { useRetainedUiState } from '../../hooks/useRetainedUiState';
 import { DetailsPanel } from './DetailsPanel';

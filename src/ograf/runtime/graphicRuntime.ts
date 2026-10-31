@@ -16,9 +16,9 @@
  * live outside it, because they are erased.
  */
 import type { Transform } from '../../types/animator';
-import type { createWorldAffineAlgebra, WorldAffine } from '../../utils/containerMath';
-import type { createShapeAppearance } from '../../utils/shapeAppearance';
-import type { describePaint, describeText } from '../../utils/drawDescriptor';
+import type { createWorldAffineAlgebra, WorldAffine } from '../../utils/geometry/containerMath';
+import type { createShapeAppearance } from '../../utils/layers/shapeAppearance';
+import type { describePaint, describeText } from '../../utils/layers/drawDescriptor';
 
 export interface RuntimePoint {
   x: number;
@@ -161,17 +161,17 @@ export interface GraphicRuntimeEnvironment {
   moduleUrl: string;
   /** The element the graphic extends: `HTMLElement` in a host. */
   elementBase: typeof HTMLElement;
-  /** The text box centre below the baseline, in em (`utils/textOrigin`). */
+  /** The text box centre below the baseline, in em (`utils/geometry/textOrigin`). */
   textBoxCentreEm: number;
-  /** The editor's paint order (`utils/stackingOrder`). */
+  /** The editor's paint order (`utils/layers/stackingOrder`). */
   compareByStackingOrder: (a: { zIndex: number }, b: { zIndex: number }) => number;
-  /** The editor's matte precedence (`utils/matte`). */
+  /** The editor's matte precedence (`utils/layers/matte`). */
   resolveMatteSource: (part: Pick<RuntimeLayer, 'matte' | 'trackMatte'>) => { sourceId: string; kind: 'track' | 'legacy' } | undefined;
-  /** The editor's world-affine algebra (`utils/containerMath`). */
+  /** The editor's world-affine algebra (`utils/geometry/containerMath`). */
   affine: ReturnType<typeof createWorldAffineAlgebra>;
-  /** The editor's appearance rules (`utils/shapeAppearance`). */
+  /** The editor's appearance rules (`utils/layers/shapeAppearance`). */
   resolveShapeAppearance: (part: RuntimeLayer) => ReturnType<ReturnType<typeof createShapeAppearance>['resolveShapeAppearance']>;
-  /** What a layer paints and writes (`utils/drawDescriptor`). */
+  /** What a layer paints and writes (`utils/layers/drawDescriptor`). */
   describePaint: typeof describePaint;
   describeText: typeof describeText;
 }

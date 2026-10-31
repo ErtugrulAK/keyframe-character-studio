@@ -11,7 +11,7 @@ import {
   resolveColorCorrection,
   resolvedParameters,
   type ColorCorrectionField,
-} from '../../../../utils/colorCorrection';
+} from '../../../../utils/layers/colorCorrection';
 
 interface ColorCorrectionCardProps {
   part: CharacterPart;

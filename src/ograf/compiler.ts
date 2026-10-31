@@ -1,5 +1,5 @@
 import type { SceneData } from '../types/composition';
-import { foldDiacritics, isSafePackageRelativePath, sanitizeFilenameComponent } from '../utils/pathSafety';
+import { foldDiacritics, isSafePackageRelativePath, sanitizeFilenameComponent } from '../utils/persistence/pathSafety';
 import { validateSceneForOGraf } from './validation';
 import { describeOGrafValueForDiagnostics } from './diagnostics';
 import {

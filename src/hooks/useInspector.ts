@@ -1,9 +1,9 @@
 import type { CharacterPart, Track, Transform, TrackChannel } from '../types/animator';
-import { affineOfTransform, composeAffine, composeWorldTransform, withWorldAffine, worldAffineOf, worldToContainerLocal } from '../utils/containerMath';
-import { resolveBoundPartners } from '../utils/partBinding';
-import { generateId } from '../utils/idGenerator';
-import { resolveAuthoredBasePose } from '../utils/channelKeyframeGroups';
-import { migrateLegacyKeyframesToCanonical, migrateTrackLegacyKeyframes } from '../utils/trackMutations';
+import { affineOfTransform, composeAffine, composeWorldTransform, withWorldAffine, worldAffineOf, worldToContainerLocal } from '../utils/geometry/containerMath';
+import { resolveBoundPartners } from '../utils/layers/partBinding';
+import { generateId } from '../utils/layers/idGenerator';
+import { resolveAuthoredBasePose } from '../utils/animation/channelKeyframeGroups';
+import { migrateLegacyKeyframesToCanonical, migrateTrackLegacyKeyframes } from '../utils/animation/trackMutations';
 
 interface UseInspectorOptions {
   selectedPartId: string | null;

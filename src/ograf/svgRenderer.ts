@@ -1,18 +1,18 @@
 import { describeOGrafValueForDiagnostics } from './diagnostics';
-import { textBaselineOffset } from '../utils/textOrigin';
+import { textBaselineOffset } from '../utils/geometry/textOrigin';
 import type { CharacterPart } from '../types/animator';
 import type { EvaluatedLayer, LayerContent } from '../types/composition';
-import { buildBezierPathD } from '../utils/bezierPath';
-import { buildFreeformPath } from '../utils/freeform';
-import { buildLayerMaskDefinition, layerMaskFilterId } from '../utils/layerMasks';
-import { alphaMasks, colorCorrectionFilter, colorCorrectionIds, resolveColorCorrection, resolvedParameters } from '../utils/colorCorrection';
-import { resolveMatteSource } from '../utils/matte';
-import { stackingOrder } from '../utils/stackingOrder';
-import { getShapeGeometry, polygonPointsToString } from '../utils/shapeGeometry';
-import { resolveShapeAppearance } from '../utils/shapeAppearance';
-import { describePaint, describeText } from '../utils/drawDescriptor';
-import { getTrimPathDashProps, resolveTrimPath } from '../utils/trimPath';
-import { affineTrsReading, worldAffineOf } from '../utils/containerMath';
+import { buildBezierPathD } from '../utils/geometry/bezierPath';
+import { buildFreeformPath } from '../utils/geometry/freeform';
+import { buildLayerMaskDefinition, layerMaskFilterId } from '../utils/layers/layerMasks';
+import { alphaMasks, colorCorrectionFilter, colorCorrectionIds, resolveColorCorrection, resolvedParameters } from '../utils/layers/colorCorrection';
+import { resolveMatteSource } from '../utils/layers/matte';
+import { stackingOrder } from '../utils/layers/stackingOrder';
+import { getShapeGeometry, polygonPointsToString } from '../utils/geometry/shapeGeometry';
+import { resolveShapeAppearance } from '../utils/layers/shapeAppearance';
+import { describePaint, describeText } from '../utils/layers/drawDescriptor';
+import { getTrimPathDashProps, resolveTrimPath } from '../utils/geometry/trimPath';
+import { affineTrsReading, worldAffineOf } from '../utils/geometry/containerMath';
 import type { OGrafEvaluatedScene } from './evaluation';
 
 interface OGrafSvgRenderOptions {

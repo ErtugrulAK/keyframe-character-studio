@@ -1,8 +1,8 @@
 import React from 'react';
 import type { BodyPartType } from '../../types/animator';
-import { getShapeGeometry, polygonPointsToString } from '../../utils/shapeGeometry';
-import { getShapeCreationPlacement, type ShapeCreationBounds } from '../../utils/viewportMath';
-import type { CoordinatePoint } from '../../utils/projectCoordinates';
+import { getShapeGeometry, polygonPointsToString } from '../../utils/geometry/shapeGeometry';
+import { getShapeCreationPlacement, type ShapeCreationBounds } from '../../utils/geometry/viewportMath';
+import type { CoordinatePoint } from '../../utils/geometry/projectCoordinates';
 
 interface ShapeCreationPreviewProps {
   type: BodyPartType;

@@ -11,7 +11,7 @@ import {
   rgbToHsv,
   toHexColor,
   type HsvColor,
-} from '../../../utils/colorUtils';
+} from '../../../utils/layers/colorUtils';
 
 interface ColorPickerPopoverProps {
   label: string;

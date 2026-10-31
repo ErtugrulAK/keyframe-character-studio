@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateFrame } from '../utils/evaluateFrame';
+import { evaluateFrame } from '../utils/animation/evaluateFrame';
 import type { CharacterPart, Track } from '../types/animator';
 import type { RuntimeData } from '../types/composition';
 

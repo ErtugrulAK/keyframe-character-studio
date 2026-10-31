@@ -1,9 +1,9 @@
 import type { CharacterPart, Track } from '../types/animator';
 import { useAnimatorAuthority } from '../context/useAnimator';
-import { planLayerDrop, planReparent, type LayerDropPosition } from '../utils/layerParenting';
-import type { RebasedChild } from '../utils/layerGrouping';
-import { relationshipParentId } from '../utils/partBinding';
-import { lockedLayersRefusal, lockedOutcomeRefusal } from '../utils/layerLocks';
+import { planLayerDrop, planReparent, type LayerDropPosition } from '../utils/layers/layerParenting';
+import type { RebasedChild } from '../utils/layers/layerGrouping';
+import { relationshipParentId } from '../utils/layers/partBinding';
+import { lockedLayersRefusal, lockedOutcomeRefusal } from '../utils/layers/layerLocks';
 import type { ToastOptions } from './useToast';
 
 type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
@@ -11,7 +11,7 @@ type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?
 /**
  * The one layer-parenting authority. The layer tree's drag and drop, its
  * keyboard commands, the context menu and the Inspector's Parent field all call
- * these actions; each plans with the pure `utils/layerParenting` helpers and
+ * these actions; each plans with the pure `utils/layers/layerParenting` helpers and
  * writes once inside a batch interaction, so one user action is one undo step.
  * A refused change writes nothing and says why.
  */

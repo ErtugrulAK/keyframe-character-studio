@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
 import type { CharacterPart, Track, TrackChannel } from '../types/animator';
-import { generateId } from '../utils/idGenerator';
-import { makeEmptyChannels } from '../utils/defaults';
-import { mirrorChannelValue, mirrorTransform, type MirrorAxis } from '../utils/mirror';
-import { cloneAnimationOntoTarget } from '../utils/animationTransfer';
-import { getGroupDescendants } from '../utils/layerGrouping';
+import { generateId } from '../utils/layers/idGenerator';
+import { makeEmptyChannels } from '../utils/animation/defaults';
+import { mirrorChannelValue, mirrorTransform, type MirrorAxis } from '../utils/animation/mirror';
+import { cloneAnimationOntoTarget } from '../utils/animation/animationTransfer';
+import { getGroupDescendants } from '../utils/layers/layerGrouping';
 
 interface UseClipboardOptions {
   characterParts: CharacterPart[];

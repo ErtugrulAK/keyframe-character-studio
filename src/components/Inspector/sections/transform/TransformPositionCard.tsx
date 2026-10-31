@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Transform } from '../../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../../types/composition';
-import { getPositionDisplayScale } from '../../../../utils/coordinateDisplay';
+import { getPositionDisplayScale } from '../../../../utils/editor/coordinateDisplay';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 
 interface TransformPositionCardProps {

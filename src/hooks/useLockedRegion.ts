@@ -14,7 +14,7 @@ const CONTROLS = 'input, select, textarea, button';
  * own reason keeps that.
  *
  * This is the VISIBLE half of the lock only; the write path refuses every
- * change of a locked layer on its own (`utils/layerLocks`).
+ * change of a locked layer on its own (`utils/layers/layerLocks`).
  */
 export const useLockedRegion = (ref: React.RefObject<HTMLElement | null>, active: boolean): void => {
   useLayoutEffect(() => {

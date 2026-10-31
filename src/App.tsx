@@ -11,7 +11,7 @@ import { PropertyInspector } from './components/Inspector/PropertyInspector';
 import { SequencerTimeline } from './components/Timeline/SequencerTimeline';
 import { LiveDirectorPanel } from './components/Broadcast/LiveDirectorPanel';
 import { useDockedPanelEdge } from './hooks/useDockedPanelEdge';
-import { REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, closeDocksForNarrowStage, isPhoneLayout } from './utils/workspaceLayout';
+import { REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, closeDocksForNarrowStage, isPhoneLayout } from './utils/editor/workspaceLayout';
 
 import './kcsEditorTheme.css';
 

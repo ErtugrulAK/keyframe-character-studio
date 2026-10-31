@@ -1,11 +1,11 @@
 import React from 'react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 
-import { getPartLocalBounds } from '../../../utils/bounds';
-import type { CornerBounds } from '../../../utils/cornerResize';
-import { applyAffine, affineSvgTransform, type WorldAffine } from '../../../utils/containerMath';
-import { getTransformGizmoMetrics } from '../../../utils/transformGizmoMetrics';
-import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
+import { getPartLocalBounds } from '../../../utils/geometry/bounds';
+import type { CornerBounds } from '../../../utils/geometry/cornerResize';
+import { applyAffine, affineSvgTransform, type WorldAffine } from '../../../utils/geometry/containerMath';
+import { getTransformGizmoMetrics } from '../../../utils/geometry/transformGizmoMetrics';
+import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/geometry/projectCoordinates';
 
 export type ScaleMode =
   | 'scale_corner_tl'
@@ -78,7 +78,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   outputOrigin = EDITOR_CAMERA_CENTER,
 }) => {
   // A geometryless container (a layer group) owns no geometry: without the
-  // aggregate box its caller measured (`utils/selectionFrame`), there is nothing
+  // aggregate box its caller measured (`utils/geometry/selectionFrame`), there is nothing
   // to draw. Fabricating a frame out of `getPartLocalBounds`'s placeholder square
   // is what put a stray empty selection square on the stage.
   if (selectedPart.isGroup === true && overrideBounds === undefined) return null;

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { CustomMotionPreset, CustomMotionPresetKeyframe } from '../types/animator';
 import { DEFAULT_INITIAL_PRESETS } from '../context/initialStateData';
-import { generateId } from '../utils/idGenerator';
+import { generateId } from '../utils/layers/idGenerator';
 
 const STORAGE_KEY = 'keyframe_custom_motion_presets';
 

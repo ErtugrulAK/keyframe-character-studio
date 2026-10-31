@@ -5,7 +5,7 @@ import {
   SHAPE_ICON_MAP,
   SHAPE_ICON_SIZE,
   SHAPE_ICON_STROKE_WIDTH,
-} from '../../../utils/shapeIconMap';
+} from '../../../utils/editor/shapeIconMap';
 
 type ShapeIcon = React.ComponentType<{
   size?: number;

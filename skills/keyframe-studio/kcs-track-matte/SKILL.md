@@ -447,7 +447,7 @@ opacity, easing?` — `sampleCustomPreset` linear interpoler (easing veri olarak
 
 ### Builtin → Custom dönüşümü
 
-`src/utils/presetConversion.ts`: builtin animasyon mevcut public runtime üzerinden deterministik
+`src/utils/animation/presetConversion.ts`: builtin animasyon mevcut public runtime üzerinden deterministik
 noktalarda (0/0.25/0.5/0.75/1) örneklenir → `CustomMotionPresetKeyframe[]`. Kaydedilen preset
 builtin ID'den BAĞIMSIZ (runtime'ta id referansı yok); sonra builtin/part değişse bile kayıtlı
 custom mutasyona uğramaz. Representative builtin-vs-custom eşleşmesi test'li (progress 0/0.5/1 exact).
@@ -873,8 +873,8 @@ interface Track {
 }
 ```
 
-- `BezierPath` is authored and rendered through `src/utils/bezierPath.ts`; legacy freeform `points` remain an additive import/export fallback.
-- `LayerMask[]` is ordered and evaluated by `src/utils/layerMasks.ts`. `add` masks may share a definition; subtract/intersect/difference operations remain explicit nested SVG masks.
+- `BezierPath` is authored and rendered through `src/utils/geometry/bezierPath.ts`; legacy freeform `points` remain an additive import/export fallback.
+- `LayerMask[]` is ordered and evaluated by `src/utils/layers/layerMasks.ts`. `add` masks may share a definition; subtract/intersect/difference operations remain explicit nested SVG masks.
 - `TrackMatteV2` stores a source layer relationship, alpha/luminance mode, inversion, enabled state, and source visibility. Existing `PartMatte` rendering remains the compatibility authority for legacy scenes.
 - `maskChannels` use the canonical timeline channel mutators and the shared `interpolateChannel` evaluator.
 - SceneData version 2 preserves V6 fields. `migrateSceneLayerV6` normalizes imported paths and masks while retaining legacy fields.

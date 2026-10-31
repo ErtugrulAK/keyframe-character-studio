@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createCustomPart } from '../utils/partFactory';
+import { createCustomPart } from '../utils/layers/partFactory';
 
 describe('PartFactory Utility', () => {
   it('creates a standard part and track', () => {

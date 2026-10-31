@@ -1,11 +1,11 @@
 import { useAnimator } from '../context/useAnimator';
 import { layerMaskChannel } from '../types/animator';
 import type { CharacterPart, LayerMask, LayerMaskChannel } from '../types/animator';
-import { evaluateLayerMasks } from '../utils/evaluateLayerMasks';
-import { authorPropertyValueAtFrameMutator } from '../utils/trackMutations';
-import { isShapeAppearanceEligible, updateShapeAppearance, type ShapeAppearancePatch } from '../utils/shapeAppearance';
-import { isTrimPathEligible } from '../utils/trimPath';
-import { updateTrimPath, type TrimPathAuthoringPatch } from '../utils/trimPathAuthoring';
+import { evaluateLayerMasks } from '../utils/animation/evaluateLayerMasks';
+import { authorPropertyValueAtFrameMutator } from '../utils/animation/trackMutations';
+import { isShapeAppearanceEligible, updateShapeAppearance, type ShapeAppearancePatch } from '../utils/layers/shapeAppearance';
+import { isTrimPathEligible } from '../utils/geometry/trimPath';
+import { updateTrimPath, type TrimPathAuthoringPatch } from '../utils/geometry/trimPathAuthoring';
 
 /**
  * The one authored-property write path for the selected part.

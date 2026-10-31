@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
 import type { CharacterPart, PropertyKeyframe, Track, TrackChannel, AnimationChannel, EasingType, Transform, BezierPath, LayerMaskPathChannel } from '../types/animator';
 import { layerMaskPathChannel } from '../types/animator';
-import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
-import { hasChannelDataForTemplate, resolveChannelAnimationState } from '../utils/timelineMetrics';
-import { buildTransformSnapshot, resolveAuthoredLocalTransform, resolveAuthoredBasePose, applyChannelStaticValue, channelArmValue } from '../utils/channelKeyframeGroups';
-import { interpolateChannel } from '../utils/defaults';
+import { generateTransitionChannelKeyframes } from '../utils/animation/motionTransitions';
+import { hasChannelDataForTemplate, resolveChannelAnimationState } from '../utils/editor/timelineMetrics';
+import { buildTransformSnapshot, resolveAuthoredLocalTransform, resolveAuthoredBasePose, applyChannelStaticValue, channelArmValue } from '../utils/animation/channelKeyframeGroups';
+import { interpolateChannel } from '../utils/animation/defaults';
 import { 
   updateKeyframeBezierPointsMutator,
   addPropertyKeyframeMutator,
@@ -29,10 +29,10 @@ import {
   applyTransitionChannelsMutator,
   applyTransitionToTrackCanonicalMutator,
   clearChannelAnimationMutator
-} from '../utils/trackMutations';
-import { planPartDeletion } from '../utils/partDeletion';
-import { evaluateLayerMasks } from '../utils/evaluateLayerMasks';
-import { lockedLayersRefusal } from '../utils/layerLocks';
+} from '../utils/animation/trackMutations';
+import { planPartDeletion } from '../utils/layers/partDeletion';
+import { evaluateLayerMasks } from '../utils/animation/evaluateLayerMasks';
+import { lockedLayersRefusal } from '../utils/layers/layerLocks';
 
 interface UseTimelineOptions {
   setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>;

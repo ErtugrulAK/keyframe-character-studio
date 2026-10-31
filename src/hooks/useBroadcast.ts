@@ -7,7 +7,7 @@ import {
   tickBroadcastState,
   tickLiveStuntsState,
   tickNamedSequenceRuntime,
-} from '../utils/broadcastEngine';
+} from '../utils/animation/broadcastEngine';
 
 interface UseBroadcastOptions {
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;

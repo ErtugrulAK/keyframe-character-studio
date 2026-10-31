@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { copyKeyframeGroupData, pasteKeyframeGroupData, type KeyframeCopyPayload } from '../utils/keyframeCopyPaste';
+import { copyKeyframeGroupData, pasteKeyframeGroupData, type KeyframeCopyPayload } from '../utils/animation/keyframeCopyPaste';
 import type { Track } from '../types/animator';
-import { makeEmptyChannels } from '../utils/defaults';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 
 /**
  * M28 28A — TIMELINE KEYFRAME COPY / PASTE (pure data layer).

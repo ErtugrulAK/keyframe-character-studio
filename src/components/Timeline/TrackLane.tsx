@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { EasingType, Track, TrackChannel, AnimationChannel, LayerMaskChannel, LayerMaskPathChannel, PropertyKeyframe, PathKeyframe, Transform } from '../../types/animator';
-import { QUICK_EASINGS } from '../../utils/keyframeEasing';
-import type { KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
+import { QUICK_EASINGS } from '../../utils/animation/keyframeEasing';
+import type { KeyframeCopyPayload } from '../../utils/animation/keyframeCopyPaste';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, KEYFRAME_DRAG_THRESHOLD_PX, KEYFRAME_GLYPH_GAP_PX, TRACK_ROW_HEIGHT } from './timelineConstants';
-import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/channelKeyframeGroups';
-import { hasChannelDataForTemplate, resolveConnectorSegments } from '../../utils/timelineMetrics';
+import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/animation/channelKeyframeGroups';
+import { hasChannelDataForTemplate, resolveConnectorSegments } from '../../utils/editor/timelineMetrics';
 import { resolveLaneRows, type LaneContext } from './timelineLaneLayout';
 import { usePointerMenuPlacement } from '../../hooks/usePointerMenuPlacement';
 

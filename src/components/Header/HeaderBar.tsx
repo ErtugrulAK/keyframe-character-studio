@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { sanitizeFilenameComponent } from '../../utils/pathSafety';
-import { packageFileAdmissionProblem, projectFileAdmissionProblem } from '../../utils/fileAdmission';
-import { downloadBlob } from '../../utils/fileDownload';
+import { sanitizeFilenameComponent } from '../../utils/persistence/pathSafety';
+import { packageFileAdmissionProblem, projectFileAdmissionProblem } from '../../utils/persistence/fileAdmission';
+import { downloadBlob } from '../../utils/persistence/fileDownload';
 // The GIF export pipeline (panel + encoder + OGraf svg/validation chain) is
 // only reachable when the panel is open, so it ships as a lazy chunk instead
 // of weighing down the editor's initial bundle. The gate owns the lazy
@@ -37,13 +37,13 @@ import { buildOGrafCapabilityReport, type OGrafCapabilityReport } from '../../og
 import { OGrafCapabilityDialog } from './OGrafCapabilityDialog';
 import type { ToastOptions } from '../../hooks/useToast';
 import { ImportReportDialog } from '../Modal/ImportReportDialog';
-import { classifyImport } from '../../utils/importDispatch';
+import { classifyImport } from '../../utils/persistence/importDispatch';
 // The package reader (with its ZIP inflater) and the Lottie mapper run only
 // when such a file is chosen, so they load then.
 import type { OGrafPackageReadResult } from '../../ograf/packageImport';
 import type { LottieImportResult } from '../../interop/lottie/mapDocument';
 import type { SceneData } from '../../types/composition';
-import { describeSaveStatus } from '../../utils/saveStatus';
+import { describeSaveStatus } from '../../utils/persistence/saveStatus';
 import './HeaderBar.css';
 
 type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;

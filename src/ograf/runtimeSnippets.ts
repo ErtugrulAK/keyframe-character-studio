@@ -19,12 +19,12 @@
  * like the imported helper.
  */
 
-import { compareByStackingOrder } from '../utils/stackingOrder';
-import { resolveMatteSource } from '../utils/matte';
-import { createWorldAffineAlgebra } from '../utils/containerMath';
+import { compareByStackingOrder } from '../utils/layers/stackingOrder';
+import { resolveMatteSource } from '../utils/layers/matte';
+import { createWorldAffineAlgebra } from '../utils/geometry/containerMath';
 import { createGraphicRuntime } from './runtime/graphicRuntime';
-import { createShapeAppearance } from '../utils/shapeAppearance';
-import { describePaint, describeText } from '../utils/drawDescriptor';
+import { createShapeAppearance } from '../utils/layers/shapeAppearance';
+import { describePaint, describeText } from '../utils/layers/drawDescriptor';
 
 /**
  * A helper's source, as the runtime will receive it.
@@ -57,7 +57,7 @@ export const runtimeWorldAffineAlgebra = (): string => `(${sourceOf(createWorldA
 /** The editor's appearance rules, as an expression that evaluates to the resolver. */
 export const runtimeResolveShapeAppearance = (): string => `(${sourceOf(createShapeAppearance as (...args: never[]) => unknown)})().resolveShapeAppearance`;
 
-/** The shared draw descriptors (`utils/drawDescriptor`): what a layer paints and writes. */
+/** The shared draw descriptors (`utils/layers/drawDescriptor`): what a layer paints and writes. */
 export const runtimeDescribePaint = (): string => sourceOf(describePaint as (...args: never[]) => unknown);
 export const runtimeDescribeText = (): string => sourceOf(describeText as (...args: never[]) => unknown);
 

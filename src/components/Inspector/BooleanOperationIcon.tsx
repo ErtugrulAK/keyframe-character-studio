@@ -1,5 +1,5 @@
 import React from 'react';
-import type { BooleanOperation } from '../../utils/booleanGeometry';
+import type { BooleanOperation } from '../../utils/geometry/booleanGeometry';
 
 /**
  * Original KCS icons for the four Boolean operations.

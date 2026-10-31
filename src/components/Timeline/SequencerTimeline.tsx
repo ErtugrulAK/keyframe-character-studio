@@ -3,12 +3,12 @@ import React, { lazy, Suspense, useRef, useState, useEffect, useCallback, useLay
 import type { KeyframeStretchSession } from '../../hooks/useTimeline';
 import { NumberField } from '../Inspector/inputs/NumberField';
 import { useAnimator } from '../../context/useAnimator';
-import { commitWorkspaceLayout, createFrameEase, prefersReducedMotion, REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, type FrameEase } from '../../utils/workspaceLayout';
+import { commitWorkspaceLayout, createFrameEase, prefersReducedMotion, REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, type FrameEase } from '../../utils/editor/workspaceLayout';
 import { type TrackChannel, type AnimationChannel } from '../../types/animator';
-import { computeMaxFrame, resolveChannelAnimationState, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/timelineMetrics';
-import { resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../../utils/channelKeyframeGroups';
-import { locateKeyframe } from '../../utils/trackMutations';
-import { duplicateKeyframeGroup as previewKeyframeDuplicate } from '../../utils/keyframeDuplicate';
+import { computeMaxFrame, resolveChannelAnimationState, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/editor/timelineMetrics';
+import { resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../../utils/animation/channelKeyframeGroups';
+import { locateKeyframe } from '../../utils/animation/trackMutations';
+import { duplicateKeyframeGroup as previewKeyframeDuplicate } from '../../utils/animation/keyframeDuplicate';
 import {
   Plus,
   ZoomIn,
@@ -32,14 +32,14 @@ import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { TimeRuler } from './TimeRuler';
 import { TrackLane, type KeyframePress } from './TrackLane';
 import { CHANNEL_META, clampPanelSize, TRACK_ROW_HEIGHT, KEYFRAME_DRAG_THRESHOLD_PX, OUTLINER_DEFAULT_WIDTH, OUTLINER_MAX_WIDTH, OUTLINER_MIN_WIDTH, resolveTimelineHeightCeiling, TIMELINE_COLLAPSED_HEIGHT, TIMELINE_DEFAULT_HEIGHT, TIMELINE_EDGE_TRANSITION_MS, TIMELINE_MIN_HEIGHT, resolveOpeningTimelineHeight, shouldOpenTimelineCollapsed } from './timelineConstants';
-import { copyKeyframeGroupData, type KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
+import { copyKeyframeGroupData, type KeyframeCopyPayload } from '../../utils/animation/keyframeCopyPaste';
 import { TrackOutlinerRow } from './TrackOutlinerRow';
-import { projectLayerOrdinals } from '../../utils/layerOrdinal';
-import { frameToSeconds, secondsToFrame } from '../../utils/timebase';
+import { projectLayerOrdinals } from '../../utils/layers/layerOrdinal';
+import { frameToSeconds, secondsToFrame } from '../../utils/animation/timebase';
 import { InlineRename } from '../Shared/InlineRename';
 import { useRowWindow, type RowViewport } from '../../hooks/useRowWindow';
 import { useRetainedScrollTop, useRetainedUiState } from '../../hooks/useRetainedUiState';
-import { rowOffsets, type RowWindowSegment } from '../../utils/rowWindow';
+import { rowOffsets, type RowWindowSegment } from '../../utils/editor/rowWindow';
 import { edgeScrollStep, laneContextOf, laneGroupHeight, laneKeyframePositions, laneKeyframes, type LaneContext } from './timelineLaneLayout';
 import './SequencerTimeline.css';
 

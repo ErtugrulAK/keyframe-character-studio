@@ -7,16 +7,16 @@
  * rotated / scaled / parented sources) using evaluateTransform.
  */
 import { describe, it, expect } from 'vitest';
-import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, buildMatteTextMask, gradientEndpoints, gradientEndpointsLocal, isMatteEligible, normalizeFeather, normalizeStrength, normalizeGradientAngle, normalizeGradient, gradientId, getDefaultGradientStops, normalizeGradientStops, canonicalStopsKey, gradientStopsHash, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode, resolveMatteSource, textMaskContent, worldToLocal, normalizeGradientType, radialGradientGeometry, matteMaskGradientSuffix, imageMaskContent, buildMatteImageMask, normalizeMediaDimension } from '../utils/matte';
+import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, buildMatteTextMask, gradientEndpoints, gradientEndpointsLocal, isMatteEligible, normalizeFeather, normalizeStrength, normalizeGradientAngle, normalizeGradient, gradientId, getDefaultGradientStops, normalizeGradientStops, canonicalStopsKey, gradientStopsHash, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode, resolveMatteSource, textMaskContent, worldToLocal, normalizeGradientType, radialGradientGeometry, matteMaskGradientSuffix, imageMaskContent, buildMatteImageMask, normalizeMediaDimension } from '../utils/layers/matte';
 import type { PartMatte } from '../types/animator';
-import { getShapeGeometry } from '../utils/shapeGeometry';
-import { buildFreeformPath } from '../utils/freeform';
-import { evaluateTransform } from '../utils/evaluateTransform';
-import { makeEmptyChannels } from '../utils/defaults';
+import { getShapeGeometry } from '../utils/geometry/shapeGeometry';
+import { buildFreeformPath } from '../utils/geometry/freeform';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 import type { CharacterPart, Track } from '../types/animator';
 import type { WorldTransform } from '../types/composition';
-import type { WorldAffine } from '../utils/containerMath';
-import { CANVAS_CENTER } from '../utils/constants';
+import type { WorldAffine } from '../utils/geometry/containerMath';
+import { CANVAS_CENTER } from '../utils/editor/constants';
 
 function makeSourcePart(type: string, overrides: Partial<CharacterPart> = {}): CharacterPart {
   return {

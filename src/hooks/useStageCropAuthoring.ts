@@ -1,8 +1,8 @@
 import type { CharacterPart, Track, Transform } from '../types/animator';
-import type { ProjectResolution } from '../utils/projectCoordinates';
-import { getLayerWorldBounds } from '../utils/layerGrouping';
-import { unionWorldBounds } from '../utils/layoutGeometry';
-import { collectArrangeTargets } from '../utils/vectorArrange';
+import type { ProjectResolution } from '../utils/geometry/projectCoordinates';
+import { getLayerWorldBounds } from '../utils/layers/layerGrouping';
+import { unionWorldBounds } from '../utils/geometry/layoutGeometry';
+import { collectArrangeTargets } from '../utils/layers/vectorArrange';
 import {
   clampStageCropRect,
   isFullStageCropRect,
@@ -13,7 +13,7 @@ import {
   stageCropResolution,
   stageCropShift,
   type StageCropRect,
-} from '../utils/stageCrop';
+} from '../utils/geometry/stageCrop';
 import type { ToastOptions } from './useToast';
 
 type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;

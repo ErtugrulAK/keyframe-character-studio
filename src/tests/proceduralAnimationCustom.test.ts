@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { computeProceduralDelta } from '../utils/proceduralAnimation';
-import { sampleCustomPreset } from '../utils/presetSampler';
+import { computeProceduralDelta } from '../utils/animation/proceduralAnimation';
+import { sampleCustomPreset } from '../utils/animation/presetSampler';
 import type { CharacterPart, CustomMotionPreset, Track, TrackChannel } from '../types/animator';
 
 /**

@@ -1,5 +1,5 @@
 import type { SceneData } from '../types/composition';
-import { normalizePackagePath } from '../utils/pathSafety';
+import { normalizePackagePath } from '../utils/persistence/pathSafety';
 import { compileOGrafManifest, isSafeOGrafPackagePath, sanitizeOGrafId } from './compiler';
 import { describeOGrafValueForDiagnostics } from './diagnostics';
 import { generateGraphicModule } from './runtimeTemplate';

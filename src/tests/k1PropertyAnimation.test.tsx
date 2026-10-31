@@ -22,7 +22,7 @@ import { AnimatorProvider, type AnimatorContextType } from '../context/AnimatorC
 import { useAnimator } from '../context/useAnimator';
 import { SequencerTimeline } from '../components/Timeline/SequencerTimeline';
 import type { Track, TrackChannel } from '../types/animator';
-import { worldToContainerLocal } from '../utils/containerMath';
+import { worldToContainerLocal } from '../utils/geometry/containerMath';
 
 const Consumer = ({ onCtx }: { onCtx: (ctx: AnimatorContextType) => void }) => {
   const ctx = useAnimator();

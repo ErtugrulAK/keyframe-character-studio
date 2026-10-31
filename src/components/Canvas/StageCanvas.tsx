@@ -6,16 +6,24 @@ import type { BezierPath, CharacterPart, Transform } from '../../types/animator'
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { parseElementDropPayload } from '../../utils/elementDropPayload';
 import { getPartBounds } from '../../utils/bounds';
-import { resolveCornerResize, resolveEdgeResize, type CornerBounds, type CornerId, type EdgeId } from '../../utils/cornerResize';
+import type { CornerBounds } from '../../utils/cornerResize';
 import {
-  applyAffine,
-  composeWorldTransform,
+  CORNER_BY_SCALE_MODE,
+  isCropGesture,
+  pointInSolveFrame,
+  resolveCropGesture,
+  resolveTransformGesture,
+  svgPointToWorld,
+  type GestureStart,
+  type ResizeSolveFrame,
+  type StageGestureMode,
+} from './stageGestures';
+import {
   invertAffine,
   worldAffineOf,
   worldToContainerLocal,
   type WorldAffine,
 } from '../../utils/containerMath';
-import type { WorldTransform } from '../../types/composition';
 import { stackingOrder } from '../../utils/stackingOrder';
 import { resolveMarqueeSelection, resolveStageSelectionTarget } from '../../utils/layerGrouping';
 import { collectArrangeTargets } from '../../utils/vectorArrange';
@@ -34,15 +42,10 @@ import {
   editorPointToStageSpace,
   isStageCropHandle,
   isStagePointInsideRect,
-  resizeStageCropRect,
   stageCropHandleCenters,
-  stageCropRectFromDrag,
   stageSpaceToEditorRect,
-  translateStageCropRect,
-  type StageCropHandle,
-  type StageCropRect,
 } from '../../utils/stageCrop';
-import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
+import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter, type CoordinatePoint } from '../../utils/projectCoordinates';
 import { REFIT_UNTOUCHED_CAMERA_COMMAND, REMEASURE_STAGE_BOX_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT } from '../../utils/workspaceLayout';
 import { normalizeFreeformPoints } from '../../utils/freeform';
@@ -96,89 +99,6 @@ const readEditSurface = (): { width: number; height: number } => ({
   width: Math.max(1, Math.ceil(typeof window !== 'undefined' ? window.innerWidth : 1)),
   height: Math.max(1, Math.ceil(typeof window !== 'undefined' ? window.innerHeight : 1)),
 });
-
-/**
- * The four corner handles of the transform gizmo, keyed by the scale mode they
- * report. Edge and single-axis modes intentionally have no corner identity.
- */
-const CORNER_BY_SCALE_MODE: Record<string, CornerId | undefined> = {
-  scale_corner_tl: 'tl',
-  scale_corner_tr: 'tr',
-  scale_corner_bl: 'bl',
-  scale_corner_br: 'br',
-};
-
-/**
- * The four edge handles, keyed by the scale mode they report. A corner and an
- * edge solve share one authority (`resolveCornerResize` / `resolveEdgeResize`):
- * both anchor the handle opposite to the one the pointer grabbed.
- */
-const EDGE_BY_SCALE_MODE: Record<string, EdgeId | undefined> = {
-  scale_left: 'left',
-  scale_right: 'right',
-  scale_top: 'top',
-  scale_bottom: 'bottom',
-};
-
-/**
- * The frame a resize gesture solves in.
- *
- * A layer whose world map IS a TRS is solved in world space, exactly as every
- * drag has always been. A layer whose world map is NOT a TRS (a rotated child of
- * an anisotropically scaled container — the nesting is sheared) has no world TRS
- * to solve against, so the gesture is solved in that layer's CONTAINER frame,
- * where the authored TRS model holds exactly: the solver's anchor keeps the
- * opposite corner of the authored box fixed, which the container's linear map
- * carries to the very same world point, and the dragged corner lands on the
- * pointer in container space — its exact image in world space.
- */
-interface ResizeSolveFrame {
-  /** The TRS the solver models: the layer's world pose, or its container-local pose. */
-  transform: WorldTransform | Transform;
-  /** The container's world pose, when the solve happens in the container frame. */
-  containerWorld?: Transform;
-  /** World → container-local, already inverted for the gesture. */
-  containerInverse?: WorldAffine;
-}
-
-/** Where the pointer sits in the frame the gesture solves in. */
-const pointInSolveFrame = (
-  point: { x: number; y: number },
-  frame: ResizeSolveFrame,
-): { x: number; y: number } => (frame.containerInverse ? applyAffine(frame.containerInverse, point) : point);
-
-/**
- * Stage pointers arrive in SVG coordinates; every transform value in this file
- * is world coordinates (no output origin). A delta is origin-independent, but a
- * pivot or a centre is not — so gestures that need an absolute point convert
- * here first.
- */
-const svgPointToWorld = (point: { x: number; y: number }): { x: number; y: number } => ({
-  x: point.x - EDITOR_CAMERA_CENTER.x,
-  y: point.y - EDITOR_CAMERA_CENTER.y,
-});
-
-/**
- * A solve answer expressed in the frame's own terms → the WORLD patch the write
- * authority expects (it converts every patch into the target's container-local
- * space itself). Composing through the container is the exact inverse of that
- * conversion for a direct child, so the authored local values are recovered
- * unchanged — including their scale signs.
- */
-const solveFramePatchToWorld = (
-  patch: { x?: number; y?: number; rotation?: number; scaleX?: number; scaleY?: number },
-  frame: ResizeSolveFrame,
-): Partial<Transform> => {
-  if (!frame.containerWorld) return patch;
-  const composed = composeWorldTransform(frame.containerWorld, { ...frame.transform, ...patch } as Transform);
-  const worldPatch: Partial<Transform> = {};
-  if (patch.x !== undefined) worldPatch.x = composed.x;
-  if (patch.y !== undefined) worldPatch.y = composed.y;
-  if (patch.rotation !== undefined) worldPatch.rotation = composed.rotation;
-  if (patch.scaleX !== undefined) worldPatch.scaleX = composed.scaleX;
-  if (patch.scaleY !== undefined) worldPatch.scaleY = composed.scaleY;
-  return worldPatch;
-};
 
 /** A right press that travels less than this (CSS px) is a click, not a pan. */
 const RIGHT_CLICK_SLOP_PX = 4;
@@ -394,11 +314,11 @@ export const StageCanvas: React.FC = () => {
    * kept running under the open menu.
    */
   const rightPressRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
-  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale_corner_tl' | 'scale_corner_tr' | 'scale_corner_bl' | 'scale_corner_br' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'shape_create' | 'child_frame_scale' | 'child_frame_rotate' | 'crop_new' | 'crop_move' | 'crop_resize' | null>(null);
+  const [dragMode, setDragMode] = useState<StageGestureMode | null>(null);
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [shapeCreationStart, setShapeCreationStart] = useState<{ clientX: number; clientY: number; svgX: number; svgY: number } | null>(null);
   const [shapeCreationPreview, setShapeCreationPreview] = useState<{ type: NonNullable<typeof pendingShapeType>; bounds: ReturnType<typeof getShapeCreationBounds> } | null>(null);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; mediaCenter?: { x: number; y: number }; partId?: string; initialChildScaleX?: number; initialChildScaleY?: number; initialChildRot?: number; corner?: CornerId; localBounds?: CornerBounds; cropAnchor?: { x: number; y: number }; cropInitial?: StageCropRect; cropHandle?: StageCropHandle; solveFrame?: ResizeSolveFrame }>({
+  const [dragStart, setDragStart] = useState<GestureStart>({
     x: 0,
     y: 0,
     initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
@@ -859,26 +779,9 @@ export const StageCanvas: React.FC = () => {
       // Crop authoring: the region is rewritten on every move and the DOCUMENT is
       // never touched — no batch interaction is open, so no history entry can be
       // produced by drawing or resizing the region.
-      if (dragMode === 'crop_new' || dragMode === 'crop_move' || dragMode === 'crop_resize') {
-        const point = clientToStage(e.clientX, e.clientY);
-        const initial = dragStart.cropInitial;
-        if (dragMode === 'crop_new') {
-          setCropRegion(stageCropRectFromDrag(dragStart.cropAnchor ?? point, point, projectResolution));
-          return;
-        }
-        if (!initial) return;
-        if (dragMode === 'crop_move') {
-          const anchor = dragStart.cropAnchor ?? point;
-          setCropRegion(translateStageCropRect(
-            initial,
-            { x: point.x - anchor.x, y: point.y - anchor.y },
-            projectResolution,
-          ));
-          return;
-        }
-        if (dragStart.cropHandle) {
-          setCropRegion(resizeStageCropRect(initial, dragStart.cropHandle, point, projectResolution));
-        }
+      if (isCropGesture(dragMode)) {
+        const region = resolveCropGesture(dragMode, dragStart, clientToStage(e.clientX, e.clientY), projectResolution);
+        if (region) setCropRegion(region);
         return;
       }
 
@@ -927,37 +830,6 @@ export const StageCanvas: React.FC = () => {
 
       if (!selectedPartId) return;
 
-      if (dragMode === 'child_frame_scale') {
-        // Uniform scale of a shape child around its center (world space),
-        // then convert the new world scale back into container-local space.
-        const c = dragStart.mediaCenter!;
-        const initDist = Math.hypot(dragStart.x - c.x, dragStart.y - c.y);
-        const curDist = Math.hypot(svgX - c.x, svgY - c.y);
-        const factor = initDist > 0.001 ? curDist / initDist : 1;
-        const newWorldScale = Math.max(0.05, Math.round((dragStart.initialChildScaleX || 1) * factor * 100) / 100);
-        const targetId = dragStart.partId ?? selectedPartId;
-        // World-space contract: updateCurrentTransform converts to the target's
-        // container-local space itself.
-        updateCurrentTransform({ scaleX: newWorldScale, scaleY: newWorldScale }, targetId);
-        return;
-      }
-
-      if (dragMode === 'child_frame_rotate') {
-        // Rotate a shape child around its center (world space); the world
-        // rotation is converted to container-local space by
-        // updateCurrentTransform, exactly like every other caller.
-        const c = dragStart.mediaCenter!;
-        const initAngle = (Math.atan2(dragStart.y - c.y, dragStart.x - c.x) * 180) / Math.PI;
-        const curAngle = (Math.atan2(svgY - c.y, svgX - c.x) * 180) / Math.PI;
-        const delta = ((curAngle - initAngle + 540) % 360) - 180;
-        const newWorldRot = Math.round(((dragStart.initialChildRot || 0) + delta) * 100) / 100;
-        const targetId = dragStart.partId ?? selectedPartId;
-        updateCurrentTransform({ rotation: newWorldRot }, targetId);
-        return;
-      }
-
-      if (!selectedPartId) return;
-
       if (dragMode === 'translate') {
         const { dx: deltaX, dy: deltaY } = getPointerDelta(
           { x: dragStart.x, y: dragStart.y },
@@ -997,81 +869,19 @@ export const StageCanvas: React.FC = () => {
         return;
       }
 
-      if (dragMode === 'rotate') {
-        // Only the rotation changes: the layer turns about its own origin, so
-        // its position stays put. A sheared nesting is turned in its container
-        // frame for the same reason a resize is (see `ResizeSolveFrame`).
-        const frame = dragStart.solveFrame ?? { transform: dragStart.initialTransform };
-        const pointer = pointInSolveFrame(svgPointToWorld({ x: svgX, y: svgY }), frame);
-        const currentAngleRad = Math.atan2(pointer.y - frame.transform.y, pointer.x - frame.transform.x);
-        const deltaAngleDeg = ((currentAngleRad - dragInitialAngle) * 180) / Math.PI;
-
-        const rotation = Math.round(frame.transform.rotation + deltaAngleDeg);
-        updateCurrentTransform(solveFramePatchToWorld({ x: frame.transform.x, y: frame.transform.y, rotation }, frame));
-      } else if (CORNER_BY_SCALE_MODE[dragMode]) {
-        // ONE geometry authority: the pure corner solver keeps the diagonally
-        // opposite corner fixed in world space and puts the dragged corner under
-        // the pointer. It answers in WORLD space — the write authority converts
-        // the patch into the layer's container-local space, exactly like every
-        // other canvas gesture. A sheared nesting is solved in its container
-        // frame instead (see `ResizeSolveFrame`). A corner drag is free
-        // non-uniform scaling: pointer X drives scaleX and pointer Y drives
-        // scaleY independently. Shift toggles the aspect constraint for the
-        // duration of one drag, against the Inspector's persistent lock.
-        const corner = CORNER_BY_SCALE_MODE[dragMode];
-        if (!corner || !dragStart.localBounds) return;
-        const frame = dragStart.solveFrame ?? { transform: dragStart.initialTransform };
-        const patch = resolveCornerResize({
-          transform: frame.transform,
-          bounds: dragStart.localBounds,
-          corner,
-          startPointer: pointInSolveFrame(svgPointToWorld({ x: dragStart.x, y: dragStart.y }), frame),
-          pointer: pointInSolveFrame(svgPointToWorld({ x: svgX, y: svgY }), frame),
-          uniform: isScaleLocked !== e.shiftKey,
-        });
-        updateCurrentTransform(solveFramePatchToWorld(patch, frame));
-      } else if (EDGE_BY_SCALE_MODE[dragMode]) {
-        // The same geometry authority as the corners, restricted to one axis:
-        // the opposite edge is the fixed point of the gesture, so a group's
-        // aggregate frame resizes from its own box instead of the geometryless
-        // container's fallback extents.
-        const edge = EDGE_BY_SCALE_MODE[dragMode];
-        const bounds = dragStart.localBounds;
-        if (!edge || !bounds) return;
-        const frame = dragStart.solveFrame ?? { transform: dragStart.initialTransform };
-        const patch = resolveEdgeResize({
-          transform: frame.transform,
-          bounds,
-          edge,
-          startPointer: pointInSolveFrame({ x: dragStart.x, y: dragStart.y }, frame),
-          pointer: pointInSolveFrame({ x: svgX, y: svgY }, frame),
-        });
-        updateCurrentTransform(solveFramePatchToWorld(patch, frame));
-      } else if (dragMode === 'scale_x') {
-        const frame = dragStart.solveFrame ?? { transform: dragStart.initialTransform };
-        const pointer = pointInSolveFrame(svgPointToWorld({ x: svgX, y: svgY }), frame);
-        const dx = pointer.x - frame.transform.x;
-        const dy = pointer.y - frame.transform.y;
-
-        const { dxLocal } = getLocalDelta(dx, dy, frame.transform.rotation);
-        const currentLocalX = Math.abs(dxLocal);
-        const ratioX = currentLocalX / Math.max(0.001, dragInitialLocalX);
-
-        const newScaleX = parseFloat(Math.max(0.05, frame.transform.scaleX * ratioX).toFixed(2));
-        updateCurrentTransform(solveFramePatchToWorld({ scaleX: newScaleX }, frame));
-      } else if (dragMode === 'scale_y') {
-        const frame = dragStart.solveFrame ?? { transform: dragStart.initialTransform };
-        const pointer = pointInSolveFrame(svgPointToWorld({ x: svgX, y: svgY }), frame);
-        const dx = pointer.x - frame.transform.x;
-        const dy = pointer.y - frame.transform.y;
-
-        const { dyLocal } = getLocalDelta(dx, dy, frame.transform.rotation);
-        const currentLocalY = Math.abs(dyLocal);
-        const ratioY = currentLocalY / Math.max(0.001, dragInitialLocalY);
-
-        const newScaleY = parseFloat(Math.max(0.05, frame.transform.scaleY * ratioY).toFixed(2));
-        updateCurrentTransform(solveFramePatchToWorld({ scaleY: newScaleY }, frame));
-      }
+      // Every other transform gesture is pure geometry (`stageGestures`): the
+      // pointer becomes a WORLD patch, which the write authority converts into
+      // the target's container-local space.
+      const solved = resolveTransformGesture(dragMode, {
+        start: dragStart,
+        pointer: { x: svgX, y: svgY },
+        initialAngle: dragInitialAngle,
+        initialLocalX: dragInitialLocalX,
+        initialLocalY: dragInitialLocalY,
+        scaleLocked: isScaleLocked,
+        shiftKey: e.shiftKey,
+      });
+      if (solved) updateCurrentTransform(solved.patch, solved.targetId);
     },
     // The pointer-up effect owns the current mouse-up callback; adding the later-declared callback here would create a declaration cycle.
     [isDragging, dragMode, dragStart, clientToSVG, clientToStage, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, updateCurrentTransform, shapeCreationStart, pendingShapeType, isScaleLocked, snapEnabled, setCropRegion, projectResolution]

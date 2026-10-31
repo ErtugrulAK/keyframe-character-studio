@@ -1,5 +1,5 @@
 // Keyframe Studio - 2D Motion Sequencer Timeline Component
-import React, { useRef, useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
+import React, { lazy, Suspense, useRef, useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
 import type { KeyframeStretchSession } from '../../hooks/useTimeline';
 import { NumberField } from '../Inspector/inputs/NumberField';
 import { useAnimator } from '../../context/useAnimator';
@@ -27,7 +27,6 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { TimeRuler } from './TimeRuler';
@@ -50,6 +49,9 @@ import './SequencerTimeline.css';
  * (which are not part of the scroll surface at all — the press would land on the
  * container outside its client box), and every form control or menu trigger.
  */
+// The curve editor (with its graph panel) opens on demand, so it loads then.
+const InteractiveCubicBezierEditor = lazy(() => import('../Inspector/InteractiveCubicBezierEditor').then((module) => ({ default: module.InteractiveCubicBezierEditor })));
+
 const MARQUEE_BLOCKERS = '.keyframe-diamond, .ue-prop-diamond, .time-ruler, .playhead-line, .timeline-resizer-bar, .timeline-column-resizer, input, textarea, select, button, [role="separator"]';
 
 /** A press that travels less than this is a click, not a selection drag. */
@@ -1614,33 +1616,35 @@ export const SequencerTimeline: React.FC = () => {
 
       {/* Expanded Pro Cubic Bezier Curve Studio Modal */}
       {isCurveModalOpen && (
-        <InteractiveCubicBezierEditor
-          controlPoints={curveSegment?.from.bezierControlPoints ?? [0.42, 0, 0.58, 1]}
-          segmentFrames={curveSegmentFrames}
-          segmentChannelLabel={curveChannelLabel}
-          inactiveReason={curveInactiveReason}
-          onChange={(points) => {
-            if (!curveSegment || !selectedTrack) return;
-            // The segment's curve lives on the keyframe it starts at; the
-            // mutator is dual (legacy + canonical + mask channels), and the
-            // target is always the SELECTED track — never a fallback layer.
-            updateKeyframeBezierPoints(selectedTrack.id, curveSegment.from.id, points);
-          }}
-          valueKeyframes={curveTarget?.channelKeyframes ?? []}
-          onChangeKeyframeValue={(keyframeId, value) => {
-            if (selectedTrack && graphChannel) updatePropertyKeyframeValue(selectedTrack.id, graphChannel as AnimationChannel, keyframeId, value);
-          }}
-          onChangeKeyframeHandles={(keyframeId, patch) => {
-            if (selectedTrack && graphChannel) updatePropertyKeyframeTemporalHandles(selectedTrack.id, graphChannel as AnimationChannel, keyframeId, patch);
-          }}
-          onApplySegmentPreset={(keyframeId, outgoing, incoming) => {
-            if (selectedTrack && graphChannel) applyTemporalHandlesToSegment(selectedTrack.id, graphChannel as AnimationChannel, keyframeId, outgoing, incoming);
-          }}
-          onBatchStart={startBatchInteraction}
-          onBatchEnd={endBatchInteraction}
-          initialModalOpen={true}
-          onCloseModal={() => setIsCurveModalOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <InteractiveCubicBezierEditor
+            controlPoints={curveSegment?.from.bezierControlPoints ?? [0.42, 0, 0.58, 1]}
+            segmentFrames={curveSegmentFrames}
+            segmentChannelLabel={curveChannelLabel}
+            inactiveReason={curveInactiveReason}
+            onChange={(points) => {
+              if (!curveSegment || !selectedTrack) return;
+              // The segment's curve lives on the keyframe it starts at; the
+              // mutator is dual (legacy + canonical + mask channels), and the
+              // target is always the SELECTED track — never a fallback layer.
+              updateKeyframeBezierPoints(selectedTrack.id, curveSegment.from.id, points);
+            }}
+            valueKeyframes={curveTarget?.channelKeyframes ?? []}
+            onChangeKeyframeValue={(keyframeId, value) => {
+              if (selectedTrack && graphChannel) updatePropertyKeyframeValue(selectedTrack.id, graphChannel as AnimationChannel, keyframeId, value);
+            }}
+            onChangeKeyframeHandles={(keyframeId, patch) => {
+              if (selectedTrack && graphChannel) updatePropertyKeyframeTemporalHandles(selectedTrack.id, graphChannel as AnimationChannel, keyframeId, patch);
+            }}
+            onApplySegmentPreset={(keyframeId, outgoing, incoming) => {
+              if (selectedTrack && graphChannel) applyTemporalHandlesToSegment(selectedTrack.id, graphChannel as AnimationChannel, keyframeId, outgoing, incoming);
+            }}
+            onBatchStart={startBatchInteraction}
+            onBatchEnd={endBatchInteraction}
+            initialModalOpen={true}
+            onCloseModal={() => setIsCurveModalOpen(false)}
+          />
+        </Suspense>
       )}
 
       {/* New Sequence Modal */}

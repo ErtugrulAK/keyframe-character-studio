@@ -61,7 +61,7 @@ describe('C-01 — Motion Curves targets the selected layer', () => {
     vi.restoreAllMocks();
   });
 
-  it('applying Ease In edits the selected legacy layer, never the canonical one', () => {
+  it('applying Ease In edits the selected legacy layer, never the canonical one', async () => {
     render(
       <AnimatorProvider>
         <ContextCapture />
@@ -74,8 +74,9 @@ describe('C-01 — Motion Curves targets the selected layer', () => {
     act(() => { context!.setSelectedKeyframeId('b30'); });
     act(() => { context!.setCurrentFrame(30); });
 
-    // Open the Motion Curves studio modal.
+    // Open the Motion Curves studio modal (its module loads on first open).
     fireEvent.click(screen.getByTitle('Open Expanded Pro Cubic Bezier Motion Curve Studio Modal'));
+    await screen.findByRole('button', { name: 'Ease In' });
 
     // The modal resolves B's incoming segment (F0 → F30) — never A's.
     expect(screen.queryByText('Segment F0 → F30')).not.toBeNull();
@@ -99,7 +100,7 @@ describe('C-01 — Motion Curves targets the selected layer', () => {
     expect(b.keyframes!.find((k) => k.id === 'b30')!.bezierControlPoints).toBeUndefined();
   });
 
-  it('selecting another layer while the modal is open retargets the edit', () => {
+  it('selecting another layer while the modal is open retargets the edit', async () => {
     render(
       <AnimatorProvider>
         <ContextCapture />
@@ -113,6 +114,7 @@ describe('C-01 — Motion Curves targets the selected layer', () => {
     act(() => { context!.setCurrentFrame(30); });
 
     fireEvent.click(screen.getByTitle('Open Expanded Pro Cubic Bezier Motion Curve Studio Modal'));
+    await screen.findByRole('button', { name: 'Ease In' });
     expect(screen.queryByText('Segment F0 → F30')).not.toBeNull();
 
     // Re-selection: layer A, its own keyframe.

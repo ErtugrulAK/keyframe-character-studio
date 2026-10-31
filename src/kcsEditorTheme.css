@@ -121,7 +121,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .header-actions { gap: 5px; }
 .header-actions button, .header-actions .btn-icon { min-height: 28px; height: 28px; border-radius: 3px; }
 
-.left-sidebar-nav { width: 56px; padding: 8px 5px; gap: 3px; background: #212121; border-right-color: var(--kcs-border-default); }
+.left-sidebar-nav { width: 56px; padding: 8px 5px; gap: 3px; background: var(--kcs-rail); border-right-color: var(--kcs-border-default); }
 .sidebar-nav-item { width: 46px; height: 48px; border-radius: 4px; gap: 3px; color: var(--kcs-text-muted); }
 .sidebar-nav-item:hover { background: var(--kcs-bg-hover); }
 .sidebar-nav-item.active { background: var(--kcs-bg-active); border-color: rgba(72, 141, 231, .42); box-shadow: none; color: var(--kcs-text-primary); }
@@ -134,10 +134,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .motion-design-right-sidebar { background: #232323; border-left-color: var(--kcs-border-default); box-shadow: -8px 0 24px rgba(0,0,0,.2); }
 .outliner-dock { background: #242424; border-bottom-color: var(--kcs-border-default); }
-.details-dock { background: #212121; }
+.details-dock { background: var(--kcs-rail); }
 /* C5 — the split is a focusable splitter: a short grip shows it can be moved, and
    keyboard focus gets the same ring as every other control. */
-.sidebar-pane-divider { position: relative; height: 6px; background: #1b1b1b; border-color: var(--kcs-border-subtle); outline: none; }
+.sidebar-pane-divider { position: relative; height: 6px; background: var(--kcs-bg-canvas); border-color: var(--kcs-border-subtle); outline: none; }
 .sidebar-pane-divider::after { content: ''; position: absolute; left: 50%; top: 2px; width: 28px; height: 2px; margin-left: -14px; border-radius: 1px; background: var(--kcs-border-strong); pointer-events: none; }
 .sidebar-pane-divider:hover, .sidebar-pane-divider:focus-visible { background: var(--kcs-bg-active); }
 .sidebar-pane-divider:hover::after, .sidebar-pane-divider:focus-visible::after { background: var(--kcs-accent); }
@@ -441,7 +441,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .ue-channel-lane,
 .ue-channel-header-lane {
-  background-color: #222222;
+  background-color: var(--kcs-bg-rail);
   border-bottom-color: rgba(166, 166, 166, .08);
 }
 
@@ -535,7 +535,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   min-width: 88px;
   background: var(--kcs-accent) !important;
   border-color: var(--kcs-accent) !important;
-  color: #101b2a !important;
+  color: var(--kcs-on-accent) !important;
   font-weight: 600;
 }
 
@@ -569,7 +569,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 
 .motion-design-right-sidebar {
-  background: #212121;
+  background: var(--kcs-rail);
   border-left-color: #383838;
   box-shadow: -10px 0 24px rgba(0,0,0,.24);
 }
@@ -581,7 +581,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .outliner-header,
 .details-header {
-  background: #2a2a2a;
+  background: var(--kcs-bg-surface);
   border-bottom-color: #3c3c3c;
 }
 
@@ -620,7 +620,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   display: block;
   width: 100%;
   max-width: none !important;
-  background: #1e1e1e !important;
+  background: var(--bg-input) !important;
   border: 1px solid #3f3f3f !important;
   border-radius: 3px !important;
 }
@@ -692,7 +692,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .temporal-graph-panel-speed .temporal-graph-svg {
   border-color: #666666 !important;
-  background: #252525 !important;
+  background: var(--bg-panel) !important;
   opacity: .92;
 }
 
@@ -1202,7 +1202,7 @@ button:disabled {
 .ce-curve-arm.is-in { stroke: rgba(231, 183, 91, .75); }
 .ce-curve-handle-hit { fill: transparent; }
 .ce-curve-handle-dot { stroke: var(--kcs-bg-graph); stroke-width: 2; transition: r var(--kcs-motion-fast); }
-.ce-curve-handle.is-out .ce-curve-handle-dot { fill: #76aaed; }
+.ce-curve-handle.is-out .ce-curve-handle-dot { fill: var(--accent-cyan); }
 .ce-curve-handle.is-in .ce-curve-handle-dot { fill: var(--kcs-accent-keyframe); }
 .ce-curve-handle:hover .ce-curve-handle-hit,
 .ce-curve-handle.is-dragging .ce-curve-handle-hit { fill: rgba(243, 243, 243, .1); }
@@ -1238,7 +1238,7 @@ button:disabled {
 }
 
 .ce-handle-swatch { width: 8px; height: 8px; flex: none; border-radius: 50%; }
-.ce-handle-field.is-out .ce-handle-swatch { background: #76aaed; }
+.ce-handle-field.is-out .ce-handle-swatch { background: var(--accent-cyan); }
 .ce-handle-field.is-in .ce-handle-swatch { background: var(--kcs-accent-keyframe); }
 
 .ce-handle-note {
@@ -1404,7 +1404,7 @@ button:disabled {
   border: 0;
   border-radius: 50%;
   background: var(--kcs-accent);
-  color: #101b2a;
+  color: var(--kcs-on-accent);
   cursor: pointer;
 }
 
@@ -1511,7 +1511,7 @@ button:disabled {
   border: 0;
   border-radius: var(--kcs-radius-control);
   background: var(--kcs-accent);
-  color: #101b2a;
+  color: var(--kcs-on-accent);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;

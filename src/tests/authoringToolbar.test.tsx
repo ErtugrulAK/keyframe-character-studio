@@ -63,7 +63,7 @@ const animatorCtx = {
   updateCurrentTransform: vi.fn(),
 };
 
-vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx }));
+vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx, useAnimatorSlice: () => animatorCtx, useAnimatorReader: () => () => animatorCtx, useAnimatorAuthority: (create: (state: typeof animatorCtx) => object) => create(animatorCtx) }));
 
 import { AuthoringToolbar } from '../components/Toolbar/AuthoringToolbar';
 

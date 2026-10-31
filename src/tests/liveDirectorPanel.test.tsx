@@ -9,8 +9,8 @@ const mocks = vi.hoisted(() => ({
   triggerAllBroadcastIn: vi.fn(),
 }));
 
-vi.mock('../context/useAnimator', () => ({
-  useAnimator: () => ({
+vi.mock('../context/useAnimator', () => {
+  const store = {
     sceneTitle: 'Template',
     motionTemplates: [
       { id: 'IN', name: 'IN', type: 'in', durationFrames: 30 },
@@ -21,8 +21,9 @@ vi.mock('../context/useAnimator', () => ({
     setActiveTemplateId: mocks.setActiveTemplateId,
     playNamedSequence: mocks.playNamedSequence,
     triggerAllBroadcastIn: mocks.triggerAllBroadcastIn,
-  }),
-}));
+  };
+  return { useAnimator: () => store, useAnimatorSlice: () => store, useAnimatorReader: () => () => store };
+});
 
 describe('LiveDirectorPanel — named sequence trigger wiring', () => {
   beforeEach(() => {

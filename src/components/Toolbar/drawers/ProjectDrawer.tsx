@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Library } from 'lucide-react';
 import { NumberField } from '../../Inspector/inputs/NumberField';
-import { useAnimator } from '../../../context/useAnimator';
+import { useAnimatorSlice } from '../../../context/useAnimator';
 import { GraphicLibraryDialog } from '../../Header/GraphicLibraryDialog';
 import { validateImportedDocument } from '../../../utils/importValidation';
 import { createIndexedDbBackend, createProjectLibrary, type ProjectLibrary } from '../../../utils/projectLibrary';
 
 export const ProjectDrawer: React.FC = () => {
-  const { projectResolution, setProjectResolution, sceneTitle, exportProject, importProject, addProjectTemplate, showToast } = useAnimator();
+  const { projectResolution, setProjectResolution, sceneTitle, exportProject, importProject, addProjectTemplate, showToast } = useAnimatorSlice('projectResolution', 'setProjectResolution', 'sceneTitle', 'exportProject', 'importProject', 'addProjectTemplate', 'showToast');
   /** The graphic library, created on first use (IndexedDB is opened only then). */
   const [library, setLibrary] = useState<ProjectLibrary | null>(null);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);

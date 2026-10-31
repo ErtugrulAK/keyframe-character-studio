@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, Unlink } from 'lucide-react';
 import type { Transform } from '../../../../types/animator';
-import { useAnimator } from '../../../../context/useAnimator';
+import { useAnimatorSlice } from '../../../../context/useAnimator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 
 interface TransformScaleCardProps {
@@ -21,7 +21,7 @@ interface TransformScaleCardProps {
  * make a free (non-uniform) corner drag unreachable.
  */
 export const TransformScaleCard: React.FC<TransformScaleCardProps> = ({ transform, onUpdate }) => {
-  const { isScaleLocked, setIsScaleLocked } = useAnimator();
+  const { isScaleLocked, setIsScaleLocked } = useAnimatorSlice('isScaleLocked', 'setIsScaleLocked');
   const avgScale = (Math.abs(transform.scaleX) + Math.abs(transform.scaleY)) / 2;
 
   return (

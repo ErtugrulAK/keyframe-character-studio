@@ -32,7 +32,7 @@ const { context } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('../context/useAnimator', () => ({ useAnimator: () => context }));
+vi.mock('../context/useAnimator', () => ({ useAnimator: () => context, useAnimatorSlice: () => context, useAnimatorReader: () => () => context }));
 vi.mock('../components/Modal/NewItemModal', () => ({ NewItemModal: () => null }));
 
 import { zipSync } from 'fflate';

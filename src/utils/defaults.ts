@@ -40,6 +40,35 @@ export function deriveAutoBezierControlPoints(
   ];
 }
 
+/**
+ * A keyframe list in frame order, computed once per list. Keyframe lists are
+ * never mutated in place (every edit makes a new array), so the list's
+ * identity is a safe cache key; a list that is already in order is its own
+ * sorted form. Stable sort keeps equal frames in authored order.
+ */
+const sortedByList = new WeakMap<readonly { frame: number }[], readonly { frame: number }[]>();
+export const sortedKeyframes = <K extends { frame: number }>(keyframes: readonly K[]): readonly K[] => {
+  const cached = sortedByList.get(keyframes);
+  if (cached) return cached as readonly K[];
+  let ordered = true;
+  for (let index = 1; index < keyframes.length && ordered; index += 1) ordered = keyframes[index - 1].frame <= keyframes[index].frame;
+  const sorted = ordered ? keyframes : [...keyframes].sort((a, b) => a.frame - b.frame);
+  sortedByList.set(keyframes, sorted);
+  return sorted;
+};
+
+/** Index of the first keyframe at or after `frame` (sorted.length when none). */
+export const lowerBound = (sorted: readonly { frame: number }[], frame: number): number => {
+  let low = 0;
+  let high = sorted.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (sorted[middle].frame < frame) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+};
+
 /** Interpolate a single numeric channel at a given frame */
 export function interpolateChannel(
   keyframes: PropertyKeyframe[],
@@ -47,27 +76,19 @@ export function interpolateChannel(
   fallback: number
 ): number {
   if (!keyframes || keyframes.length === 0) return fallback;
-  const sorted = [...keyframes].sort((a, b) => a.frame - b.frame);
-  const exact = sorted.find((k) => k.frame === frame);
-  if (exact) return exact.value;
-  if (frame <= sorted[0].frame) return sorted[0].value;
-  if (frame >= sorted[sorted.length - 1].frame) return sorted[sorted.length - 1].value;
-  let prev = sorted[0];
-  let next = sorted[sorted.length - 1];
-  for (let i = 0; i < sorted.length - 1; i++) {
-    if (frame >= sorted[i].frame && frame <= sorted[i + 1].frame) {
-      prev = sorted[i];
-      next = sorted[i + 1];
-      break;
-    }
-  }
+  const sorted = sortedKeyframes(keyframes);
+  const at = lowerBound(sorted, frame);
+  // An exact key wins (the first of equal frames, as authored).
+  if (at < sorted.length && sorted[at].frame === frame) return sorted[at].value;
+  if (at === 0) return sorted[0].value;
+  if (at === sorted.length) return sorted[sorted.length - 1].value;
+  const prev = sorted[at - 1];
+  const next = sorted[at];
   const duration = next.frame - prev.frame;
   if (duration <= 0) return prev.value;
   const progress = (frame - prev.frame) / duration;
-  const previousPrevious = sorted[sorted.indexOf(prev) - 1];
-  const nextNext = sorted[sorted.indexOf(next) + 1];
   const autoBezier = prev.easing === 'autoBezier'
-    ? deriveAutoBezierControlPoints(prev, next, previousPrevious, nextNext)
+    ? deriveAutoBezierControlPoints(prev, next, sorted[at - 2], sorted[at + 1])
     : undefined;
   const eased = applyEasing(
     progress,
@@ -85,20 +106,13 @@ export function interpolatePathChannel(
   fallback: BezierPath,
 ): BezierPath {
   if (!keyframes || keyframes.length === 0) return fallback;
-  const sorted = [...keyframes].sort((a, b) => a.frame - b.frame);
-  const exact = sorted.find((keyframe) => keyframe.frame === frame);
-  if (exact) return exact.value;
-  if (frame <= sorted[0].frame) return sorted[0].value;
-  if (frame >= sorted[sorted.length - 1].frame) return sorted[sorted.length - 1].value;
-  let previous = sorted[0];
-  let next = sorted[sorted.length - 1];
-  for (let index = 0; index < sorted.length - 1; index += 1) {
-    if (frame >= sorted[index].frame && frame <= sorted[index + 1].frame) {
-      previous = sorted[index];
-      next = sorted[index + 1];
-      break;
-    }
-  }
+  const sorted = sortedKeyframes(keyframes);
+  const at = lowerBound(sorted, frame);
+  if (at < sorted.length && sorted[at].frame === frame) return sorted[at].value;
+  if (at === 0) return sorted[0].value;
+  if (at === sorted.length) return sorted[sorted.length - 1].value;
+  const previous = sorted[at - 1];
+  const next = sorted[at];
   const duration = next.frame - previous.frame;
   if (duration <= 0) return previous.value;
   const progress = (frame - previous.frame) / duration;

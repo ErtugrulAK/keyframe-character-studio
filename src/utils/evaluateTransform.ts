@@ -10,7 +10,7 @@
 
 import type { CharacterPart, Transform, Keyframe, PropertyKeyframe, AnimationTrackData } from '../types/animator';
 import type { WorldTransform } from '../types/composition';
-import { interpolateTransform, interpolateChannel } from './defaults';
+import { interpolateTransform, interpolateChannel, lowerBound, sortedKeyframes } from './defaults';
 import { PART_ANCHOR_OFFSETS } from './constants';
 import { affineOfTransform, composeAffine, composeWorldTransform, withWorldAffine } from './containerMath';
 
@@ -42,7 +42,8 @@ export const authoredBasePose = (part: CharacterPart | undefined): Transform => 
  * Evaluate the animated transform for a single layer at a given frame.
  *
  * Pure — same (layers, tracks, activeTemplateId, partId, frame) always
- * produces the same Transform. No React, no cache, no side effects.
+ * produces the same Transform. No React and no side effects; the lookup index
+ * and keyframe orders it reuses are keyed by its (immutable) inputs.
  *
  * Includes:
  *   - Keyframe evaluation (channels first, legacy composite fallback)
@@ -60,11 +61,57 @@ export function evaluateTransform(
   partId: string,
   frame: number,
 ): WorldTransform {
+  return createTransformEvaluator(layers, tracks, activeTemplateId)(partId, frame);
+}
+
+/** id -> layer and partId -> track, built once per (layers, tracks) pair. */
+type SceneIndex = { parts: Map<string, CharacterPart>; tracks: Map<string, AnimationTrackData> };
+const sceneIndexes = new WeakMap<CharacterPart[], WeakMap<AnimationTrackData[], SceneIndex>>();
+const sceneIndexOf = (layers: CharacterPart[], tracks: AnimationTrackData[]): SceneIndex => {
+  let byTracks = sceneIndexes.get(layers);
+  if (!byTracks) {
+    byTracks = new WeakMap();
+    sceneIndexes.set(layers, byTracks);
+  }
+  let index = byTracks.get(tracks);
+  if (!index) {
+    // The FIRST layer/track with an id wins, as a linear find did.
+    const parts = new Map<string, CharacterPart>();
+    for (const part of layers) if (!parts.has(part.id)) parts.set(part.id, part);
+    const trackByPart = new Map<string, AnimationTrackData>();
+    for (const track of tracks) if (!trackByPart.has(track.partId)) trackByPart.set(track.partId, track);
+    index = { parts, tracks: trackByPart };
+    byTracks.set(tracks, index);
+  }
+  return index;
+};
+
+/**
+ * One scene's transform evaluator. Lookups go through an index instead of a
+ * scan per layer and per parent level, and a world pose is computed once per
+ * (layer, frame) for the evaluator's lifetime, so a parent shared by many
+ * children is evaluated once: a frame of n layers is O(n) instead of O(n^2).
+ * A result that touched a parent cycle (an invalid scene; validateScene
+ * refuses it) is not reused, so such scenes evaluate exactly as before.
+ */
+export const createTransformEvaluator = (
+  layers: CharacterPart[],
+  tracks: AnimationTrackData[],
+  activeTemplateId: string,
+): ((partId: string, frame: number) => WorldTransform) => {
+  const index = sceneIndexOf(layers, tracks);
+  const activeTmpl = activeTemplateId || 'Sequence';
+  const memo = new Map<string, WorldTransform>();
   const visiting = new Set<string>();
-  const evaluate = (currentPartId: string): WorldTransform => {
-    const part = layers.find((p) => p.id === currentPartId);
-    const track = tracks.find((t) => t.partId === currentPartId);
-    const activeTmpl = activeTemplateId || 'Sequence';
+  let cycleHits = 0;
+
+  const evaluate = (currentPartId: string, frame: number): WorldTransform => {
+    const key = `${currentPartId}@${frame}`;
+    const known = memo.get(key);
+    if (known) return known;
+    const hitsBefore = cycleHits;
+    const part = index.parts.get(currentPartId);
+    const track = index.tracks.get(currentPartId);
     // A layer with no animation track still inherits its parent: only the
     // keyframe evaluation is skipped here, never the hierarchy resolution.
     // Returning early left a static child at its local transform while the same
@@ -79,14 +126,17 @@ export function evaluateTransform(
       const offsets = PART_ANCHOR_OFFSETS[part.anchor] || PART_ANCHOR_OFFSETS.none;
       finalComputed = { ...rawTransform, x: offsets.ax + ox, y: offsets.ay + oy };
     }
-    if (visiting.has(currentPartId)) return finalComputed;
+    if (visiting.has(currentPartId)) {
+      cycleHits += 1;
+      return finalComputed;
+    }
 
     visiting.add(currentPartId);
     const relationshipParentId = part?.parentId ?? part?.booleanGroupId;
     if (part && relationshipParentId) {
-      const parentPart = layers.find((p) => p.id === relationshipParentId);
+      const parentPart = index.parts.get(relationshipParentId);
       if (parentPart && parentPart.id !== currentPartId) {
-        const parentTransform = evaluate(parentPart.id);
+        const parentTransform = evaluate(parentPart.id, frame);
         const nestedAffine = composeAffine(
           parentTransform.affine ?? affineOfTransform(parentTransform),
           affineOfTransform(finalComputed),
@@ -95,10 +145,28 @@ export function evaluateTransform(
       }
     }
     visiting.delete(currentPartId);
+    if (cycleHits === hitsBefore) memo.set(key, finalComputed);
     return finalComputed;
   };
-  return evaluate(partId);
-}
+  return evaluate;
+};
+
+/** The keyframes of a template in a list, computed once per (list, template). */
+const byTemplate = new WeakMap<readonly { templateId?: string }[], Map<string, unknown[]>>();
+const keyframesOfTemplate = <K extends { templateId?: string }>(keyframes: readonly K[] | undefined, templateId: string): K[] => {
+  if (!keyframes || keyframes.length === 0) return [];
+  let perTemplate = byTemplate.get(keyframes);
+  if (!perTemplate) {
+    perTemplate = new Map();
+    byTemplate.set(keyframes, perTemplate);
+  }
+  let filtered = perTemplate.get(templateId) as K[] | undefined;
+  if (!filtered) {
+    filtered = keyframes.filter((k) => (k.templateId || 'Sequence') === templateId);
+    perTemplate.set(templateId, filtered);
+  }
+  return filtered;
+};
 
 // ─── Keyframe evaluation (pure, extracted from useMath.ts:46-114) ──────
 
@@ -109,14 +177,11 @@ function evaluateKeyframes(
   activeTmpl: string,
 ): Transform {
   const ch = track.channels;
-  const filterCh = (arr: PropertyKeyframe[] = []) =>
-    arr.filter((k) => (k.templateId || 'Sequence') === activeTmpl);
+  const filterCh = (arr: PropertyKeyframe[] | undefined) => keyframesOfTemplate(arr, activeTmpl);
   const hasChannelData =
-    ch && Object.values(ch).some((arr: any) => filterCh(arr).length > 0);
+    ch && Object.values(ch).some((arr) => filterCh(arr as PropertyKeyframe[] | undefined).length > 0);
 
-  const filteredKfs = (track.keyframes || []).filter(
-    (k) => (k.templateId || 'Sequence') === activeTmpl,
-  );
+  const filteredKfs = keyframesOfTemplate(track.keyframes, activeTmpl);
 
   // Per-channel evaluation (canonical path)
   if (hasChannelData) {
@@ -159,22 +224,14 @@ function evalComposite(
 ): Transform {
   if (keyframes.length === 0) return baseTransform;
 
-  const sorted = [...keyframes].sort((a, b) => a.frame - b.frame);
-  const exact = sorted.find((k) => k.frame === frame);
-  if (exact) return exact.transform;
+  const sorted = sortedKeyframes(keyframes);
+  const at = lowerBound(sorted, frame);
+  if (at < sorted.length && sorted[at].frame === frame) return sorted[at].transform;
+  if (at === 0) return sorted[0].transform;
+  if (at === sorted.length) return sorted[sorted.length - 1].transform;
 
-  if (frame <= sorted[0].frame) return sorted[0].transform;
-  if (frame >= sorted[sorted.length - 1].frame) return sorted[sorted.length - 1].transform;
-
-  let prev = sorted[0];
-  let next = sorted[sorted.length - 1];
-  for (let i = 0; i < sorted.length - 1; i++) {
-    if (frame >= sorted[i].frame && frame <= sorted[i + 1].frame) {
-      prev = sorted[i];
-      next = sorted[i + 1];
-      break;
-    }
-  }
+  const prev = sorted[at - 1];
+  const next = sorted[at];
   const dur = next.frame - prev.frame;
   const prog = (frame - prev.frame) / dur;
   return interpolateTransform(prev.transform, next.transform, prog, prev.easing, prev.bezierControlPoints);

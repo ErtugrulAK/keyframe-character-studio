@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, Layers, Search, X } from 'lucide-react';
-import { useAnimator } from '../../context/useAnimator';
+import { useAnimatorSlice, useAnimatorReader } from '../../context/useAnimator';
 import { useEditorContextMenu } from '../../context/editorContextMenu';
 import type { CharacterPart } from '../../types/animator';
 import { resolveMatteSource } from '../../utils/matte';
@@ -42,14 +42,15 @@ const dropPositionAt = (event: React.DragEvent<HTMLElement>): LayerDropPosition 
 };
 
 export const OutlinerPanel: React.FC = () => {
-  const animator = useAnimator();
+  // The rows read these; actions read the whole store at call time.
   const {
     tracks,
     characterParts,
     selectedPartId,
     selectedPartIds,
     sceneTitle,
-  } = animator;
+  } = useAnimatorSlice('tracks', 'characterParts', 'selectedPartId', 'selectedPartIds', 'sceneTitle');
+  const readAnimator = useAnimatorReader();
   const { openContextMenu } = useEditorContextMenu();
 
   // Kept across an Edit ⇄ Broadcast round trip (the panel unmounts in Broadcast).
@@ -143,9 +144,9 @@ export const OutlinerPanel: React.FC = () => {
   });
 
   // Everything a row action needs, read at call time — never a render dependency.
-  const latest = useRef({ animator, visibleRows, draggingId, dropTarget, openContextMenu });
+  const latest = useRef({ visibleRows, draggingId, dropTarget, openContextMenu });
   useLayoutEffect(() => {
-    latest.current = { animator, visibleRows, draggingId, dropTarget, openContextMenu };
+    latest.current = { visibleRows, draggingId, dropTarget, openContextMenu };
   });
 
   const focusRow = useCallback((id: string) => {
@@ -165,8 +166,8 @@ export const OutlinerPanel: React.FC = () => {
     const {
       handleSelectPart, activeTool, focusModeNodeId, setActiveTool, setFocusModeNodeId,
       booleanOperandEditingGroupId, setBooleanOperandEditingGroupId,
-    } = latest.current.animator;
-    const part = latest.current.animator.characterParts.find((candidate) => candidate.id === partId);
+    } = readAnimator();
+    const part = readAnimator().characterParts.find((candidate) => candidate.id === partId);
     // Selecting a part outside the active Boolean structure exits the
     // transient operand editing mode.
     if (booleanOperandEditingGroupId && partId !== booleanOperandEditingGroupId && part?.booleanGroupId !== booleanOperandEditingGroupId) {
@@ -177,7 +178,7 @@ export const OutlinerPanel: React.FC = () => {
       setFocusModeNodeId(null);
     }
     handleSelectPart(partId, additive);
-  }, []);
+  }, [readAnimator]);
 
   const startRename = useCallback((partId: string) => {
     setRenamingId(partId);
@@ -201,26 +202,26 @@ export const OutlinerPanel: React.FC = () => {
       return next;
     }),
     toggleVisibility: (partId) => {
-      const track = latest.current.animator.tracks.find((candidate) => candidate.partId === partId);
-      if (track) latest.current.animator.toggleTrackEditVisibility(track.id);
+      const track = readAnimator().tracks.find((candidate) => candidate.partId === partId);
+      if (track) readAnimator().toggleTrackEditVisibility(track.id);
     },
     toggleLock: (partId) => {
-      const track = latest.current.animator.tracks.find((candidate) => candidate.partId === partId);
-      if (track) latest.current.animator.setLayersLocked([partId], !track.locked);
+      const track = readAnimator().tracks.find((candidate) => candidate.partId === partId);
+      if (track) readAnimator().setLayersLocked([partId], !track.locked);
     },
     moveInStack: (partId, direction) => {
-      const parts = latest.current.animator.characterParts;
+      const parts = readAnimator().characterParts;
       const index = parts.findIndex((part) => part.id === partId);
       const next = index + direction;
       if (index < 0 || next < 0 || next >= parts.length) return;
-      latest.current.animator.reorderParts(index, next);
+      readAnimator().reorderParts(index, next);
     },
     startRename,
     commitRename: (partId, name) => {
-      const part = latest.current.animator.characterParts.find((candidate) => candidate.id === partId);
+      const part = readAnimator().characterParts.find((candidate) => candidate.id === partId);
       setRenamingId(null);
       focusRow(partId);
-      if (part && name.trim() && name.trim() !== part.name) latest.current.animator.renamePartAndTrack(partId, name);
+      if (part && name.trim() && name.trim() !== part.name) readAnimator().renamePartAndTrack(partId, name);
     },
     cancelRename: (partId) => {
       setRenamingId(null);
@@ -236,7 +237,7 @@ export const OutlinerPanel: React.FC = () => {
       if (!dragged) return;
       event.preventDefault();
       const position = dropPositionAt(event);
-      const { characterParts: parts, tracks: currentTracks } = latest.current.animator;
+      const { characterParts: parts, tracks: currentTracks } = readAnimator();
       const target = parts.find((part) => part.id === partId);
       const nextParent = position === 'nest' ? partId : (relationshipParentId(target) ?? null);
       const blockedReason = dragged === partId
@@ -257,17 +258,17 @@ export const OutlinerPanel: React.FC = () => {
       setDraggingId(null);
       setDropTarget(null);
       if (!dragged || dragged === partId) return;
-      if (createLayerParentingActions(latest.current.animator).dropLayer(dragged, partId, position)) focusRow(dragged);
+      if (createLayerParentingActions(readAnimator()).dropLayer(dragged, partId, position)) focusRow(dragged);
     },
     dragEnd: () => {
       // A refused drop never fires `drop` (the browser honours dropEffect
       // "none"), so the reason the hint showed is repeated once on release.
       const refused = latest.current.dropTarget?.blockedReason;
-      if (refused) latest.current.animator.showToast(refused, 'error');
+      if (refused) readAnimator().showToast(refused, 'error');
       setDraggingId(null);
       setDropTarget(null);
     },
-  }), [focusRow, selectRow, setCollapsedPartIds, startRename]);
+  }), [focusRow, readAnimator, selectRow, setCollapsedPartIds, startRename]);
 
   // The context menu's "Rename" (and any other surface) asks through one event.
   useEffect(() => {
@@ -275,7 +276,7 @@ export const OutlinerPanel: React.FC = () => {
       const command = (event as CustomEvent<OutlinerCommand>).detail;
       if (command?.type !== 'rename') return;
       // Reveal the row first: expand every collapsed ancestor.
-      const parts = latest.current.animator.characterParts;
+      const parts = readAnimator().characterParts;
       const ancestors: string[] = [];
       let cursor = relationshipParentId(parts.find((part) => part.id === command.partId));
       while (cursor && !ancestors.includes(cursor)) {
@@ -288,7 +289,7 @@ export const OutlinerPanel: React.FC = () => {
     };
     window.addEventListener(OUTLINER_COMMAND_EVENT, handleCommand);
     return () => window.removeEventListener(OUTLINER_COMMAND_EVENT, handleCommand);
-  }, [setCollapsedPartIds, setIsGroupExpanded, startRename]);
+  }, [readAnimator, setCollapsedPartIds, setIsGroupExpanded, startRename]);
 
   const announce = (message: string) => setStatus(message);
 
@@ -308,7 +309,7 @@ export const OutlinerPanel: React.FC = () => {
       event.stopPropagation();
     };
     if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
-      const actions = createLayerParentingActions(animator);
+      const actions = createLayerParentingActions(readAnimator());
       let done = false;
       if (event.key === 'ArrowUp') done = actions.moveLayerAmongSiblings(id, -1);
       else if (event.key === 'ArrowDown') done = actions.moveLayerAmongSiblings(id, 1);

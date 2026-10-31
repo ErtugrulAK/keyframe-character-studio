@@ -8,7 +8,7 @@ import { HeaderBar } from '../components/Header/HeaderBar';
 
 const animatorCtx = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
 vi.mock('../components/Canvas/GifExportPanel', () => ({ GifExportPanel: () => null }));
-vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx.value }));
+vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx.value, useAnimatorSlice: () => animatorCtx.value, useAnimatorReader: () => () => animatorCtx.value }));
 
 function renderHeader() {
   animatorCtx.value = {

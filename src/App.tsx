@@ -29,6 +29,12 @@ const MemoSequencerTimeline = React.memo(SequencerTimeline);
 const MemoLiveDirectorPanel = React.memo(LiveDirectorPanel);
 
 const MainAppContent: React.FC = () => {
+  // The shell reads the store from context, not as a slice: `appMode` decides
+  // which surfaces are mounted around the stage, and the stage (a context
+  // reader) fits its camera in the same commit the mode changes. A slice update
+  // lands one commit later, so the stage would measure itself before the
+  // toolbar and docks are back. Every child is memoised, so this per-frame
+  // render is the shell only.
   const { appMode, modeSwapActive, finishModeSwap } = useAnimator();
 
   // The `kcs-mode-enter` chrome fade belongs to a mode TRANSITION, not to the

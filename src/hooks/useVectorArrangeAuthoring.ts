@@ -1,4 +1,4 @@
-import { useAnimator } from '../context/useAnimator';
+import { useAnimatorAuthority } from '../context/useAnimator';
 import type { CharacterPart, Track, Transform } from '../types/animator';
 import type { ToastOptions } from './useToast';
 import { lockedLayersRefusal } from '../utils/layerLocks';
@@ -153,4 +153,8 @@ export const createVectorArrangeActions = ({
 };
 
 /** The same authority, wired to the animator context for UI callers. */
-export const useVectorArrangeAuthoring = (): VectorArrange => createVectorArrangeActions(useAnimator());
+export const useVectorArrangeAuthoring = (): VectorArrange => useAnimatorAuthority(
+  createVectorArrangeActions,
+  // The arrange targets (and so their counts) come from the selection and the layers.
+  'characterParts', 'tracks', 'selectedPartId', 'selectedPartIds',
+);

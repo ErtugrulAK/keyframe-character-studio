@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAnimator } from '../../../context/useAnimator';
+import { useAnimatorSlice } from '../../../context/useAnimator';
 import type { BodyPartType } from '../../../types/animator';
 import {
   SHAPE_ICON_MAP,
@@ -26,7 +26,7 @@ const SHAPE_ITEMS: { type: BodyPartType; label: string; icon: ShapeIcon }[] = [
 ];
 
 export const ElementsDrawer: React.FC = () => {
-  const { armShapeCreation, activeTool, pendingShapeType, setActiveTool } = useAnimator();
+  const { armShapeCreation, activeTool, pendingShapeType, setActiveTool } = useAnimatorSlice('armShapeCreation', 'activeTool', 'pendingShapeType', 'setActiveTool');
   const handleDragStart = (e: React.DragEvent, type: BodyPartType, label: string) => {
     if (type === 'custom_freeform') return; // free draw is a tool, not a draggable element
     e.dataTransfer.setData(

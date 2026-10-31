@@ -43,7 +43,7 @@ const animatorCtx = {
   setBooleanOperandEditingGroupId: vi.fn(),
 };
 
-vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx }));
+vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx, useAnimatorSlice: () => animatorCtx, useAnimatorReader: () => () => animatorCtx, useAnimatorAuthority: (create: (state: typeof animatorCtx) => object) => create(animatorCtx) }));
 
 import { useBooleanAuthoring } from '../hooks/useBooleanAuthoring';
 import { useLayerGrouping } from '../hooks/useLayerGrouping';

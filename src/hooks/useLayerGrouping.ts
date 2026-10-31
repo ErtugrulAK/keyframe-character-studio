@@ -1,4 +1,4 @@
-import { useAnimator } from '../context/useAnimator';
+import { useAnimatorAuthority } from '../context/useAnimator';
 import { generateId } from '../utils/idGenerator';
 import {
   createGroupDisplayName,
@@ -134,4 +134,8 @@ export const createLayerGroupingActions = ({
 };
 
 /** The same authority, wired to the animator context for UI callers. */
-export const useLayerGrouping = (): LayerGrouping => createLayerGroupingActions(useAnimator());
+export const useLayerGrouping = (): LayerGrouping => useAnimatorAuthority(
+  createLayerGroupingActions,
+  // `selectedGroup` and the group block reason come from these.
+  'characterParts', 'selectedPartId', 'selectedPartIds',
+);

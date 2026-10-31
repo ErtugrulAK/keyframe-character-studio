@@ -1,4 +1,5 @@
-import { useAnimator } from '../context/useAnimator';
+import { useAnimatorAuthority } from '../context/useAnimator';
+import type { AnimatorContextType } from '../context/AnimatorContext';
 import { makeEmptyChannels } from '../utils/defaults';
 import { generateId } from '../utils/idGenerator';
 import type { CharacterPart } from '../types/animator';
@@ -32,8 +33,8 @@ interface BooleanAuthoring {
   dissolveBooleanGroup: () => void;
 }
 
-export const useBooleanAuthoring = (): BooleanAuthoring => {
-  const {
+/** The Boolean authority over one store state (see `useBooleanAuthoring`). */
+const createBooleanAuthoring = ({
     currentFrame,
     selectedPartId,
     selectedPartIds,
@@ -48,7 +49,7 @@ export const useBooleanAuthoring = (): BooleanAuthoring => {
     showToast,
     tracks,
     setBooleanOperandEditingGroupId,
-  } = useAnimator();
+}: AnimatorContextType): BooleanAuthoring => {
 
   const booleanEligibleParts = selectedPartIds
     .map((id) => characterParts.find((part) => part.id === id))
@@ -172,3 +173,9 @@ export const useBooleanAuthoring = (): BooleanAuthoring => {
 
   return { booleanEligibleParts, selectedBooleanGroup, createBooleanGroup, updateBooleanOperation, dissolveBooleanGroup };
 };
+
+export const useBooleanAuthoring = (): BooleanAuthoring => useAnimatorAuthority(
+  createBooleanAuthoring,
+  // The eligible operands and the selected Boolean group come from these.
+  'characterParts', 'selectedPartId', 'selectedPartIds',
+);

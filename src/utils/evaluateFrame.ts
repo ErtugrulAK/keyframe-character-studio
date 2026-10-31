@@ -23,7 +23,7 @@ import type {
   RuntimeTrackState,
   LayerContent,
 } from '../types/composition';
-import { evaluateTransform } from './evaluateTransform';
+import { createTransformEvaluator, type evaluateTransform } from './evaluateTransform';
 import { affineOfTransform, composeAffine, withWorldAffine } from './containerMath';
 import { computeProceduralDelta } from './proceduralAnimation';
 import { evaluateLayerMasks } from './evaluateLayerMasks';
@@ -63,10 +63,16 @@ export function evaluateFrame(
     delta: ReturnType<typeof computeProceduralDelta>;
   }>();
 
+  // One evaluator for the frame: a parent shared by many children is
+  // evaluated once, and lookups go through an index.
+  const worldOf = createTransformEvaluator(layers, tracks, sequenceId);
+  const trackByPart = new Map<string, (typeof tracks)[number]>();
+  for (const track of tracks) if (!trackByPart.has(track.partId)) trackByPart.set(track.partId, track);
+
   for (const layer of layers) {
     // Use per-layer frame override for custom_timeline presets
     const evalFrame = frameOverrides && Object.prototype.hasOwnProperty.call(frameOverrides, layer.id) ? frameOverrides[layer.id] : frame;
-    const world = evaluateTransform(layers, tracks, sequenceId, layer.id, evalFrame);
+    const world = worldOf(layer.id, evalFrame);
     // Procedural deltas always use the global frame (broadcast progress doesn't change per-layer)
     const delta = computeProceduralDelta(layer, tracks, totalFrames, frame, runtime, customPresets);
     computed.set(layer.id, { world, delta });
@@ -105,7 +111,7 @@ export function evaluateFrame(
     const finalOpacity = Math.max(0, Math.min(1, c.world.opacity * d.opacityMul));
     const visible = finalOpacity > 0.001;
 
-    const track = tracks.find((candidate) => candidate.partId === layer.id);
+    const track = trackByPart.get(layer.id);
     const layerFrame = frameOverrides && Object.prototype.hasOwnProperty.call(frameOverrides, layer.id) ? frameOverrides[layer.id] : frame;
     const trim = evaluateTrimPath(layer, track, layerFrame, sequenceId || 'Sequence');
     const masks = evaluateLayerMasks(layer, track, layerFrame, sequenceId);

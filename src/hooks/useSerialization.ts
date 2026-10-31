@@ -9,7 +9,7 @@ import { AUTOSAVE_LOCK_NAME, AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } fr
 import { DEFAULT_SCENE_COORDINATE_SYSTEM, isSceneCoordinateSystem, migrateSceneCoordinates } from '../utils/persistence/coordinateMigration';
 import { normalizeMotionTemplates } from '../utils/animation/motionTemplates';
 import { migrateSceneLayerV6 } from '../utils/persistence/v6Migration';
-import { ASSET_REF_PREFIX, createAssetStore, createIndexedDbAssetBackend } from '../utils/persistence/assetStore';
+import { ASSET_REF_PREFIX, createAssetStore, createIndexedDbAssetBackend, startAssetSession, type AssetLockManager } from '../utils/persistence/assetStore';
 
 /**
  * Narrowing helpers for the legacy document's optional fields. The import
@@ -562,6 +562,9 @@ export const useSerialization = ({
   // stored scene names them (`utils/persistence/assetStore`): localStorage holds the scene,
   // not the photos. Everything else keeps the data URLs.
   const [assetStore] = useState(() => createAssetStore(createIndexedDbAssetBackend()));
+  // Media are stored only once the asset session started: a tab that is alone
+  // first deletes the media no saved text names (`startAssetSession`).
+  const [assetSessionReady, setAssetSessionReady] = useState(false);
 
   // Cross-tab write discipline. storageKnownRef holds the exact
   // string this tab last READ at boot (a refused/corrupted value included:
@@ -723,8 +726,25 @@ export const useSerialization = ({
   // Media enter the asset store as soon as they are in the scene, so the save
   // that follows can name them; one still being stored is saved inline.
   useEffect(() => {
+    let cancelled = false;
+    const readLiveTexts = (): string[] => {
+      const texts: string[] = [];
+      for (let index = 0; index < localStorage.length; index += 1) texts.push(localStorage.getItem(localStorage.key(index) ?? '') ?? '');
+      return texts;
+    };
+    void startAssetSession(assetStore, autosaveLockManager() as unknown as AssetLockManager | null, readLiveTexts).then((removed) => {
+      if (removed > 0) console.info(`[Assets] ${removed} unused stored medium(s) deleted.`);
+      if (!cancelled) setAssetSessionReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [assetStore]);
+
+  useEffect(() => {
+    if (!assetSessionReady) return;
     void assetStore.ingest(characterParts as unknown as Array<Record<string, unknown>>);
-  }, [assetStore, characterParts]);
+  }, [assetStore, assetSessionReady, characterParts]);
 
   // 2. Auto-Save: SceneData format, at most AUTOSAVE_DELAY_MS after the first unsaved change (SAFE-01 write discipline).
   const buildSceneJson = useCallback((): string => {

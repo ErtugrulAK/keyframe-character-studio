@@ -14,6 +14,11 @@
  * the write (the transaction completed); until then it stays inline. A stored
  * reference whose bytes are missing is kept as it is, never dropped, so a later
  * save cannot erase it.
+ *
+ * Collection: a stored medium no saved text names any more is deleted at
+ * startup, and only by a tab that is alone. Every tab holds a shared session
+ * lock for its lifetime; the sweep needs that lock exclusively, so it never
+ * runs while another tab may still hold a medium in its undo history.
  */
 
 export const ASSET_REF_PREFIX = 'kcs-asset:';
@@ -28,7 +33,13 @@ export interface AssetBackend {
   get(ref: string): Promise<string | undefined>;
   /** Resolves once the value is durably stored. */
   put(ref: string, dataUrl: string): Promise<void>;
+  /** Every stored reference; a backend without it is never swept. */
+  keys?(): Promise<string[]>;
+  /** Resolves once the deletions are durable. */
+  delete?(refs: string[]): Promise<void>;
 }
+
+const ASSET_REF_PATTERN = /kcs-asset:sha256-[0-9a-f]{64}/gu;
 
 export const isAssetRef = (value: unknown): value is string => typeof value === 'string' && value.startsWith(ASSET_REF_PREFIX);
 
@@ -48,6 +59,8 @@ export interface AssetStore {
   externalize<T extends SceneLike>(scene: T): T;
   /** A stored scene with its references resolved; unresolved references are listed and kept. */
   internalize(json: string): Promise<{ json: string; missing: string[] }>;
+  /** Deletes every stored medium none of these texts names; resolves the number deleted. */
+  sweep(liveTexts: ReadonlyArray<string>): Promise<number>;
 }
 
 export const createAssetStore = (backend: AssetBackend | null): AssetStore => {
@@ -123,7 +136,49 @@ export const createAssetStore = (backend: AssetBackend | null): AssetStore => {
       }
       return { json: JSON.stringify(scene), missing };
     },
+
+    async sweep(liveTexts) {
+      if (!backend?.keys || !backend.delete || pending.size > 0) return 0;
+      const live = new Set(liveTexts.flatMap((text) => text.match(ASSET_REF_PATTERN) ?? []));
+      const unused = (await backend.keys()).filter((ref) => isAssetRef(ref) && !live.has(ref));
+      if (unused.length === 0) return 0;
+      await backend.delete(unused);
+      const deleted = new Set(unused);
+      for (const [dataUrl, ref] of confirmed) if (deleted.has(ref)) confirmed.delete(dataUrl);
+      return unused.length;
+    },
   };
+};
+
+/** The part of the Web Locks API the collection uses. */
+export interface AssetLockManager {
+  request(name: string, options: { mode?: 'shared' | 'exclusive'; ifAvailable?: boolean }, callback: (lock: unknown) => unknown): Promise<unknown>;
+}
+
+export const ASSET_SESSION_LOCK = 'kcs-assets-session';
+
+/**
+ * Sweeps unused media when no other tab is open, then holds the shared session
+ * lock until the page closes. Resolves once this tab may store media. Without
+ * Web Locks no tab can prove it is alone, so nothing is swept.
+ */
+export const startAssetSession = async (store: AssetStore, locks: AssetLockManager | null, readLiveTexts: () => string[]): Promise<number> => {
+  if (!locks) return 0;
+  let removed = 0;
+  try {
+    await locks.request(ASSET_SESSION_LOCK, { mode: 'exclusive', ifAvailable: true }, async (lock) => {
+      if (lock) removed = await store.sweep(readLiveTexts());
+    });
+  } catch (error) {
+    console.warn('[Assets] Unused media were not collected:', error);
+  }
+  await new Promise<void>((resolve) => {
+    void locks.request(ASSET_SESSION_LOCK, { mode: 'shared' }, () => {
+      resolve();
+      return new Promise(() => {});
+    }).catch(() => resolve());
+  });
+  return removed;
 };
 
 const DB_NAME = 'kcs-assets';
@@ -158,6 +213,23 @@ export const createIndexedDbAssetBackend = (factory: IDBFactory | undefined = gl
         transaction.onabort = () => reject(transaction.error ?? new Error('The asset write was aborted'));
       });
     },
+    keys: async () => {
+      const request = (await db()).transaction(STORE, 'readonly').objectStore(STORE).getAllKeys();
+      return new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result.filter((key): key is string => typeof key === 'string'));
+        request.onerror = () => reject(request.error);
+      });
+    },
+    delete: async (refs) => {
+      const transaction = (await db()).transaction(STORE, 'readwrite');
+      const store = transaction.objectStore(STORE);
+      for (const ref of refs) store.delete(ref);
+      await new Promise<void>((resolve, reject) => {
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error ?? new Error('The asset deletion was aborted'));
+      });
+    },
   };
 };
 
@@ -167,5 +239,7 @@ export const createMemoryAssetBackend = (): AssetBackend & { entries: Map<string
     entries,
     get: async (ref) => entries.get(ref),
     put: async (ref, dataUrl) => { entries.set(ref, dataUrl); },
+    keys: async () => [...entries.keys()],
+    delete: async (refs) => { for (const ref of refs) entries.delete(ref); },
   };
 };

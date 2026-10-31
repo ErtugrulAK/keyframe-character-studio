@@ -6,9 +6,10 @@ import { App } from '../App';
 vi.mock('../context/AnimatorContext', () => ({
   AnimatorProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
-vi.mock('../context/useAnimator', () => ({
-  useAnimator: () => ({ appMode: 'edit', setIsPlaying: vi.fn() }),
-}));
+vi.mock('../context/useAnimator', () => {
+  const store = { appMode: 'edit', setIsPlaying: vi.fn(), modeSwapActive: false, finishModeSwap: vi.fn() };
+  return { useAnimator: () => store, useAnimatorSlice: () => store };
+});
 vi.mock('../components/Header/HeaderBar', () => ({ HeaderBar: () => <header /> }));
 vi.mock('../context/EditorContextMenuContext', () => ({
   EditorContextMenuProvider: ({ children }: { children: React.ReactNode }) => children,

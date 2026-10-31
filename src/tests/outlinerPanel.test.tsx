@@ -29,6 +29,8 @@ const animatorCtx = {
 };
 vi.mock('../context/useAnimator', () => ({
   useAnimator: () => animatorCtx,
+  useAnimatorSlice: () => animatorCtx,
+  useAnimatorReader: () => () => animatorCtx,
 }));
 vi.mock('../context/editorContextMenu', () => ({
   useEditorContextMenu: () => ({ openContextMenu: vi.fn(), closeContextMenu: vi.fn() }),

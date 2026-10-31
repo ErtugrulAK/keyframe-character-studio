@@ -1,11 +1,11 @@
 import React, { useRef, useState } from 'react';
-import { useAnimator } from '../../../context/useAnimator';
+import { useAnimatorSlice } from '../../../context/useAnimator';
 import { Upload } from 'lucide-react';
 import type { ImageContentBounds } from '../../../types/animator';
 import { contentBoundsInLocalUnits, visibleContentRectOfImage } from '../../../utils/imageContentBounds';
 
 export const MediaDrawer: React.FC = () => {
-  const { characterParts, addCustomPart } = useAnimator();
+  const { characterParts, addCustomPart } = useAnimatorSlice('characterParts', 'addCustomPart');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
 

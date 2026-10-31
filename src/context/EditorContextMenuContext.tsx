@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { isConvertibleShapeType, shapeToPathBlockReason } from '../utils/shapeToPath';
-import { useAnimator } from './useAnimator';
+import { useAnimatorSlice } from './useAnimator';
 import { EditorContextMenuContext, type ContextMenuRequest } from './editorContextMenu';
 import { useBooleanAuthoring } from '../hooks/useBooleanAuthoring';
 import { useLayerGrouping } from '../hooks/useLayerGrouping';
@@ -45,7 +45,12 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     setLayersLocked,
     toggleTrackEditVisibility,
     convertToEditablePath,
-  } = useAnimator();
+  } = useAnimatorSlice(
+    'appMode', 'characterParts', 'tracks', 'selectedPartId', 'selectedPartIds', 'setSelectedPartId',
+    'setSelectedPartIds', 'handleSelectPart', 'deletePart', 'copySelectedPart', 'pasteCopiedPart',
+    'duplicateSelectedPart', 'clipboardData', 'reorderParts', 'booleanOperandEditingGroupId',
+    'setBooleanOperandEditingGroupId', 'setLayersLocked', 'toggleTrackEditVisibility', 'convertToEditablePath',
+  );
   const { selectedBooleanGroup, dissolveBooleanGroup } = useBooleanAuthoring();
   const { selectedGroup, canGroup, groupSelection, ungroupSelection } = useLayerGrouping();
   const { nestIntoLayerAbove, unparentLayer } = useLayerParenting();
@@ -197,7 +202,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     unparentLayer,
   ]);
 
-  const openContextMenu = useCallback((request: ContextMenuRequest) => {
+  const openMenuWithLatest = useCallback((request: ContextMenuRequest) => {
     const { targetId } = request;
     if (targetId === null) {
       // Nothing to offer on an empty stage: the menu simply does not open.
@@ -233,6 +238,12 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     setBooleanOperandEditingGroupId,
     setSelectedPartId,
   ]);
+  // A stable opener for the context value (it calls the latest one), so the
+  // panels that open menus do not render again whenever this provider does.
+  const latestOpener = useRef(openMenuWithLatest);
+  useLayoutEffect(() => { latestOpener.current = openMenuWithLatest; });
+  const openContextMenu = useCallback((request: ContextMenuRequest) => latestOpener.current(request), []);
+  const contextValue = useMemo(() => ({ openContextMenu, closeContextMenu }), [openContextMenu, closeContextMenu]);
 
   // Shift+F10 / the ContextMenu key opens the same menu for the current
   // selection, anchored on the layer's rendered box (or the stage centre).
@@ -257,7 +268,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
   }, [appMode, openContextMenu, selectedPartId]);
 
   return (
-    <EditorContextMenuContext.Provider value={{ openContextMenu, closeContextMenu }}>
+    <EditorContextMenuContext.Provider value={contextValue}>
       {children}
       <EditorContextMenu
         isOpen={menu !== null}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAnimator } from '../../context/useAnimator';
+import { useAnimatorSlice } from '../../context/useAnimator';
 import { ProjectDrawer } from './drawers/ProjectDrawer';
 import { MediaDrawer } from './drawers/MediaDrawer';
 import { ElementsDrawer } from './drawers/ElementsDrawer';
@@ -27,7 +27,7 @@ interface LeftToolbarProps {
 }
 
 export const LeftToolbar: React.FC<LeftToolbarProps> = ({ isHidden = false, edgeStyle, panelRef }) => {
-  const { activeTool } = useAnimator();
+  const { activeTool } = useAnimatorSlice('activeTool');
   const [activeCategory, setActiveCategory] = useState<ActiveNavCategory>('media');
   // UI-only category state remains local so collapse never changes the active tool.
   const isCapturing = activeTool === 'shape_create' || activeTool === 'freeform_draw';

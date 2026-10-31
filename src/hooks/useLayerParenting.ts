@@ -1,5 +1,5 @@
 import type { CharacterPart, Track } from '../types/animator';
-import { useAnimator } from '../context/useAnimator';
+import { useAnimatorAuthority } from '../context/useAnimator';
 import { planLayerDrop, planReparent, type LayerDropPosition } from '../utils/layerParenting';
 import type { RebasedChild } from '../utils/layerGrouping';
 import { relationshipParentId } from '../utils/partBinding';
@@ -172,4 +172,4 @@ export const createLayerParentingActions = ({
 };
 
 /** The parenting actions for a component inside the editor. */
-export const useLayerParenting = (): LayerParenting => createLayerParentingActions(useAnimator());
+export const useLayerParenting = (): LayerParenting => useAnimatorAuthority(createLayerParentingActions);

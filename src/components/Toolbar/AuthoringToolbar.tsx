@@ -38,7 +38,7 @@ import {
   ZoomOut,
   type LucideIcon,
 } from 'lucide-react';
-import { useAnimator } from '../../context/useAnimator';
+import { useAnimatorSlice } from '../../context/useAnimator';
 import { useBooleanAuthoring } from '../../hooks/useBooleanAuthoring';
 import { useLayerGrouping } from '../../hooks/useLayerGrouping';
 import { useVectorArrangeAuthoring } from '../../hooks/useVectorArrangeAuthoring';
@@ -194,7 +194,7 @@ export const AuthoringToolbar: React.FC = () => {
     pendingShapeType,
     addCustomPart,
     reorderParts,
-  } = useAnimator();
+  } = useAnimatorSlice('activeTool', 'setActiveTool', 'showGrid', 'setShowGrid', 'showCoordinateOverlay', 'setShowCoordinateOverlay', 'snapEnabled', 'setSnapEnabled', 'cropMode', 'setCropMode', 'cropRegion', 'applyStageCrop', 'clearStageCropRegion', 'cropStageToSelection', 'cropStageToVisibleContent', 'stageCropBlockReason', 'canCropStageToSelection', 'canCropStageToVisibleContent', 'selectedPartId', 'characterParts', 'armShapeCreation', 'clearShapeCreation', 'pendingShapeType', 'addCustomPart', 'reorderParts');
   const {
     booleanEligibleParts,
     selectedBooleanGroup,

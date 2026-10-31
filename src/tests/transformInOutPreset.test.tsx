@@ -6,16 +6,17 @@ import type { CharacterPart, Transform } from '../types/animator';
 
 // TransformAlignmentBar (rendered inside TransformTab) reads the animator
 // context for the multi-select alignment state — provide a minimal stub.
-vi.mock('../context/useAnimator', () => ({
-  useAnimator: () => ({
+vi.mock('../context/useAnimator', () => {
+  const store = {
     selectedPartIds: [] as string[],
     selectedPartId: undefined as string | undefined,
     handleSelectPart: vi.fn(),
     reorderParts: vi.fn(),
     setActiveTool: vi.fn(),
     activeTool: 'select',
-  }),
-}));
+  };
+  return { useAnimator: () => store, useAnimatorSlice: () => store, useAnimatorReader: () => () => store };
+});
 
 /**
  * M23 9B — IN/OUT animation preset Inspector UX.

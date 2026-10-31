@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAnimator } from '../../../context/useAnimator';
+import { useAnimatorSlice } from '../../../context/useAnimator';
 import type { BodyPartType } from '../../../types/animator';
 import { Type } from 'lucide-react';
 
@@ -78,7 +78,7 @@ const TEXT_PRESETS: TextPreset[] = [
 ];
 
 export const TextsDrawer: React.FC = () => {
-  const { addCustomPart } = useAnimator();
+  const { addCustomPart } = useAnimatorSlice('addCustomPart');
 
   const handleDragStart = (e: React.DragEvent, type: BodyPartType, label: string, extraData?: Record<string, any>) => {
     e.dataTransfer.setData(

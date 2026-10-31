@@ -8,7 +8,7 @@ import { downloadBlob } from '../../utils/fileDownload';
 // mount, its loading state and a localized failure/retry card.
 import { GifPanelGate } from './GifPanelGate';
 import type { SceneData as ExportableSceneData } from '../../types/composition';
-import { useAnimator } from '../../context/useAnimator';
+import { useAnimatorSlice, useAnimatorReader } from '../../context/useAnimator';
 import {
   Download,
   Upload,
@@ -122,9 +122,9 @@ export const HeaderBar: React.FC = () => {
     characterParts,
     tracks,
     coordinateSystem,
-    currentFrame,
     isPlaying,
-  } = useAnimator();
+  } = useAnimatorSlice('exportProject', 'importProject', 'resetProject', 'lastSavedAt', 'restoredFromLocalStorage', 'autosaveConflict', 'manualSaveRejectedAt', 'autosaveError', 'hasUnsavedChanges', 'isSaving', 'triggerManualSave', 'getPersistenceSafety', 'forceSaveNow', 'showToast', 'appMode', 'setAppMode', 'sceneTitle', 'projectTemplates', 'activeProjectTemplateId', 'setActiveProjectTemplateId', 'addProjectTemplate', 'renameProjectTemplate', 'deleteProjectTemplate', 'fps', 'setFps', 'openShortcutReference', 'characterParts', 'tracks', 'coordinateSystem', 'isPlaying');
+  const readAnimator = useAnimatorReader();
 
   const [editingTmplId, setEditingTmplId] = useState<string | null>(null);
   const [editingTmplName, setEditingTmplName] = useState<string>('');
@@ -173,7 +173,7 @@ export const HeaderBar: React.FC = () => {
       characterParts.length > 0 ||
       tracks.length > 0 ||
       coordinateSystem !== 'project-unit-center-v1' ||
-      currentFrame !== 0 ||
+      readAnimator().currentFrame !== 0 ||
       isPlaying;
     if (!carriesResettableState) {
       resetProject();

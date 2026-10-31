@@ -13,10 +13,8 @@ const part = {
 
 const setIsScaleLocked = vi.fn();
 vi.mock('../context/useAnimator', () => ({
-  useAnimator: () => ({
-    isScaleLocked: true,
-    setIsScaleLocked,
-  }),
+  useAnimator: () => ({ isScaleLocked: true, setIsScaleLocked }),
+  useAnimatorSlice: () => ({ isScaleLocked: true, setIsScaleLocked }),
 }));
 
 describe('TransformTab compact presentation', () => {

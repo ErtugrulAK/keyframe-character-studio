@@ -44,7 +44,7 @@ const animatorCtx = {
   setTracks: vi.fn(),
 };
 
-vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx }));
+vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx, useAnimatorSlice: () => animatorCtx, useAnimatorReader: () => () => animatorCtx, useAnimatorAuthority: (create: (state: typeof animatorCtx) => object) => create(animatorCtx) }));
 
 import { EditorContextMenuProvider } from '../context/EditorContextMenuContext';
 import { useEditorContextMenu } from '../context/editorContextMenu';

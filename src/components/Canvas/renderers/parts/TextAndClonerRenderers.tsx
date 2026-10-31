@@ -2,6 +2,7 @@ import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
 import { resolveShapeAppearance } from '../../../../utils/shapeAppearance';
 import { textBaselineOffset } from '../../../../utils/textOrigin';
+import { describePaint, describeText } from '../../../../utils/drawDescriptor';
 
 interface TextAndClonerProps {
   part: CharacterPart;
@@ -13,10 +14,13 @@ interface TextAndClonerProps {
 
 export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, currentFrame }: TextAndClonerProps): React.ReactNode => {
   if (part.type === 'custom_text') {
-    const textStr = part.textValue || 'TEXT';
+    const glyphs = describeText(part, textBaselineOffset(part));
+    const textStr = glyphs.text;
     const isStaggered = part.textAnimMode && part.textAnimMode !== 'none';
     const appearance = resolveShapeAppearance(part);
-    const baselineY = textBaselineOffset(part);
+    const paint = describePaint(appearance);
+    // The stage paints with the renderer's resolved `fill` (it may be a
+    // gradient reference) wherever the descriptor says the fill is on.
     const textFill = appearance.fillEnabled ? fill : 'none';
     // Authored paint wins: the `stroke` prop carries the legacy selection
     // highlight, so it is only used as the unset-colour fallback, and as the
@@ -26,8 +30,8 @@ export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, current
       : (isSelected ? '#4a8fe7' : 'none');
     const textStrokeProps = {
       stroke: textStroke,
-      strokeOpacity: appearance.strokeOpacity,
-      strokeWidth: appearance.strokeWidth,
+      strokeOpacity: paint.strokeOpacity,
+      strokeWidth: paint.strokeWidth,
       // C10 — an authored outline scales with the layer and the view; only the
       // selection highlight (outline switched off) stays screen-constant.
       ...(appearance.strokeEnabled ? {} : { vectorEffect: 'non-scaling-stroke' as const }),
@@ -42,14 +46,14 @@ export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, current
         <g>
           <text
             x={0}
-            y={baselineY}
+            y={glyphs.y}
             textAnchor="middle"
             fill={textFill}
-            fillOpacity={appearance.fillOpacity}
+            fillOpacity={paint.fillOpacity}
             {...textStrokeProps}
-            fontSize={part.fontSize || 24}
-            fontWeight="bold"
-            fontFamily={part.fontFamily || 'Outfit'}
+            fontSize={glyphs.fontSize}
+            fontWeight={glyphs.fontWeight}
+            fontFamily={glyphs.fontFamily}
           >
             {items.map((item, idx) => {
               const itemStartFrame = startFrame + idx * staggerDelayFrames;
@@ -77,14 +81,14 @@ export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, current
         <g>
           <text
             x={0}
-            y={baselineY}
+            y={glyphs.y}
             textAnchor="middle"
             fill={textFill}
-            fillOpacity={appearance.fillOpacity}
+            fillOpacity={paint.fillOpacity}
             {...textStrokeProps}
-            fontSize={part.fontSize || 24}
-            fontWeight="bold"
-            fontFamily={part.fontFamily || 'Outfit'}
+            fontSize={glyphs.fontSize}
+            fontWeight={glyphs.fontWeight}
+            fontFamily={glyphs.fontFamily}
           >
             {textStr}
           </text>

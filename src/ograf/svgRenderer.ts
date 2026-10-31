@@ -10,6 +10,7 @@ import { resolveMatteSource } from '../utils/matte';
 import { stackingOrder } from '../utils/stackingOrder';
 import { getShapeGeometry, polygonPointsToString } from '../utils/shapeGeometry';
 import { resolveShapeAppearance } from '../utils/shapeAppearance';
+import { describePaint, describeText } from '../utils/drawDescriptor';
 import { getTrimPathDashProps, resolveTrimPath } from '../utils/trimPath';
 import { affineTrsReading, worldAffineOf } from '../utils/containerMath';
 import type { OGrafEvaluatedScene } from './evaluation';
@@ -79,13 +80,12 @@ function renderGeometry(type: string, content: LayerContent, props: SvgAttribute
 
 function renderText(layer: EvaluatedLayer, props: SvgAttributes = {}): string {
   const content = layer.content;
-  const text = content.textValue || 'TEXT';
   // A caller that passes paint is drawing a silhouette — the matte path paints
   // the source black to punch the hole — so those values replace the layer's own
   // paint. Appending them instead produced a second `fill` the browser ignores,
   // which left the glyphs their own colour and the hole missing for a dark text.
   const { fill, stroke, 'fill-opacity': fillOpacity, ...rest } = props;
-  const appearance = resolveShapeAppearance({
+  const paint = describePaint(resolveShapeAppearance({
     type: 'custom_text',
     fillColor: content.fillColor ?? 'none',
     strokeColor: content.strokeColor ?? 'none',
@@ -95,13 +95,13 @@ function renderText(layer: EvaluatedLayer, props: SvgAttributes = {}): string {
     strokeOpacity: content.strokeOpacity,
     strokeWidth: content.strokeWidth,
     strokeAlignment: content.strokeAlignment,
-  });
+  }));
+  const glyphs = describeText(content, textBaselineOffset(content));
   // Authored paint wins; only silhouette callers (matte) replace the stroke.
-  const authoredStroke = appearance.strokeEnabled ? appearance.strokeColor : 'none';
-  const strokeColor = stroke === undefined ? authoredStroke : String(stroke);
-  const fillColor = fill === undefined ? (appearance.fillEnabled ? appearance.fillColor : 'none') : String(fill);
-  const resolvedFillOpacity = fillOpacity === undefined ? appearance.fillOpacity : Number(fillOpacity);
-  return `<text x="0" y="${svgNumber(textBaselineOffset(content))}" text-anchor="middle" fill="${escapeXml(fillColor || 'none')}" fill-opacity="${svgNumber(resolvedFillOpacity ?? 1)}" stroke="${escapeXml(strokeColor || 'none')}" stroke-opacity="${svgNumber(appearance.strokeOpacity)}" stroke-width="${svgNumber(appearance.strokeWidth)}" font-size="${svgNumber(content.fontSize || 24)}" font-weight="bold" font-family="${escapeXml(content.fontFamily || 'Outfit')}"${attributes(rest)}>${escapeXml(text)}</text>`;
+  const strokeColor = stroke === undefined ? paint.stroke : String(stroke);
+  const fillColor = fill === undefined ? paint.fill : String(fill);
+  const resolvedFillOpacity = fillOpacity === undefined ? paint.fillOpacity : Number(fillOpacity);
+  return `<text x="0" y="${svgNumber(glyphs.y)}" text-anchor="middle" fill="${escapeXml(fillColor || 'none')}" fill-opacity="${svgNumber(resolvedFillOpacity ?? 1)}" stroke="${escapeXml(strokeColor || 'none')}" stroke-opacity="${svgNumber(paint.strokeOpacity)}" stroke-width="${svgNumber(paint.strokeWidth)}" font-size="${svgNumber(glyphs.fontSize)}" font-weight="${glyphs.fontWeight}" font-family="${escapeXml(glyphs.fontFamily)}"${attributes(rest)}>${escapeXml(glyphs.text)}</text>`;
 }
 
 function renderImage(layer: EvaluatedLayer, options: OGrafSvgRenderOptions, props: SvgAttributes = {}): string {
@@ -153,7 +153,7 @@ function layerTransform(scene: OGrafEvaluatedScene, layer: EvaluatedLayer): stri
 
 function renderShape(layer: EvaluatedLayer): string {
   const content = layer.content;
-  const appearance = resolveShapeAppearance({
+  const paint = describePaint(resolveShapeAppearance({
     type: layer.type as Parameters<typeof resolveShapeAppearance>[0]['type'],
     fillColor: content.fillColor || 'none',
     strokeColor: content.strokeColor || 'none',
@@ -163,13 +163,13 @@ function renderShape(layer: EvaluatedLayer): string {
     strokeOpacity: content.strokeOpacity,
     strokeWidth: content.strokeWidth,
     strokeAlignment: content.strokeAlignment,
-  });
+  }));
   const common: SvgAttributes = {
-    fill: appearance.fillEnabled ? appearance.fillColor : 'none',
-    'fill-opacity': appearance.fillOpacity,
-    stroke: appearance.strokeEnabled ? appearance.strokeColor : 'none',
-    'stroke-opacity': appearance.strokeOpacity,
-    'stroke-width': appearance.strokeWidth,
+    fill: paint.fill,
+    'fill-opacity': paint.fillOpacity,
+    stroke: paint.stroke,
+    'stroke-opacity': paint.strokeOpacity,
+    'stroke-width': paint.strokeWidth,
     // C12 — as in the editor, the stroke is in scene units whatever the
     // layer's own scale (the document is drawn at one unit per pixel).
     'vector-effect': 'non-scaling-stroke',
@@ -177,20 +177,20 @@ function renderShape(layer: EvaluatedLayer): string {
   };
   const geometry = renderGeometry(layer.type, content, common);
   if (!geometry) throw new Error(`Unsupported or invalid SVG geometry for layer "${describeOGrafValueForDiagnostics(layer.id)}" (${describeOGrafValueForDiagnostics(layer.type)}).`);
-  if (appearance.strokeAlignment === 'center' || !appearance.strokeEnabled || appearance.strokeWidth <= 0) return geometry;
-  const maskId = safeSvgId(`${appearance.strokeAlignment}-stroke-${layer.id}`);
+  if (paint.strokeAlignment === 'center' || !paint.stroked) return geometry;
+  const maskId = safeSvgId(`${paint.strokeAlignment}-stroke-${layer.id}`);
   const maskGeometry = renderGeometry(layer.type, content, {
-    fill: appearance.strokeAlignment === 'inside' ? 'white' : 'black',
+    fill: paint.strokeAlignment === 'inside' ? 'white' : 'black',
     stroke: 'none',
   });
   const fillGeometry = renderGeometry(layer.type, content, { ...common, stroke: 'none', 'stroke-width': 0 });
   const strokeGeometry = renderGeometry(layer.type, content, {
     ...common,
     fill: 'none',
-    'stroke-width': appearance.strokeWidth * 2,
+    'stroke-width': paint.strokeWidth * 2,
     mask: `url(#${maskId})`,
   });
-  return `<g><defs><mask id="${maskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"><rect x="-1000000" y="-1000000" width="2000000" height="2000000" fill="${appearance.strokeAlignment === 'inside' ? 'black' : 'white'}" />${maskGeometry}</mask></defs>${fillGeometry}${strokeGeometry}</g>`;
+  return `<g><defs><mask id="${maskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"><rect x="-1000000" y="-1000000" width="2000000" height="2000000" fill="${paint.strokeAlignment === 'inside' ? 'black' : 'white'}" />${maskGeometry}</mask></defs>${fillGeometry}${strokeGeometry}</g>`;
 }
 
 function asCharacterPart(layer: EvaluatedLayer): CharacterPart {

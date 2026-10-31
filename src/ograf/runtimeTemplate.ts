@@ -3,7 +3,10 @@ import type { OGrafPublicColorField, OGrafPublicImageField, OGrafPublicTextField
 import { TEXT_BOX_CENTRE_EM } from '../utils/textOrigin';
 import {
   runtimeCompareByStackingOrder,
+  runtimeDescribePaint,
+  runtimeDescribeText,
   runtimeGraphicFactory,
+  runtimeResolveShapeAppearance,
   runtimeResolveMatteSource,
   runtimeWorldAffineAlgebra,
 } from './runtimeSnippets';
@@ -55,6 +58,9 @@ const RUNTIME = (${runtimeGraphicFactory()})({
   compareByStackingOrder: ${runtimeCompareByStackingOrder()},
   resolveMatteSource: ${runtimeResolveMatteSource()},
   affine: ${runtimeWorldAffineAlgebra()},
+  resolveShapeAppearance: ${runtimeResolveShapeAppearance()},
+  describePaint: ${runtimeDescribePaint()},
+  describeText: ${runtimeDescribeText()},
 });
 export default class Graphic extends RUNTIME.Graphic {}
 `;

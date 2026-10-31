@@ -17,6 +17,8 @@
  */
 import type { Transform } from '../../types/animator';
 import type { createWorldAffineAlgebra, WorldAffine } from '../../utils/containerMath';
+import type { createShapeAppearance } from '../../utils/shapeAppearance';
+import type { describePaint, describeText } from '../../utils/drawDescriptor';
 
 export interface RuntimePoint {
   x: number;
@@ -167,6 +169,11 @@ export interface GraphicRuntimeEnvironment {
   resolveMatteSource: (part: Pick<RuntimeLayer, 'matte' | 'trackMatte'>) => { sourceId: string; kind: 'track' | 'legacy' } | undefined;
   /** The editor's world-affine algebra (`utils/containerMath`). */
   affine: ReturnType<typeof createWorldAffineAlgebra>;
+  /** The editor's appearance rules (`utils/shapeAppearance`). */
+  resolveShapeAppearance: (part: RuntimeLayer) => ReturnType<ReturnType<typeof createShapeAppearance>['resolveShapeAppearance']>;
+  /** What a layer paints and writes (`utils/drawDescriptor`). */
+  describePaint: typeof describePaint;
+  describeText: typeof describeText;
 }
 
 export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
@@ -180,6 +187,9 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     textBoxCentreEm,
     compareByStackingOrder,
     resolveMatteSource,
+    resolveShapeAppearance,
+    describePaint,
+    describeText,
   } = environment;
   const { affineOfTransform, composeWorldTransform, composeAffine, applyAffine, withWorldAffine, worldAffineOf, affineTrsReading } = environment.affine;
 
@@ -584,47 +594,68 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     });
   }
 
-  function geometry(layer: RuntimeLayer, props: string): string {
-    const attributes = props || '';
+  type SvgAttributes = Record<string, string | number | undefined>;
+
+  /** Attributes from one record, so an override replaces a value instead of repeating it. */
+  function attributes(values: SvgAttributes): string {
+    return Object.keys(values)
+      .filter((key) => values[key] !== undefined)
+      .map((key) => ' ' + key + '="' + escapeXml(values[key]) + '"')
+      .join('');
+  }
+
+  function geometry(layer: RuntimeLayer, props: SvgAttributes): string {
+    const attrs = attributes(props);
     const path = layer.path
       ? localPathD(layer.path)
       : layer.points && layer.points.length >= 3 ? 'M ' + layer.points.map((point) => point.x + ' ' + point.y).join(' L ') + ' Z' : '';
-    if (layer.type === 'custom_freeform') return path ? '<path d="' + escapeXml(path) + '" stroke-linejoin="' + (layer.strokeLinejoin === 'miter' ? 'miter' : 'round') + '"' + attributes + ' />' : '';
-    if (layer.type === 'custom_circle') return '<circle cx="0" cy="0" r="30"' + attributes + ' />';
-    if (layer.type === 'custom_box') return '<rect x="-30" y="-30" width="60" height="60" rx="0"' + attributes + ' />';
-    if (layer.type === 'custom_rect') return '<rect x="-60" y="-30" width="120" height="60" rx="' + (layer.borderRadius || 0) + '"' + attributes + ' />';
-    if (layer.type === 'custom_capsule') return '<rect x="-50" y="-20" width="100" height="40" rx="20"' + attributes + ' />';
+    if (layer.type === 'custom_freeform') return path ? '<path d="' + escapeXml(path) + '" stroke-linejoin="' + (layer.strokeLinejoin === 'miter' ? 'miter' : 'round') + '"' + attrs + ' />' : '';
+    if (layer.type === 'custom_circle') return '<circle cx="0" cy="0" r="30"' + attrs + ' />';
+    if (layer.type === 'custom_box') return '<rect x="-30" y="-30" width="60" height="60" rx="0"' + attrs + ' />';
+    if (layer.type === 'custom_rect') return '<rect x="-60" y="-30" width="120" height="60" rx="' + (layer.borderRadius || 0) + '"' + attrs + ' />';
+    if (layer.type === 'custom_capsule') return '<rect x="-50" y="-20" width="100" height="40" rx="20"' + attrs + ' />';
     const points: Record<string, string> = {
       custom_triangle: '0,-35 35,25 -35,25',
       custom_diamond: '0,-35 35,0 0,35 -35,0',
       custom_star: '0,-35 10,-10 35,-10 15,5 23,30 0,15 -23,30 -15,5 -35,-10 -10,-10',
       custom_parallelogram: '-35,-30 85,-30 35,30 -85,30',
     };
-    return points[layer.type] ? '<polygon points="' + points[layer.type] + '"' + attributes + ' />' : '';
+    return points[layer.type] ? '<polygon points="' + points[layer.type] + '"' + attrs + ' />' : '';
   }
 
-  function text(layer: RuntimeLayer, props: string, fillOverride?: string): string {
-    const baselineY = layer.textOrigin === 'center' ? (layer.fontSize || 24) * textBoxCentreEm : 0;
-    return '<text x="0" y="' + baselineY + '" text-anchor="middle"'
-      + ' fill="' + escapeXml(fillOverride === undefined ? (layer.fillColor || 'none') : fillOverride) + '"'
-      + ' fill-opacity="' + (layer.fillOpacity === undefined ? 1 : layer.fillOpacity) + '"'
-      + ' font-size="' + (layer.fontSize || 24) + '" font-weight="bold"'
-      + ' font-family="' + escapeXml(layer.fontFamily || 'sans-serif') + '"'
-      + (props || '') + '>' + escapeXml(layer.textValue || 'TEXT') + '</text>';
+  /**
+   * A text layer's glyphs, painted as the editor paints them. A silhouette
+   * caller (matte, clip) passes the paint that replaces the layer's own.
+   */
+  function text(layer: RuntimeLayer, silhouette?: { fill: string; stroke: string }): string {
+    const paint = describePaint(resolveShapeAppearance(layer));
+    const glyphs = describeText(layer, layer.textOrigin === 'center' ? (layer.fontSize || 24) * textBoxCentreEm : 0);
+    return '<text x="0" y="' + glyphs.y + '" text-anchor="middle"' + attributes({
+      fill: silhouette ? silhouette.fill : paint.fill,
+      'fill-opacity': paint.fillOpacity,
+      stroke: silhouette ? silhouette.stroke : paint.stroke,
+      'stroke-opacity': paint.strokeOpacity,
+      'stroke-width': paint.strokeWidth,
+      'font-size': glyphs.fontSize,
+      'font-weight': glyphs.fontWeight,
+      'font-family': glyphs.fontFamily,
+    }) + '>' + escapeXml(glyphs.text) + '</text>';
   }
 
-  function image(layer: RuntimeLayer, imageReferences: Record<string, string>, props: string): string {
+  function image(layer: RuntimeLayer, imageReferences: Record<string, string>, props: SvgAttributes): string {
     const width = layer.width || 180;
     const height = layer.height || 120;
     const href = imageReferences[layer.imageUrl as string] || layer.imageUrl || '';
-    return '<image href="' + escapeXml(resourceUrl(href)) + '" x="' + (-width / 2) + '" y="' + (-height / 2) + '" width="' + width + '" height="' + height + '" preserveAspectRatio="xMidYMid slice"' + (props || '') + ' />';
+    return '<image href="' + escapeXml(resourceUrl(href)) + '" x="' + (-width / 2) + '" y="' + (-height / 2) + '" width="' + width + '" height="' + height + '" preserveAspectRatio="xMidYMid slice"' + attributes(props) + ' />';
   }
 
-  function content(layer: RuntimeLayer, imageReferences: Record<string, string>, props: string, fillOverride?: string): string {
-    if (layer.type === 'custom_text') return text(layer, props, fillOverride);
-    if (layer.type === 'custom_image') return image(layer, imageReferences, props);
-    return geometry(layer, props);
+  /** A layer's content painted as a silhouette: the matte and clip sources. */
+  function silhouette(layer: RuntimeLayer, imageReferences: Record<string, string>, fill: string): string {
+    if (layer.type === 'custom_text') return text(layer, { fill, stroke: 'none' });
+    if (layer.type === 'custom_image') return image(layer, imageReferences, { fill, stroke: 'none' });
+    return geometry(layer, { fill, stroke: 'none' });
   }
+
 
   // The world map of a layer, spelled exactly like the editor's own emitter and
   // the static SVG renderer: affineTrsReading names the historical TRS form
@@ -722,7 +753,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       if (!source) throw new Error('Missing track matte source: ' + relation.sourceLayerId);
       const id = runtimeId('kcs-ograf-track-matte', layer.id, source.id, relation.mode, relation.inverted ? 'inverted' : '');
       const sourceFill = relation.inverted ? 'black' : (relation.mode === 'luminance' ? escapeXml(source.fillColor || 'white') : 'white');
-      const sourceBody = content(source, IMAGE_REFERENCES, ' fill="' + sourceFill + '" stroke="none"', sourceFill);
+      const sourceBody = silhouette(source, IMAGE_REFERENCES, sourceFill);
       const sourceShape = '<g transform="' + transform(scene, source) + '">' + sourceBody + '</g>';
       const body = relation.inverted ? '<rect x="0" y="0" width="' + scene.width + '" height="' + scene.height + '" fill="white" />' + sourceShape : sourceShape;
       defs.push('<mask id="' + id + '" x="0" y="0" width="' + scene.width + '" height="' + scene.height + '" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="' + (relation.inverted ? 'luminance' : relation.mode) + '">' + body + '</mask>');
@@ -741,45 +772,55 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       const source = evaluated.find((candidate) => candidate.id === matte.sourcePartId);
       if (!source) throw new Error('Missing clip matte source: ' + matte.sourcePartId);
       const id = runtimeId('kcs-clip', source.id);
-      defs.push('<clipPath id="' + id + '" clipPathUnits="userSpaceOnUse"><g transform="' + transform(scene, source) + '">' + content(source, IMAGE_REFERENCES, ' fill="white" stroke="none"') + '</g></clipPath>');
+      defs.push('<clipPath id="' + id + '" clipPathUnits="userSpaceOnUse"><g transform="' + transform(scene, source) + '">' + silhouette(source, IMAGE_REFERENCES, 'white') + '</g></clipPath>');
       seen[source.id] = true;
     });
     return defs.join('');
   }
 
-  function renderShape(layer: EvaluatedRuntimeLayer, attrs: string): string {
-    const strokeWidth = layer.strokeWidth === undefined ? 1.5 : layer.strokeWidth;
-    const common = attrs + ' vector-effect="non-scaling-stroke"';
-    const id = runtimeId(layer.strokeAlignment + '-stroke', layer.id);
-    const maskBase = layer.strokeAlignment === 'inside' ? 'black' : 'white';
-    const maskShape = geometry(layer, ' fill="' + (layer.strokeAlignment === 'inside' ? 'white' : 'black') + '" stroke="none"');
-    const fillShape = geometry(layer, common + ' stroke="none" stroke-width="0"');
-    const strokeShape = geometry(layer, common + ' fill="none" stroke-width="' + (strokeWidth * 2) + '" mask="url(#' + id + ')"');
-    return '<g><defs><mask id="' + id + '" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"><rect x="-1000000" y="-1000000" width="2000000" height="2000000" fill="' + maskBase + '" />' + maskShape + '</mask></defs>' + fillShape + strokeShape + '</g>';
+  /**
+   * A shape painted as the static renderer paints it: a centred outline on the
+   * geometry itself, an inside or outside one as a double-width outline masked
+   * by the geometry.
+   */
+  function renderShape(layer: EvaluatedRuntimeLayer): string {
+    const paint = describePaint(resolveShapeAppearance(layer));
+    const common: SvgAttributes = {
+      fill: paint.fill,
+      'fill-opacity': paint.fillOpacity,
+      stroke: paint.stroke,
+      'stroke-opacity': paint.strokeOpacity,
+      'stroke-width': paint.strokeWidth,
+      // As in the editor, the stroke is in scene units whatever the layer's own scale.
+      'vector-effect': 'non-scaling-stroke',
+      ...trimAttributes(layer),
+    };
+    if (paint.strokeAlignment === 'center' || !paint.stroked) return geometry(layer, common);
+    const id = runtimeId(paint.strokeAlignment + '-stroke', layer.id);
+    const inside = paint.strokeAlignment === 'inside';
+    const maskShape = geometry(layer, { fill: inside ? 'white' : 'black', stroke: 'none' });
+    const fillShape = geometry(layer, { ...common, stroke: 'none', 'stroke-width': 0 });
+    const strokeShape = geometry(layer, { ...common, fill: 'none', 'stroke-width': paint.strokeWidth * 2, mask: 'url(#' + id + ')' });
+    return '<g><defs><mask id="' + id + '" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"><rect x="-1000000" y="-1000000" width="2000000" height="2000000" fill="' + (inside ? 'black' : 'white') + '" />' + maskShape + '</mask></defs>' + fillShape + strokeShape + '</g>';
   }
 
-  function trimAttributes(layer: EvaluatedRuntimeLayer): string {
-    if (layer.trimPathEnabled !== true) return '';
+  function trimAttributes(layer: EvaluatedRuntimeLayer): SvgAttributes {
+    if (layer.trimPathEnabled !== true) return {};
     const start = normTrim01(layer.trimPathStart, 0);
     const end = normTrim01(layer.trimPathEnd, 1);
     const offset = normTrimOffsetDegrees(layer.trimPathOffset);
     const rawSpan = end - start;
     const span = ((rawSpan % 1) + 1) % 1;
     const begin = ((start + offset / 360) % 1 + 1) % 1;
-    if (rawSpan === 1) return ' pathLength="1"';
-    if (span === 0) return ' pathLength="1" stroke-dasharray="0 1" stroke-dashoffset="' + (begin === 0 ? 0 : -begin) + '"';
-    return ' pathLength="1" stroke-dasharray="' + span + ' ' + (1 - span) + '" stroke-dashoffset="' + (begin === 0 ? 0 : -begin) + '"';
+    const dashOffset = begin === 0 ? 0 : -begin;
+    if (rawSpan === 1) return { pathLength: 1 };
+    if (span === 0) return { pathLength: 1, 'stroke-dasharray': '0 1', 'stroke-dashoffset': dashOffset };
+    return { pathLength: 1, 'stroke-dasharray': span + ' ' + (1 - span), 'stroke-dashoffset': dashOffset };
   }
 
   function renderLayer(scene: RuntimeScene, layer: EvaluatedRuntimeLayer, maskMap: Record<string, string[]>, matteId: string | undefined, hidden: boolean): string {
     if (hidden || !layer.visible || layer.opacity <= 0) return '';
-    const attrs = ' fill="' + escapeXml(layer.fillEnabled === false ? 'none' : layer.fillColor || 'none') + '"'
-      + ' fill-opacity="' + (layer.fillOpacity === undefined ? 1 : layer.fillOpacity) + '"'
-      + ' stroke="' + escapeXml(layer.strokeEnabled === false ? 'none' : layer.strokeColor || 'none') + '"'
-      + ' stroke-opacity="' + (layer.strokeOpacity === undefined ? 1 : layer.strokeOpacity) + '"'
-      + ' stroke-width="' + (layer.strokeWidth === undefined ? 1.5 : layer.strokeWidth) + '"'
-      + trimAttributes(layer);
-    const body = layer.type === 'custom_text' ? text(layer, attrs) : layer.type === 'custom_image' ? image(layer, IMAGE_REFERENCES, attrs) : renderShape(layer, attrs);
+    const body = layer.type === 'custom_text' ? text(layer) : layer.type === 'custom_image' ? image(layer, IMAGE_REFERENCES, {}) : renderShape(layer);
     let inner = '<g transform="' + transform(scene, layer) + '">' + body + '</g>';
     const ids = (maskMap[layer.id] || []).concat(matteId ? [matteId] : []);
     ids.slice().reverse().forEach((id) => {

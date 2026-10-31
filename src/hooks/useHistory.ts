@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { CharacterPart, MotionTemplate, Track } from '../types/animator';
 import type { SceneCoordinateSystem } from '../types/composition';
+import { deepFreeze, structurallyEqual } from '../utils/historySnapshot';
 
 /**
  * The document-level authoring state a scene replacement carries.
@@ -25,6 +26,27 @@ interface HistoryState {
   motionTemplates?: MotionTemplate[];
   document?: HistoryDocumentState;
 }
+
+/**
+ * A snapshot holds the state arrays themselves, not copies: scene state is
+ * updated immutably, so a recorded array never changes afterwards. Development
+ * builds freeze it to prove that — an in-place edit throws instead of quietly
+ * rewriting history.
+ */
+const recordSnapshot = (
+  tracks: Track[],
+  characterParts: CharacterPart[],
+  motionTemplates: MotionTemplate[] | undefined,
+  document: HistoryDocumentState,
+): HistoryState => {
+  const snapshot: HistoryState = {
+    tracks,
+    characterParts,
+    ...(motionTemplates ? { motionTemplates } : {}),
+    document,
+  };
+  return import.meta.env.DEV ? deepFreeze(snapshot) : snapshot;
+};
 
 interface UseHistoryOptions {
   tracks: Track[];
@@ -120,12 +142,7 @@ export const useHistory = ({
   const startBatchInteraction = useCallback(() => {
     if (!isBatchInteractingRef.current) {
       isBatchInteractingRef.current = true;
-      batchStartSnapshotRef.current = {
-        tracks: structuredClone(tracksRef.current),
-        characterParts: structuredClone(characterPartsRef.current),
-        ...(motionTemplates ? { motionTemplates: structuredClone(motionTemplates) } : {}),
-        document: structuredClone(documentStateRef.current),
-      };
+      batchStartSnapshotRef.current = recordSnapshot(tracksRef.current, characterPartsRef.current, motionTemplates, documentStateRef.current);
     }
   }, [characterPartsRef, motionTemplates, tracksRef]);
 
@@ -135,14 +152,9 @@ export const useHistory = ({
       isBatchInteractingRef.current = false;
       batchStartSnapshotRef.current = null;
 
-      const finalSnap: HistoryState = {
-        tracks: structuredClone(tracksRef.current),
-        characterParts: structuredClone(characterPartsRef.current),
-        ...(motionTemplates ? { motionTemplates: structuredClone(motionTemplates) } : {}),
-        document: structuredClone(documentStateRef.current),
-      };
+      const finalSnap = recordSnapshot(tracksRef.current, characterPartsRef.current, motionTemplates, documentStateRef.current);
 
-      if (initialSnap && JSON.stringify(initialSnap) !== JSON.stringify(finalSnap)) {
+      if (initialSnap && !structurallyEqual(initialSnap, finalSnap)) {
         const trimmed = historyRef.current.slice(0, historyIndexRef.current + 1);
         // Defensive bootstrap: if the stack is somehow empty, seed it with the
         // pre-interaction state so undo can always restore it.
@@ -179,12 +191,7 @@ export const useHistory = ({
     if (isBatchInteractingRef.current) {
       return;
     }
-    const snap: HistoryState = {
-      tracks: structuredClone(tracks),
-      characterParts: structuredClone(characterParts),
-      ...(motionTemplates ? { motionTemplates: structuredClone(motionTemplates) } : {}),
-      document: structuredClone(documentStateRef.current),
-    };
+    const snap = recordSnapshot(tracks, characterParts, motionTemplates, documentStateRef.current);
 
     if (baselineResetRef.current) {
       // Initialization, not an edit: the restored document IS the baseline.
@@ -195,7 +202,7 @@ export const useHistory = ({
 
     const current = historyRef.current;
     const last = current[current.length - 1];
-    if (last && JSON.stringify(last) === JSON.stringify(snap)) {
+    if (last && structurallyEqual(last, snap)) {
       return; // no change — do not touch the index
     }
 
@@ -221,14 +228,14 @@ export const useHistory = ({
       const targetState = historyRef.current[idx - 1];
       if (targetState) {
         isUndoRedoRef.current = true;
-        setTracks(structuredClone(targetState.tracks));
-        setCharacterParts(structuredClone(targetState.characterParts));
+        setTracks(targetState.tracks);
+        setCharacterParts(targetState.characterParts);
         if (setMotionTemplates && targetState.motionTemplates) {
-          setMotionTemplates(structuredClone(targetState.motionTemplates));
+          setMotionTemplates(targetState.motionTemplates);
         }
         // The document-level state goes back with the layers: restoring only the
         // layers would leave an imported frame rate or canvas on the old scene.
-        if (targetState.document) restoreDocumentState(structuredClone(targetState.document));
+        if (targetState.document) restoreDocumentState(targetState.document);
         setHistoryIndex(idx - 1);
         historyIndexRef.current = idx - 1;
       }
@@ -244,12 +251,12 @@ export const useHistory = ({
       const targetState = historyRef.current[idx + 1];
       if (targetState) {
         isUndoRedoRef.current = true;
-        setTracks(structuredClone(targetState.tracks));
-        setCharacterParts(structuredClone(targetState.characterParts));
+        setTracks(targetState.tracks);
+        setCharacterParts(targetState.characterParts);
         if (setMotionTemplates && targetState.motionTemplates) {
-          setMotionTemplates(structuredClone(targetState.motionTemplates));
+          setMotionTemplates(targetState.motionTemplates);
         }
-        if (targetState.document) restoreDocumentState(structuredClone(targetState.document));
+        if (targetState.document) restoreDocumentState(targetState.document);
         setHistoryIndex(idx + 1);
         historyIndexRef.current = idx + 1;
       }

@@ -1,9 +1,9 @@
 import React from 'react';
-import type { PathOrderCommand } from '../../../utils/maskPathOrder';
+import type { PathOrderCommand } from '../../../utils/geometry/maskPathOrder';
 import type { BezierPath, CharacterPart, Track, Transform } from '../../../types/animator';
 import { StyleColorSection } from './style/StyleColorSection';
 import { StyleAppearanceSection } from './style/StyleAppearanceSection';
-import { isShapeAppearanceEligible } from '../../../utils/shapeAppearance';
+import { isShapeAppearanceEligible } from '../../../utils/layers/shapeAppearance';
 import { StyleTextFields } from './style/StyleTextFields';
 import { StyleClonerSection } from './style/StyleClonerSection';
 import { StyleParticleSection } from './style/StyleParticleSection';
@@ -15,7 +15,7 @@ import type { SceneCoordinateSystem } from '../../../types/composition';
 import { StyleMatteSection } from './style/StyleMatteSection';
 import type { MaskDrawShape } from '../../../hooks/useMaskEditing';
 import { TrimPathSection, type TrimPathChannel } from './style/TrimPathSection';
-import { isTrimPathEligible } from '../../../utils/trimPath';
+import { isTrimPathEligible } from '../../../utils/geometry/trimPath';
 
 interface StyleTabProps {
   selectedPart: CharacterPart;
@@ -25,14 +25,14 @@ interface StyleTabProps {
   transform?: Transform;
   coordinateSystem?: SceneCoordinateSystem;
   onChangeMaskPath?: (maskId: string, path: BezierPath) => void;
-  /** WP-02: canvas mask editing of this layer. */
+  /** Canvas mask editing of this layer. */
   maskEditTargetId?: string | null;
   onEditMaskOnCanvas?: (maskId: string) => void;
   onExitMaskEditing?: () => void;
-  /** WP-03: drawing new masks and whole-path transforms. */
+  /** Drawing new masks and whole-path transforms. */
   maskDrawShape?: MaskDrawShape | null;
   onStartMaskDraw?: (shape: MaskDrawShape) => void;
-  /** WP-04: Track Matte target/source navigation. */
+  /** Track Matte target/source navigation. */
   matteReturnTargetId?: string | null;
   onSelectMatteSource?: (targetId: string, sourceId: string) => void;
   onBackToMatteTarget?: () => void;
@@ -48,8 +48,8 @@ interface StyleTabProps {
   /** Opens/closes ONE undo entry around a completed color pointer gesture. */
   onColorInteractionStart?: () => void;
   onColorInteractionEnd?: () => void;
-  /** C6 — shape ↔ editable path: conversion, and the path's points shared with the canvas. */
-  /** WP-08 — colour correction of an image layer. */
+  /** Shape ↔ editable path: conversion, and the path's points shared with the canvas. */
+  /** Colour correction of an image layer. */
   colorCorrection?: {
     evaluatedMasks?: LayerMask[];
     onChangeEffects: (effects: ColorCorrectionEffect[] | undefined) => void;
@@ -58,7 +58,7 @@ interface StyleTabProps {
     readOnlyReason: string | null;
   };
   /**
-   * C7 — which Inspector tab this renders: 'properties' (paint, text, Trim
+   * Which Inspector tab this renders: 'properties' (paint, text, Trim
    * Path, geometry, effects) or 'masks' (layer masks, Track Matte, legacy clip
    * matte). Omitted: everything, in that order.
    */
@@ -110,7 +110,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
     selectedPart.type === 'custom_text' ||
     selectedPart.type === 'custom_banner';
 
-  // C7 — the Properties tab: paint, text, Trim Path, geometry, effects.
+  // The Properties tab: paint, text, Trim Path, geometry, effects.
   const properties = (
     <>
       {isTrimPathEligible(selectedPart.type) && (
@@ -183,7 +183,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
       <StyleParticleSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
     </>
   );
-  // C7 — the Masks tab: layer masks, Track Matte, legacy clip matte.
+  // The Masks tab: layer masks, Track Matte, legacy clip matte.
   const masks = (
     <StyleMatteSection
       selectedPart={selectedPart}

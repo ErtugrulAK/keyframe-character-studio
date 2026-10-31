@@ -1,6 +1,6 @@
 import type { CharacterPart, Transform } from '../types/animator';
 import type { EvaluatedFrame, EvaluatedLayer, RuntimeData, RuntimeTrackState, SceneData, SceneLayer } from '../types/composition';
-import { evaluateFrame } from '../utils/evaluateFrame';
+import { evaluateFrame } from '../utils/animation/evaluateFrame';
 import { validateSceneForOGraf } from './validation';
 import type { OGrafExportOptions } from './types';
 
@@ -95,7 +95,7 @@ function assertExportable(sceneData: SceneData, options: OGrafExportOptions): vo
  * A scene that cannot be rendered at all is still caught — by the renderer
  * itself, and by `validateSceneForOGraf` where the caller chooses to ask.
  *
- * N2a: the sequence resolves in the order the generated runtime and the editor
+ * The sequence resolves in the order the generated runtime and the editor
  * stage already use — an explicit override first, then the scene's persisted
  * `activeTemplateId`, then the historical `'Sequence'`. An empty identifier is
  * treated as absent on every path, matching the runtime's `||` convention.

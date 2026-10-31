@@ -1,5 +1,5 @@
 import type { SceneData, SceneLayer } from '../types/composition';
-import { isPrototypeSensitiveKey, normalizePackagePath } from '../utils/pathSafety';
+import { isPrototypeSensitiveKey, normalizePackagePath } from '../utils/persistence/pathSafety';
 import {
   type OGrafAssetPlan,
   type OGrafDiagnosticCode,
@@ -13,7 +13,7 @@ import {
 } from './types';
 import { resolveOGrafPublicControls } from './publicControls';
 import { describeOGrafValueForDiagnostics } from './diagnostics';
-import { resolveMatteSource } from '../utils/matte';
+import { resolveMatteSource } from '../utils/layers/matte';
 const SUPPORTED_LAYER_TYPES: Record<string, true> = {
   custom_box: true,
   custom_rect: true,
@@ -514,7 +514,7 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
   if (proceduralValues.some((value) => /(?:shake|random)/iu.test(value))) {
     diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_NONDETERMINISTIC_PROCEDURAL', 'ERROR', 'Non-deterministic procedural animation is not supported by OGraf Export V1.', layer, 'procedural-animation'));
   }
-  // F-04: the generated runtime renders the timeline (transform/opacity/mask
+  // The generated runtime renders the timeline (transform/opacity/mask
   // channels) and nothing else, so a layer whose frame output the *editor*
   // resolves from an in/out preset would play a different animation in the
   // exported graphic. That is a silent difference, so the export is refused
@@ -613,7 +613,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
   if (!sceneData || (sceneData.version !== 1 && sceneData.version !== 2 && sceneData.version !== 3) || !Number.isFinite(sceneData.width) || !Number.isFinite(sceneData.height) || !Number.isFinite(sceneData.fps)) {
     diagnostics.push({ code: 'OGRAF_INVALID_PROJECT', severity: 'ERROR', message: 'SceneData must be a version 1, 2 or 3 project with finite width, height, and FPS.' });
   }
-  // WP-08 — the generated OGraf runtime does not draw colour correction and
+  // The generated OGraf runtime does not draw colour correction and
   // would read an effect-only mask as an alpha cut, so either one blocks the
   // package (never flattened, never silently dropped). GIF renders both.
   for (const layer of sceneData?.layers || []) {
@@ -655,7 +655,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
   for (const layer of sceneData.layers || []) {
     const storedSourceId = layer.trackMatte?.sourceLayerId ?? layer.matte?.sourcePartId;
     if (!storedSourceId) continue;
-    // WP-07: only the ACTIVE relationship is an export edge — the one the
+    // Only the ACTIVE relationship is an export edge — the one the
     // editor, the stage and the generated runtime all resolve through
     // `resolveMatteSource` (an enabled Track Matte, else an enabled legacy
     // matte). A disabled relationship renders nothing, so it can neither form

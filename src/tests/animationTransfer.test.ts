@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { cloneAnimationOntoTarget } from '../utils/animationTransfer';
+import { cloneAnimationOntoTarget } from '../utils/animation/animationTransfer';
 import type { CharacterPart, Track } from '../types/animator';
-import { makeEmptyChannels } from '../utils/defaults';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 
 /**
  * M26 26A — COPY ANIMATION ONTO EXISTING PART (pure data layer).

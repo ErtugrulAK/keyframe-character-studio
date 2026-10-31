@@ -1,16 +1,16 @@
 import React from 'react';
 import type { CharacterPart, Track, Transform } from '../../types/animator';
-import { affineSvgTransform, worldAffineOf, type WorldAffine } from '../../utils/containerMath';
-import type { CornerBounds } from '../../utils/cornerResize';
-import { getGroupChildren } from '../../utils/layerGrouping';
-import { suppressedMatteSourceIds } from '../../utils/matte';
-import { getSelectionFrameBounds, selectionFrameGizmoBounds } from '../../utils/selectionFrame';
+import { affineSvgTransform, worldAffineOf, type WorldAffine } from '../../utils/geometry/containerMath';
+import type { CornerBounds } from '../../utils/geometry/cornerResize';
+import { getGroupChildren } from '../../utils/layers/layerGrouping';
+import { suppressedMatteSourceIds } from '../../utils/layers/matte';
+import { getSelectionFrameBounds, selectionFrameGizmoBounds } from '../../utils/geometry/selectionFrame';
 import { TransformGizmo, type ScaleMode } from './overlays/TransformGizmo';
-import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../utils/projectCoordinates';
+import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../utils/geometry/projectCoordinates';
 
 /**
  * A layer's evaluated world pose. The DERIVED `affine` rides along on every
- * evaluated transform (see `utils/containerMath`) and every frame below draws
+ * evaluated transform (see `utils/geometry/containerMath`) and every frame below draws
  * through it, so the type has to carry it: a frame whose map a TRS cannot
  * express is drawn by the gizmo's affine branch instead of the TRS one.
  */
@@ -114,7 +114,7 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
     const isFreeform = !selectedPart.isGroup && selectedPart.type === 'custom_freeform' && !selectedPart.booleanOperandIds?.length;
 
     const hasActiveMatte = Boolean(selectedPart.matte?.sourcePartId && selectedPart.matte.enabled !== false);
-    // WP-04: a Track Matte source hidden from the composition is not painted,
+    // A Track Matte source hidden from the composition is not painted,
     // so it has no body to press. While it is selected it gets an edit-only
     // move area and a label — its visibility setting is never touched.
     const isHiddenMatteSource = suppressedMatteSourceIds(characterParts).has(selectedPart.id);

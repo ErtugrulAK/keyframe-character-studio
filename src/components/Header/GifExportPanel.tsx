@@ -53,7 +53,7 @@ export const GifExportPanel: React.FC<GifExportPanelProps> = ({ scene, sceneTitl
     [exportFps, scene.fps, scene.totalFrames],
   );
   const dimensions = useMemo(() => resolveGifDimensions(scene.width, scene.height, scale), [scale, scene.height, scene.width]);
-  // C8 — a 120 fps half-second gives 25 frames, not 60: GIF cannot show more
+  // A 120 fps half-second gives 25 frames, not 60: GIF cannot show more
   // than 50 a second (or more than the frame budget). Say so where the number
   // is shown, instead of leaving the count to look like a bug.
   const requestedFrames = Math.max(1, Math.round(plan.authoredDurationSeconds * plan.exportFps));

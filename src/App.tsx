@@ -11,7 +11,7 @@ import { PropertyInspector } from './components/Inspector/PropertyInspector';
 import { SequencerTimeline } from './components/Timeline/SequencerTimeline';
 import { LiveDirectorPanel } from './components/Broadcast/LiveDirectorPanel';
 import { useDockedPanelEdge } from './hooks/useDockedPanelEdge';
-import { REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, closeDocksForNarrowStage, isPhoneLayout } from './utils/workspaceLayout';
+import { REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, closeDocksForNarrowStage, isPhoneLayout } from './utils/editor/workspaceLayout';
 
 import './kcsEditorTheme.css';
 
@@ -47,14 +47,14 @@ const MainAppContent: React.FC = () => {
   const leftToolbar = useDockedPanelEdge(true, 'left');
   const inspector = useDockedPanelEdge(true, 'right');
 
-  // C3 — a narrow (or browser-zoomed) window opens with the left dock closed
+  // A narrow (or browser-zoomed) window opens with the left dock closed
   // when the stage would otherwise be narrower than MIN_OPENING_STAGE_WIDTH.
   // Measured once from the real first layout, before the first paint (the
   // microtask runs before the browser paints, outside React's commit), then the
   // untouched opening camera is re-fitted to the wider stage. After this the
   // dock opens and closes only when the user says so, or (C11, below) when the
   // window itself is made narrower.
-  // C11: on a phone-width window the docks open OVER the stage
+  // On a phone-width window the docks open OVER the stage
   // (kcsEditorTheme.css), so they never squeeze it to nothing, and the
   // inspector opens closed too — open, it would cover the whole stage.
   const snapLeftDock = leftToolbar.snap;
@@ -87,7 +87,7 @@ const MainAppContent: React.FC = () => {
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // C11 — the same rule when the WINDOW is made narrower (resizing, snapping
+  // The same rule when the WINDOW is made narrower (resizing, snapping
   // the browser to half the screen, rotating a tablet). Only a shrink acts, so
   // a dock the user reopens in a narrow window is never closed again under them.
   useEffect(() => {
@@ -111,7 +111,7 @@ const MainAppContent: React.FC = () => {
     };
   }, [appMode, closeDocksIfStageNarrow]);
 
-  // R2-07 — the browser's native context menu is suppressed for the whole
+  // The browser's native context menu is suppressed for the whole
   // editor: canvas, layer list, sequence tabs, toolbar, timeline, Details and
   // every text field. The listener runs in the CAPTURE phase on `document`, so
   // it always gets there first: no component can right-click its way around it,
@@ -127,7 +127,7 @@ const MainAppContent: React.FC = () => {
 
   return (
     /*
-     * R3-02 / R4-01 — the two dock handles are children of the editor WORKSPACE
+     * The two dock handles are children of the editor WORKSPACE
      * ROW (`.main-layout`), the box the timeline resize shortens from below. The
      * row's TOP edge never moves — only its height does — so a handle pinned a
      * fixed distance below that edge keeps the same vertical centre at every

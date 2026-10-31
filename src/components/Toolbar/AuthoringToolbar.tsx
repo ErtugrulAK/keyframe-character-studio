@@ -44,14 +44,14 @@ import { useLayerGrouping } from '../../hooks/useLayerGrouping';
 import { useVectorArrangeAuthoring } from '../../hooks/useVectorArrangeAuthoring';
 import { BooleanOperationIcon } from '../Inspector/BooleanOperationIcon';
 import { ToolbarMenu, type ToolbarMenuItem } from './ToolbarMenu';
-import type { BooleanOperation } from '../../utils/booleanGeometry';
-import type { AlignEdge } from '../../utils/vectorArrange';
+import type { BooleanOperation } from '../../utils/geometry/booleanGeometry';
+import type { AlignEdge } from '../../utils/layers/vectorArrange';
 import {
   ariaKeyshortcuts,
   detectShortcutPlatform,
   formatShortcutHint,
   type ShortcutCommandId,
-} from '../../utils/shortcuts';
+} from '../../utils/editor/shortcuts';
 import './AuthoringToolbar.css';
 
 /** The four Boolean operations, in the order the Inspector presents them. */
@@ -159,7 +159,7 @@ const dispatchViewportCommand = (type: 'zoom-in' | 'zoom-out' | 'reset-view') =>
  * Layer bonding (Bind/Unbind) is deliberately NOT here either: the strip no
  * longer offers it. The bond model itself is untouched — a document that
  * carries `boundPartIds` still loads, still moves the bonded layers together,
- * and still round-trips on export (`utils/partBinding` remains the one bond
+ * and still round-trips on export (`utils/layers/partBinding` remains the one bond
  * authority and `usePartBindingAuthoring` remains its authoring surface).
  *
  * State-dependent actions (Boolean, grouping, arrange, align, distribute,
@@ -228,13 +228,13 @@ export const AuthoringToolbar: React.FC = () => {
   // actions carry the availability.
   const booleanReady = Boolean(selectedBooleanGroup) || booleanEligibleParts.length >= 2;
   const penActive = activeTool === 'freeform_draw';
-  // C2: a creation button shows the mode the stage is really in, and a second
+  // A creation button shows the mode the stage is really in, and a second
   // press disarms it (back to Select) — the toolbar never disagrees with the stage.
   const rectangleArmed = activeTool === 'shape_create' && pendingShapeType === 'custom_rect';
   const circleArmed = activeTool === 'shape_create' && pendingShapeType === 'custom_circle';
   const activeCanvasToolIndex = CANVAS_TOOLS.indexOf(activeTool as 'select' | 'pan');
 
-  // C3 — the narrow strip's two menus: the same commands as the wide bands.
+  // The narrow strip's two menus: the same commands as the wide bands.
   const alignMenuItems: ToolbarMenuItem[] = [
     ...[...ALIGN_EDGE_ITEMS, ...CENTER_ITEMS].map(({ id, label, note, icon }) => ({
       id: `align-${id}`,

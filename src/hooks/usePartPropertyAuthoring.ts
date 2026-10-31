@@ -1,11 +1,11 @@
 import { useAnimator } from '../context/useAnimator';
 import { layerMaskChannel } from '../types/animator';
 import type { CharacterPart, LayerMask, LayerMaskChannel } from '../types/animator';
-import { evaluateLayerMasks } from '../utils/evaluateLayerMasks';
-import { authorPropertyValueAtFrameMutator } from '../utils/trackMutations';
-import { isShapeAppearanceEligible, updateShapeAppearance, type ShapeAppearancePatch } from '../utils/shapeAppearance';
-import { isTrimPathEligible } from '../utils/trimPath';
-import { updateTrimPath, type TrimPathAuthoringPatch } from '../utils/trimPathAuthoring';
+import { evaluateLayerMasks } from '../utils/animation/evaluateLayerMasks';
+import { authorPropertyValueAtFrameMutator } from '../utils/animation/trackMutations';
+import { isShapeAppearanceEligible, updateShapeAppearance, type ShapeAppearancePatch } from '../utils/layers/shapeAppearance';
+import { isTrimPathEligible } from '../utils/geometry/trimPath';
+import { updateTrimPath, type TrimPathAuthoringPatch } from '../utils/geometry/trimPathAuthoring';
 
 /**
  * The one authored-property write path for the selected part.
@@ -58,7 +58,7 @@ export const usePartPropertyAuthoring = (): PartPropertyAuthoring => {
   };
 
   /**
-   * WP-01: the mask fields display the ACTIVE sequence's evaluated masks, so an
+   * The mask fields display the ACTIVE sequence's evaluated masks, so an
    * edit is resolved against that same evaluation. Only a scalar the user
    * CHANGED is written: to its channel at the playhead when the channel is
    * animated in the active sequence (an exact key keeps its metadata, a

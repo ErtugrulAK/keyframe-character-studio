@@ -9,7 +9,7 @@
 // (partId-based, canonical). `SceneData.tracks` references it directly —
 // there is no separate AnimationTrack type (P4-S3).
 import type { AnimationTrackData, BezierPath, ColorCorrectionEffect, ImageContentBounds, LayerMask, MotionTemplate, PartMatte, TrackMatteV2 } from './animator';
-import type { WorldAffine } from '../utils/containerMath';
+import type { WorldAffine } from '../utils/geometry/containerMath';
 /**
  * Coordinate-unit semantics for persisted scene data.
  *
@@ -93,7 +93,7 @@ export interface SceneLayer {
   masks?: LayerMask[];
   /** V6 track matte relationship. */
   trackMatte?: TrackMatteV2;
-  /** WP-08 — layer effects (colour correction); present only in version 3 scenes. */
+  /** Layer effects (colour correction); present only in version 3 scenes. */
   effects?: ColorCorrectionEffect[];
   booleanGroupId?: string;
   booleanOperation?: 'union' | 'subtract' | 'intersect' | 'exclude';
@@ -128,15 +128,15 @@ export interface SceneLayer {
   shadowOffsetX?: number;
   shadowOffsetY?: number;
   borderRadius?: number;
-  /** C6 — stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
+  /** Stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
   strokeLinejoin?: 'miter' | 'round';
 
   // Content — type-dependent; only fields actually read by PartRenderer sub-renderers
   textValue?: string;
   fontSize?: number;
   fontFamily?: string;
-  /** Absent = the origin sits on the baseline. See utils/textOrigin. */
-  textOrigin?: import('../utils/textOrigin').TextOrigin;
+  /** Absent = the origin sits on the baseline. See utils/geometry/textOrigin. */
+  textOrigin?: import('../utils/geometry/textOrigin').TextOrigin;
   imageUrl?: string;
   videoUrl?: string;
   /** Freeform polygon vertices (center-relative) */
@@ -238,13 +238,13 @@ export type WorldTransform = {
    * Rotation/scale above retain the authored reading of the chain; x/y are
    * always the actual world origin. An anisotropic parent and rotated child
    * can produce shear, so render/measure/hit-test consumers read this exact
-   * map instead of reconstructing axes from scalars. See `utils/containerMath`.
+   * map instead of reconstructing axes from scalars. See `utils/geometry/containerMath`.
    */
   affine?: WorldAffine;
 };
 
-/** World affine, re-exported where composition types live (see `utils/containerMath`). */
-export type { WorldAffine } from '../utils/containerMath';
+/** World affine, re-exported where composition types live (see `utils/geometry/containerMath`). */
+export type { WorldAffine } from '../utils/geometry/containerMath';
 
 export interface LayerContent {
   fillColor?: string;
@@ -264,22 +264,22 @@ export interface LayerContent {
   textValue?: string;
   fontSize?: number;
   fontFamily?: string;
-  /** Absent = the origin sits on the baseline. See utils/textOrigin. */
-  textOrigin?: import('../utils/textOrigin').TextOrigin;
+  /** Absent = the origin sits on the baseline. See utils/geometry/textOrigin. */
+  textOrigin?: import('../utils/geometry/textOrigin').TextOrigin;
   imageUrl?: string;
   videoUrl?: string;
   /** V6 same-layer mask stack. */
   masks?: LayerMask[];
   /** V6 track matte relationship. */
   trackMatte?: TrackMatteV2;
-  /** WP-08 — layer effects (colour correction); present only in version 3 scenes. */
+  /** Layer effects (colour correction); present only in version 3 scenes. */
   effects?: ColorCorrectionEffect[];
   shadowColor?: string;
   shadowBlur?: number;
   shadowOffsetX?: number;
   shadowOffsetY?: number;
   borderRadius?: number;
-  /** C6 — stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
+  /** Stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
   strokeLinejoin?: 'miter' | 'round';
   trimPathEnabled?: boolean;
   trimPathStart?: number;

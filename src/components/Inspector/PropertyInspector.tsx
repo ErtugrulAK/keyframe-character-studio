@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { outlinerHeightBounds, resolveOutlinerHeight } from '../../utils/workspaceLayout';
+import { outlinerHeightBounds, resolveOutlinerHeight } from '../../utils/editor/workspaceLayout';
 import { OutlinerPanel } from './OutlinerPanel';
 import { useRetainedUiState } from '../../hooks/useRetainedUiState';
 import { DetailsPanel } from './DetailsPanel';
@@ -24,11 +24,11 @@ interface PropertyInspectorProps {
 
 export const PropertyInspector: React.FC<PropertyInspectorProps> = ({ isHidden, edgeStyle, panelRef }) => {
   const [outlinerHeight, setOutlinerHeight] = useRetainedUiState<number>('inspector.outlinerHeight', 240);
-  // C5 — set once the user sizes the split; from then on their height wins
+  // Set once the user sizes the split; from then on their height wins
   // over the short-window caps (see `resolveOutlinerHeight`).
   const [userSized, setUserSized] = useRetainedUiState<boolean>('inspector.outlinerUserSized', false);
   const [restoreHeight, setRestoreHeight] = useRetainedUiState<number | null>('inspector.outlinerRestoreHeight', null);
-  // WP-06: the sidebar's real height (the Outliner pane's parent), observed so
+  // The sidebar's real height (the Outliner pane's parent), observed so
   // the Details pane keeps a usable height in short windows.
   const [sidebarElement, setSidebarElement] = useState<HTMLElement | null>(null);
   const [sidebarHeight, setSidebarHeight] = useState<number | null>(null);
@@ -80,7 +80,7 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({ isHidden, 
     window.addEventListener('mouseup', handleMouseUp);
   };
   /*
-   * C5 — the split is a real window splitter (WAI-ARIA "separator"): it is a
+   * The split is a real window splitter (WAI-ARIA "separator"): it is a
    * Tab stop with a name and its value, ↑/↓ move it (Shift: faster),
    * Home/End go to the smallest/largest layer list, and Enter (or a
    * double-click) gives the list all the room it can have and back again.

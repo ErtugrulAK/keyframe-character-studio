@@ -3,12 +3,12 @@ import { fireEvent, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { TransformGizmo } from '../components/Canvas/overlays/TransformGizmo';
 import type { CharacterPart, Transform } from '../types/animator';
-import { affineEquals, affineHasShear, affineOfTransform, applyAffine, invertAffine, type WorldAffine } from '../utils/containerMath';
-import { getPartLocalBounds } from '../utils/bounds';
-import { evaluateTransform } from '../utils/evaluateTransform';
-import { selectionFrameGizmoBounds } from '../utils/selectionFrame';
-import { EDITOR_CAMERA_CENTER } from '../utils/projectCoordinates';
-import { getTransformGizmoMetrics } from '../utils/transformGizmoMetrics';
+import { affineEquals, affineHasShear, affineOfTransform, applyAffine, invertAffine, type WorldAffine } from '../utils/geometry/containerMath';
+import { getPartLocalBounds } from '../utils/geometry/bounds';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { selectionFrameGizmoBounds } from '../utils/geometry/selectionFrame';
+import { EDITOR_CAMERA_CENTER } from '../utils/geometry/projectCoordinates';
+import { getTransformGizmoMetrics } from '../utils/geometry/transformGizmoMetrics';
 
 describe('TransformGizmo proportional handle metrics', () => {
   it('keeps tiny-object visuals bounded while preserving an 8px screen hit radius', () => {

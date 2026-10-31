@@ -11,7 +11,7 @@ import {
   SHORTCUT_COMMANDS,
   type ShortcutCategory,
   type ShortcutScope,
-} from '../../utils/shortcuts';
+} from '../../utils/editor/shortcuts';
 import './ShortcutReferenceDialog.css';
 
 interface ShortcutReferenceDialogProps {
@@ -43,7 +43,7 @@ const SCOPE_LABELS: Partial<Record<ShortcutScope, string>> = {
 /**
  * The keyboard shortcut reference.
  *
- * It renders the ONE shortcut table (`utils/shortcuts`) — labels, categories,
+ * It renders the ONE shortcut table (`utils/editor/shortcuts`) — labels, categories,
  * gestures and scopes all come from there, so the panel can never disagree with
  * what the editor binds — and every key is drawn as a platform-formatted chip: a
  * Windows/Linux user reads `Ctrl+Shift+←` and a macOS user reads `⇧⌘←` from the

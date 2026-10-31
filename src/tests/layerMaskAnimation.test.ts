@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addPropertyKeyframeMutator, deletePropertyKeyframeMutator, updatePropertyKeyframeFrameMutator } from '../utils/trackMutations';
+import { addPropertyKeyframeMutator, deletePropertyKeyframeMutator, updatePropertyKeyframeFrameMutator } from '../utils/animation/trackMutations';
 import { layerMaskChannel } from '../types/animator';
 import type { Track } from '../types/animator';
 

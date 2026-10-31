@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getTrimPathDashProps, normalizeTrimPathOffset, resolveTrimPath } from '../utils/trimPath';
+import { getTrimPathDashProps, normalizeTrimPathOffset, resolveTrimPath } from '../utils/geometry/trimPath';
 
 describe('Trim Path V2 pure contract', () => {
   it('resolves modern defaults without mutating legacy absence', () => {

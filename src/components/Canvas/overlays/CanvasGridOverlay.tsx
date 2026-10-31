@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CoordinatePoint } from '../../../utils/projectCoordinates';
+import type { CoordinatePoint } from '../../../utils/geometry/projectCoordinates';
 
 interface CanvasGridOverlayProps {
   artX: number;

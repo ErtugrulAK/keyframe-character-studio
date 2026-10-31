@@ -3,7 +3,7 @@
  */
 
 import { describe, test, expect } from 'vitest';
-import { validateCritical, hasCriticalErrors } from '../utils/validateScene';
+import { validateCritical, hasCriticalErrors } from '../utils/persistence/validateScene';
 import type { SceneData } from '../types/composition';
 
 function makeLayer(id: string, parentId?: string, matte?: { sourcePartId?: string; enabled?: boolean }): any {

@@ -1,8 +1,8 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
-import { resolveShapeAppearance } from '../../../../utils/shapeAppearance';
-import { textBaselineOffset } from '../../../../utils/textOrigin';
-import { describePaint, describeText } from '../../../../utils/drawDescriptor';
+import { resolveShapeAppearance } from '../../../../utils/layers/shapeAppearance';
+import { textBaselineOffset } from '../../../../utils/geometry/textOrigin';
+import { describePaint, describeText } from '../../../../utils/layers/drawDescriptor';
 
 interface TextAndClonerProps {
   part: CharacterPart;
@@ -32,7 +32,7 @@ export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, current
       stroke: textStroke,
       strokeOpacity: paint.strokeOpacity,
       strokeWidth: paint.strokeWidth,
-      // C10 — an authored outline scales with the layer and the view; only the
+      // An authored outline scales with the layer and the view; only the
       // selection highlight (outline switched off) stays screen-constant.
       ...(appearance.strokeEnabled ? {} : { vectorEffect: 'non-scaling-stroke' as const }),
     };

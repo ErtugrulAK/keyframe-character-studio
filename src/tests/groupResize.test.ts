@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { act, renderHook } from '@testing-library/react';
 import type { CharacterPart, Track, Transform } from '../types/animator';
-import { evaluateTransform } from '../utils/evaluateTransform';
-import { getGroupAggregateBounds } from '../utils/layerGrouping';
-import { getPartLocalBounds, getPartWorldBounds } from '../utils/bounds';
-import { resolveCornerResize, resolveEdgeResize, type CornerBounds } from '../utils/cornerResize';
-import { affineOfTransform, affineSvgTransform, applyAffine, composeWorldTransform, worldAffineOf, type WorldAffine } from '../utils/containerMath';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { getGroupAggregateBounds } from '../utils/layers/layerGrouping';
+import { getPartLocalBounds, getPartWorldBounds } from '../utils/geometry/bounds';
+import { resolveCornerResize, resolveEdgeResize, type CornerBounds } from '../utils/geometry/cornerResize';
+import { affineOfTransform, affineSvgTransform, applyAffine, composeWorldTransform, worldAffineOf, type WorldAffine } from '../utils/geometry/containerMath';
 import { useInspector } from '../hooks/useInspector';
 import { useHistory, type HistoryDocumentState } from '../hooks/useHistory';
 

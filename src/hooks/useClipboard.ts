@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
 import type { CharacterPart, Track, TrackChannel } from '../types/animator';
-import { generateId } from '../utils/idGenerator';
-import { makeEmptyChannels } from '../utils/defaults';
-import { mirrorChannelValue, mirrorTransform, type MirrorAxis } from '../utils/mirror';
-import { cloneAnimationOntoTarget } from '../utils/animationTransfer';
-import { getGroupDescendants } from '../utils/layerGrouping';
+import { generateId } from '../utils/layers/idGenerator';
+import { makeEmptyChannels } from '../utils/animation/defaults';
+import { mirrorChannelValue, mirrorTransform, type MirrorAxis } from '../utils/animation/mirror';
+import { cloneAnimationOntoTarget } from '../utils/animation/animationTransfer';
+import { getGroupDescendants } from '../utils/layers/layerGrouping';
 
 interface UseClipboardOptions {
   characterParts: CharacterPart[];
@@ -254,14 +254,14 @@ export const useClipboard = ({
   );
 
   /**
-   * M26 — paste the copied ANIMATION onto an EXISTING selected part.
+   * Paste the copied ANIMATION onto an EXISTING selected part.
    * The target part is NOT replaced: only animation data is transferred
    * (Track.channels + legacy keyframes + IN/OUT presets + durations). The
    * target keeps its id/name/transform/matte/parent/geometry/media and its
    * track keeps its id + visible/locked metadata. Fresh keyframe ids are
    * generated; custom preset IDs are referenced, never duplicated.
    *
-   * C8 — the transfer is RELATIVE to the target's own base transform: the
+   * The transfer is RELATIVE to the target's own base transform: the
    * target keeps its place and proportions and performs the source's motion
    * (see `cloneAnimationOntoTarget`). Exact values stay the job of the
    * timeline's keyframe copy/paste.

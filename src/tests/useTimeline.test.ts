@@ -2,7 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { useTimeline } from '../hooks/useTimeline';
 import { Track, CharacterPart } from '../types/animator';
-import { makeEmptyChannels } from '../utils/defaults';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 
 describe('useTimeline Hook', () => {
   const mockSetCharacterParts = vi.fn();

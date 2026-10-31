@@ -19,7 +19,7 @@ Windows-safe filename and package-relative path handling for KCS exports, OGraf 
 
 ## Implementation
 
-- `src/utils/pathSafety.ts` centralizes filename sanitization, package-path normalization, Windows device-name checks, package-relative validation, and case-insensitive collision detection.
+- `src/utils/persistence/pathSafety.ts` centralizes filename sanitization, package-path normalization, Windows device-name checks, package-relative validation, and case-insensitive collision detection.
 - `src/ograf/compiler.ts` uses the central package-path policy and hardens generated OGraf IDs.
 - `src/ograf/validation.ts` normalizes configured packaged paths before they reach package compilation.
 - `src/ograf/packageCompiler.ts` normalizes asset paths and resolves collisions case-insensitively.

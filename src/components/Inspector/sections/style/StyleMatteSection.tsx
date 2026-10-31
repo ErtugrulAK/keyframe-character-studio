@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Eye, EyeOff, Lock, PenLine, X } from 'lucide-react';
 import type { BezierPath, CharacterPart, LayerMask, MatteMode, PartMatte, Track } from '../../../../types/animator';
-import { maskPathTopologyLockReason } from '../../../../utils/maskPathCreation';
+import { maskPathTopologyLockReason } from '../../../../utils/geometry/maskPathCreation';
 import { BezierPathEditor } from '../../BezierPathEditor';
 import { NumberField } from '../../inputs/NumberField';
-import { pickedTrackMatte, trackMattePickVerdict } from '../../../../utils/trackMattePick';
-import { requestMaskPointsFocus } from '../../../../utils/maskPointFocus';
-import type { PathOrderCommand } from '../../../../utils/maskPathOrder';
+import { pickedTrackMatte, trackMattePickVerdict } from '../../../../utils/layers/trackMattePick';
+import { requestMaskPointsFocus } from '../../../../utils/geometry/maskPointFocus';
+import type { PathOrderCommand } from '../../../../utils/geometry/maskPathOrder';
 import type { MaskDrawShape } from '../../../../hooks/useMaskEditing';
-import { resolveMatteSource, resolveMatteMode, normalizeFeather, isMatteEligible, suppressedMatteSourceIds, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/matte';
-import type { MatteGradientStop } from '../../../../utils/matte';
+import { resolveMatteSource, resolveMatteMode, normalizeFeather, isMatteEligible, suppressedMatteSourceIds, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/layers/matte';
+import type { MatteGradientStop } from '../../../../utils/layers/matte';
 import { StyleCard } from './StyleCard';
 import { TrackMatteSummary } from './TrackMatteSummary';
 interface StyleMatteSectionProps {
@@ -20,24 +20,24 @@ interface StyleMatteSectionProps {
   characterParts: CharacterPart[];
   onPartPropChange: (key: keyof CharacterPart, value: any) => void;
   onChangeMaskPath?: (maskId: string, path: BezierPath) => void;
-  /** WP-02: the mask of THIS layer edited on the canvas, if any. */
+  /** The mask of THIS layer edited on the canvas, if any. */
   maskEditTargetId?: string | null;
   onEditMaskOnCanvas?: (maskId: string) => void;
   onExitMaskEditing?: () => void;
-  /** WP-03: the shape a new mask is being drawn as on the canvas, if any. */
+  /** The shape a new mask is being drawn as on the canvas, if any. */
   maskDrawShape?: MaskDrawShape | null;
   onStartMaskDraw?: (shape: MaskDrawShape) => void;
-  /** WP-03: rotates/scales the active mask path about its own centre (layer pivot untouched). */
-  /** WP-04: transient Track Matte navigation (selection only). */
+  /** Rotates/scales the active mask path about its own centre (layer pivot untouched). */
+  /** Transient Track Matte navigation (selection only). */
   matteReturnTargetId?: string | null;
   onSelectMatteSource?: (targetId: string, sourceId: string) => void;
   onBackToMatteTarget?: () => void;
   /** Tells why a Track Matte source choice was refused (C10: from the source list). */
   onPickRefused?: (reason: string) => void;
-  /** C4 — a mask path structure command; returns the selected point's new index, undefined when refused. */
+  /** A mask path structure command; returns the selected point's new index, undefined when refused. */
   onMaskPathOrder?: (maskId: string, command: PathOrderCommand, selectedIndex: number | null) => number | null | undefined;
   onSelectMatteTarget?: (targetId: string) => void;
-  /** C2: the layer's mask path keys (the topology guard reads them) and the canvas-selected point. */
+  /** The layer's mask path keys (the topology guard reads them) and the canvas-selected point. */
   maskPathChannels?: Track['maskPathChannels'];
   maskVertexIndex?: number | null;
   onSelectMaskVertex?: (index: number | null) => void;
@@ -50,7 +50,7 @@ const MASK_DRAW_SHAPES: { shape: MaskDrawShape; label: string }[] = [
 ];
 
 /**
- * C10 — a mask either shows the layer inside it or cuts a hole ("Cut a hole":
+ * A mask either shows the layer inside it or cuts a hole ("Cut a hole":
  * subtract). Intersect and Difference are kept for older projects: they render
  * as before and are named here, but are no longer offered.
  */
@@ -156,12 +156,12 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
 
   const sourceMissing = !!matte && !characterParts.some((p) => p.id === matte.sourcePartId);
 
-  // M18 — text sources have NO path geometry, so Clip is not a valid mode for
+  // Text sources have NO path geometry, so Clip is not a valid mode for
   // them (buildMattePath → null; the renderer ignores text+clip). The Clip
   // option is disabled at the UI level while a text source is selected — no
   // renderer fallback, no new eligibility logic (isMatteEligible stays the
   // single authority for the source LIST).
-  // M21 — IMAGE sources are the same: buildMattePath(image) → null (the
+  // IMAGE sources are the same: buildMattePath(image) → null (the
   // <image> is mask CONTENT, never a clip contour — 7B/7C contract). Same
   // UI-level disabled-Clip pattern; alpha/luminance/inverted/feather/
   // strength/gradient all stay enabled.
@@ -242,7 +242,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
     setMatte({ ...matte, gradient: { ...matte.gradient, angle: normalizedAngle } });
   };
 
-  // M20 — gradient TYPE (linear | radial) is derived from matte.gradient via
+  // Gradient TYPE (linear | radial) is derived from matte.gradient via
   // the shared pure normalizeGradientType authority (no local state; a
   // malformed/missing type always displays as Linear). Radial geometry is
   // automatic (center/radius derived from source bounds) — the MVP exposes
@@ -360,7 +360,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   const suppressedSourceIds = suppressedMatteSourceIds(characterParts);
   const setTrackMatte = (next: CharacterPart['trackMatte'] | undefined) => onPartPropChange('trackMatte', next);
 
-  // WP-04: the effective relationship (and the layers this one is the matte
+  // The effective relationship (and the layers this one is the matte
   // of) is always visible above the settings, so the user never has to know
   // which stored representation is in effect.
   const showMatteSummary = Boolean(resolveMatteSource(selectedPart))

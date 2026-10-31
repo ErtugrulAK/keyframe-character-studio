@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { BezierPath, CharacterPart, Track } from '../types/animator';
 import type { ToastOptions } from './useToast';
-import { convertShapeToEditablePath } from '../utils/shapeToPath';
-import { deleteMaskVertex } from '../utils/maskPathCreation';
-import { resolveFreeformPath } from '../utils/freeform';
+import { convertShapeToEditablePath } from '../utils/geometry/shapeToPath';
+import { deleteMaskVertex } from '../utils/geometry/maskPathCreation';
+import { resolveFreeformPath } from '../utils/geometry/freeform';
 
 /** The selected point of an editable path layer (transient editor state, never scene data). */
 export interface PathVertexSelection {
@@ -21,7 +21,7 @@ interface UsePathEditingOptions {
 }
 
 /**
- * C6 — editable paths: converting a basic shape into a path layer, and the
+ * Editable paths: converting a basic shape into a path layer, and the
  * point selection the canvas and the Inspector share. Every write goes through
  * the editor's (lock-guarded) part setter, so convert / add / remove / move
  * are ordinary scene edits with their usual undo step.

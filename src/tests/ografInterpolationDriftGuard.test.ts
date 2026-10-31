@@ -1,7 +1,7 @@
 // A1 — Interpolation drift guard: editor authority vs emitted OGraf runtime.
 //
 // The easing/interpolation algebra intentionally exists in two sources (editor
-// `utils/defaults.ts` and the generated `ograf/runtimeTemplate.ts`). N2b and
+// `utils/animation/defaults.ts` and the generated `ograf/runtimeTemplate.ts`). N2b and
 // A2 restored numerical parity; this test is the tripwire that catches any
 // future SINGLE-SIDED edit: a seeded deterministic fuzz over easings,
 // duplicate frames, exact-key landings and fractional probes asserts the two
@@ -14,7 +14,7 @@ import { build } from 'vite';
 import { describe, expect, test } from 'vitest';
 import type { PropertyKeyframe } from '../types/animator';
 import type { SceneData } from '../types/composition';
-import { interpolateChannel } from '../utils/defaults';
+import { interpolateChannel } from '../utils/animation/defaults';
 
 const runtimePath = fileURLToPath(new URL('../ograf/runtimeTemplate.ts', import.meta.url)).replaceAll('\\', '/');
 

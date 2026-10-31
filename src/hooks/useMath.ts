@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
 import type { CharacterPart, Transform, AnimationTrackData } from '../types/animator';
 import type { WorldAffine } from '../types/composition';
-import { evaluateTransform } from '../utils/evaluateTransform';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
 
 interface UseMathOptions {
   characterParts: CharacterPart[];
@@ -34,7 +34,7 @@ interface TransformCache {
  * React hook wrapping the pure `evaluateTransform` function.
  *
  * Phase 2: The hook delegates all evaluation to the pure function and only adds
- * per-frame memoization. Actual math lives in `utils/evaluateTransform.ts`.
+ * per-frame memoization. Actual math lives in `utils/animation/evaluateTransform.ts`.
  *
  * API unchanged: `getComputedTransform(partId, frame) → Transform`
  */

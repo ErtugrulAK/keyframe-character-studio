@@ -2,8 +2,8 @@ import React, { useRef } from 'react';
 import type { BezierPath, CharacterPart, Track } from '../../../../types/animator';
 import { StyleCard } from './StyleCard';
 import { BezierPathEditor } from '../../BezierPathEditor';
-import { resolveFreeformPath } from '../../../../utils/freeform';
-import { convertibleShapeLabel, isConvertibleShapeType, shapeToPathBlockReason } from '../../../../utils/shapeToPath';
+import { resolveFreeformPath } from '../../../../utils/geometry/freeform';
+import { convertibleShapeLabel, isConvertibleShapeType, shapeToPathBlockReason } from '../../../../utils/geometry/shapeToPath';
 
 interface PathGeometryCardProps {
   selectedPart: CharacterPart;
@@ -45,7 +45,7 @@ const mapPath = (path: BezierPath, map: (p: { x: number; y: number }) => { x: nu
 });
 
 /**
- * C6 — the shape's geometry in the Inspector, stated plainly:
+ * The shape's geometry in the Inspector, stated plainly:
  * - a basic shape is PARAMETRIC (its outline comes from its type): it offers
  *   "Convert to editable path", or says why it cannot be converted;
  * - an editable path lists its points for Corner/Smooth, add/remove and

@@ -11,8 +11,8 @@ import {
   lockedOutcomeRefusal,
   lockedPartChanges,
   lockedTrackChanges,
-} from '../utils/layerLocks';
-import { selectAllLayers } from '../utils/layerSelection';
+} from '../utils/layers/layerLocks';
+import { selectAllLayers } from '../utils/layers/layerSelection';
 
 const mask = (id: string, locked = false): LayerMask => ({
   id, name: id.toUpperCase(), mode: 'add', enabled: true, locked,

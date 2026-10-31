@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useSerialization } from '../hooks/useSerialization';
-import type { ImportResult } from '../utils/importValidation';
+import type { ImportResult } from '../utils/persistence/importValidation';
 import type { SceneLayer } from '../types/composition';
 
 /**

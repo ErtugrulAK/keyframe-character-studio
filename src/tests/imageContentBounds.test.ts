@@ -11,7 +11,7 @@ import {
   VISIBLE_ALPHA_THRESHOLD,
   contentBoundsInLocalUnits,
   findVisibleBounds,
-} from '../utils/imageContentBounds';
+} from '../utils/geometry/imageContentBounds';
 
 /** Build an alpha plane from rows of `#` (opaque) and `.` (transparent). */
 const alphaFromRows = (rows: string[]): { alpha: Uint8Array; width: number; height: number } => {

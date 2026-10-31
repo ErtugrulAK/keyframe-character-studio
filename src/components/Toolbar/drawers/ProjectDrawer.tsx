@@ -2,8 +2,8 @@ import React, { lazy, Suspense, useState } from 'react';
 import { Library } from 'lucide-react';
 import { NumberField } from '../../Inspector/inputs/NumberField';
 import { useAnimatorSlice } from '../../../context/useAnimator';
-import { validateImportedDocument } from '../../../utils/importValidation';
-import { createIndexedDbBackend, createProjectLibrary, type ProjectLibrary } from '../../../utils/projectLibrary';
+import { validateImportedDocument } from '../../../utils/persistence/importValidation';
+import { createIndexedDbBackend, createProjectLibrary, type ProjectLibrary } from '../../../utils/persistence/projectLibrary';
 
 // The library dialog opens on demand, so it loads then.
 const GraphicLibraryDialog = lazy(() => import('../../Header/GraphicLibraryDialog').then((module) => ({ default: module.GraphicLibraryDialog })));

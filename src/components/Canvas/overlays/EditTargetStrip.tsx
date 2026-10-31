@@ -1,5 +1,5 @@
 import React from 'react';
-import type { EditTarget } from '../../../utils/editTarget';
+import type { EditTarget } from '../../../utils/layers/editTarget';
 
 interface EditTargetStripProps {
   target: EditTarget;
@@ -11,12 +11,12 @@ interface EditTargetStripProps {
   blocked?: boolean;
   /** The mode's own controls (Finish, Cancel, Back to …). */
   children?: React.ReactNode;
-  /** C10 — the controls only, without the mode and path caption. */
+  /** The controls only, without the mode and path caption. */
   bare?: boolean;
 }
 
 /**
- * C5 — the compact "what am I editing" strip at the top-left of the stage.
+ * The compact "what am I editing" strip at the top-left of the stage.
  *
  * One component for every mode (layer, matte source, new shape, drawing a
  * shape or a mask, editing a mask path), fed by `resolveEditTarget` — the

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hsvToRgb, parseHexColor, rgbToHsv, toHexColor } from '../utils/colorUtils';
+import { hsvToRgb, parseHexColor, rgbToHsv, toHexColor } from '../utils/layers/colorUtils';
 
 describe('color utilities', () => {
   it.each([

@@ -1,9 +1,9 @@
 import type { SceneData, SceneLayer } from '../types/composition';
 import type { OGrafExportOptions } from './types';
-import { matchTextFontFamily } from '../utils/textFonts';
+import { matchTextFontFamily } from '../utils/layers/textFonts';
 import playfairDisplayUrl from '../assets/fonts/playfair-display/PlayfairDisplay.ttf?url';
 import playfairDisplayLicense from '../assets/fonts/playfair-display/OFL.txt?raw';
-import { EMBEDDED_IMAGE_MIME_TYPES, decodeDataUrl, isSafeEmbeddedImage } from '../utils/embeddedImage';
+import { EMBEDDED_IMAGE_MIME_TYPES, decodeDataUrl, isSafeEmbeddedImage } from '../utils/persistence/embeddedImage';
 import { BUNDLED_TEXT_FONTS, type BundledFontFamily } from './bundledFonts';
 import type { OGrafAssetCatalogEntry } from './types';
 

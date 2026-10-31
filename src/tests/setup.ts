@@ -49,7 +49,7 @@ afterEach(() => {
 /**
  * jsdom has no canvas implementation: `HTMLCanvasElement.prototype.getContext`
  * logs "Not implemented" and returns null. The production text-measurement
- * helper (`src/utils/bounds.ts`) already falls back when the context is
+ * helper (`src/utils/geometry/bounds.ts`) already falls back when the context is
  * missing, so returning null up front is behaviour-identical and removes the
  * per-suite noise from every test that renders text geometry.
  */

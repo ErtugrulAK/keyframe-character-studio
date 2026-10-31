@@ -1,7 +1,7 @@
 // A2 — Mask/Trim RUNTIME-ONLY normalization parity (RED first).
 //
-// Authority: the editor's `evaluateTrimPath` (utils/trimPath.ts) and
-// `buildLayerMaskDefinition` (utils/layerMasks.ts). The emitted OGraf runtime
+// Authority: the editor's `evaluateTrimPath` (utils/geometry/trimPath.ts) and
+// `buildLayerMaskDefinition` (utils/layers/layerMasks.ts). The emitted OGraf runtime
 // must reach the SAME effective numbers from the SAME authored data —
 // normalization happens at runtime evaluation only; stored scene data is
 // never rewritten.

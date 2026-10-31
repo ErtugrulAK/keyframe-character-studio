@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PropertyKeyframe, Track } from '../types/animator';
-import { effectiveSegmentAuthority } from '../utils/defaults';
-import { setKeyframeGroupEasing } from '../utils/keyframeEasing';
+import { effectiveSegmentAuthority } from '../utils/animation/defaults';
+import { setKeyframeGroupEasing } from '../utils/animation/keyframeEasing';
 
 const key = (id: string, frame: number, extra: Partial<PropertyKeyframe> = {}): PropertyKeyframe => ({ id, frame, value: frame, easing: 'linear', ...extra });
 

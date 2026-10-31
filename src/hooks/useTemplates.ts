@@ -1,15 +1,15 @@
 import { useState, useCallback } from 'react';
 import type { CharacterPart, Track, MotionTemplate, ProjectTemplate, AppMode } from '../types/animator';
 import type { SceneCoordinateSystem } from '../types/composition';
-import { DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
-import { DEFAULT_CHARACTER_PARTS, DEFAULT_TRACKS } from '../utils/defaults';
-import { DEFAULT_SCENE_COORDINATE_SYSTEM } from '../utils/coordinateMigration';
+import { DEFAULT_MOTION_TEMPLATES } from '../utils/editor/constants';
+import { DEFAULT_CHARACTER_PARTS, DEFAULT_TRACKS } from '../utils/animation/defaults';
+import { DEFAULT_SCENE_COORDINATE_SYSTEM } from '../utils/persistence/coordinateMigration';
 import {
   createMotionTemplate,
   hasSequenceName,
   normalizeMotionTemplates,
   normalizeSequenceDuration,
-} from '../utils/motionTemplates';
+} from '../utils/animation/motionTemplates';
 
 interface TemplateCanvas {
   characterParts: CharacterPart[];

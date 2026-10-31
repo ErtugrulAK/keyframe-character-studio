@@ -23,9 +23,9 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { AnimatorProvider, type AnimatorContextType } from '../context/AnimatorContext';
 import { useAnimator } from '../context/useAnimator';
 import { SequencerTimeline } from '../components/Timeline/SequencerTimeline';
-import { createLayerGroup } from '../utils/layerGrouping';
-import { worldToContainerLocal } from '../utils/containerMath';
-import { generateId } from '../utils/idGenerator';
+import { createLayerGroup } from '../utils/layers/layerGrouping';
+import { worldToContainerLocal } from '../utils/geometry/containerMath';
+import { generateId } from '../utils/layers/idGenerator';
 import type { CharacterPart, Track, Transform, TrackChannel } from '../types/animator';
 
 const Consumer = ({ onCtx }: { onCtx: (ctx: AnimatorContextType) => void }) => {

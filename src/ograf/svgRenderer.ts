@@ -1,18 +1,18 @@
 import { describeOGrafValueForDiagnostics } from './diagnostics';
-import { textBaselineOffset } from '../utils/textOrigin';
+import { textBaselineOffset } from '../utils/geometry/textOrigin';
 import type { CharacterPart } from '../types/animator';
 import type { EvaluatedLayer, LayerContent } from '../types/composition';
-import { buildBezierPathD } from '../utils/bezierPath';
-import { buildFreeformPath } from '../utils/freeform';
-import { buildLayerMaskDefinition, layerMaskFilterId } from '../utils/layerMasks';
-import { alphaMasks, colorCorrectionFilter, colorCorrectionIds, resolveColorCorrection, resolvedParameters } from '../utils/colorCorrection';
-import { resolveMatteSource } from '../utils/matte';
-import { stackingOrder } from '../utils/stackingOrder';
-import { getShapeGeometry, polygonPointsToString } from '../utils/shapeGeometry';
-import { resolveShapeAppearance } from '../utils/shapeAppearance';
-import { describePaint, describeText } from '../utils/drawDescriptor';
-import { getTrimPathDashProps, resolveTrimPath } from '../utils/trimPath';
-import { affineTrsReading, worldAffineOf } from '../utils/containerMath';
+import { buildBezierPathD } from '../utils/geometry/bezierPath';
+import { buildFreeformPath } from '../utils/geometry/freeform';
+import { buildLayerMaskDefinition, layerMaskFilterId } from '../utils/layers/layerMasks';
+import { alphaMasks, colorCorrectionFilter, colorCorrectionIds, resolveColorCorrection, resolvedParameters } from '../utils/layers/colorCorrection';
+import { resolveMatteSource } from '../utils/layers/matte';
+import { stackingOrder } from '../utils/layers/stackingOrder';
+import { getShapeGeometry, polygonPointsToString } from '../utils/geometry/shapeGeometry';
+import { resolveShapeAppearance } from '../utils/layers/shapeAppearance';
+import { describePaint, describeText } from '../utils/layers/drawDescriptor';
+import { getTrimPathDashProps, resolveTrimPath } from '../utils/geometry/trimPath';
+import { affineTrsReading, worldAffineOf } from '../utils/geometry/containerMath';
 import type { OGrafEvaluatedScene } from './evaluation';
 
 interface OGrafSvgRenderOptions {
@@ -170,7 +170,7 @@ function renderShape(layer: EvaluatedLayer): string {
     stroke: paint.stroke,
     'stroke-opacity': paint.strokeOpacity,
     'stroke-width': paint.strokeWidth,
-    // C12 — as in the editor, the stroke is in scene units whatever the
+    // As in the editor, the stroke is in scene units whatever the
     // layer's own scale (the document is drawn at one unit per pixel).
     'vector-effect': 'non-scaling-stroke',
     ...renderTrim(content),
@@ -209,7 +209,7 @@ function asCharacterPart(layer: EvaluatedLayer): CharacterPart {
 }
 
 function renderLayerMaskDefinitions(scene: OGrafEvaluatedScene, target: EvaluatedLayer): { defs: string; ids: string[] } {
-  // WP-08 — effect-only masks scope an effect; they never cut the layer.
+  // Effect-only masks scope an effect; they never cut the layer.
   const masks = alphaMasks(target.content.masks);
   if (masks.length === 0) return { defs: '', ids: [] };
   const part = asCharacterPart(target);
@@ -335,7 +335,7 @@ function renderClipDefs(scene: OGrafEvaluatedScene, options: OGrafSvgRenderOptio
   return defs.join('');
 }
 
-/** WP-08 — how one layer's colour correction is drawn in this renderer. */
+/** How one layer's colour correction is drawn in this renderer. */
 interface ColorCorrectionMarkup {
   filterId: string;
   coverageId?: string;
@@ -344,7 +344,7 @@ interface ColorCorrectionMarkup {
 }
 
 /**
- * WP-08 — the same correction the editor draws (`PartRenderer`): one sRGB
+ * The same correction the editor draws (`PartRenderer`): one sRGB
  * filter F and, for a mask scope, a coverage luminance mask w and its inverse
  * (1 - w) built from the layer's evaluated mask. Anything but an 'applied'
  * correction (off, neutral, missing or disabled mask) produces nothing.
@@ -376,7 +376,7 @@ function renderColorCorrectionDefinitions(scene: OGrafEvaluatedScene, target: Ev
   return { defs: `${filter}${coverageFilter}${coverage}${inverse}`, markup: { filterId: ids.filter, coverageId: ids.coverage, inverseId: ids.inverse, amount } };
 }
 
-/** WP-08 — C_out = (1 - w)*C + w*F(C), A_out = A: two copies in an isolated group, the second added with plus-lighter. */
+/** C_out = (1 - w)*C + w*F(C), A_out = A: two copies in an isolated group, the second added with plus-lighter. */
 function mixColorCorrection(body: string, correction: ColorCorrectionMarkup | undefined): string {
   if (!correction) return body;
   const original = correction.inverseId ? ` mask="url(#${escapeXml(correction.inverseId)})"` : ` opacity="${svgNumber(1 - correction.amount)}"`;

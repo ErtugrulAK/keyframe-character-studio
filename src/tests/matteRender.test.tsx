@@ -13,9 +13,9 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
 import { StagePartLayers } from '../components/Canvas/StagePartLayers';
-import { makeEmptyChannels } from '../utils/defaults';
-import { matteClipPathId, buildMatteClipPath, resolveMatteSource } from '../utils/matte';
-import { evaluateTransform } from '../utils/evaluateTransform';
+import { makeEmptyChannels } from '../utils/animation/defaults';
+import { matteClipPathId, buildMatteClipPath, resolveMatteSource } from '../utils/layers/matte';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
 import type { CharacterPart, Track } from '../types/animator';
 
 function makePart(id: string, type: string, matte?: CharacterPart['matte']): CharacterPart {

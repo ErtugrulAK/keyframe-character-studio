@@ -21,14 +21,14 @@ import {
   SquareDashed,
 } from 'lucide-react';
 import type { BodyPartType, CharacterPart } from '../../types/animator';
-import { booleanOperationLabel } from '../../utils/booleanGeometry';
-import { isMatteSourceSuppressed, resolveMatteSource } from '../../utils/matte';
-import type { LayerDropPosition } from '../../utils/layerParenting';
+import { booleanOperationLabel } from '../../utils/geometry/booleanGeometry';
+import { isMatteSourceSuppressed, resolveMatteSource } from '../../utils/layers/matte';
+import type { LayerDropPosition } from '../../utils/layers/layerParenting';
 import {
   SHAPE_ICON_MAP,
   SHAPE_ICON_SIZE,
   SHAPE_ICON_STROKE_WIDTH,
-} from '../../utils/shapeIconMap';
+} from '../../utils/editor/shapeIconMap';
 import { InlineRename } from '../Shared/InlineRename';
 
 /**
@@ -41,7 +41,7 @@ export interface OutlinerRowActions {
   contextMenu: (partId: string, event: React.MouseEvent) => void;
   toggleExpanded: (partId: string) => void;
   toggleVisibility: (partId: string) => void;
-  /** C4 — the layer's lock switch. */
+  /** The layer's lock switch. */
   toggleLock: (partId: string) => void;
   moveInStack: (partId: string, direction: -1 | 1) => void;
   startRename: (partId: string) => void;
@@ -63,7 +63,7 @@ interface OutlinerRowProps {
   stackSize: number;
   ordinal: number | undefined;
   isVisible: boolean;
-  /** C4 — the layer's lock switch is on: content protected, still selectable here. */
+  /** The layer's lock switch is on: content protected, still selectable here. */
   isLocked: boolean;
   hasTrack: boolean;
   selected: boolean;
@@ -74,11 +74,11 @@ interface OutlinerRowProps {
   dropPosition: LayerDropPosition | null;
   dropBlocked: boolean;
   /**
-   * C5 — shown INSIDE the target row while a drag is over its middle ("Parent
+   * Shown INSIDE the target row while a drag is over its middle ("Parent
    * to …" / "Move into group …") or over a refused target (the reason).
    */
   dropLabel?: string;
-  /** C5 — while the layer search is active: true on a match, false on an ancestor shown for context. */
+  /** While the layer search is active: true on a match, false on an ancestor shown for context. */
   searchMatch?: boolean;
   /** The resolved matte source layer, when the row has a matte relationship. */
   matteSource: CharacterPart | undefined;
@@ -127,7 +127,7 @@ export const OutlinerRow: React.FC<OutlinerRowProps> = React.memo(({
   return (
     <div
       role="treeitem"
-      // C5 — the row is announced by its name and states only (its buttons have
+      // The row is announced by its name and states only (its buttons have
       // their own names), so it reads "Photo, hidden, locked, 1 mask".
       aria-label={[
         part.name,

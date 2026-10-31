@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, PropertyKeyframe, Track } from '../types/animator';
-import { makeEmptyChannels } from '../utils/defaults';
-import { EDITOR_CAMERA_CENTER } from '../utils/projectCoordinates';
-import { evaluateTransform } from '../utils/evaluateTransform';
+import { makeEmptyChannels } from '../utils/animation/defaults';
+import { EDITOR_CAMERA_CENTER } from '../utils/geometry/projectCoordinates';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
 import {
   MIN_STAGE_CROP_SIZE,
   clampStageCropRect,
@@ -22,7 +22,7 @@ import {
   stageCropShift,
   stageSpaceToEditorRect,
   translateStageCropRect,
-} from '../utils/stageCrop';
+} from '../utils/geometry/stageCrop';
 
 /**
  * The stage crop authority, as pure math: the shift, the clamps, the region the

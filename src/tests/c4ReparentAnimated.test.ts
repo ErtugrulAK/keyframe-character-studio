@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, Track } from '../types/animator';
 import type { RuntimeData } from '../types/composition';
-import { evaluateTransform } from '../utils/evaluateTransform';
-import { evaluateFrame } from '../utils/evaluateFrame';
-import { worldAffineOf, type WorldAffine } from '../utils/containerMath';
-import { makeEmptyChannels } from '../utils/defaults';
-import { planLayerDrop, planReparent } from '../utils/layerParenting';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { evaluateFrame } from '../utils/animation/evaluateFrame';
+import { worldAffineOf, type WorldAffine } from '../utils/geometry/containerMath';
+import { makeEmptyChannels } from '../utils/animation/defaults';
+import { planLayerDrop, planReparent } from '../utils/layers/layerParenting';
 
 const part = (id: string, base: Partial<CharacterPart['baseTransform']> = {}, extra: Partial<CharacterPart> = {}): CharacterPart => ({
   id, name: id[0].toUpperCase() + id.slice(1), type: 'custom_rect', zIndex: 1,

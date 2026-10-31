@@ -24,8 +24,8 @@ import { build } from 'vite';
 import { describe, expect, test } from 'vitest';
 import type { PropertyKeyframe } from '../types/animator';
 import type { SceneData } from '../types/composition';
-import { interpolateChannel, deriveAutoBezierControlPoints } from '../utils/defaults';
-import { interpolateBezierPath } from '../utils/bezierPath';
+import { interpolateChannel, deriveAutoBezierControlPoints } from '../utils/animation/defaults';
+import { interpolateBezierPath } from '../utils/geometry/bezierPath';
 
 // --- independent helper: bisection (a different algorithm than the runtime's
 // Newton iteration, so agreement is real evidence, not shared code) -----------

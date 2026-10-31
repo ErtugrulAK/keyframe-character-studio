@@ -3,14 +3,14 @@ import * as Tabs from '@radix-ui/react-tabs';
 import { useAnimator } from '../../context/useAnimator';
 import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
 import { useLockedRegion } from '../../hooks/useLockedRegion';
-import { makeEmptyChannels } from '../../utils/defaults';
-import { evaluateLayerMasks } from '../../utils/evaluateLayerMasks';
+import { makeEmptyChannels } from '../../utils/animation/defaults';
+import { evaluateLayerMasks } from '../../utils/animation/evaluateLayerMasks';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { TransformTab } from './sections/TransformTab';
 import { LayerParentField } from './LayerParentField';
-import { editTargetText, layerTypeLabel, resolveEditTarget } from '../../utils/editTarget';
+import { editTargetText, layerTypeLabel, resolveEditTarget } from '../../utils/layers/editTarget';
 import { StyleTab } from './sections/StyleTab';
-import { evaluateTrimPath } from '../../utils/trimPath';
+import { evaluateTrimPath } from '../../utils/geometry/trimPath';
 import { AnimationDataCard } from './sections/AnimationDataCard';
 import { StyleCard } from './sections/style/StyleCard';
 import { useRetainedUiState } from '../../hooks/useRetainedUiState';
@@ -20,7 +20,7 @@ import {
   MousePointerClick,
 } from 'lucide-react';
 
-/** C7 — the Details tabs: what the layer looks like, what cuts it, how it relates and animates. */
+/** The Details tabs: what the layer looks like, what cuts it, how it relates and animates. */
 type DetailsTab = 'properties' | 'masks' | 'layer';
 
 /**
@@ -74,7 +74,7 @@ export const DetailsPanel: React.FC = () => {
     selectPathVertex,
   } = useAnimator();
 
-  // C5 — the same "what am I editing" description the canvas strip shows; the
+  // The same "what am I editing" description the canvas strip shows; the
   // Inspector names the session (mask path, mask drawing, matte source) under
   // the layer it belongs to. Its controls stay where they are (the canvas
   // strip's Finish, the mask row's toggle, the matte summary's Back), so no
@@ -93,7 +93,7 @@ export const DetailsPanel: React.FC = () => {
   const sessionTarget = editTarget && (editTarget.kind === 'mask' || editTarget.kind === 'drawing-mask' || editTarget.kind === 'matte-source') ? editTarget : null;
 
   /*
-   * C7 — Details is split into tabs (Radix Tabs: roving arrow keys, Home/End,
+   * Details is split into tabs (Radix Tabs: roving arrow keys, Home/End,
    * tab/tabpanel roles): Properties (transform, paint, text, Trim Path,
    * geometry, effects), Masks (layer masks, Track Matte, legacy clip matte) and
    * Layer (parent, animation data). The choice is session UI memory, like an
@@ -116,13 +116,13 @@ export const DetailsPanel: React.FC = () => {
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const selectedTrack = selectedPartId ? tracks.find((track) => track.partId === selectedPartId) : undefined;
-  // WP-01: the Inspector shows the ACTIVE sequence's mask, as the renderer does.
+  // The Inspector shows the ACTIVE sequence's mask, as the renderer does.
   const evaluatedMasks = selectedPart && selectedTrack
     ? evaluateLayerMasks(selectedPart, selectedTrack, currentFrame, activeTemplateId || 'Sequence')
     : undefined;
   const inspectorPart = selectedPart && evaluatedMasks ? { ...selectedPart, masks: evaluatedMasks } : selectedPart;
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
-  // C4 — a locked layer is inspected, not edited: its controls are disabled
+  // A locked layer is inspected, not edited: its controls are disabled
   // (disclosure and navigation stay), and the banner offers the unlock.
   const isLocked = Boolean(selectedTrack?.locked);
   // A group container owns no geometry, so it has no paint, masks or matte.
@@ -153,7 +153,7 @@ export const DetailsPanel: React.FC = () => {
     handlePartColorChange,
   } = usePartPropertyAuthoring();
 
-  // M26 — copy/paste/clear ANIMATION (26A data layer + 26B UI).
+  // Copy/paste/clear ANIMATION (26A data layer + 26B UI).
   // Paste + Clear wrap the two setState halves in ONE batch interaction so
   // Ctrl+Z reverts the whole transfer as a single logical undo entry.
   const handleCopyAnimation = () => {

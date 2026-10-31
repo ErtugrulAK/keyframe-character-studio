@@ -18,11 +18,11 @@ export interface GifPanelGateProps {
   /** Test seam for the hard recovery action; production reloads the document. */
   reloadApp?: () => void;
   /**
-   * A1: point-in-time persistence verdict consulted before ANY reload. An
+   * Point-in-time persistence verdict consulted before ANY reload. An
    * absent probe fails closed — reload is never assumed safe.
    */
   persistenceStatus?: () => PersistenceSafety;
-  /** A1: forced durable write; the reload proceeds on its true resolution only. */
+  /** Forced durable write; the reload proceeds on its true resolution only. */
   saveBeforeReload?: () => Promise<boolean>;
 }
 
@@ -137,7 +137,7 @@ export const GifPanelGate = (props: GifPanelGateProps): React.JSX.Element => {
     setAttempt((value) => value + 1);
   };
   const doReload = () => (props.reloadApp ?? (() => window.location.reload()))();
-  // A1: a reload is never silent. A clean verdict reloads at once; anything
+  // A reload is never silent. A clean verdict reloads at once; anything
   // else (including a missing probe) stops at an informed choice instead.
   const handleReload = () => {
     const status = props.persistenceStatus?.() ?? { safe: false as const, reason: 'unknown' as const };

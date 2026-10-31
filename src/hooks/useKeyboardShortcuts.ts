@@ -1,14 +1,14 @@
 import { useEffect, useRef } from 'react';
 import type { AppMode, BodyPartType, ToolType } from '../types/animator';
-import { isBlockingModalOpen } from '../utils/modalBoundary';
-import { focusedShortcutScope, isEditableElement, ownsShortcutScope } from '../utils/keyboardFocus';
+import { isBlockingModalOpen } from '../utils/editor/modalBoundary';
+import { focusedShortcutScope, isEditableElement, ownsShortcutScope } from '../utils/editor/keyboardFocus';
 import {
   detectShortcutPlatform,
   resolveShortcutCommand,
   type ShortcutCommandId,
   type ShortcutPlatform,
-} from '../utils/shortcuts';
-import type { FlipAxis, RotateDirection } from '../utils/vectorArrange';
+} from '../utils/editor/shortcuts';
+import type { FlipAxis, RotateDirection } from '../utils/layers/vectorArrange';
 
 /**
  * The commands the editor's global keyboard handler can run. Callers provide
@@ -64,14 +64,14 @@ export interface EditorShortcutCommands {
   setIsPlaying?: React.Dispatch<React.SetStateAction<boolean>>;
   appMode?: AppMode;
   openShortcutReference?: () => void;
-  /** C4 — locks the selected layers, or unlocks them when all are locked. */
+  /** Locks the selected layers, or unlocks them when all are locked. */
   toggleSelectionLock?: () => void;
   /** F9 — Easy Ease on the selected keyframes; false when none is selected. */
   easySelectedKeyframes?: () => boolean;
-  /** C4 — unlocks every layer. */
+  /** Unlocks every layer. */
   unlockAllLayers?: () => void;
   /**
-   * C8 — the arrow-key nudge, run through the arrange authority: `beginNudge`
+   * The arrow-key nudge, run through the arrange authority: `beginNudge`
    * opens one batch and returns the mover (total offset since the start), or
    * null when nothing can move; `endNudge` closes the batch on key release.
    */
@@ -103,7 +103,7 @@ const canvasOwnsArrows = (): boolean => {
 
 /**
  * The editor's keyboard commands, driven by the ONE shortcut table
- * (`utils/shortcuts`).
+ * (`utils/editor/shortcuts`).
  *
  * The handler reads the keymap instead of listing gestures, so a binding and the
  * shortcut reference cannot disagree. Three rules decide whether a command runs:
@@ -125,7 +125,7 @@ const canvasOwnsArrows = (): boolean => {
  * mask editing, leave the Boolean operand edit, step out
  * of a grouped child onto its container, then clear the timeline keyframe
  * selection. It never clears the layer selection — several non-modal surfaces own
- * Escape while they are open (see the note in `utils/shortcuts`).
+ * Escape while they are open (see the note in `utils/editor/shortcuts`).
  */
 export const useKeyboardShortcuts = ({
   selectedPartId,
@@ -165,7 +165,7 @@ export const useKeyboardShortcuts = ({
   // Detected once per session: the platform cannot change under a running app.
   const platformRef = useRef<ShortcutPlatform>(detectShortcutPlatform());
 
-  // C8 — a held arrow key is ONE nudge session (one batch, one undo step). The
+  // A held arrow key is ONE nudge session (one batch, one undo step). The
   // session outlives the listener re-binding below, so it lives in a ref, and
   // the latest begin/end are read at event time.
   const nudgeSessionRef = useRef<{ move: (dx: number, dy: number) => void; x: number; y: number } | null>(null);
@@ -391,7 +391,7 @@ export const useKeyboardShortcuts = ({
 
       const command = resolveShortcutCommand(event, platformRef.current);
       if (!command) return;
-      // C4 — Broadcast shows no editor: its keys must not edit, select, create
+      // Broadcast shows no editor: its keys must not edit, select, create
       // or undo anything in the scene behind it. Only the shortcut reference
       // (read-only help) is still offered there.
       if (appMode === 'broadcast' && command.id !== 'shortcut-reference') return;

@@ -4,10 +4,10 @@ import type { EvaluatedLayer } from '../../../types/composition';
 import { renderShapePart } from './parts/ShapePartRenderers';
 import { renderMediaPart } from './parts/MediaPartRenderer';
 import { renderTextOrClonerPart } from './parts/TextAndClonerRenderers';
-import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
-import { affineSvgTransform, worldAffineOf } from '../../../utils/containerMath';
+import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/geometry/projectCoordinates';
+import { affineSvgTransform, worldAffineOf } from '../../../utils/geometry/containerMath';
 
-/** WP-08 — how one layer's colour correction is drawn (defs built by StagePartLayers). */
+/** How one layer's colour correction is drawn (defs built by StagePartLayers). */
 export interface ColorCorrectionRender {
   filterId: string;
   /** Mask scope: coverage w and its inverse (1 - w), both world-space luminance masks. */
@@ -26,7 +26,7 @@ interface PartRendererProps {
   onSelect: (partId: string, event: React.MouseEvent) => void;
   onStartTranslateDrag: (partId: string, e: React.MouseEvent) => void;
   /**
-   * R4-09 — the explicit drill-in: a double-click selects THIS layer instead of
+   * The explicit drill-in: a double-click selects THIS layer instead of
    * its group, which is how a grouped child is edited without ungrouping.
    */
   onDrillIn: (partId: string) => void;
@@ -34,9 +34,9 @@ interface PartRendererProps {
   evaluatedLayer: EvaluatedLayer;
   /** Dynamic Boolean contours evaluated for the current frame. */
   booleanContours?: CharacterPart['booleanContours'];
-  /** M11: track matte — id of the world-space clipPath clipping this part */
+  /** Track matte — id of the world-space clipPath clipping this part */
   matteClipPathId?: string;
-  /** M13: track matte — id of the world-space <mask> masking this part
+  /** Track matte — id of the world-space <mask> masking this part
    *  (alpha/luminance/inverted). Never combined with matteClipPathId —
    *  a part's matte mode selects exactly one of clip / mask. */
   matteMaskId?: string;
@@ -44,9 +44,9 @@ interface PartRendererProps {
   layerMaskIds?: string[];
   /** Output origin: edit camera center or project-resolution center. */
   outputOrigin?: CoordinatePoint;
-  /** C4 — a locked layer takes no canvas pointer: clicks reach the layer beneath. */
+  /** A locked layer takes no canvas pointer: clicks reach the layer beneath. */
   isLocked?: boolean;
-  /** WP-08 — the layer's colour correction, when it changes pixels. */
+  /** The layer's colour correction, when it changes pixels. */
   colorCorrection?: ColorCorrectionRender;
 }
 
@@ -121,7 +121,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   }
 
   /**
-   * R4-09 — the canvas pointer contract of one layer.
+   * The canvas pointer contract of one layer.
    *
    * A single click and the drag it may become are resolved by the canvas
    * (`StageCanvas`): they target the layer's GROUP, so clicking a child selects
@@ -164,7 +164,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
     </g>
   );
   /*
-   * WP-08 — C_out = (1 - w)*C + w*F(C), A_out = A. Inside an isolated group
+   * C_out = (1 - w)*C + w*F(C), A_out = A. Inside an isolated group
    * the layer is drawn once under (1 - w) and once, through the correction
    * filter, under w, added with plus-lighter (premultiplied add): the colour
    * is mixed and the alpha is exactly the layer's own. The mix sits BEFORE

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, LayerMask } from '../types/animator';
 import type { WorldTransform } from '../types/composition';
-import { buildLayerMaskDefinition, buildLayerMaskPathD } from '../utils/layerMasks';
-import { evaluateLayerMasks } from '../utils/evaluateLayerMasks';
+import { buildLayerMaskDefinition, buildLayerMaskPathD } from '../utils/layers/layerMasks';
+import { evaluateLayerMasks } from '../utils/animation/evaluateLayerMasks';
 import { layerMaskChannel, layerMaskPathChannel } from '../types/animator';
 
 const part = {

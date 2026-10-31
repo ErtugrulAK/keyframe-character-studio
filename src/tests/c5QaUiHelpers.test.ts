@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, Track } from '../types/animator';
-import { makeEmptyChannels } from '../utils/defaults';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 import { edgeScrollStep, laneGroupHeight, laneKeyframePositions, laneKeyframes, resolveLaneRows } from '../components/Timeline/timelineLaneLayout';
 import { CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from '../components/Timeline/timelineConstants';
-import { rowOffsets } from '../utils/rowWindow';
-import { searchLayers } from '../utils/layerSearch';
-import { editTargetText, resolveEditTarget, type EditTargetInput } from '../utils/editTarget';
-import { deletionCommandLabel, describeDeletionScope } from '../utils/partDeletion';
-import { pickedTrackMatte } from '../utils/trackMattePick';
-import { resolveMatteSource } from '../utils/matte';
-import { validateCritical } from '../utils/validateScene';
+import { rowOffsets } from '../utils/editor/rowWindow';
+import { searchLayers } from '../utils/layers/layerSearch';
+import { editTargetText, resolveEditTarget, type EditTargetInput } from '../utils/layers/editTarget';
+import { deletionCommandLabel, describeDeletionScope } from '../utils/layers/partDeletion';
+import { pickedTrackMatte } from '../utils/layers/trackMattePick';
+import { resolveMatteSource } from '../utils/layers/matte';
+import { validateCritical } from '../utils/persistence/validateScene';
 
 const part = (id: string, extra: Partial<CharacterPart> = {}): CharacterPart => ({
   id,

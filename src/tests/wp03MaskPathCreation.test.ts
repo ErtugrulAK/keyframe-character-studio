@@ -15,8 +15,8 @@ import {
   nearestMaskPathSegment,
   pointOnMaskPathSegment,
   transformMaskPathInLayerSpace,
-} from '../utils/maskPathCreation';
-import { maskPathPointToWorld, resolveMaskPathFrame } from '../utils/maskPathEditing';
+} from '../utils/geometry/maskPathCreation';
+import { maskPathPointToWorld, resolveMaskPathFrame } from '../utils/geometry/maskPathEditing';
 
 const owner = (overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id: 'img',

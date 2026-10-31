@@ -5,8 +5,8 @@ import {
   supportsStrokeAlignment,
   toAuthoringStrokeAlignment,
   toStrokeAlignmentControlValue,
-} from '../../../../utils/shapeAppearance';
-import type { StrokeAlignmentControlValue } from '../../../../utils/shapeAppearance';
+} from '../../../../utils/layers/shapeAppearance';
+import type { StrokeAlignmentControlValue } from '../../../../utils/layers/shapeAppearance';
 import { ColorPickerPopover } from '../../inputs/ColorPickerPopover';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { StyleCard } from './StyleCard';

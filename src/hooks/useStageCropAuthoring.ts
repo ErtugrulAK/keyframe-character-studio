@@ -1,8 +1,8 @@
 import type { CharacterPart, Track, Transform } from '../types/animator';
-import type { ProjectResolution } from '../utils/projectCoordinates';
-import { getLayerWorldBounds } from '../utils/layerGrouping';
-import { unionWorldBounds } from '../utils/layoutGeometry';
-import { collectArrangeTargets } from '../utils/vectorArrange';
+import type { ProjectResolution } from '../utils/geometry/projectCoordinates';
+import { getLayerWorldBounds } from '../utils/layers/layerGrouping';
+import { unionWorldBounds } from '../utils/geometry/layoutGeometry';
+import { collectArrangeTargets } from '../utils/layers/vectorArrange';
 import {
   clampStageCropRect,
   isFullStageCropRect,
@@ -13,7 +13,7 @@ import {
   stageCropResolution,
   stageCropShift,
   type StageCropRect,
-} from '../utils/stageCrop';
+} from '../utils/geometry/stageCrop';
 import type { ToastOptions } from './useToast';
 
 type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
@@ -133,7 +133,7 @@ export const createStageCropActions = ({
   const selectionCropRect = selectionTargets.length > 0
     ? stageCropRectFromWorldBounds(unionWorldBounds(selectionTargets.map((target) => target.bounds)), projectResolution)
     : null;
-  // C5 — the visible-content rectangle is computed only when that crop runs.
+  // The visible-content rectangle is computed only when that crop runs.
   // The commands are rebuilt on every provider render (every playback frame),
   // and the availability flag only needs ONE visible layer with bounds, so it
   // stops at the first one instead of evaluating every layer's world box.

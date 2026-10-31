@@ -1,0 +1,184 @@
+/**
+ * Phase 2 Step 4 — Frame Evaluation Pipeline (with procedural animation)
+ *
+ * Pure function: layers + tracks + frame + runtime + customPresets → EvaluatedFrame
+ * React-free, Node-compatible, deterministic.
+ *
+ * Pipeline (4 stages):
+ *   1. Animation — keyframe interpolation + broadcast/live-stunt procedural deltas
+ *   2. Hierarchy — parent-child world transform (in evaluateTransform)
+ *   3. Visibility & Opacity — base opacity × procedural × editVisible/broadcast
+ *   4. Sort — zIndex ordering
+ *
+ * DEPENDS ON:
+ *   - evaluateTransform.ts (Step 2)
+ *   - proceduralAnimation.ts (Step 4 Phase A)
+ */
+
+import type { CharacterPart, CustomMotionPreset, AnimationTrackData, LayerMask } from '../../types/animator';
+import type {
+  EvaluatedFrame,
+  EvaluatedLayer,
+  RuntimeData,
+  RuntimeTrackState,
+  LayerContent,
+} from '../../types/composition';
+import { createTransformEvaluator, type evaluateTransform } from './evaluateTransform';
+import { affineOfTransform, composeAffine, withWorldAffine } from '../geometry/containerMath';
+import { computeProceduralDelta } from './proceduralAnimation';
+import { evaluateLayerMasks } from './evaluateLayerMasks';
+import { evaluateTrimPath } from '../geometry/trimPath';
+import { compareByStackingOrder } from '../layers/stackingOrder';
+
+/**
+ * Evaluate one complete frame with full animation evaluation.
+ *
+ * @param layers         — CharacterPart[]
+ * @param tracks         — AnimationTrackData & RuntimeTrackState (animation data +
+ *                          render-relevant visibility state; editor-only fields excluded)
+ * @param totalFrames    — scene totalFrames
+ * @param frame          — target frame number (default for all layers)
+ * @param runtime        — RuntimeData (broadcast, liveStunts, appMode)
+ * @param customPresets  — CustomMotionPreset[] (procedural animation assets)
+ * @param frameOverrides — per-layer frame overrides for custom_timeline presets
+ * @param sequenceId     — timeline sequence/template ID (defaults to legacy "Sequence")
+ */
+export function evaluateFrame(
+  layers: CharacterPart[],
+  tracks: (AnimationTrackData & RuntimeTrackState)[],
+  totalFrames: number,
+  frame: number,
+  runtime: RuntimeData,
+  customPresets: CustomMotionPreset[],
+  frameOverrides?: Record<string, number>,
+  sequenceId: string = 'Sequence',
+): EvaluatedFrame {
+  // ── Stage 1 & 2: Animation + Hierarchy ────────────────────────────
+  // evaluateTransform handles keyframe interpolation + parent-child.
+  // computeProceduralDelta handles broadcast/live-stunt deltas.
+  // Both are merged here.
+
+  const computed = new Map<string, {
+    world: ReturnType<typeof evaluateTransform>;
+    delta: ReturnType<typeof computeProceduralDelta>;
+  }>();
+
+  // One evaluator for the frame: a parent shared by many children is
+  // evaluated once, and lookups go through an index.
+  const worldOf = createTransformEvaluator(layers, tracks, sequenceId);
+  const trackByPart = new Map<string, (typeof tracks)[number]>();
+  for (const track of tracks) if (!trackByPart.has(track.partId)) trackByPart.set(track.partId, track);
+
+  for (const layer of layers) {
+    // Use per-layer frame override for custom_timeline presets
+    const evalFrame = frameOverrides && Object.prototype.hasOwnProperty.call(frameOverrides, layer.id) ? frameOverrides[layer.id] : frame;
+    const world = worldOf(layer.id, evalFrame);
+    // Procedural deltas always use the global frame (broadcast progress doesn't change per-layer)
+    const delta = computeProceduralDelta(layer, tracks, totalFrames, frame, runtime, customPresets);
+    computed.set(layer.id, { world, delta });
+  }
+
+  // ── Stage 3: Visibility & Opacity ─────────────────────────────────
+  // Stage 4: Sort ────────────────────────────────────────────────────
+  const evaluated: EvaluatedLayer[] = [];
+
+  for (const layer of layers) {
+    const c = computed.get(layer.id);
+    if (!c) continue;
+
+    const d = c.delta;
+
+    // Merge keyframe world + procedural deltas
+    const finalX = c.world.x + d.x;
+    const finalY = c.world.y + d.y;
+    const finalRot = c.world.rotation + d.rotation;
+    const finalSX = c.world.scaleX * d.scaleX;
+    const finalSY = c.world.scaleY * d.scaleY;
+
+    // The procedural delta is a world-space layer pose applied ON TOP of the
+    // evaluated world pose: translation adds, rotation rotates the map and scale
+    // multiplies its columns. Applied to the derived affine too, so a layer
+    // whose nesting is sheared (a rotated child of an anisotropically scaled
+    // container) keeps the exact procedural result instead of the TRS reading
+    // that cannot express it.
+    const worldAffine = c.world.affine ?? affineOfTransform(c.world);
+    const mergedTransform = withWorldAffine(
+      { x: finalX, y: finalY, rotation: finalRot, scaleX: finalSX, scaleY: finalSY },
+      composeAffine(affineOfTransform(d), worldAffine),
+    );
+
+    // Opacity: keyframe-evaluated (world.opacity) × procedural multiplier
+    const finalOpacity = Math.max(0, Math.min(1, c.world.opacity * d.opacityMul));
+    const visible = finalOpacity > 0.001;
+
+    const track = trackByPart.get(layer.id);
+    const layerFrame = frameOverrides && Object.prototype.hasOwnProperty.call(frameOverrides, layer.id) ? frameOverrides[layer.id] : frame;
+    const trim = evaluateTrimPath(layer, track, layerFrame, sequenceId || 'Sequence');
+    const masks = evaluateLayerMasks(layer, track, layerFrame, sequenceId);
+
+    evaluated.push({
+      id: layer.id,
+      type: layer.type,
+      transform: {
+        ...mergedTransform,
+        opacity: finalOpacity,
+      },
+      opacity: finalOpacity,
+      visible,
+      content: extractContent(layer, trim, masks),
+      zIndex: layer.zIndex,
+    });
+  }
+
+  evaluated.sort(compareByStackingOrder);
+
+  return { frame, layers: evaluated };
+}
+
+// ─── Content extraction ──────────────────────────────────────────────────
+
+function extractContent(
+  layer: CharacterPart,
+  trim: ReturnType<typeof evaluateTrimPath>,
+  masks?: LayerMask[],
+): LayerContent {
+  return {
+    fillColor: layer.fillColor,
+    strokeColor: layer.strokeColor,
+    fillEnabled: layer.fillEnabled,
+    fillOpacity: layer.fillOpacity,
+    strokeEnabled: layer.strokeEnabled,
+    strokeWidth: layer.strokeWidth,
+    strokeOpacity: layer.strokeOpacity,
+    strokeAlignment: layer.strokeAlignment,
+    matte: layer.matte,
+    masks: masks ?? layer.masks,
+    trackMatte: layer.trackMatte,
+    effects: layer.effects,
+    textValue: layer.textValue,
+    fontSize: layer.fontSize,
+    fontFamily: layer.fontFamily,
+    ...(layer.textOrigin !== undefined ? { textOrigin: layer.textOrigin } : {}),
+    imageUrl: layer.imageUrl,
+    videoUrl: layer.videoUrl,
+    points: layer.points,
+    path: layer.path,
+    shadowColor: layer.shadowColor,
+    shadowBlur: layer.shadowBlur,
+    shadowOffsetX: layer.shadowOffsetX,
+    shadowOffsetY: layer.shadowOffsetY,
+    borderRadius: layer.borderRadius,
+    strokeLinejoin: layer.strokeLinejoin,
+    trimPathEnabled: trim.isModern ? trim.enabled : undefined,
+    trimPathStart: trim.isModern ? trim.start : undefined,
+    trimPathEnd: trim.isModern ? trim.end : undefined,
+    trimPathOffset: trim.isModern ? trim.offset : undefined,
+    width: layer.width,
+    height: layer.height,
+    // Cloner/particle passthrough
+    clonerConfig: layer.clonerConfig,
+    particleConfig: layer.particleConfig,
+    inCustomPresetId: layer.inCustomPresetId,
+    outCustomPresetId: layer.outCustomPresetId,
+  };
+}

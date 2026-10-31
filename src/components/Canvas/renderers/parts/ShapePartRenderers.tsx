@@ -1,10 +1,10 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
-import { buildBezierPathD, legacyFreeformPointsToPath } from '../../../../utils/bezierPath';
-import { buildFreeformPath, getFreeformPerimeter, normalizeClosedPoints } from '../../../../utils/freeform';
-import { getShapeGeometry, polygonPointsToString } from '../../../../utils/shapeGeometry';
-import { isShapeAppearanceEligible, resolveShapeAppearance, type ResolvedShapeAppearance } from '../../../../utils/shapeAppearance';
-import { getTrimPathDashProps, resolveTrimPath } from '../../../../utils/trimPath';
+import { buildBezierPathD, legacyFreeformPointsToPath } from '../../../../utils/geometry/bezierPath';
+import { buildFreeformPath, getFreeformPerimeter, normalizeClosedPoints } from '../../../../utils/geometry/freeform';
+import { getShapeGeometry, polygonPointsToString } from '../../../../utils/geometry/shapeGeometry';
+import { isShapeAppearanceEligible, resolveShapeAppearance, type ResolvedShapeAppearance } from '../../../../utils/layers/shapeAppearance';
+import { getTrimPathDashProps, resolveTrimPath } from '../../../../utils/geometry/trimPath';
 
 interface ShapePartProps {
   part: CharacterPart;
@@ -41,7 +41,7 @@ const getShapeDashProps = (part: CharacterPart, totalPerimeter: number) => {
 type SvgShapeProps = Record<string, unknown>;
 
 /**
- * C12 — an authored stroke width in stage units, independent of the layer's
+ * An authored stroke width in stage units, independent of the layer's
  * own scale: non-scaling, times the stage's screen pixels per unit (the
  * `--kcs-stroke-scale` StageCanvas sets), so it still zooms with the view.
  */
@@ -107,7 +107,7 @@ const renderModernShape = (
     stroke,
     strokeOpacity: appearance.strokeOpacity,
     // C10 made the stroke zoom with the view (it used to stay N screen px).
-    // C12 — but not with the layer's scale: a shape drawn by dragging is a
+    // But not with the layer's scale: a shape drawn by dragging is a
     // scaled canonical shape, so its 1.5-unit border painted 6 px thick (and
     // thicker on two sides when the drag was not square).
     ...authoredStrokeWidth(appearance.strokeWidth),

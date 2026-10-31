@@ -14,7 +14,7 @@ import { DetailsPanel } from '../components/Inspector/DetailsPanel';
 import { StageCanvas } from '../components/Canvas/StageCanvas';
 import type { BezierPath, CharacterPart, LayerMask, Track } from '../types/animator';
 import { layerMaskPathChannel } from '../types/animator';
-import { translateMaskPath } from '../utils/maskPathEditing';
+import { translateMaskPath } from '../utils/geometry/maskPathEditing';
 
 const path: BezierPath = {
   version: 1,

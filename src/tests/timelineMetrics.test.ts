@@ -8,8 +8,8 @@
  */
 
 import { describe, test, expect } from 'vitest';
-import { computeMaxFrame, hasChannelDataForTemplate, resolveAdjacentKeyframeFrame, resolveChannelKeyframeFrames, resolveConnectorSegments, resolveCurveSegment, resolveLayerKeyframeFrames } from '../utils/timelineMetrics';
-import { updateKeyframeBezierPointsMutator } from '../utils/trackMutations';
+import { computeMaxFrame, hasChannelDataForTemplate, resolveAdjacentKeyframeFrame, resolveChannelKeyframeFrames, resolveConnectorSegments, resolveCurveSegment, resolveLayerKeyframeFrames } from '../utils/editor/timelineMetrics';
+import { updateKeyframeBezierPointsMutator } from '../utils/animation/trackMutations';
 import type { Track, TrackChannel, PropertyKeyframe, Keyframe } from '../types/animator';
 
 function makeTrack(id: string, opts?: {

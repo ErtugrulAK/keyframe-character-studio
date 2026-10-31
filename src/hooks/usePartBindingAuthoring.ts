@@ -1,11 +1,11 @@
 import { useAnimator } from '../context/useAnimator';
-import { bindParts, isRelationshipChainRelated, resolveBondGroup, unbindPart } from '../utils/partBinding';
+import { bindParts, isRelationshipChainRelated, resolveBondGroup, unbindPart } from '../utils/layers/partBinding';
 
 /**
  * The one layer-bond authoring authority for the current selection.
  *
  * Bind/Bond is position-only: it writes `boundPartIds` through
- * `utils/partBinding` and nothing else. The write goes through the ordinary
+ * `utils/layers/partBinding` and nothing else. The write goes through the ordinary
  * `setCharacterParts` setter inside a single batch interaction — the same shape
  * as the grouping and Boolean authorities — so bonding is one undo step and one
  * history entry. There is exactly one bind write path, and it is shared by every

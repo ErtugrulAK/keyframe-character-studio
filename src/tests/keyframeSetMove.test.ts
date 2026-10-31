@@ -8,13 +8,13 @@
 
 import { describe, expect, it } from 'vitest';
 import type { PropertyKeyframe, Track } from '../types/animator';
-import { makeEmptyChannels } from '../utils/defaults';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 import {
   frameGroupKeyframes,
   locateKeyframe,
   moveKeyframesMutator,
   resolveKeyframeMoveTargets,
-} from '../utils/trackMutations';
+} from '../utils/animation/trackMutations';
 
 const pk = (id: string, frame: number, value: number, channel = 'x'): PropertyKeyframe => ({
   id: `${channel}_${id}`,

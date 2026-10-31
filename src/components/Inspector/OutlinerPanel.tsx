@@ -3,16 +3,16 @@ import { ChevronDown, ChevronRight, Layers, Search, X } from 'lucide-react';
 import { useAnimatorSlice, useAnimatorReader } from '../../context/useAnimator';
 import { useEditorContextMenu } from '../../context/editorContextMenu';
 import type { CharacterPart } from '../../types/animator';
-import { resolveMatteSource } from '../../utils/matte';
-import { projectLayerOrdinals } from '../../utils/layerOrdinal';
-import { reparentBlockReason, type LayerDropPosition } from '../../utils/layerParenting';
-import { relationshipParentId } from '../../utils/partBinding';
+import { resolveMatteSource } from '../../utils/layers/matte';
+import { projectLayerOrdinals } from '../../utils/layers/layerOrdinal';
+import { reparentBlockReason, type LayerDropPosition } from '../../utils/layers/layerParenting';
+import { relationshipParentId } from '../../utils/layers/partBinding';
 import { createLayerParentingActions } from '../../hooks/useLayerParenting';
-import { OUTLINER_COMMAND_EVENT, type OutlinerCommand } from '../../utils/outlinerCommands';
+import { OUTLINER_COMMAND_EVENT, type OutlinerCommand } from '../../utils/layers/outlinerCommands';
 import { OutlinerRow, type OutlinerRowActions } from './OutlinerRow';
 import { useRetainedScrollTop, useRetainedUiState } from '../../hooks/useRetainedUiState';
 import { useRowWindow, type RowViewport } from '../../hooks/useRowWindow';
-import { searchLayers } from '../../utils/layerSearch';
+import { searchLayers } from '../../utils/layers/layerSearch';
 
 /** The row pitch assumed until a mounted row has been measured. */
 const OUTLINER_ROW_PITCH_ESTIMATE = 28;
@@ -66,7 +66,7 @@ export const OutlinerPanel: React.FC = () => {
   const pendingFocusRef = useRef<string | null>(null);
 
   const partById = useMemo(() => new Map(characterParts.map((part) => [part.id, part])), [characterParts]);
-  // C5 — layer search on the scene data (the windowed list cannot be searched
+  // Layer search on the scene data (the windowed list cannot be searched
   // by the browser's find): matches and their ancestors, expanded.
   const [layerQuery, setLayerQuery] = useRetainedUiState('outliner.query', '');
   const search = useMemo(() => searchLayers(characterParts, layerQuery), [characterParts, layerQuery]);
@@ -99,14 +99,14 @@ export const OutlinerPanel: React.FC = () => {
   const stackIndexById = useMemo(() => new Map(characterParts.map((part, index) => [part.id, index])), [characterParts]);
   const visibilityById = useMemo(() => new Map(tracks.map((track) => [track.partId, track.editVisible !== false])), [tracks]);
   const lockedById = useMemo(() => new Set(tracks.filter((track) => track.locked).map((track) => track.partId)), [tracks]);
-  // WP-05: one derived display ordinal per layer (never an identity).
+  // One derived display ordinal per layer (never an identity).
   const layerOrdinals = useMemo(() => projectLayerOrdinals(characterParts), [characterParts]);
   const selectedSet = useMemo(() => new Set(selectedPartIds ?? []), [selectedPartIds]);
   const rovingId = focusedId && visibleRows.some((row) => row.part.id === focusedId)
     ? focusedId
     : (selectedPartId && visibleRows.some((row) => row.part.id === selectedPartId) ? selectedPartId : visibleRows[0]?.part.id ?? null);
 
-  // C4 — a long list mounts only the rows near its viewport. The roving row
+  // A long list mounts only the rows near its viewport. The roving row
   // (Tab's way into the tree), the renamed, dragged and drop-target rows and
   // the primary selection stay mounted wherever they are.
   const pinnedRows = useMemo(() => {
@@ -370,7 +370,7 @@ export const OutlinerPanel: React.FC = () => {
   };
 
   /*
-   * C5 — what the drop will do, BEFORE the release. Nesting onto a group puts
+   * What the drop will do, BEFORE the release. Nesting onto a group puts
    * the layer IN the container ("Move into group"); nesting onto any other layer
    * is a transform relationship ("Parent to"); a line between rows is a reorder,
    * and the hint also says when that reorder changes the parent.

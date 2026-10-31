@@ -3,7 +3,7 @@ import { unzipSync, zipSync } from 'fflate';
 import { compileOGrafPackage } from '../ograf/packageCompiler';
 import { createOGrafBrowserZip, sanitizeOGrafDownloadName } from '../ograf/browserZip';
 import { readOGrafPackage } from '../ograf/packageImport';
-import { isSafePackageRelativePath, normalizePackagePath } from '../utils/pathSafety';
+import { isSafePackageRelativePath, normalizePackagePath } from '../utils/persistence/pathSafety';
 import type { SceneData, SceneLayer } from '../types/composition';
 
 /**

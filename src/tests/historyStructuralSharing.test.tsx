@@ -8,7 +8,7 @@ import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AnimatorProvider, type AnimatorContextType } from '../context/AnimatorContext';
 import { useAnimator } from '../context/useAnimator';
-import { deepFreeze, structurallyEqual } from '../utils/historySnapshot';
+import { deepFreeze, structurallyEqual } from '../utils/persistence/historySnapshot';
 
 const Consumer = ({ onCtx }: { onCtx: (ctx: AnimatorContextType) => void }) => {
   const ctx = useAnimator();

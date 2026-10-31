@@ -20,7 +20,7 @@ const STATUS_LABEL: Record<OGrafLayerCapability, string> = {
 };
 
 /**
- * WP-07 — "what will an OGraf export do with each layer?", shown before the
+ * "what will an OGraf export do with each layer?", shown before the
  * export. Every row comes from the real export diagnostics; nothing is
  * flattened or dropped silently. Status is text + colour, never colour alone.
  */

@@ -3,7 +3,7 @@ import {
   formatInspectorCoordinate,
   getPositionDisplayScale,
   toInspectorPositionDisplay,
-} from '../utils/coordinateDisplay';
+} from '../utils/editor/coordinateDisplay';
 
 describe('coordinate display contract', () => {
   it('keeps project-unit positions raw and inverts the stage Y sign', () => {

@@ -1,7 +1,7 @@
 import { useAnimatorAuthority } from '../context/useAnimator';
 import type { CharacterPart, Track, Transform } from '../types/animator';
 import type { ToastOptions } from './useToast';
-import { lockedLayersRefusal } from '../utils/layerLocks';
+import { lockedLayersRefusal } from '../utils/layers/layerLocks';
 import {
   collectArrangeTargets,
   planAlign,
@@ -14,7 +14,7 @@ import {
   type DistributeAxis,
   type FlipAxis,
   type RotateDirection,
-} from '../utils/vectorArrange';
+} from '../utils/layers/vectorArrange';
 
 type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
 
@@ -22,7 +22,7 @@ type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?
  * The one vector-arrange authoring authority for the current selection.
  *
  * It reads the selection, plans the command with the pure helpers in
- * `utils/vectorArrange` and writes the plan through the ONE transform write path
+ * `utils/layers/vectorArrange` and writes the plan through the ONE transform write path
  * (`updateCurrentTransform`: world space in, container-local out) inside a single
  * batch interaction — so a command is one undo step and one history entry, and
  * it works on animated and static layers alike. The toolbar and the keyboard
@@ -106,7 +106,7 @@ export const createVectorArrangeActions = ({
     // A command that would not move anything writes nothing at all: no empty
     // history entry and no keyframe on a property that did not change.
     if (entries.length === 0) return;
-    // C4 — every target is written or none: a locked one refuses the command.
+    // Every target is written or none: a locked one refuses the command.
     const lockRefusal = lockedLayersRefusal(characterParts, tracks, entries.map(([id]) => id));
     if (lockRefusal) {
       showToast?.(lockRefusal, 'error');

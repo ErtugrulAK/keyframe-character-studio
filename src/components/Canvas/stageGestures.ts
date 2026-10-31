@@ -9,11 +9,11 @@
  */
 import type { Transform } from '../../types/animator';
 import type { WorldTransform } from '../../types/composition';
-import { applyAffine, composeWorldTransform, type WorldAffine } from '../../utils/containerMath';
-import { resolveCornerResize, resolveEdgeResize, type CornerBounds, type CornerId, type EdgeId } from '../../utils/cornerResize';
-import { EDITOR_CAMERA_CENTER } from '../../utils/projectCoordinates';
-import { resizeStageCropRect, stageCropRectFromDrag, translateStageCropRect, type StageCropHandle, type StageCropRect } from '../../utils/stageCrop';
-import { getLocalDelta } from '../../utils/viewportMath';
+import { applyAffine, composeWorldTransform, type WorldAffine } from '../../utils/geometry/containerMath';
+import { resolveCornerResize, resolveEdgeResize, type CornerBounds, type CornerId, type EdgeId } from '../../utils/geometry/cornerResize';
+import { EDITOR_CAMERA_CENTER } from '../../utils/geometry/projectCoordinates';
+import { resizeStageCropRect, stageCropRectFromDrag, translateStageCropRect, type StageCropHandle, type StageCropRect } from '../../utils/geometry/stageCrop';
+import { getLocalDelta } from '../../utils/geometry/viewportMath';
 
 export type CornerScaleMode = 'scale_corner_tl' | 'scale_corner_tr' | 'scale_corner_bl' | 'scale_corner_br';
 export type EdgeScaleMode = 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom';

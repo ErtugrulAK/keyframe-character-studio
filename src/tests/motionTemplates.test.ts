@@ -4,7 +4,7 @@ import {
   cloneSequenceAnimation,
   createMotionTemplate,
   normalizeMotionTemplates,
-} from '../utils/motionTemplates';
+} from '../utils/animation/motionTemplates';
 
 const templates: MotionTemplate[] = [
   { id: 'Sequence', name: 'Sequence', type: 'in', durationFrames: 60 },

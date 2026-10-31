@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, Transform } from '../types/animator';
-import type { PartWorldBounds } from '../utils/bounds';
-import { evaluateTransform } from '../utils/evaluateTransform';
-import { getLayerWorldBounds } from '../utils/layerGrouping';
+import type { PartWorldBounds } from '../utils/geometry/bounds';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { getLayerWorldBounds } from '../utils/layers/layerGrouping';
 import {
   collectLayerSnapCandidates,
   collectStageSnapCandidates,
@@ -12,7 +12,7 @@ import {
   unionWorldBounds,
   worldBoundsCenter,
   type SnapLine,
-} from '../utils/layoutGeometry';
+} from '../utils/geometry/layoutGeometry';
 
 /**
  * The shared layout geometry + snapping authority, measured in world space.

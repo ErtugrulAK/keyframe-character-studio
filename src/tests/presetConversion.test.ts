@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { builtinPresetToCustomKeyframes } from '../utils/presetConversion';
-import { sampleCustomPreset } from '../utils/presetSampler';
-import { computeProceduralDelta } from '../utils/proceduralAnimation';
+import { builtinPresetToCustomKeyframes } from '../utils/animation/presetConversion';
+import { sampleCustomPreset } from '../utils/animation/presetSampler';
+import { computeProceduralDelta } from '../utils/animation/proceduralAnimation';
 import type { CharacterPart } from '../types/animator';
 
 /**

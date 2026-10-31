@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { closeDocksForNarrowStage, MIN_OPENING_STAGE_WIDTH } from '../utils/workspaceLayout';
+import { closeDocksForNarrowStage, MIN_OPENING_STAGE_WIDTH } from '../utils/editor/workspaceLayout';
 
 describe('C11 closeDocksForNarrowStage — docks give the stage its room', () => {
   const run = (initial: number, gains: number[]) => {

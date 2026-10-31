@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AnimationTrackData, CharacterPart, Track, MotionTemplate, PropertyKeyframe } from '../types/animator';
 import type { PersistedTrackState, SceneCoordinateSystem, SceneData, SceneLayer } from '../types/composition';
-import { initializeIdCounter } from '../utils/idGenerator';
-import { makeEmptyChannels, DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../utils/defaults';
-import { convertLegacyKeyframesToChannels, fillChannelsFromLegacyKeyframes } from '../utils/legacyKeyframeConversion';
-import { resolveAuthoredBasePose } from '../utils/channelKeyframeGroups';
-import { AUTOSAVE_LOCK_NAME, AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
-import { DEFAULT_SCENE_COORDINATE_SYSTEM, isSceneCoordinateSystem, migrateSceneCoordinates } from '../utils/coordinateMigration';
-import { normalizeMotionTemplates } from '../utils/motionTemplates';
-import { migrateSceneLayerV6 } from '../utils/v6Migration';
-import { ASSET_REF_PREFIX, createAssetStore, createIndexedDbAssetBackend } from '../utils/assetStore';
+import { initializeIdCounter } from '../utils/layers/idGenerator';
+import { makeEmptyChannels, DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../utils/animation/defaults';
+import { convertLegacyKeyframesToChannels, fillChannelsFromLegacyKeyframes } from '../utils/animation/legacyKeyframeConversion';
+import { resolveAuthoredBasePose } from '../utils/animation/channelKeyframeGroups';
+import { AUTOSAVE_LOCK_NAME, AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/editor/constants';
+import { DEFAULT_SCENE_COORDINATE_SYSTEM, isSceneCoordinateSystem, migrateSceneCoordinates } from '../utils/persistence/coordinateMigration';
+import { normalizeMotionTemplates } from '../utils/animation/motionTemplates';
+import { migrateSceneLayerV6 } from '../utils/persistence/v6Migration';
+import { ASSET_REF_PREFIX, createAssetStore, createIndexedDbAssetBackend } from '../utils/persistence/assetStore';
 
 /**
  * Narrowing helpers for the legacy document's optional fields. The import
@@ -39,9 +39,9 @@ const readMotionTemplates = (value: unknown): MotionTemplate[] | undefined => {
     typeof entry === 'object' && entry !== null && typeof (entry as { id?: unknown }).id === 'string' && typeof (entry as { name?: unknown }).name === 'string');
   return templates.length > 0 ? templates : undefined;
 };
-import { normalizeBezierPath } from '../utils/bezierPath';
-import { SCENE_VERSION_WITH_EFFECTS, sceneUsesEffectFeatures } from '../utils/colorCorrection';
-import { validateImportedDocument, type ImportResult } from '../utils/importValidation';
+import { normalizeBezierPath } from '../utils/geometry/bezierPath';
+import { SCENE_VERSION_WITH_EFFECTS, sceneUsesEffectFeatures } from '../utils/layers/colorCorrection';
+import { validateImportedDocument, type ImportResult } from '../utils/persistence/importValidation';
 const noopSetCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>> = () => undefined;
 // A module-level stable default: a per-render inline default would join the
 // restore effect's dependencies and re-arm the one-shot sync on every render.
@@ -159,7 +159,7 @@ function toSceneData(
   // M8e: channels-only export policy. keyframes[] is NOT exported anymore —
   // legacy-only tracks (empty channels + populated keyframes[]) are converted
   // to canonical channels at export time so no animation data is lost.
-  // F-01: a track with *partly* populated channels still resolves its remaining
+  // A track with *partly* populated channels still resolves its remaining
   // channels from the legacy composite at evaluation time, so those channels are
   // filled here. Writing only the populated ones dropped that fallback and
   // changed the animation the next load produced.
@@ -313,12 +313,12 @@ function fromSceneData(
       })),
       // BUG #1 fix: import the canonical channels written by toSceneData
       // instead of resetting to empty. Legacy files without channels fall back.
-      // M2: if the file has NO channels but HAS legacy keyframes, convert them
+      // If the file has NO channels but HAS legacy keyframes, convert them
       // into canonical channels at import time. Existing channels always win.
       // M8e-prepB: "channels exist" now means they carry ACTUAL keyframe data —
       // an all-empty channel structure (e.g. 10 empty arrays) falls back to the
       // legacy conversion instead of silently dropping populated keyframes[].
-      // R3-11: the resolution is the EVALUATOR's own (`fillChannelsFromLegacyKeyframes`),
+      // The resolution is the EVALUATOR's own (`fillChannelsFromLegacyKeyframes`),
       // so a file with partially populated channels plus a legacy keyframe list
       // imports what it plays — nothing can be hidden from the timeline, and a
       // channel the legacy list still drives becomes canonical at import. The
@@ -420,7 +420,7 @@ interface UseSerializationOptions {
 }
 
 /**
- * SAFE-02: bounded wait a manual save gives the shared autosave lock before
+ * Bounded wait a manual save gives the shared autosave lock before
  * its intent is reported as not completed. Interval ticks never wait.
  */
 const MANUAL_SAVE_LOCK_WAIT_MS = 1_000;
@@ -435,7 +435,7 @@ export const AUTOSAVE_DELAY_MS = 10_000;
 /** How often the autosave deadline is checked (cheap: refs only). */
 const AUTOSAVE_CHECK_INTERVAL_MS = 1_000;
 
-/** D2: the last persistence failure, exposed so the badge can speak instead
+/** The last persistence failure, exposed so the badge can speak instead
  *  of showing a stale success. Cleared by the first write that lands. */
 export type AutosavePersistenceError = { kind: 'quota' | 'unavailable'; at: number };
 
@@ -477,7 +477,7 @@ export interface UseSerializationApi {
    */
   restoredFromLocalStorage: boolean;
   /**
-   * SAFE-01: true once another writer is detected to have changed the shared
+   * True once another writer is detected to have changed the shared
    * autosave storage outside this tab. Unsafe background and manual writes
    * are then paused until reload, so a foreign document is never silently
    * overwritten; the header surfaces the pause and the user can export or
@@ -485,7 +485,7 @@ export interface UseSerializationApi {
    */
   autosaveConflict: boolean;
   /**
-   * SAFE-02: wall-clock timestamp of the last manual save whose bounded Web
+   * Wall-clock timestamp of the last manual save whose bounded Web
    * Lock wait expired, or null when none needs attention. A deferred save is
    * NOT a conflict pause: the edits are kept and the next autosave tick
    * retries; the header surfaces exactly one notice per event.
@@ -552,18 +552,18 @@ export const useSerialization = ({
 
   const [restoredFromLocalStorage, setRestoredFromLocalStorage] = useState<boolean>(false);
 
-  // SAFE-02: bumped when a queued reset finalizes outside a render
+  // Bumped when a queued reset finalizes outside a render
   // commit, so the settle effect re-runs for the post-reset document exactly
   // like the synchronous fallback does (adopted ownership must not wait for
   // the next unrelated state change to capture its baseline).
   const [settleEpoch, setSettleEpoch] = useState(0);
 
   // The autosave keeps media in a content-addressed IndexedDB store and the
-  // stored scene names them (`utils/assetStore`): localStorage holds the scene,
+  // stored scene names them (`utils/persistence/assetStore`): localStorage holds the scene,
   // not the photos. Everything else keeps the data URLs.
   const [assetStore] = useState(() => createAssetStore(createIndexedDbAssetBackend()));
 
-  // SAFE-01 — cross-tab write discipline. storageKnownRef holds the exact
+  // Cross-tab write discipline. storageKnownRef holds the exact
   // string this tab last READ at boot (a refused/corrupted value included:
   // "whatever was there") or last WROTE itself: every attempted save compares
   // the live key against it — optimistic concurrency, because localStorage
@@ -580,7 +580,7 @@ export const useSerialization = ({
   const restoreDecidedRef = useRef<boolean>(false);
   const restoreAppliedRef = useRef<boolean>(false);
 
-  // SAFE-02 — the SAFE-01 read-compare-write runs as one critical section
+  // The SAFE-01 read-compare-write runs as one critical section
   // inside the Web Lock named after the guarded key. manualPendingRef keeps a
   // single queued manual intent (the grant re-reads state, so the pending
   // save always writes the LATEST document — extra clicks add nothing);
@@ -621,7 +621,7 @@ export const useSerialization = ({
           if (applied) {
             // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
             setRestoredFromLocalStorage(true);
-            // N1: the restored scene is the baseline, not an undoable edit.
+            // The restored scene is the baseline, not an undoable edit.
             requestHistoryBaseline();
             restoreAppliedRef.current = true;
           }
@@ -673,7 +673,7 @@ export const useSerialization = ({
         setLastSavedAt(savedAt ?? new Date());
         // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
         setRestoredFromLocalStorage(true);
-        // N1: the restored legacy scene is the baseline, not an undoable edit.
+        // The restored legacy scene is the baseline, not an undoable edit.
         requestHistoryBaseline();
         restoreAppliedRef.current = true;
       } catch (e) {
@@ -734,7 +734,7 @@ export const useSerialization = ({
   }, [characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId]);
 
   /**
-   * SAFE-01: capture the document THIS TAB WAS GIVEN as its idle baseline.
+   * Capture the document THIS TAB WAS GIVEN as its idle baseline.
    * Runs after the mount effect and, when a restore was applied, after that
    * restore's state commit (signalled by restoredFromLocalStorage) — always
    * before any user edit is possible, so an edit made in the first seconds of
@@ -910,7 +910,7 @@ export const useSerialization = ({
     })();
   }, [casWrite, runWithAutosaveLock]);
 
-  // SAFE-02: a late continuation after unmount must not touch state, notify,
+  // A late continuation after unmount must not touch state, notify,
   // or (worse) write: drop the queued manual intent at the boundary.
   useEffect(() => {
     // StrictMode remounts effects in dev: the flag must be re-armed at setup,
@@ -924,7 +924,7 @@ export const useSerialization = ({
   }, []);
 
   /**
-   * SAFE-01: import and reset are EXPLICIT document replacements — the user's
+   * Import and reset are EXPLICIT document replacements — the user's
    * intent is to own whatever the shared key holds. Re-observe the key right
    * now (so the next save compares against reality, not the boot value), lift
    * any previous conflict pause, and hand the fresh document to the settle
@@ -1025,7 +1025,7 @@ export const useSerialization = ({
     setCurrentFrame(0);
     setIsPlaying(false);
     setCoordinateSystem('project-unit-center-v1');
-    // SAFE-02: removal of the key joins the same critical section as saves,
+    // Removal of the key joins the same critical section as saves,
     // so a concurrent tab's write can neither slip between the reset tabs
     // intent and the deletion, nor be clobbered by a reset-time snapshot.
     // Synchronous fallback where Web Locks are unavailable (SAFE-01).
@@ -1114,7 +1114,7 @@ export const useSerialization = ({
     return true;
   }, [activeProjectTemplateId, activeTemplateId, characterParts, coordinateSystem, fps, motionTemplates, projectResolution, sceneTitle, setCharacterParts, setCoordinateSystem, setTemplateCanvasStore, setTracks, totalFrames, tracks]);
 
-  // A1: single synchronous verdict for destructive-navigation callers. All
+  // Single synchronous verdict for destructive-navigation callers. All
   // state lives in refs set synchronously by the write path, so this is a
   // point-in-time fact, not a render-time approximation.
   const getPersistenceSafety = useCallback((): PersistenceSafety => {
@@ -1129,7 +1129,7 @@ export const useSerialization = ({
     return { safe: true, reason: 'clean' };
   }, [buildSceneJson, autosaveError]);
 
-  // A1: one forced durable write through the existing SAFE-01/02 critical
+  // One forced durable write through the existing SAFE-01/02 critical
   // section; resolves true only when the key actually advanced (casWrite's
   // own honest contract).
   const forceSaveNow = useCallback(async (): Promise<boolean> => {

@@ -11,9 +11,9 @@ interface StyleCardProps {
    * layer that shows the same card. Without it the state lives per mount.
    */
   retainKey?: string;
-  /** C6 — a short status next to the title ("In use", "Advanced"); not part of the card's name. */
+  /** A short status next to the title ("In use", "Advanced"); not part of the card's name. */
   badge?: string;
-  /** C6 — 'quiet' de-emphasises a card that is kept for compatibility and unused here. */
+  /** 'quiet' de-emphasises a card that is kept for compatibility and unused here. */
   tone?: 'default' | 'quiet';
   children: React.ReactNode;
 }

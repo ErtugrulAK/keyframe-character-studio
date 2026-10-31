@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createMemoryBackend, createProjectLibrary } from '../utils/projectLibrary';
+import { createMemoryBackend, createProjectLibrary } from '../utils/persistence/projectLibrary';
 
 const scene = (layers: number) => JSON.stringify({ version: 1, layers: Array.from({ length: layers }, (_, i) => ({ id: `l${i}` })), tracks: [] });
 

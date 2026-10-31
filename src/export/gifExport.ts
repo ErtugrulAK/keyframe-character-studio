@@ -30,7 +30,7 @@ import {
   resolvePaletteSampleIndexes,
   type GifFramePlan,
 } from './gifPlan';
-import { KCS_DEFAULT_TEXT_FONT } from '../utils/textFonts';
+import { KCS_DEFAULT_TEXT_FONT } from '../utils/layers/textFonts';
 
 /** How many frames the palette is sampled from. */
 const GIF_PALETTE_SAMPLE_FRAMES = 8;

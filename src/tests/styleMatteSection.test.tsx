@@ -10,7 +10,7 @@ import React from 'react';
 import { render, fireEvent, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { StyleMatteSection } from '../components/Inspector/sections/style/StyleMatteSection';
-import { normalizeGradientType, normalizeGradientStops, gradientId, gradientStopsHash } from '../utils/matte';
+import { normalizeGradientType, normalizeGradientStops, gradientId, gradientStopsHash } from '../utils/layers/matte';
 import type { CharacterPart } from '../types/animator';
 
 function makePart(id: string, type: string, name: string, matte?: CharacterPart['matte']): CharacterPart {

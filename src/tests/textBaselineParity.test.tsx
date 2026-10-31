@@ -17,8 +17,8 @@ import { renderTextOrClonerPart } from '../components/Canvas/renderers/parts/Tex
 import { renderOGrafSvg } from '../ograf/svgRenderer';
 import { evaluateOGrafScene } from '../ograf/evaluation';
 import { generateGraphicModule } from '../ograf/runtimeTemplate';
-import { textMaskContent } from '../utils/matte';
-import { getPartLocalBounds } from '../utils/bounds';
+import { textMaskContent } from '../utils/layers/matte';
+import { getPartLocalBounds } from '../utils/geometry/bounds';
 
 const textLayer: SceneLayer = {
   id: 'headline', name: 'Headline', type: 'custom_text',

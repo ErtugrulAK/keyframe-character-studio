@@ -16,7 +16,7 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test';
  *      completed", keeps the edits and the badge clean, and the next tick
  *      completes the write after the holder releases.
  *
- * The lock name mirrors src/utils/constants.ts AUTOSAVE_LOCK_NAME; the string
+ * The lock name mirrors src/utils/editor/constants.ts AUTOSAVE_LOCK_NAME; the string
  * is inlined here because the browser-side holder must name it without
  * importing app modules.
  */

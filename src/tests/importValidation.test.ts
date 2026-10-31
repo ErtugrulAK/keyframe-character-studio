@@ -3,7 +3,7 @@ import {
   MAX_IMPORT_CHARACTERS,
   MAX_IMPORT_LAYERS,
   validateImportedDocument,
-} from '../utils/importValidation';
+} from '../utils/persistence/importValidation';
 
 /**
  * The import boundary is the only place untrusted project text becomes a typed

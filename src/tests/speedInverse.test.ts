@@ -13,8 +13,8 @@ import {
   normalizedSlopeToPhysicalVelocity,
   physicalVelocityToNormalized,
   segmentVelocityScale,
-} from '../utils/speedInverse';
-import { channelVelocityAt } from '../utils/velocityMath';
+} from '../utils/animation/speedInverse';
+import { channelVelocityAt } from '../utils/animation/velocityMath';
 import type { PropertyKeyframe } from '../types/animator';
 
 const h = (x: number, y: number) => ({ x, y });

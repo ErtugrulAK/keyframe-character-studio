@@ -5,7 +5,7 @@ const EXEMPT = '[aria-expanded], [data-lock-exempt]';
 const CONTROLS = 'input, select, textarea, button';
 
 /**
- * C4 — the Inspector of a LOCKED layer stays readable but not editable: while
+ * The Inspector of a LOCKED layer stays readable but not editable: while
  * `active`, every form control inside `ref` is disabled, except disclosure
  * toggles (anything with `aria-expanded`) and controls marked
  * `data-lock-exempt` (navigation, copy). Controls mounted later — a card the
@@ -14,7 +14,7 @@ const CONTROLS = 'input, select, textarea, button';
  * own reason keeps that.
  *
  * This is the VISIBLE half of the lock only; the write path refuses every
- * change of a locked layer on its own (`utils/layerLocks`).
+ * change of a locked layer on its own (`utils/layers/layerLocks`).
  */
 export const useLockedRegion = (ref: React.RefObject<HTMLElement | null>, active: boolean): void => {
   useLayoutEffect(() => {

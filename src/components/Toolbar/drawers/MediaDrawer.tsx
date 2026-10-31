@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useAnimatorSlice } from '../../../context/useAnimator';
 import { Upload } from 'lucide-react';
 import type { ImageContentBounds } from '../../../types/animator';
-import { contentBoundsInLocalUnits, visibleContentRectOfImage } from '../../../utils/imageContentBounds';
+import { contentBoundsInLocalUnits, visibleContentRectOfImage } from '../../../utils/geometry/imageContentBounds';
 
 export const MediaDrawer: React.FC = () => {
   const { characterParts, addCustomPart } = useAnimatorSlice('characterParts', 'addCustomPart');

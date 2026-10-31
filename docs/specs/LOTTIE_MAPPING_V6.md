@@ -6,8 +6,8 @@ This document defines the interoperability boundary for KCS V6 Motion Core and C
 
 ## Canonical KCS fields
 
-| `BezierPath` (`version: 1`, `coordinateSpace`, `closed`, ordered vertex IDs) | `src/utils/bezierPath.ts` | Maps to shape path vertices and tangents when topology is compatible | Supported for evaluated freeform SVG output |
-| `LayerMask[]` | `src/utils/layerMasks.ts` and `StagePartLayers` | Maps conceptually to ordered mask shapes and mask modes | Supported for the V6 SVG adapter; generated-runtime parity is covered by focused tests |
+| `BezierPath` (`version: 1`, `coordinateSpace`, `closed`, ordered vertex IDs) | `src/utils/geometry/bezierPath.ts` | Maps to shape path vertices and tangents when topology is compatible | Supported for evaluated freeform SVG output |
+| `LayerMask[]` | `src/utils/layers/layerMasks.ts` and `StagePartLayers` | Maps conceptually to ordered mask shapes and mask modes | Supported for the V6 SVG adapter; generated-runtime parity is covered by focused tests |
 | `TrackMatteV2` | `StagePartLayers` and `validateScene` | Maps to alpha/luma track matte relationships and inversion | Supported for the V6 alpha/luminance adapter; disabled relationships are ignored |
 | `maskChannels` | `trackMutations`, `useTimeline`, `interpolateChannel` | Maps to animated mask opacity/feather/expansion where the target supports them | Preserved and evaluated by the V6 adapter/runtime |
 | `PropertyKeyframe.bezierIn/bezierOut` | `interpolateChannel` and `TemporalGraphPanel` | Maps to temporal easing handles; target-specific conversion required | Preserved in scene data and evaluated by the generated runtime |
@@ -33,8 +33,8 @@ Every V6 field remains in `scene.kcs`. The OGraf package runtime is an adapter, 
 
 ## Implementation references
 
-- KCS path authority: `src/utils/bezierPath.ts`
-- KCS V6 migration: `src/utils/v6Migration.ts`
+- KCS path authority: `src/utils/geometry/bezierPath.ts`
+- KCS V6 migration: `src/utils/persistence/v6Migration.ts`
 - OGraf evaluation: `src/ograf/evaluation.ts`
 - OGraf SVG adapter: `src/ograf/svgRenderer.ts`
 - OGraf capability diagnostics: `src/ograf/validation.ts`

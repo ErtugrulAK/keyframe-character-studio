@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import { retireStaleDevServiceWorker } from './utils/devFreshness'
+import { retireStaleDevServiceWorker } from './utils/editor/devFreshness'
 import { installPerfMonitor } from './perf/perfMonitor'
 
 // DEV FRESHNESS CONTRACT — a dev session must never be served by a stale

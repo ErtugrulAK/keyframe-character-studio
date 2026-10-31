@@ -20,7 +20,7 @@ import { resolveOpeningTimelineHeight } from '../components/Timeline/timelineCon
 import { InteractiveCubicBezierEditor } from '../components/Inspector/InteractiveCubicBezierEditor';
 import { TemporalGraphPanel } from '../components/Inspector/TemporalGraphPanel';
 import { BezierPathEditor } from '../components/Inspector/BezierPathEditor';
-import { makeEmptyChannels } from '../utils/defaults';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 import type { PropertyKeyframe } from '../types/animator';
 
 const Consumer = ({ onCtx }: { onCtx: (ctx: AnimatorContextType) => void }) => {

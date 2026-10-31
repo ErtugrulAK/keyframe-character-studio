@@ -9,7 +9,7 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { TransformGizmo } from '../components/Canvas/overlays/TransformGizmo';
-import { makeEmptyChannels } from '../utils/defaults';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 import type { CharacterPart } from '../types/animator';
 
 const part: CharacterPart = {

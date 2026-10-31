@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart } from '../types/animator';
-import { bindParts, isRelationshipChainRelated, resolveBondGroup, resolveBoundPartners, unbindPart } from '../utils/partBinding';
+import { bindParts, isRelationshipChainRelated, resolveBondGroup, resolveBoundPartners, unbindPart } from '../utils/layers/partBinding';
 
 const part = (id: string, overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id,

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { CharacterPart, MotionTemplate, Track } from '../types/animator';
 import type { SceneCoordinateSystem } from '../types/composition';
-import { deepFreeze, structurallyEqual } from '../utils/historySnapshot';
+import { deepFreeze, structurallyEqual } from '../utils/persistence/historySnapshot';
 
 /**
  * The document-level authoring state a scene replacement carries.

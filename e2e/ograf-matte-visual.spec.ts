@@ -128,3 +128,49 @@ test('the generated runtime renders the same inverted alpha matte as the canonic
   expect(inside).toBe(0);
   expect(outside).toBe(255);
 });
+
+/** The exported runtime's markup for a scene, from the compiled package. */
+const runtimeMarkup = (page: Page, scene: SceneData) => page.evaluate(async (moduleSource) => {
+  const url = `data:text/javascript;charset=utf-8,${encodeURIComponent(moduleSource.replaceAll('import.meta.url', 'location.href'))}`;
+  const module = await import(/* @vite-ignore */ url);
+  const tag = `x-ograf-matte-visual-${Math.random().toString(36).slice(2)}`;
+  customElements.define(tag, module.default);
+  const graphic = document.createElement(tag) as HTMLElement & { load: (params: unknown) => Promise<unknown> };
+  document.body.appendChild(graphic);
+  await graphic.load({ renderType: 'realtime', data: {} });
+  return graphic.innerHTML;
+}, compileOGrafPackage(scene).files.find((file) => file.path === 'graphic.mjs')?.content || '');
+
+/** The most opaque pixel of a rasterized SVG: a glyph's centre is not a fixed point. */
+const peakAlpha = (page: Page, svg: string) => page.evaluate(async (markup) => {
+  const image = new Image();
+  await new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error('the SVG did not load'));
+    image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = 200;
+  canvas.height = 200;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('no 2d context');
+  context.drawImage(image, 0, 0);
+  const data = context.getImageData(0, 0, 200, 200).data;
+  let peak = 0;
+  for (let index = 3; index < data.length; index += 4) peak = Math.max(peak, data[index]);
+  return peak;
+}, svg);
+
+// The editor's matte paints its source silhouette at full opacity: a source
+// drawn at 40% fill opacity still keeps the target fully (measured on the stage,
+// where the target's pixels are the same at fill opacity 1 and 0.4). The static
+// renderer kept 40% for shapes and text, the runtime for text.
+for (const type of ['custom_circle', 'custom_text'] as const) {
+  test(`a matte source's own fill opacity does not weaken the matte (${type})`, async ({ page }) => {
+    const scene = matteScene('alpha', false);
+    scene.layers[0] = { ...scene.layers[0], type, fillOpacity: 0.4, ...(type === 'custom_text' ? { textValue: 'WWW', fontSize: 80 } : {}) };
+
+    expect(await peakAlpha(page, renderOGrafSvg(evaluateOGrafScene(scene, 0)))).toBe(255);
+    expect(await peakAlpha(page, await runtimeMarkup(page, scene))).toBe(255);
+  });
+}

@@ -611,8 +611,8 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       : layer.points && layer.points.length >= 3 ? 'M ' + layer.points.map((point) => point.x + ' ' + point.y).join(' L ') + ' Z' : '';
     if (layer.type === 'custom_freeform') return path ? '<path d="' + escapeXml(path) + '" stroke-linejoin="' + (layer.strokeLinejoin === 'miter' ? 'miter' : 'round') + '"' + attrs + ' />' : '';
     if (layer.type === 'custom_circle') return '<circle cx="0" cy="0" r="30"' + attrs + ' />';
-    if (layer.type === 'custom_box') return '<rect x="-30" y="-30" width="60" height="60" rx="0"' + attrs + ' />';
-    if (layer.type === 'custom_rect') return '<rect x="-60" y="-30" width="120" height="60" rx="' + (layer.borderRadius || 0) + '"' + attrs + ' />';
+    if (layer.type === 'custom_box') return '<rect x="-30" y="-30" width="60" height="60" rx="' + (layer.borderRadius ?? 0) + '"' + attrs + ' />';
+    if (layer.type === 'custom_rect') return '<rect x="-60" y="-30" width="120" height="60" rx="' + (layer.borderRadius ?? 0) + '"' + attrs + ' />';
     if (layer.type === 'custom_capsule') return '<rect x="-50" y="-20" width="100" height="40" rx="20"' + attrs + ' />';
     const points: Record<string, string> = {
       custom_triangle: '0,-35 35,25 -35,25',
@@ -632,7 +632,8 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     const glyphs = describeText(layer, layer.textOrigin === 'center' ? (layer.fontSize || 24) * textBoxCentreEm : 0);
     return '<text x="0" y="' + glyphs.y + '" text-anchor="middle"' + attributes({
       fill: silhouette ? silhouette.fill : paint.fill,
-      'fill-opacity': paint.fillOpacity,
+      // A silhouette (matte or clip source) is drawn at full opacity, as in the editor.
+      'fill-opacity': silhouette ? 1 : paint.fillOpacity,
       stroke: silhouette ? silhouette.stroke : paint.stroke,
       'stroke-opacity': paint.strokeOpacity,
       'stroke-width': paint.strokeWidth,

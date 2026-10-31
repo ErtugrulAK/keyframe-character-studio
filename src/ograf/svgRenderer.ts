@@ -72,7 +72,8 @@ function renderGeometry(type: string, content: LayerContent, props: SvgAttribute
   if (!geometry) return '';
   if (geometry.kind === 'circle') return `<circle cx="0" cy="0" r="${svgNumber(geometry.r)}"${attributes(props)} />`;
   if (geometry.kind === 'rect') {
-    const rx = content.borderRadius ?? geometry.rx;
+    // As in the editor, a capsule keeps its fixed ends; the other rects take the authored radius.
+    const rx = type === 'custom_capsule' ? geometry.rx : content.borderRadius ?? geometry.rx;
     return `<rect x="${svgNumber(geometry.x)}" y="${svgNumber(geometry.y)}" width="${svgNumber(geometry.width)}" height="${svgNumber(geometry.height)}" rx="${svgNumber(rx)}"${attributes(props)} />`;
   }
   return `<polygon points="${escapeXml(polygonPointsToString(geometry.points))}"${attributes(props)} />`;
@@ -301,10 +302,12 @@ function renderTrackMatteDefinition(scene: OGrafEvaluatedScene, target: Evaluate
   const sourceFill = relationship.inverted
     ? 'black'
     : relationship.mode === 'luminance' ? (source.content.fillColor || 'white') : 'white';
+  // The editor's matte paints the source silhouette at full opacity: its own
+  // fill opacity never weakens the matte (only the relationship's strength does).
   const sourceContent = renderLayerContent(source, options, {
     fill: sourceFill,
     stroke: 'none',
-    'fill-opacity': source.content.fillOpacity ?? 1,
+    'fill-opacity': 1,
   });
   if (!sourceContent) throw new Error(`Track matte source "${describeOGrafValueForDiagnostics(source.id)}" has no supported SVG content.`);
   const sourceShape = `<g transform="${layerTransform(scene, source)}">${sourceContent}</g>`;

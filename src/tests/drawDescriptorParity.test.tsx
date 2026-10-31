@@ -17,6 +17,7 @@ import { renderOGrafSvg } from '../ograf/svgRenderer';
 import { evaluateOGrafScene } from '../ograf/evaluation';
 import { generateGraphicModule } from '../ograf/runtimeTemplate';
 import { renderTextOrClonerPart } from '../components/Canvas/renderers/parts/TextAndClonerRenderers';
+import { renderShapePart } from '../components/Canvas/renderers/parts/ShapePartRenderers';
 
 const base = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, fillColor: '#ff0000', strokeColor: '#000000' };
 
@@ -89,5 +90,29 @@ describe('one draw descriptor, three renderers', () => {
     expect(pick(runtimeText, TEXT)).toEqual(pick(staticText, TEXT));
     // The stage paints with the renderer's resolved fill (a gradient may replace it), so compare it where it is a colour.
     expect(pick(stageText, TEXT)).toEqual(pick(staticText, TEXT));
+  });
+
+  // The corner radius follows the editor: a box and a rectangle take the
+  // authored radius, a capsule keeps its fixed round ends whatever is authored.
+  // The runtime drew a box square; the static renderer rounded a capsule's ends to the authored radius.
+  const corners: Array<[string, Partial<SceneLayer>]> = [
+    ['rounded box', { type: 'custom_box', borderRadius: 12 }],
+    ['rounded rect', { type: 'custom_rect', borderRadius: 12 }],
+    ['capsule with an authored radius', { type: 'custom_capsule', borderRadius: 5 }],
+    ['modern rounded box', { type: 'custom_box', borderRadius: 8, fillEnabled: true, strokeEnabled: false }],
+    ['modern capsule with an authored radius', { type: 'custom_capsule', borderRadius: 5, fillEnabled: true, strokeEnabled: false }],
+  ];
+  const GEOMETRY = ['x', 'y', 'width', 'height', 'rx'];
+
+  it.each(corners)('gives a %s editor corners in the static renderer and the runtime', (_label, overrides) => {
+    const layer = { ...base, id: 'a', name: 'a', ...overrides } as SceneLayer;
+    const scene = sceneOf(layer);
+    const stage = renderToString(renderShapePart({ part: layer as unknown as CharacterPart, fill: layer.fillColor as string, stroke: 'none', isSelected: false }) as React.ReactElement);
+    // The stage may add a transparent hit rect; every rect it draws has the same corners.
+    const [stageRect] = paintedTags(stage, 'rect');
+    const [staticRect] = paintedTags(renderOGrafSvg(evaluateOGrafScene(scene, 0)), 'rect');
+    const [runtimeRect] = paintedTags(runtimeMarkup(scene), 'rect');
+    expect(pick(staticRect, GEOMETRY)).toEqual(pick(stageRect, GEOMETRY));
+    expect(pick(runtimeRect, GEOMETRY)).toEqual(pick(stageRect, GEOMETRY));
   });
 });

@@ -10,6 +10,8 @@ import { compareByStackingOrder } from '../utils/stackingOrder';
 import { resolveMatteSource } from '../utils/matte';
 import { createWorldAffineAlgebra } from '../utils/containerMath';
 import { TEXT_BOX_CENTRE_EM } from '../utils/textOrigin';
+import { resolveShapeAppearance } from '../utils/shapeAppearance';
+import { describePaint, describeText } from '../utils/drawDescriptor';
 
 class HostElement { innerHTML = ''; }
 
@@ -30,6 +32,9 @@ const environmentFor = (scene: RuntimeScene): GraphicRuntimeEnvironment => ({
   compareByStackingOrder,
   resolveMatteSource: resolveMatteSource as GraphicRuntimeEnvironment['resolveMatteSource'],
   affine: createWorldAffineAlgebra(),
+  resolveShapeAppearance: resolveShapeAppearance as GraphicRuntimeEnvironment['resolveShapeAppearance'],
+  describePaint,
+  describeText,
 });
 
 const runtimeFor = (scene: RuntimeScene) => createGraphicRuntime(environmentFor(scene));

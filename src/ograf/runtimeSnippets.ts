@@ -22,6 +22,7 @@
 import { compareByStackingOrder } from '../utils/stackingOrder';
 import { resolveMatteSource } from '../utils/matte';
 import { createWorldAffineAlgebra } from '../utils/containerMath';
+import { createGraphicRuntime } from './runtime/graphicRuntime';
 
 /**
  * A helper's source, as the runtime will receive it.
@@ -41,23 +42,18 @@ export const runtimeCompareByStackingOrder = (): string => sourceOf(compareBySta
 export const runtimeResolveMatteSource = (): string => sourceOf(resolveMatteSource as (...args: never[]) => unknown);
 
 /**
- * Embed the ONE affine authority as a complete lexical closure.
+ * Embed the ONE affine authority as a complete lexical closure: an expression
+ * that evaluates to the algebra.
  *
  * Serializing helpers separately is unsafe in production: the minifier renames
  * module-scope references inside their source. The self-contained factory keeps
  * those declarations and references together, so its source remains executable
  * after minification without name rewriting or a second copy of the math.
  */
-export const runtimeWorldAffineAlgebra = (): string => `const {
-  AFFINE_EPSILON,
-  affineOfTransform,
-  composeWorldTransform,
-  composeAffine,
-  applyAffine,
-  affineHasShear,
-  affineToTransform,
-  affineEquals,
-  withWorldAffine,
-  worldAffineOf,
-  affineTrsReading,
-} = (${sourceOf(createWorldAffineAlgebra as (...args: never[]) => unknown)})();`;
+export const runtimeWorldAffineAlgebra = (): string => `(${sourceOf(createWorldAffineAlgebra as (...args: never[]) => unknown)})()`;
+
+/**
+ * The graphic runtime factory itself. Like the affine algebra it is one
+ * self-contained function, so its source runs unchanged in the package.
+ */
+export const runtimeGraphicFactory = (): string => sourceOf(createGraphicRuntime as (...args: never[]) => unknown);

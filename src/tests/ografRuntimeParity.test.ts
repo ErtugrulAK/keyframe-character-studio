@@ -78,14 +78,15 @@ describe('the runtime carries KCS rules, not copies of them', () => {
     const source = generateGraphicModule(scene([layer({ id: 'a', zIndex: 2 }), layer({ id: 'b', zIndex: 1 })]));
     // The rule appears exactly once, as the embedded helper.
     expect(source.split('a.zIndex - b.zIndex').length - 1).toBe(1);
-    expect(source).toContain('function stackingOrder(items) { return items.slice().sort(compareByStackingOrder); }');
+    // The runtime factory receives it; it sorts with nothing else.
+    expect(source).toContain(`compareByStackingOrder: ${runtimeCompareByStackingOrder()}`);
   });
 
   test('the generated module contains no hand-written matte precedence', () => {
     const source = generateGraphicModule(scene([layer({ id: 'a' })]));
     // The precedence chain lives in the embedded resolver, so the module does not
     // repeat the `trackMatte && enabled !== false` decision.
-    expect(source).toContain('const resolveMatteSource = ');
+    expect(source).toContain(`resolveMatteSource: ${runtimeResolveMatteSource()}`);
     expect(source).not.toContain('if (layer.trackMatte && layer.trackMatte.enabled !== false) return {');
   });
 });

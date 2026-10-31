@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { Library } from 'lucide-react';
 import { NumberField } from '../../Inspector/inputs/NumberField';
 import { useAnimatorSlice } from '../../../context/useAnimator';
-import { GraphicLibraryDialog } from '../../Header/GraphicLibraryDialog';
 import { validateImportedDocument } from '../../../utils/importValidation';
 import { createIndexedDbBackend, createProjectLibrary, type ProjectLibrary } from '../../../utils/projectLibrary';
+
+// The library dialog opens on demand, so it loads then.
+const GraphicLibraryDialog = lazy(() => import('../../Header/GraphicLibraryDialog').then((module) => ({ default: module.GraphicLibraryDialog })));
 
 export const ProjectDrawer: React.FC = () => {
   const { projectResolution, setProjectResolution, sceneTitle, exportProject, importProject, addProjectTemplate, showToast } = useAnimatorSlice('projectResolution', 'setProjectResolution', 'sceneTitle', 'exportProject', 'importProject', 'addProjectTemplate', 'showToast');
@@ -39,14 +41,16 @@ export const ProjectDrawer: React.FC = () => {
           <span>Open Library…</span>
         </button>
         {library && isLibraryOpen && (
-          <GraphicLibraryDialog
-            isOpen={isLibraryOpen}
-            library={library}
-            currentName={sceneTitle}
-            exportCurrent={exportProject}
-            openGraphic={openLibraryGraphic}
-            onClose={() => setIsLibraryOpen(false)}
-          />
+          <Suspense fallback={null}>
+            <GraphicLibraryDialog
+              isOpen={isLibraryOpen}
+              library={library}
+              currentName={sceneTitle}
+              exportCurrent={exportProject}
+              openGraphic={openLibraryGraphic}
+              onClose={() => setIsLibraryOpen(false)}
+            />
+          </Suspense>
         )}
       </div>
       <div className="project-section">

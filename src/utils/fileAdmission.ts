@@ -1,5 +1,5 @@
 import { MAX_IMPORT_CHARACTERS } from './importValidation';
-import { OGRAF_PACKAGE_LIMITS } from '../ograf/packageImport';
+import { OGRAF_PACKAGE_LIMITS } from '../ograf/packageLimits';
 
 /**
  * N3 PR-2c1 — pre-admission limits for imported files.

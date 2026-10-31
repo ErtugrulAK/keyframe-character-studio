@@ -38,8 +38,10 @@ import { OGrafCapabilityDialog } from './OGrafCapabilityDialog';
 import type { ToastOptions } from '../../hooks/useToast';
 import { ImportReportDialog } from '../Modal/ImportReportDialog';
 import { classifyImport } from '../../utils/importDispatch';
-import { readOGrafPackage, type OGrafPackageReadResult } from '../../ograf/packageImport';
-import { importLottieDocument, type LottieImportResult } from '../../interop/lottie/mapDocument';
+// The package reader (with its ZIP inflater) and the Lottie mapper run only
+// when such a file is chosen, so they load then.
+import type { OGrafPackageReadResult } from '../../ograf/packageImport';
+import type { LottieImportResult } from '../../interop/lottie/mapDocument';
 import type { SceneData } from '../../types/composition';
 import { describeSaveStatus } from '../../utils/saveStatus';
 import './HeaderBar.css';
@@ -385,7 +387,10 @@ export const HeaderBar: React.FC = () => {
           showToast('The selected package could not be read.', 'error');
           return;
         }
-        setPendingPackageImport({ fileName: file.name, result: readOGrafPackage(new Uint8Array(buffer)) });
+        import('../../ograf/packageImport').then(
+          ({ readOGrafPackage }) => setPendingPackageImport({ fileName: file.name, result: readOGrafPackage(new Uint8Array(buffer)) }),
+          () => showToast('The package reader could not be loaded. Reload the editor and try again.', 'error'),
+        );
       };
       packageReader.onerror = () => showToast('The selected package could not be read.', 'error');
       packageReader.readAsArrayBuffer(file);
@@ -413,7 +418,10 @@ export const HeaderBar: React.FC = () => {
           return;
         case 'lottie':
           // Parsing only: nothing in the project changes until the report is accepted.
-          setPendingLottieImport({ fileName: file.name, result: importLottieDocument(text) });
+          import('../../interop/lottie/mapDocument').then(
+            ({ importLottieDocument }) => setPendingLottieImport({ fileName: file.name, result: importLottieDocument(text) }),
+            () => showToast('The Lottie importer could not be loaded. Reload the editor and try again.', 'error'),
+          );
           return;
         default: {
           const result = importProject(text, fileNameWithoutExt);

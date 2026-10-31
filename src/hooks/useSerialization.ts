@@ -9,6 +9,7 @@ import { AUTOSAVE_LOCK_NAME, AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } fr
 import { DEFAULT_SCENE_COORDINATE_SYSTEM, isSceneCoordinateSystem, migrateSceneCoordinates } from '../utils/coordinateMigration';
 import { normalizeMotionTemplates } from '../utils/motionTemplates';
 import { migrateSceneLayerV6 } from '../utils/v6Migration';
+import { ASSET_REF_PREFIX, createAssetStore, createIndexedDbAssetBackend } from '../utils/assetStore';
 
 /**
  * Narrowing helpers for the legacy document's optional fields. The import
@@ -557,6 +558,11 @@ export const useSerialization = ({
   // the next unrelated state change to capture its baseline).
   const [settleEpoch, setSettleEpoch] = useState(0);
 
+  // The autosave keeps media in a content-addressed IndexedDB store and the
+  // stored scene names them (`utils/assetStore`): localStorage holds the scene,
+  // not the photos. Everything else keeps the data URLs.
+  const [assetStore] = useState(() => createAssetStore(createIndexedDbAssetBackend()));
+
   // SAFE-01 — cross-tab write discipline. storageKnownRef holds the exact
   // string this tab last READ at boot (a refused/corrupted value included:
   // "whatever was there") or last WROTE itself: every attempted save compares
@@ -598,87 +604,127 @@ export const useSerialization = ({
 
   // 1. Initial Load: Restore from LocalStorage (SceneData v1 or legacy AnimationProject)
   useEffect(() => {
+    const applySavedScene = (saved: string) => {
+      try {
+        // The autosave payload goes through the same boundary as an imported
+        // document: a corrupted or tampered entry is reported and skipped
+        // instead of being applied, and the defaults stay in place.
+        const validation = validateImportedDocument(saved);
+        if (!validation.ok) {
+          console.warn('[Storage] Autosave restore refused:', validation.diagnostics[0]?.code, validation.diagnostics[0]?.message);
+          return;
+        }
+
+        if (validation.document.kind === 'scene') {
+          const scene = validation.document.scene;
+          const applied = fromSceneData(scene, scene.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
+          if (applied) {
+            // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
+            setRestoredFromLocalStorage(true);
+            // N1: the restored scene is the baseline, not an undoable edit.
+            requestHistoryBaseline();
+            restoreAppliedRef.current = true;
+          }
+          return;
+        }
+
+        // Legacy AnimationProject format (backward compat)
+        const parsed = validation.document.project;
+        const hasLegacyStickman = parsed.characterParts.some((part) => (part as { type?: unknown }).type === 'head' || (part as { type?: unknown }).type === 'torso');
+        const legacyMotionTemplates = readMotionTemplates(parsed.motionTemplates);
+        if (hasLegacyStickman) {
+          localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
+          // This tab legitimately deleted the key; that deletion is its own last-known write.
+          storageKnownRef.current = null;
+          return;
+        }
+        const savedResolution = readProjectResolution(parsed.projectResolution);
+        const migratedTracks = parsed.tracks.map(migrateTrack);
+        const savedFps = readOptionalNumber(parsed.fps);
+        const savedTotalFrames = readOptionalNumber(parsed.totalFrames);
+        const savedAt = readOptionalDate(parsed.lastSavedTime);
+        // The id sweep and the counter init read the same boundary fields the
+        // setters below queue. They run FIRST, mirroring `fromSceneData`: every
+        // derivable throw happens while the live document is still untouched,
+        // so a failed restore mutates nothing and never requests a baseline.
+        const allIds: string[] = [];
+        parsed.characterParts.forEach((p) => allIds.push(p.id));
+        parsed.tracks.forEach((t) => {
+          allIds.push(t.id);
+          t.keyframes?.forEach((k) => allIds.push(k.id));
+          if (t.channels) {
+            Object.values(t.channels).forEach((channel) => channel?.forEach((pk) => allIds.push(pk.id)));
+          }
+        });
+        for (const template of legacyMotionTemplates ?? []) {
+          allIds.push(template.id);
+        }
+        initializeIdCounter(allIds);
+        // From here to the baseline request the block is pure setter dispatch:
+        // a successful legacy startup restore is all-or-nothing (N1), and the
+        // baseline request is the final statement of the success path.
+        if (savedResolution) setProjectResolution(savedResolution);
+        setTracks(migratedTracks);
+        setCharacterParts(parsed.characterParts);
+        if (savedFps !== undefined) setFps(savedFps);
+        if (savedTotalFrames !== undefined) setTotalFrames(savedTotalFrames);
+        // Autosave restoration synchronizes React state with persisted storage.
+        // oxlint-disable-next-line react/set-state-in-effect
+        setLastSavedAt(savedAt ?? new Date());
+        // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
+        setRestoredFromLocalStorage(true);
+        // N1: the restored legacy scene is the baseline, not an undoable edit.
+        requestHistoryBaseline();
+        restoreAppliedRef.current = true;
+      } catch (e) {
+        console.warn('[AutoSave] Failed to restore saved state', e);
+      }
+    };
+
+    let saved: string | null;
     try {
-      const saved = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
-      // Whatever is in the key at boot — applied, refused, or absent — is what
-      // this tab last observed; every later write compares against it (SAFE-01).
-      storageKnownRef.current = saved;
-      restoreDecidedRef.current = true;
-      if (!saved) return;
-      // The autosave payload goes through the same boundary as an imported
-      // document: a corrupted or tampered entry is reported and skipped
-      // instead of being applied, and the defaults stay in place.
-      const validation = validateImportedDocument(saved);
-      if (!validation.ok) {
-        console.warn('[Storage] Autosave restore refused:', validation.diagnostics[0]?.code, validation.diagnostics[0]?.message);
-        return;
-      }
-
-      if (validation.document.kind === 'scene') {
-        const scene = validation.document.scene;
-        const applied = fromSceneData(scene, scene.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
-        if (applied) {
-          // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
-          setRestoredFromLocalStorage(true);
-          // N1: the restored scene is the baseline, not an undoable edit.
-          requestHistoryBaseline();
-          restoreAppliedRef.current = true;
-        }
-        return;
-      }
-
-      // Legacy AnimationProject format (backward compat)
-      const parsed = validation.document.project;
-      const hasLegacyStickman = parsed.characterParts.some((part) => (part as { type?: unknown }).type === 'head' || (part as { type?: unknown }).type === 'torso');
-      const legacyMotionTemplates = readMotionTemplates(parsed.motionTemplates);
-      if (hasLegacyStickman) {
-        localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
-        // This tab legitimately deleted the key; that deletion is its own last-known write.
-        storageKnownRef.current = null;
-        return;
-      }
-      const savedResolution = readProjectResolution(parsed.projectResolution);
-      const migratedTracks = parsed.tracks.map(migrateTrack);
-      const savedFps = readOptionalNumber(parsed.fps);
-      const savedTotalFrames = readOptionalNumber(parsed.totalFrames);
-      const savedAt = readOptionalDate(parsed.lastSavedTime);
-      // The id sweep and the counter init read the same boundary fields the
-      // setters below queue. They run FIRST, mirroring `fromSceneData`: every
-      // derivable throw happens while the live document is still untouched,
-      // so a failed restore mutates nothing and never requests a baseline.
-      const allIds: string[] = [];
-      parsed.characterParts.forEach((p) => allIds.push(p.id));
-      parsed.tracks.forEach((t) => {
-        allIds.push(t.id);
-        t.keyframes?.forEach((k) => allIds.push(k.id));
-        if (t.channels) {
-          Object.values(t.channels).forEach((channel) => channel?.forEach((pk) => allIds.push(pk.id)));
-        }
-      });
-      for (const template of legacyMotionTemplates ?? []) {
-        allIds.push(template.id);
-      }
-      initializeIdCounter(allIds);
-      // From here to the baseline request the block is pure setter dispatch:
-      // a successful legacy startup restore is all-or-nothing (N1), and the
-      // baseline request is the final statement of the success path.
-      if (savedResolution) setProjectResolution(savedResolution);
-      setTracks(migratedTracks);
-      setCharacterParts(parsed.characterParts);
-      if (savedFps !== undefined) setFps(savedFps);
-      if (savedTotalFrames !== undefined) setTotalFrames(savedTotalFrames);
-      // Autosave restoration synchronizes React state with persisted storage.
-      // oxlint-disable-next-line react/set-state-in-effect
-      setLastSavedAt(savedAt ?? new Date());
-      // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
-      setRestoredFromLocalStorage(true);
-      // N1: the restored legacy scene is the baseline, not an undoable edit.
-      requestHistoryBaseline();
-      restoreAppliedRef.current = true;
+      saved = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
     } catch (e) {
       console.warn('[AutoSave] Failed to restore saved state', e);
+      restoreDecidedRef.current = true;
+      return;
     }
-  }, [setTotalFrames, setProjectResolution, setTracks, setCharacterParts, setFps, setCoordinateSystem, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState, requestHistoryBaseline]);
+    // Whatever is in the key at boot — applied, refused, or absent — is what
+    // this tab last observed; every later write compares against it (SAFE-01).
+    storageKnownRef.current = saved;
+    if (saved === null || !saved.includes(ASSET_REF_PREFIX)) {
+      restoreDecidedRef.current = true;
+      if (saved) applySavedScene(saved);
+      return;
+    }
+    // The saved scene names stored media: resolve them before it goes through
+    // the import boundary. Until then the restore is undecided, so the settle
+    // capture and every save wait. A medium whose bytes are missing keeps its
+    // reference (the layer shows no image) and is never dropped from storage.
+    const savedScene = saved;
+    let cancelled = false;
+    void assetStore.internalize(savedScene)
+      .catch((error: unknown) => {
+        console.warn('[Assets] Stored media could not be read', error);
+        return { json: savedScene, missing: [] as string[] };
+      })
+      .then(({ json, missing }) => {
+        if (cancelled) return;
+        if (missing.length > 0) console.warn(`[Assets] ${missing.length} stored medium(s) not found; their layers keep the reference.`);
+        restoreDecidedRef.current = true;
+        applySavedScene(json);
+        setSettleEpoch((epoch) => epoch + 1);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [assetStore, setTotalFrames, setProjectResolution, setTracks, setCharacterParts, setFps, setCoordinateSystem, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState, requestHistoryBaseline]);
+
+  // Media enter the asset store as soon as they are in the scene, so the save
+  // that follows can name them; one still being stored is saved inline.
+  useEffect(() => {
+    void assetStore.ingest(characterParts as unknown as Array<Record<string, unknown>>);
+  }, [assetStore, characterParts]);
 
   // 2. Auto-Save: SceneData format, at most AUTOSAVE_DELAY_MS after the first unsaved change (SAFE-01 write discipline).
   const buildSceneJson = useCallback((): string => {
@@ -726,6 +772,14 @@ export const useSerialization = ({
     setHasUnsavedChanges(true);
   }, [buildSceneJson]);
 
+  /** The autosave form of a serialized scene: confirmed media replaced by their references. */
+  const storedFormOf = useCallback((json: string): string => {
+    if (!json.includes('"data:')) return json;
+    const scene = JSON.parse(json) as SceneData;
+    const stored = assetStore.externalize(scene as unknown as { layers?: Array<Record<string, unknown>> });
+    return stored === (scene as unknown) ? json : JSON.stringify(stored);
+  }, [assetStore]);
+
   /**
    * SAFE-01 read-compare-write as one callable so SAFE-02 can run the whole
    * critical section — candidate serialization, conflict pause and write —
@@ -736,6 +790,8 @@ export const useSerialization = ({
   const casWrite = useCallback((force: boolean): boolean => {
     const nextJson = buildSceneJson();
     if (!force && nextJson === settledSaveRef.current) return false;
+    // What the key receives: the same scene with its stored media named.
+    const storedJson = storedFormOf(nextJson);
     let currentStored: string | null;
     try {
       currentStored = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
@@ -754,8 +810,8 @@ export const useSerialization = ({
       return false;
     }
     try {
-      localStorage.setItem(AUTOSAVE_STORAGE_KEY, nextJson);
-      storageKnownRef.current = nextJson;
+      localStorage.setItem(AUTOSAVE_STORAGE_KEY, storedJson);
+      storageKnownRef.current = storedJson;
       settledSaveRef.current = nextJson;
       setLastSavedAt(new Date());
       setAutosaveError(null);
@@ -768,7 +824,7 @@ export const useSerialization = ({
       console.error('[AutoSave] Failed to save project to LocalStorage', e);
       return false;
     }
-  }, [buildSceneJson, clearUnsaved]);
+  }, [buildSceneJson, clearUnsaved, storedFormOf]);
 
   type LockRunOutcome<T> = { ran: boolean; value?: T };
 

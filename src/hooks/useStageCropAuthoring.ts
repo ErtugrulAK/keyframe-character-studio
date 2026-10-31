@@ -133,7 +133,7 @@ export const createStageCropActions = ({
   const selectionCropRect = selectionTargets.length > 0
     ? stageCropRectFromWorldBounds(unionWorldBounds(selectionTargets.map((target) => target.bounds)), projectResolution)
     : null;
-  // C5 — the visible-content rectangle is computed only when that crop runs.
+  // The visible-content rectangle is computed only when that crop runs.
   // The commands are rebuilt on every provider render (every playback frame),
   // and the availability flag only needs ONE visible layer with bounds, so it
   // stops at the first one instead of evaluating every layer's world box.

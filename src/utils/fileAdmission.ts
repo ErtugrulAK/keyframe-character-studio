@@ -2,7 +2,7 @@ import { MAX_IMPORT_CHARACTERS } from './importValidation';
 import { OGRAF_PACKAGE_LIMITS } from '../ograf/packageLimits';
 
 /**
- * N3 PR-2c1 — pre-admission limits for imported files.
+ * Pre-admission limits for imported files.
  *
  * `FileReader` materializes a whole file in memory before any content check
  * can run, so the size contract has to be enforced on `File.size` BEFORE a

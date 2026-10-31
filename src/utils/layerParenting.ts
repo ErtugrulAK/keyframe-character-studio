@@ -13,7 +13,7 @@ import { isLocalTransformAnimated, rebaseLayerOntoParent, type RebasedChild } fr
 import { relationshipAncestorIds, relationshipParentId } from './partBinding';
 
 /**
- * C2-E — the one plan for "this layer gets a different parent".
+ * The one plan for "this layer gets a different parent".
  *
  * A layer's `parentId` makes `evaluateTransform` compose the parent's world
  * transform onto the layer's own (local) one. Changing the parent therefore has
@@ -22,7 +22,7 @@ import { relationshipAncestorIds, relationshipParentId } from './partBinding';
  * written as TRS only when that map is a TRS (no shear) and verified by
  * re-composing it.
  *
- * C4 — when the layer's own transform, or a layer of the old or new parent
+ * When the layer's own transform, or a layer of the old or new parent
  * chain, is ANIMATED, a static rewrite cannot keep the pose at every frame; the
  * plan then re-bases the layer's animation into the new parent
  * (`rebaseLayerOntoParent`: key times and easings kept where exact, baked
@@ -77,7 +77,7 @@ export const reparentBlockReason = (
     return `${nameOf(child, childId)} is placed by an anchor preset; set Anchor to None before changing its parent.`;
   }
 
-  // C4 — animation is no longer a refusal: `planReparent` re-bases it.
+  // Animation is no longer a refusal: `planReparent` re-bases it.
   const newChain = newParentId ? [newParentId, ...relationshipAncestorIds(parts, newParentId)] : [];
 
   // A bond across an ancestor/descendant pair would move the bonded layer twice.

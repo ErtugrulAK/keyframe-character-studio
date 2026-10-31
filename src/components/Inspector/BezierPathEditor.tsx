@@ -20,13 +20,13 @@ interface BezierPathEditorProps {
    */
   topologyLockReason?: string | null;
   /**
-   * C4 — when set (a locked mask, or a locked layer), the path is shown and its
+   * When set (a locked mask, or a locked layer), the path is shown and its
    * points can be selected for inspection, but nothing changes it: no drag, no
    * nudge, no point type, no add/delete/reorder/open-close. The reason is shown.
    */
   readOnlyReason?: string | null;
   /**
-   * C4 — runs a path structure command through the editor's authority (it also
+   * Runs a path structure command through the editor's authority (it also
    * rewrites every keyframe of an animated path). Returns the selected point's
    * new index, or undefined when the command was refused. Without it the
    * command is applied to `path` and reported through `onChange`.

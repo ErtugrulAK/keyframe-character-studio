@@ -1,7 +1,7 @@
 import type { BodyPartType } from '../types/animator';
 
 /**
- * N3 PR-2a — the single authority for `application/json` drops on the stage.
+ * The single authority for `application/json` drops on the stage.
  *
  * The JSON drop channel is written only by the app's own drawer drag sources
  * (ElementsDrawer shapes, TextsDrawer text presets). Because any script with

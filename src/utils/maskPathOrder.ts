@@ -3,7 +3,7 @@ import { areBezierPathsTopologyCompatible } from './bezierPath';
 import { MIN_CLOSED_MASK_POINTS } from './maskPathCreation';
 
 /**
- * C4 — the structure commands of a mask path, each with ONE meaning:
+ * The structure commands of a mask path, each with ONE meaning:
  *
  * - `close` / `open` — whether the path joins its last point back to its first.
  *   Points, handles and the owner layer's transform are untouched. An OPEN mask

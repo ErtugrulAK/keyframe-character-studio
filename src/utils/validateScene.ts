@@ -18,7 +18,7 @@ import type { ValidationError } from '../types/composition';
 export interface LayerRef {
   id: string;
   parentId?: string;
-  /** M11: legacy track matte reference. */
+  /** Legacy track matte reference. */
   matte?: { sourcePartId?: string; enabled?: boolean };
   /** V6: explicit source relationship. */
   trackMatte?: { sourceLayerId?: string; enabled?: boolean };

@@ -14,7 +14,7 @@ interface DockedPanelEdge {
   edgeStyle: CSSProperties | undefined;
   /** Attach to the docked panel element — the box that slides. */
   panelRef: React.RefObject<HTMLElement | null>;
-  /** C6 — attach to the panel's edge handle: it rides the sliding edge frame by frame. */
+  /** Attach to the panel's edge handle: it rides the sliding edge frame by frame. */
   handleRef: React.RefObject<HTMLElement | null>;
   toggle: () => void;
   /** Sets the visibility at once, without the slide (layout decisions, not user toggles). */
@@ -31,7 +31,7 @@ const HANDLE_HALF_WIDTH = 10;
 const handleInset = (width: number, shown: number): number => shown * Math.max(0, width - HANDLE_HALF_WIDTH);
 
 /**
- * C7 — how much of the stage the travelling panel covers right now, as a CSS
+ * How much of the stage the travelling panel covers right now, as a CSS
  * variable on the editor shell. Chrome pinned to a stage edge (the coordinate
  * readout, the edit-target strip) offsets by it, so it rides the sliding panel
  * edge instead of jumping when the stage box changes once at the start (hide)
@@ -43,7 +43,7 @@ const overlapVariable = (side: DockSide): string => `--kcs-dock-${side}-overlap`
  * Drives a docked panel's show/hide so the authored world never moves AND the
  * stage box changes only once per toggle.
  *
- * C3 — while the panel travels it is lifted out of the workspace row
+ * While the panel travels it is lifted out of the workspace row
  * (`position: absolute`) and slides over the stage with a compositor transform
  * written straight to its element each frame: no React render, no layout of the
  * row, no camera work per frame. The stage box therefore changes exactly once,
@@ -81,7 +81,7 @@ export const useDockedPanelEdge = (initiallyVisible: boolean, side: DockSide): D
     const panel = panelRef.current;
     if (panel) panel.style.transform = slideTransform(side, shown);
     panel?.closest<HTMLElement>('.app-container')?.style.setProperty(overlapVariable(side), `${shown * travelWidthRef.current}px`);
-    // C6 — the handle's stylesheet position is already the TARGET state's (the
+    // The handle's stylesheet position is already the TARGET state's (the
     // class flips when the slide starts); this offset keeps it on the moving
     // edge until the slide settles, instead of a separate CSS transition that
     // lagged behind the panel and nudged it after the panel had stopped.

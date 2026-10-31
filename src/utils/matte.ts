@@ -65,7 +65,7 @@ export function resolveMatteSource(part: { matte?: PartMatte; trackMatte?: Track
 }
 
 /**
- * M13 — Deterministic SVG id for a matte <mask> def. Encodes source + mode +
+ * Deterministic SVG id for a matte <mask> def. Encodes source + mode +
  * inverted so the same source used with different modes/inversions never
  * collides (each (source, mode, inverted) combo gets its own definition).
  */
@@ -74,7 +74,7 @@ export function matteMaskId(sourcePartId: string, mode: MatteMode, inverted: boo
 }
 
 /**
- * M13 — Resolve a matte's effective mode at runtime.
+ * Resolve a matte's effective mode at runtime.
  * Legacy project data may omit `mode` → treated as 'clip'.
  * An absent/empty matte resolves to `undefined` (no matte).
  */
@@ -90,7 +90,7 @@ export function isMatteActive(matte: { enabled?: boolean } | undefined): boolean
 }
 
 /**
- * K5 — does an ACTIVE Track Matte V2 relationship suppress its source layer
+ * Does an ACTIVE Track Matte V2 relationship suppress its source layer
  * from painting (the matte switch: `sourceVisible:false` — not painted, still
  * clipping; see `StagePartLayers` hiddenMatteSources)? Legacy mattes carry no
  * such flag; only an active V2 record can suppress. Pure read of the
@@ -166,7 +166,7 @@ function freeformWorldPathD(
   return buildBezierPathD(path, (point) => applyWorld(point, w, outputOrigin));
 }
 
-/** M15 — whether a part can be a matte source: static shape geometry OR a
+/** Whether a part can be a matte source: static shape geometry OR a
  *  freeform polygon (custom_freeform → CharacterPart.points) OR a text part
  *  (M18 — the glyphs become the mask CONTENT element, no path geometry) OR an
  *  image part (M21 — the <image> becomes the mask CONTENT element, no path
@@ -194,7 +194,7 @@ export function buildMatteClipPath(
   return { id: matteClipPathId(sourcePart.id), pathD };
 }
 
-/** M13 — pure data for an SVG <mask> def (alpha/luminance/inverted).
+/** Pure data for an SVG <mask> def (alpha/luminance/inverted).
  *  The mask wraps the SAME world-space pathD the clipPath uses (no second
  *  geometry computation). Renderer (StagePartLayers) composes the actual
  *  <mask> element — for inverted it adds a full-region background:
@@ -213,31 +213,31 @@ export interface MatteMask {
   /** Fill for the geometry path: 'white' for alpha masks, the source's
    *  evaluated fillColor for luminance masks. */
   fill: string;
-  /** M14: optional soft-edge feather (world-space px, raw value — the
+  /** Optional soft-edge feather (world-space px, raw value — the
    *  renderer normalizes via normalizeFeather). Absent/0 → sharp edge. */
   feather?: number;
-  /** M16: optional matte strength (raw value — renderer normalizes via
+  /** Optional matte strength (raw value — renderer normalizes via
    *  normalizeStrength). Absent = full strength (legacy). Render only —
    *  geometry is NEVER affected. */
   strength?: number;
-  /** M17: optional world-space <linearGradient> def id referenced by the
+  /** Optional world-space <linearGradient> def id referenced by the
    *  mask content fill (url(#id)). Absent = legacy solid fill. Render only —
    *  NEVER geometry. */
   gradientId?: string;
-  /** M18: text mask content — present ONLY for custom_text sources (pathD is
+  /** Text mask content — present ONLY for custom_text sources (pathD is
    *  then null). The glyphs are rendered as a transform-baked <text> element
    *  inside the mask (the app's text renderer semantics). Render-only data —
    *  NEVER serialized into PartMatte (content/fonts live on the source part
    *  and are read at runtime). */
   text?: MatteTextContent | null;
-  /** M21: image mask content — present ONLY for custom_image sources (pathD
+  /** Image mask content — present ONLY for custom_image sources (pathD
    *  is then null). The image is rendered as a transform-baked <image>
    *  element inside the mask (7A spike: SVG <image> works as mask content;
    *  alpha flows into alpha masks, luminance is deterministic). Render-only
    *  data — NEVER serialized into PartMatte (href/dimensions live on the
    *  source part and are read at runtime). */
   image?: MatteImageContent | null;
-  /** M21: nested content-mask id for the image × gradient composition
+  /** Nested content-mask id for the image × gradient composition
    *  (7A pixel-verified — <image> cannot consume fill; the final mask wraps
    *  the gradient rect with a mask that carries the image alpha). Present
    *  ONLY when an image source has a gradient AND is not inverted. The
@@ -247,7 +247,7 @@ export interface MatteMask {
 }
 
 /**
- * M14 — Normalize a feather value to a safe non-negative number.
+ * Normalize a feather value to a safe non-negative number.
  * undefined/0 → 0 (sharp M13 edge); negative/NaN/±Infinity → 0.
  * Pure; NEVER touches geometry (feather is a render parameter only).
  */
@@ -257,7 +257,7 @@ export function normalizeFeather(value: number | undefined): number {
 }
 
 /**
- * M16 — Normalize a matte strength value to a safe 0-1 number.
+ * Normalize a matte strength value to a safe 0-1 number.
  * undefined/NaN/±Infinity/negative/>1 → 1 (full strength = legacy behavior).
  * 0 is a VALID value (matte disabled) — never collapse it with `|| 1`.
  * Pure; NEVER touches geometry (strength is a render parameter only).
@@ -268,7 +268,7 @@ export function normalizeStrength(value: number | undefined): number {
   return value;
 }
 
-/** M17 — one default gradient stop. */
+/** One default gradient stop. */
 export interface MatteGradientStop {
   offset: number;   // 0..1
   color: string;
@@ -276,7 +276,7 @@ export interface MatteGradientStop {
 }
 
 /**
- * M17 — Normalize a source-local gradient angle (degrees) into [0, 360).
+ * Normalize a source-local gradient angle (degrees) into [0, 360).
  * undefined → undefined (SEMANTIC: gradient absent — never coerce to 0);
  * NaN/±Infinity (malformed numeric) → 0; finite → ((v % 360) + 360) % 360.
  * Pure; NEVER touches geometry (a paint parameter only).
@@ -287,14 +287,14 @@ export function normalizeGradientAngle(value: number | undefined): number | unde
   return ((value % 360) + 360) % 360;
 }
 
-/** M20 — Deterministic gradient type normalization: THE single authority.
+/** Deterministic gradient type normalization: THE single authority.
  *  Absent/undefined/'linear' → 'linear' (legacy byte-for-byte); 'radial' →
  *  'radial'; any malformed value → 'linear'. Pure, idempotent, Node-safe. */
 export function normalizeGradientType(value: unknown): 'linear' | 'radial' {
   return value === 'radial' ? 'radial' : 'linear';
 }
 
-/** M20 — Derived RADIAL gradient geometry (paint parameter — NEVER geometry,
+/** Derived RADIAL gradient geometry (paint parameter — NEVER geometry,
  *  NEVER persisted). Center = source local bounds center; radius = the local
  *  bounds' bounding circle (sqrt(w²+h²)/2) — the same sourceLocalPoints used
  *  by gradientEndpoints (never a second geometry system).
@@ -341,7 +341,7 @@ export function radialGradientGeometry(
   return { cx: wc.x, cy: wc.y, r: localRadius * worldRadiusFactor(world, worldAffineOf(world)) };
 }
 
-/** M20 — Deterministic <linearGradient|radialGradient> id for a matte source.
+/** Deterministic <linearGradient|radialGradient> id for a matte source.
  *  kcs-mg-{sourcePartId}-{normalizedAngle} (360 ≡ 0, -315 ≡ 45 — the id uses
  *  the NORMALIZED angle, so equivalent angles share the def). Absent gradient
  *  → undefined (no gradient def requested).
@@ -378,7 +378,7 @@ export function gradientId(
 }
 
 /**
- * M19 — Deterministic normalization of user gradient stops (paint data only,
+ * Deterministic normalization of user gradient stops (paint data only,
  * NEVER geometry, NEVER a channel — M8 untouched). Pure + Node-compatible.
  *
  * Policy (documented contract):
@@ -425,14 +425,14 @@ export function normalizeGradientStops(
     .map((x) => x.s);
 }
 
-/** M19 — canonical serialization of NORMALIZED stops: a deterministic string
+/** Canonical serialization of NORMALIZED stops: a deterministic string
  *  where equal stop sets (after normalization) produce equal keys, independent
  *  of the original insertion order. Colors are NOT parsed (opaque strings). */
 export function canonicalStopsKey(stops: MatteGradientStop[]): string {
   return stops.map((s) => `${s.offset};${s.color};${s.opacity}`).join('|');
 }
 
-/** M19 — deterministic 32-bit FNV-1a hash (hex) over the canonical stops key.
+/** Deterministic 32-bit FNV-1a hash (hex) over the canonical stops key.
  *  Stable across runs, serialization and JS object insertion order (the key
  *  is built from the sorted normalized array). Collision space 2^32 — ample
  *  for the local SVG def namespace. No crypto, no randomness. */
@@ -446,7 +446,7 @@ export function gradientStopsHash(stops: MatteGradientStop[]): string {
   return h.toString(16).padStart(8, '0');
 }
 
-/** M19 — deterministic MASK-id suffix for a gradient: `-g{angle}` (legacy,
+/** Deterministic MASK-id suffix for a gradient: `-g{angle}` (legacy,
  *  byte-for-byte) or `-g{angle}-s{stopsHash}` when custom stops are present.
  *  The stops identity MUST survive the mask id: two targets with the same
  *  source+mode+inverted+feather+strength+angle but DIFFERENT stops would
@@ -472,7 +472,7 @@ export function matteMaskGradientSuffix(
 
 // ─── M18: text matte — pure data (mask content element, NOT geometry) ──────
 
-/** M18 — render-only text mask content, mapped from the SOURCE part's runtime
+/** Render-only text mask content, mapped from the SOURCE part's runtime
  *  fields (mirrors TextAndClonerRenderers exactly: `textValue || 'TEXT'`,
  *  `fontSize || 24`, hardcoded bold, `fontFamily || 'Outfit'`, centred
  *  horizontally on the local origin with the baseline where the stage draws
@@ -504,7 +504,7 @@ export function textMaskContent(
   };
 }
 
-/** M18 — build the render-data MatteMask for a TEXT source. pathD is null
+/** Build the render-data MatteMask for a TEXT source. pathD is null
  *  (text has no path geometry — buildMattePath stays untouched); the glyphs
  *  are the mask content via `text`. `fill` carries the TEXT fill, as for a
  *  shape: 'white' for alpha, the source's own colour for luminance, and
@@ -531,7 +531,7 @@ export function buildMatteTextMask(
   };
 }
 
-/** M21 — deterministic media dimension normalization for image layout bounds.
+/** Deterministic media dimension normalization for image layout bounds.
  *  Positive finite number → as-is; anything else (undefined/0/negative/NaN/
  *  Infinity) → the MediaPartRenderer default (180×120). Never reads pixels. */
 export function normalizeMediaDimension(value: number | undefined, fallback: number): number {
@@ -539,7 +539,7 @@ export function normalizeMediaDimension(value: number | undefined, fallback: num
   return value;
 }
 
-/** M21 — runtime image mask content descriptor (the <image> element data the
+/** Runtime image mask content descriptor (the <image> element data the
  *  mask content needs). href resolution follows MediaPartRenderer's SINGLE
  *  authority: `imageUrl || innerMediaUrl` — no third URL field is invented.
  *  PreserveAspectRatio matches the app image renderer ('xMidYMid slice').
@@ -566,7 +566,7 @@ export function imageMaskContent(
   };
 }
 
-/** M21 — build the render-data MatteMask for an IMAGE source. pathD is null
+/** Build the render-data MatteMask for an IMAGE source. pathD is null
  *  (image has no path geometry — buildMattePath stays untouched); the <image>
  *  is the mask content via `image`.
  *  INVERTED CONTRACT (7A pixel-verified): an <image> CANNOT be repainted
@@ -600,7 +600,7 @@ export function buildMatteImageMask(
   };
 }
 
-/** M18 — inverse of the matte world transform (applyWorld). Pure point
+/** Inverse of the matte world transform (applyWorld). Pure point
  *  conversion for the TEXT mask branch: the gradient def endpoints are
  *  produced in world space by the M17 helper, then converted to the text
  *  source's LOCAL space because a gradient referenced from a <text> inside a
@@ -635,7 +635,7 @@ export function worldToLocal(
   };
 }
 
-/** M18 — local-space gradient endpoints for a TEXT source: the M17
+/** Local-space gradient endpoints for a TEXT source: the M17
  *  world-space endpoints (source local bbox + angle → applyWorld) converted
  *  through the inverse transform. The renderer feeds these into the def the
  *  text branch references (the reference resolves in the text's local space). */
@@ -653,7 +653,7 @@ export function gradientEndpointsLocal(
 }
 
 /**
- * M17 — Normalize a gradient object: undefined stays undefined (legacy
+ * Normalize a gradient object: undefined stays undefined (legacy
  * projects remain gradient-free); a present object gets a safe angle
  * (NaN/±Infinity/undefined angle → 0). No defaults create a gradient where
  * none existed.
@@ -664,7 +664,7 @@ export function normalizeGradient(gradient: { angle: number } | undefined): { an
 }
 
 /**
- * M17 — Default two-stop gradient paint for the MVP (no user stops yet).
+ * Default two-stop gradient paint for the MVP (no user stops yet).
  * ALPHA: white opaque → white transparent (spatial alpha fade).
  * LUMINANCE: white → black (spatial luminance fade, grayscale rule).
  * Pure + deterministic — repeated calls return identical data.
@@ -682,7 +682,7 @@ export function getDefaultGradientStops(mode: Exclude<MatteMode, 'clip'>): Matte
   ];
 }
 
-/** M17 — world-space gradient endpoints (linearGradient x1/y1/x2/y2). */
+/** World-space gradient endpoints (linearGradient x1/y1/x2/y2). */
 interface MatteGradientEndpoints {
   x1: number;
   y1: number;
@@ -691,7 +691,7 @@ interface MatteGradientEndpoints {
 }
 
 /**
- * M17 — World-space endpoints for the source-local gradient angle.
+ * World-space endpoints for the source-local gradient angle.
  *
  * 1. The source's LOCAL bbox is derived from the SAME points buildMattePath
  *    uses (shapeGeometry for static shapes, CharacterPart.points for
@@ -705,7 +705,7 @@ interface MatteGradientEndpoints {
  *
  * Only TWO points are ever transformed. Pure; no cache.
  */
-/** M18 — canonical LOCAL bounds for a text source's gradient span (a typical
+/** Canonical LOCAL bounds for a text source's gradient span (a typical
  *  text line: 200×60, centered at the local origin). Text has no geometry
  *  bbox — this deterministic default keeps the M17 endpoint math uniform. */
 const TEXT_GRADIENT_BOX_POINTS: { x: number; y: number }[] = [
@@ -715,7 +715,7 @@ const TEXT_GRADIENT_BOX_POINTS: { x: number; y: number }[] = [
   { x: 100, y: 30 },
 ];
 
-/** M17/M20 — THE single local-bounds source for gradient geometry: the same
+/** THE single local-bounds source for gradient geometry: the same
  *  points buildMattePath's shape geometry uses (shapeGeometry for static
  *  shapes, CharacterPart.points for freeform) plus the canonical M18 text box.
  *  Never a second geometry system — only the bounds/extent are derived. */
@@ -727,7 +727,7 @@ function sourceLocalPoints(sourcePart: Pick<CharacterPart, 'type' | 'points'> & 
       ? TEXT_GRADIENT_BOX_POINTS
       : sourcePart.type === 'custom_image'
         ? (() => {
-            // M21 — image has no geometry: the deterministic local bounds are the
+            // Image has no geometry: the deterministic local bounds are the
             // image element's layout box (width × height, centered at the local
             // origin — the same convention MediaPartRenderer draws with). Never
             // reads image pixels; malformed dims fall back to the renderer defaults.
@@ -770,7 +770,7 @@ export function gradientEndpoints(
   // Local bounds from the SAME geometry the matte path uses — shapeGeometry
   // for static shapes, CharacterPart.points for freeform. Never a second
   // geometry system: only the bbox (2 endpoint points) is derived.
-  // M18: custom_text has NO geometry (buildMattePath → null) — the gradient
+  // Custom_text has NO geometry (buildMattePath → null) — the gradient
   // span falls back to a canonical default local box (a typical text line),
   // so the paint effect is well-defined for text sources too.
   const pts = sourceLocalPoints(sourcePart);

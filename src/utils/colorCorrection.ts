@@ -1,7 +1,7 @@
 import type { CharacterPart, ColorCorrectionEffect, LayerMask } from '../types/animator';
 
 /**
- * WP-08 — mask-constrained colour correction, the pure authority shared by
+ * Mask-constrained colour correction, the pure authority shared by
  * the editor renderer (StagePartLayers/PartRenderer), the SVG export renderer
  * (GIF) and the Inspector.
  *

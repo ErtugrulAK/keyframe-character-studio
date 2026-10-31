@@ -66,7 +66,7 @@ export const OutlinerPanel: React.FC = () => {
   const pendingFocusRef = useRef<string | null>(null);
 
   const partById = useMemo(() => new Map(characterParts.map((part) => [part.id, part])), [characterParts]);
-  // C5 — layer search on the scene data (the windowed list cannot be searched
+  // Layer search on the scene data (the windowed list cannot be searched
   // by the browser's find): matches and their ancestors, expanded.
   const [layerQuery, setLayerQuery] = useRetainedUiState('outliner.query', '');
   const search = useMemo(() => searchLayers(characterParts, layerQuery), [characterParts, layerQuery]);
@@ -99,14 +99,14 @@ export const OutlinerPanel: React.FC = () => {
   const stackIndexById = useMemo(() => new Map(characterParts.map((part, index) => [part.id, index])), [characterParts]);
   const visibilityById = useMemo(() => new Map(tracks.map((track) => [track.partId, track.editVisible !== false])), [tracks]);
   const lockedById = useMemo(() => new Set(tracks.filter((track) => track.locked).map((track) => track.partId)), [tracks]);
-  // WP-05: one derived display ordinal per layer (never an identity).
+  // One derived display ordinal per layer (never an identity).
   const layerOrdinals = useMemo(() => projectLayerOrdinals(characterParts), [characterParts]);
   const selectedSet = useMemo(() => new Set(selectedPartIds ?? []), [selectedPartIds]);
   const rovingId = focusedId && visibleRows.some((row) => row.part.id === focusedId)
     ? focusedId
     : (selectedPartId && visibleRows.some((row) => row.part.id === selectedPartId) ? selectedPartId : visibleRows[0]?.part.id ?? null);
 
-  // C4 — a long list mounts only the rows near its viewport. The roving row
+  // A long list mounts only the rows near its viewport. The roving row
   // (Tab's way into the tree), the renamed, dragged and drop-target rows and
   // the primary selection stay mounted wherever they are.
   const pinnedRows = useMemo(() => {
@@ -370,7 +370,7 @@ export const OutlinerPanel: React.FC = () => {
   };
 
   /*
-   * C5 — what the drop will do, BEFORE the release. Nesting onto a group puts
+   * What the drop will do, BEFORE the release. Nesting onto a group puts
    * the layer IN the container ("Move into group"); nesting onto any other layer
    * is a transform relationship ("Parent to"); a line between rows is a reorder,
    * and the hint also says when that reorder changes the parent.

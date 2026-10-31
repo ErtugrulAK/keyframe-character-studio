@@ -48,7 +48,7 @@ export const GIF_MAX_FRAMES = 900;
  *    not the GIF's. The GIF's own media rule is added below.
  */
 const NON_BLOCKING_FOR_GIF = [
-  // WP-08 — the GIF frames come from the SVG renderer, which draws colour
+  // The GIF frames come from the SVG renderer, which draws colour
   // correction and effect-only masks exactly like the editor.
   'OGRAF_UNSUPPORTED_COLOR_CORRECTION',
   'OGRAF_UNSUPPORTED_EFFECT_MASK',

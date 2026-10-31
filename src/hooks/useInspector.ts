@@ -42,7 +42,7 @@ export const useInspector = ({
     const track = tracks.find((t) => t.partId === id);
     if (!track) return;
 
-    // R3-10/R3-11: ONE canonical authored truth. A track whose animation still
+    // ONE canonical authored truth. A track whose animation still
     // lives in the legacy composite list is migrated into the canonical channels
     // first, so the edit lands on the channel the timeline and the evaluator
     // read, and no other channel's keys can disappear or hide. The authored base
@@ -61,7 +61,7 @@ export const useInspector = ({
   };
 
   /**
-   * M4: write Inspector transform edits into canonical channels.
+   * Write Inspector transform edits into canonical channels.
    * - Channel has keyframes for this template → update value at current frame
    *   (or add a new keyframe there if the frame is empty), keeping easing/bezier.
    * - Channel is completely empty for this template → fall back to baseTransform

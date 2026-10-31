@@ -2,7 +2,7 @@ import type { CharacterPart } from '../types/animator';
 import { relationshipAncestorIds } from './partBinding';
 
 /**
- * C5 — "find a layer" in a large scene.
+ * "find a layer" in a large scene.
  *
  * The layer list mounts only the rows near its viewport (C4 row windowing), so
  * the browser's own find (Ctrl+F) cannot reach a row that is scrolled away. The

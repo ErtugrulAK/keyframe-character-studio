@@ -201,7 +201,7 @@ export const HeaderBar: React.FC = () => {
   };
 
   /**
-   * WP-07 — the pre-export check: the SAME compile the OGraf export runs, read
+   * The pre-export check: the SAME compile the OGraf export runs, read
    * per layer. Opening it never writes or downloads anything.
    */
   const [ografCheck, setOgrafCheck] = useState<{ report: OGrafCapabilityReport | null } | null>(null);
@@ -264,7 +264,7 @@ export const HeaderBar: React.FC = () => {
   });
 
   /**
-   * SAFE-01: a conflict pause must be noticed, not discovered. One toast per
+   * A conflict pause must be noticed, not discovered. One toast per
    * session (the badge stays visible afterwards); the current in-memory edits
    * are never replaced — the user reloads to adopt the external document or
    * exports this tab's work.
@@ -277,7 +277,7 @@ export const HeaderBar: React.FC = () => {
     }
   }, [autosaveConflict, showToast]);
   /**
-   * SAFE-02: a manual save that never got the shared lock within its bounded
+   * A manual save that never got the shared lock within its bounded
    * wait is reported once per event. The edits stay in memory, autosave is
    * NOT paused, and the next interval tick retries the write — so this is an
    * info notice, deliberately not the conflict error.
@@ -298,7 +298,7 @@ export const HeaderBar: React.FC = () => {
 
 
   /**
-   * D2: a failed persistence attempt is announced once per event, never on
+   * A failed persistence attempt is announced once per event, never on
    * every retried tick. The document stays in memory untouched; the badge
    * keeps showing the failure until a write lands, and the manual click is
    * the immediate retry.
@@ -370,7 +370,7 @@ export const HeaderBar: React.FC = () => {
     const lowerName = file.name.toLowerCase();
     const looksLikePackage = lowerName.endsWith('.zip') || lowerName.endsWith('.ograf');
     if (looksLikePackage) {
-      // N3 PR-2c1: a package over the importer's own ceiling is refused on its
+      // A package over the importer's own ceiling is refused on its
       // declared size, before any bytes are allocated for it.
       const packageRefusal = packageFileAdmissionProblem(file);
       if (packageRefusal) {
@@ -396,7 +396,7 @@ export const HeaderBar: React.FC = () => {
       packageReader.readAsArrayBuffer(file);
       return;
     }
-    // N3 PR-2c1: oversized text imports are refused on declared size before
+    // Oversized text imports are refused on declared size before
     // FileReader allocates them; the post-read validators stay the authority.
     const projectRefusal = projectFileAdmissionProblem(file);
     if (projectRefusal) {
@@ -611,7 +611,7 @@ export const HeaderBar: React.FC = () => {
             onClick={triggerManualSave}
             data-last-saved-at={lastSavedAt ? String(lastSavedAt.getTime()) : ''}
             data-save-state={saveStatus.state}
-            // C7 — restore provenance (this browser's autosave vs a shared
+            // Restore provenance (this browser's autosave vs a shared
             // file; autosave is per origin, so a LAN visitor may see another
             // project) is stated here instead of a header chip.
             title={restoredFromLocalStorage ? `${saveStatus.detail} This project was restored from this browser's autosave, not from a shared project file; use Import to open another machine's document.` : saveStatus.detail}

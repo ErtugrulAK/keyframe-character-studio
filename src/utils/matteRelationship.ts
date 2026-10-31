@@ -2,7 +2,7 @@ import type { CharacterPart } from '../types/animator';
 import { resolveMatteMode, resolveMatteSource, suppressedMatteSourceIds } from './matte';
 
 /**
- * WP-04 — one product-language reading of a layer's Track Matte, built only
+ * One product-language reading of a layer's Track Matte, built only
  * from the existing authorities (`resolveMatteSource` for V2-over-legacy
  * precedence, `suppressedMatteSourceIds` for the scene-wide visibility
  * aggregation). It reads; it never migrates, merges or writes either raw

@@ -30,7 +30,7 @@ export const WORKSPACE_LAYOUT_COMMAND_EVENT = 'canvas-viewport-command';
 export const REMEASURE_STAGE_BOX_COMMAND = 'remeasure-stage-box';
 
 /**
- * C2 — sent once by the workspace when it corrected its own OPENING layout
+ * Sent once by the workspace when it corrected its own OPENING layout
  * (e.g. the timeline clamped to a short or 200 %-zoomed window). The stage
  * re-fits only while the camera is still the untouched opening camera (zoom 1,
  * never panned); any user camera is left exactly as it is.
@@ -38,7 +38,7 @@ export const REMEASURE_STAGE_BOX_COMMAND = 'remeasure-stage-box';
 export const REFIT_UNTOUCHED_CAMERA_COMMAND = 'refit-untouched-camera';
 
 /**
- * C3 — the stage width below which the editor OPENS with the left dock
+ * The stage width below which the editor OPENS with the left dock
  * (Project/Media/Elements/Texts) closed, so a narrow or browser-zoomed window
  * starts with a usable stage (Master Review UI spec: canvas target ≥ 400 CSS
  * px). Decided once, at mount; afterwards only the user opens or closes it.
@@ -50,7 +50,7 @@ const shouldOpenWithLeftDockClosed = (stageWidth: number): boolean => (
 );
 
 /**
- * C11 — phone-width windows, where the docks open over the stage instead of
+ * Phone-width windows, where the docks open over the stage instead of
  * beside it (kcsEditorTheme.css uses the same 600 px breakpoint). Only there
  * does the inspector also open closed: it would cover the stage entirely.
  */
@@ -62,7 +62,7 @@ export const isPhoneLayout = (): boolean => (
 );
 
 /**
- * C11 — closes the docks, left first, while the stage is narrower than
+ * Closes the docks, left first, while the stage is narrower than
  * MIN_OPENING_STAGE_WIDTH. Used at mount and when the window is made narrower
  * (a phone, a tablet, a browser snapped to half the screen); never on the
  * user's own toggles, so a dock the user reopens stays open. `closers` must
@@ -171,7 +171,7 @@ export const createFrameEase = (
 };
 
 /**
- * WP-06 — the Details pane keeps a usable height whenever the right sidebar has
+ * The Details pane keeps a usable height whenever the right sidebar has
  * room for both panes. The Outliner's stored height used to be bounded only by
  * the WINDOW, so in a 720 px window Details shrank to a sliver beside the
  * timeline. The bound is applied at render time (the stored height is kept)
@@ -179,20 +179,20 @@ export const createFrameEase = (
  * maximised timeline keeps the historic layout, so nothing slides under the
  * dock handle.
  */
-// C4: 140 (was 160) — on a short window the layer list gets the 20 px; Details stays usable (WP-06: ≥ 120).
+// 140 (was 160) — on a short window the layer list gets the 20 px; Details stays usable (WP-06: ≥ 120).
 const DETAILS_MIN_HEIGHT = 140;
 const TWO_PANE_MIN_SIDEBAR_HEIGHT = 280;
 const OUTLINER_MIN_HEIGHT = 72;
 
 /*
- * C4 — the window cap that used to be WRITTEN into the stored height
+ * The window cap that used to be WRITTEN into the stored height
  * (`min(height, max(160, innerHeight − 320))`, which assumed a 320 px
  * timeline and permanently lowered the user's split) is now applied at render
  * time only, and only where the sidebar cannot hold both panes. A sidebar that
  * can is bounded by its own real height.
  */
 /**
- * C5 — once the USER has sized the split (drag or keyboard on the divider),
+ * Once the USER has sized the split (drag or keyboard on the divider),
  * their height is honoured up to the sidebar's own height: the Details pane may
  * then shrink to its header (it scrolls), because giving the layer list the
  * room is exactly what the user asked for. The caps above only shape the

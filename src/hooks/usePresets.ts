@@ -66,7 +66,7 @@ export const usePresets = (options: UsePresetsOptions = {}) => {
   // oxlint-disable-next-line react/refs
   customPresetsRef.current = customPresets;
 
-  // N3 PR-2b: persistence is change-driven, never mount-driven. Booting a tab
+  // Persistence is change-driven, never mount-driven. Booting a tab
   // has nothing to save, and writing the just-read (or just-defaulted) value
   // back would destroy corrupt-but-recoverable bytes and clobber fresher
   // writes from other tabs inside the boot window. The effect only persists
@@ -90,7 +90,7 @@ export const usePresets = (options: UsePresetsOptions = {}) => {
   }, [customPresets]);
 
   /**
-   * M25 — save a custom preset into the existing collection and persist it
+   * Save a custom preset into the existing collection and persist it
    * to the existing localStorage key. Pure data-layer operation (no UI, no
    * animation edit, no history). Returns the created preset, or null when
    * the input is invalid (empty/whitespace name, unknown type, non-finite or
@@ -162,7 +162,7 @@ export const usePresets = (options: UsePresetsOptions = {}) => {
   }, []);
 
   /**
-   * M25 — remove a custom preset by id and persist. Missing id is a safe
+   * Remove a custom preset by id and persist. Missing id is a safe
    * no-op (never throws). Builtin/default presets are never deleted — they
    * are only re-seeded when storage is empty/corrupt.
    */
@@ -178,7 +178,7 @@ export const usePresets = (options: UsePresetsOptions = {}) => {
   }, []);
 
   /**
-   * M30 — import already validated + merged presets (30A pure helpers own
+   * Import already validated + merged presets (30A pure helpers own
    * validation/collision logic; this API only replaces the collection and
    * lets the existing useEffect persist to keyframe_custom_motion_presets).
    * Library operation: no history, no scene mutation.

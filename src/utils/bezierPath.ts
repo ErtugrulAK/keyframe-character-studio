@@ -353,7 +353,7 @@ export const altMoveVertexHandle = (
 ): BezierVertex => moveVertexHandle({ ...vertex, kind: vertex.kind === 'smooth' ? 'corner' : 'smooth' }, handle, next);
 
 /**
- * C10 — Alt-drag from a vertex pulls out new handles, as in After Effects:
+ * Alt-drag from a vertex pulls out new handles, as in After Effects:
  * the out handle follows the pointer (`offset` from the vertex) and the in
  * handle mirrors it, so the vertex becomes smooth. A zero or non-finite offset
  * leaves the vertex unchanged.

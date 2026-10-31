@@ -1,7 +1,7 @@
 import { layerMaskPathChannel, type CharacterPart, type Track } from '../types/animator';
 
 /**
- * C4 — layer and mask locks.
+ * Layer and mask locks.
  *
  * Two different locks, never merged into one:
  *

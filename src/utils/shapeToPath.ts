@@ -2,7 +2,7 @@ import type { BezierPath, BezierVertex, CharacterPart, Track } from '../types/an
 import { getShapeGeometry } from './shapeGeometry';
 
 /**
- * C6 — "Convert to editable path": a parametric shape (Rectangle, Ellipse,
+ * "Convert to editable path": a parametric shape (Rectangle, Ellipse,
  * polygons) becomes a `custom_freeform` layer whose canonical `path` draws the
  * SAME outline in the same local space. The layer keeps its id (so its track,
  * layer order, parent, children, Track Matte and legacy matte references all

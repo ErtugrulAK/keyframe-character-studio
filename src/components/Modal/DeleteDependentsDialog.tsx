@@ -8,30 +8,30 @@ interface DeleteDependentsDialogProps {
   /** The layers the delete removes (names), or null when nothing is pending. */
   deletedNames: string[] | null;
   dependents: DeletionDependent[];
-  /** C3 — child layers whose transform keyframes the delete adds to. */
+  /** Child layers whose transform keyframes the delete adds to. */
   bakedChildren?: BakedChild[];
-  /** C5 — layers deleted WITH a deleted group (its contents). */
+  /** Layers deleted WITH a deleted group (its contents). */
   ownedNames?: string[];
-  /** C5 — children of a deleted plain parent: kept, moved up one level. */
+  /** Children of a deleted plain parent: kept, moved up one level. */
   keptChildNames?: string[];
   onConfirm: () => void;
   onCancel: () => void;
 }
 
 /**
- * C2 — shown ONLY when a delete removes a layer that another surviving layer
+ * Shown ONLY when a delete removes a layer that another surviving layer
  * uses as its matte source. It names those layers before anything changes; the
  * delete itself is the ordinary one (one undo step), and the dependent layers
  * keep their relationship, which then reports a missing source until Undo
  * restores the source or the user picks another one.
  *
- * C3 — also shown when deleting a parent ADDS keyframes to its children (its
+ * Also shown when deleting a parent ADDS keyframes to its children (its
  * motion is baked into them so they keep their place): it names each child and
  * the keyframe count before/after, and says when the result is one key per
  * frame. Cancel changes nothing. A delete with neither consequence never opens
  * this dialog.
  *
- * C5 — and when the delete removes a GROUP with layers in it: a group is a
+ * And when the delete removes a GROUP with layers in it: a group is a
  * container, so its layers go with it, and the dialog lists them. Whenever it
  * opens it also states which children are KEPT (a plain parent is a transform
  * relationship: its children stay, one level up, in place), so the difference

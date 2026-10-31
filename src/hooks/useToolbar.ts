@@ -50,7 +50,7 @@ export const useToolbar = ({
     setTracks([newTrack, ...tracks]);
     setCharacterParts((prev) => [newPart, ...prev]);
     setSelectedPartId(newPart.id);
-    // C2: the new part becomes THE selection — a layer selected before the
+    // The new part becomes THE selection — a layer selected before the
     // shape was drawn must not stay selected beside it.
     setSelectedPartIds?.([newPart.id]);
   };

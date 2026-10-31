@@ -8,7 +8,7 @@ interface UseMatteNavigationOptions {
 }
 
 /**
- * WP-04 — "Select Source" / "Back to Target" for a Track Matte. Both are
+ * "Select Source" / "Back to Target" for a Track Matte. Both are
  * SELECTION changes only (selection is never scene data or history), and the
  * remembered target is transient: it is dropped once the source is no longer
  * the selection or the target no longer exists — never redirected elsewhere.

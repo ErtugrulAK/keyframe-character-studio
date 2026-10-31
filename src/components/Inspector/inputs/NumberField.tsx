@@ -11,7 +11,7 @@ interface NumberFieldProps extends NativeNumberProps {
 }
 
 /**
- * C10 — a numeric field that keeps what the user TYPES while it has focus.
+ * A numeric field that keeps what the user TYPES while it has focus.
  *
  * A plain controlled `<input type="number" value={n}>` re-renders the stored
  * number on every keystroke, so an emptied field jumps back to "0" (the 0

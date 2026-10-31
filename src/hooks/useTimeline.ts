@@ -58,7 +58,7 @@ interface UseTimelineOptions {
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-/** C10 — one proportional keyframe-stretch gesture (see `beginKeyframeStretch`). */
+/** One proportional keyframe-stretch gesture (see `beginKeyframeStretch`). */
 export interface KeyframeStretchSession {
   /** The frame that stays put: the other end of the selection. */
   pivotFrame: number;
@@ -101,7 +101,7 @@ export const useTimeline = ({
       return;
     }
     if (deletion.deletedIds.length === 0) return;
-    // C4 — a locked layer is neither deleted nor rewritten (a released child
+    // A locked layer is neither deleted nor rewritten (a released child
     // gets a new pose): the whole delete is refused, nothing half-applied.
     const lockRefusal = lockedLayersRefusal(characterParts, tracks, [...deletion.deletedIds, ...deletion.releasedChildIds]);
     if (lockRefusal) {
@@ -161,7 +161,7 @@ export const useTimeline = ({
   const basePoseOfTrack = (partId: string) => resolveAuthoredBasePose(characterParts, partId);
 
   /**
-   * R3-10: the layer-level ("aggregate") keyframe action authors ONE canonical
+   * The layer-level ("aggregate") keyframe action authors ONE canonical
    * transform keyframe group — the x/y/rotation/scaleX/scaleY/opacity and Trim
    * Path channels at this frame, from the layer's evaluated authored pose. The
    * layer row and the expanded channel rows are then two views of the same
@@ -232,7 +232,7 @@ export const useTimeline = ({
   };
 
   /**
-   * C4 — the one lock writer for several layers at once (the lock shortcut, the
+   * The one lock writer for several layers at once (the lock shortcut, the
    * Inspector's Unlock, Unlock All). The lock is a switch: one undo step, and it
    * never touches the layer's content.
    */
@@ -278,7 +278,7 @@ export const useTimeline = ({
   };
 
   /**
-   * R3-04: move the whole timeline keyframe selection by `delta` frames — one
+   * Move the whole timeline keyframe selection by `delta` frames — one
    * gesture, one history entry (the caller batches), clamped to the project range
    * and stopped at the first frame that would overwrite unrelated animation.
    * Returns the delta actually applied, so a drag keeps its pointer mapping.
@@ -299,7 +299,7 @@ export const useTimeline = ({
   };
 
   /**
-   * C10 — a proportional time-stretch gesture of the selection (Alt-drag of its
+   * A proportional time-stretch gesture of the selection (Alt-drag of its
    * first or last key). Returns null when the pressed key is not an END of a
    * selection that spans at least two frames. The session keeps the gesture's
    * base tracks, so every `stretchTo` is computed from the same start (no
@@ -454,7 +454,7 @@ export const useTimeline = ({
     setTracks((prev) => updatePropertyKeyframeFrameMutator(prev, trackId, channel, keyframeId, newFrame));
   };
 
-  // M1: change easing of a single channel keyframe
+  // Change easing of a single channel keyframe
   const updatePropertyKeyframeEasing = (trackId: string, channel: AnimationChannel, keyframeId: string, easing: EasingType) => {
     setTracks((prev) => updatePropertyKeyframeEasingMutator(prev, trackId, channel, keyframeId, easing));
   };
@@ -504,7 +504,7 @@ export const useTimeline = ({
 
   const reorderParts = useCallback((dragIndex: number, hoverIndex: number) => {
     if (dragIndex === hoverIndex) return;
-    // C4 — a locked layer keeps its place in the stack (other layers may still
+    // A locked layer keeps its place in the stack (other layers may still
     // move past it; that only renumbers it).
     const moved = characterParts[dragIndex];
     const lockRefusal = moved ? lockedLayersRefusal(characterParts, tracks, [moved.id]) : null;
@@ -556,7 +556,7 @@ export const useTimeline = ({
     if (!track || !part) return;
     const scope = activeTemplateId || 'Sequence';
     if (resolveChannelAnimationState(track, channel, currentFrame, scope) !== 'off') return;
-    // WP-03 — a mask PATH arms like a scalar: its first key is the path the
+    // A mask PATH arms like a scalar: its first key is the path the
     // timeline shows at the playhead in this sequence (the existing writer).
     if (channel.endsWith(':path')) {
       const maskId = channel.slice(0, -':path'.length);
@@ -589,7 +589,7 @@ export const useTimeline = ({
     const track = tracks.find((candidate) => candidate.id === trackId);
     if (!track) return;
     const scope = activeTemplateId || 'Sequence';
-    // WP-03 — the path disarm mirrors the scalar one: the active sequence's
+    // The path disarm mirrors the scalar one: the active sequence's
     // path keys go, and the path shown at the playhead stays as the base path.
     if (channel.endsWith(':path')) {
       const maskId = channel.slice(0, -':path'.length);

@@ -7,7 +7,7 @@ import { convertLegacyKeyframesToChannels, fillChannelsFromLegacyKeyframes } fro
 import { makeEmptyChannels } from './defaults';
 
 /**
- * R3-10 / R3-11 — ONE canonical authored animation truth.
+ * ONE canonical authored animation truth.
  *
  * A document may still carry the legacy composite list (`track.keyframes[]`).
  * The evaluator resolves a channel from that list only while the channel has no
@@ -135,7 +135,7 @@ export const addPropertyKeyframeMutator = (
 };
 
 /**
- * WP-01: author a property VALUE at the playhead of a channel that is already
+ * Author a property VALUE at the playhead of a channel that is already
  * animated in `templateId` — the convention every Inspector scalar follows.
  * An exact (frame, sequence) key changes its value only, so its easing,
  * temporal handles and sequence survive; otherwise one key is inserted with the
@@ -251,7 +251,7 @@ export const addMaskPathKeyframeMutator = (
 });
 
 /**
- * WP-03: removes every key of one mask path channel IN ONE SEQUENCE (the path
+ * Removes every key of one mask path channel IN ONE SEQUENCE (the path
  * stopwatch's confirmed disarm). Other sequences' keys survive untouched.
  */
 export const clearMaskPathAnimationMutator = (
@@ -670,7 +670,7 @@ export const moveKeyframesMutator = (
 };
 
 /**
- * C10 — proportional time-stretch of a keyframe selection (After Effects'
+ * Proportional time-stretch of a keyframe selection (After Effects'
  * Alt-drag of the first or last selected key). The key at the OTHER end is the
  * pivot and stays; the dragged edge goes to `toEdge`, and every target lands at
  * `pivot + round((frame - pivot) * scale)`. Computed from the gesture's BASE
@@ -794,7 +794,7 @@ export const updatePropertyKeyframeFrameMutator = (
   });
 };
 
-// M1: change the easing of a single channel keyframe. Only the target
+// Change the easing of a single channel keyframe. Only the target
 // channel's matching keyframe is touched — other channels/keyframes stay.
 export const updatePropertyKeyframeEasingMutator = (
   tracks: Track[],

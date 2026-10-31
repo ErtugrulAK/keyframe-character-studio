@@ -9,7 +9,7 @@ import type { ToastOptions } from './useToast';
 type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
 
 /**
- * C2-E — the one layer-parenting authority. The layer tree's drag and drop, its
+ * The one layer-parenting authority. The layer tree's drag and drop, its
  * keyboard commands, the context menu and the Inspector's Parent field all call
  * these actions; each plans with the pure `utils/layerParenting` helpers and
  * writes once inside a batch interaction, so one user action is one undo step.
@@ -38,7 +38,7 @@ interface LayerParentingDependencies {
   startBatchInteraction: () => void;
   endBatchInteraction: () => void;
   showToast: ShowToast;
-  /** C4 — asked before a re-based animation is written; without it the change is written at once. */
+  /** Asked before a re-based animation is written; without it the change is written at once. */
   requestConfirmation?: (request: { title: string; description: string; confirmLabel?: string; onConfirm: () => void }) => void;
 }
 
@@ -83,7 +83,7 @@ export const createLayerParentingActions = ({
   };
 
   /**
-   * C4 — a re-parent that keeps the layer's place by ADDING keyframes (its
+   * A re-parent that keeps the layer's place by ADDING keyframes (its
    * animation, or its old/new parent's, re-based into the new parent) asks
    * first, naming the layer, the key counts and any per-frame bake; Cancel
    * writes nothing. A re-base that adds no key is written at once.
@@ -102,7 +102,7 @@ export const createLayerParentingActions = ({
   };
 
   const dropLayer: LayerParenting['dropLayer'] = (id, targetId, position) => {
-    // C4 — a locked layer keeps its place and its parent (a reorder of the
+    // A locked layer keeps its place and its parent (a reorder of the
     // layer itself changes no record the outcome check would see).
     const lockRefusal = lockedLayersRefusal(characterParts, tracks, [id]);
     if (lockRefusal) {

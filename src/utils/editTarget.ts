@@ -1,7 +1,7 @@
 import type { BodyPartType, CharacterPart } from '../types/animator';
 
 /**
- * C5 — "what am I editing right now?", answered ONCE.
+ * "what am I editing right now?", answered ONCE.
  *
  * The canvas status strip, the Inspector header and the canvas highlight all
  * read this one description, so they can never name different targets. It is
@@ -55,7 +55,7 @@ const SHAPE_NAMES: Partial<Record<BodyPartType, string>> = {
 const shapeName = (type: BodyPartType): string => SHAPE_NAMES[type] ?? type.replace(/^custom_/, '').replace(/_/g, ' ').replace(/^\w/, (letter) => letter.toUpperCase());
 
 /**
- * C6 — the plain-language kind of a layer for the Inspector header
+ * The plain-language kind of a layer for the Inspector header
  * ("Rectangle", "Path", "Image", "Group"…), never an internal type id.
  */
 export const layerTypeLabel = (part: Pick<CharacterPart, 'type' | 'isGroup' | 'booleanOperation'>): string => {

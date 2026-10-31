@@ -4,7 +4,7 @@ import { applyAffine, invertAffine } from './containerMath';
 import { normalizationAffine, type MaskPathFrame } from './maskPathEditing';
 
 /**
- * WP-03 — creating layer masks and editing a mask path as a whole (rotate,
+ * Creating layer masks and editing a mask path as a whole (rotate,
  * scale, add/remove points). Every result is an ordinary `BezierPath` in the
  * mask's own coordinate space: no mask primitive, no mask transform field and
  * no new schema. Creation and edits are written through the existing mask

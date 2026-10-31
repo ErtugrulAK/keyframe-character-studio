@@ -21,7 +21,7 @@ interface UsePathEditingOptions {
 }
 
 /**
- * C6 — editable paths: converting a basic shape into a path layer, and the
+ * Editable paths: converting a basic shape into a path layer, and the
  * point selection the canvas and the Inspector share. Every write goes through
  * the editor's (lock-guarded) part setter, so convert / add / remove / move
  * are ordinary scene edits with their usual undo step.

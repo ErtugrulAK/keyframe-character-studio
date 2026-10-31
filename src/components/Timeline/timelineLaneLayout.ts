@@ -4,7 +4,7 @@ import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/
 import { hasChannelDataForTemplate } from '../../utils/timelineMetrics';
 
 /**
- * C5 — the timeline lane layout as DATA.
+ * The timeline lane layout as DATA.
  *
  * A long layer list mounts only the tracks near its viewport (C4 row
  * windowing), so a marquee that hit-tested the rendered diamonds could not
@@ -17,7 +17,7 @@ import { hasChannelDataForTemplate } from '../../utils/timelineMetrics';
  * cannot drift apart.
  */
 
-/** C7 — a property row's place in the tree: a layer property, or a member of a group. */
+/** A property row's place in the tree: a layer property, or a member of a group. */
 type LaneRowDepth = 1 | 2;
 
 type LaneRow =
@@ -36,7 +36,7 @@ type LaneRow =
 type GroupExpanded = (key: string, defaultVal?: boolean) => boolean;
 
 /**
- * C7 — what of the LAYER decides which property groups exist: its masks (in
+ * What of the LAYER decides which property groups exist: its masks (in
  * stacking order, with their names) and whether it uses Trim Paths. Every
  * consumer (property tree, lanes, marquee, row heights) builds it with
  * `laneContextOf`, so they can never disagree.
@@ -67,7 +67,7 @@ const animatedMaskIds = (track: Track): string[] => {
 /**
  * The rows of one track's lane group, top to bottom (the layer row first).
  *
- * C7 — the property list reads like other motion tools (After Effects):
+ * The property list reads like other motion tools (After Effects):
  *   Position › X, Y · Scale › X, Y · Rotation · Opacity
  *   Trim Paths › Start, End, Offset   — only when the layer uses Trim Paths
  *                                       (or still holds Trim keys)

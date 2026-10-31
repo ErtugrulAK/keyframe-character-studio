@@ -140,7 +140,7 @@ const liesInsideGroup = (parts: CharacterPart[], partId: string, groupId: string
 );
 
 /**
- * R4-09 — the layer a CANVAS click targets (vector-editor model).
+ * The layer a CANVAS click targets (vector-editor model).
  *
  * A plain click on any child geometry selects the GROUP the child belongs to
  * (the outermost group ancestor), never the child itself: grouping would be
@@ -173,7 +173,7 @@ export const resolveStageSelectionTarget = (
 };
 
 /**
- * R5-08 — the canvas marquee's hit list folded into the canonical selection.
+ * The canvas marquee's hit list folded into the canonical selection.
  *
  * The box hit-tests real layer geometry, so a hit is a LAYER, and a marquee that
  * encloses grouped children must land on the same thing a click on those
@@ -907,7 +907,7 @@ const bakeScopeChannel = (options: {
       }
       missing.push(segmentMiss(key, right).frame);
     });
-    // C4 — the re-easing above may already have made the list exact: measure
+    // The re-easing above may already have made the list exact: measure
     // again before deciding that only a split (or the dense bake) can help.
     error = errorOf(keys);
     if (error <= BAKE_TOLERANCE) break;
@@ -1249,7 +1249,7 @@ const localKeyCount = (track: Track | undefined): number => (track
   : 0);
 
 /**
- * C4 — gives `childId` a new parent (`newParentId`, or none) and keeps its
+ * Gives `childId` a new parent (`newParentId`, or none) and keeps its
  * WORLD pose at every integer frame of every sequence, also when the layer or
  * a layer of the old or new parent chain is animated.
  *

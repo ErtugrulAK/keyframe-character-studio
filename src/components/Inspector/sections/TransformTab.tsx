@@ -16,15 +16,15 @@ interface TransformTabProps {
   coordinateSystem: SceneCoordinateSystem;
   currentFrame: number;
   updateCurrentTransform: (newTransform: Partial<Transform>) => void;
-  // M25 — user-saved custom preset library (passed through to the card)
+  // User-saved custom preset library (passed through to the card)
   customPresets: CustomMotionPreset[];
   onSavePreset: (input: SavePresetInput) => CustomMotionPreset | null;
   onUpdatePreset: (id: string, input: UpdatePresetInput) => CustomMotionPreset | null;
   onDeletePreset: (id: string) => void;
-  // M30 — preset library export/import (passed through to the card)
+  // Preset library export/import (passed through to the card)
   onImportPresets?: (presets: CustomMotionPreset[]) => void;
   showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
-  // M26 — copy/paste/clear animation (passed through to the card)
+  // Copy/paste/clear animation (passed through to the card)
   onCopyAnimation?: () => void;
   onPasteAnimation?: () => void;
   onClearAnimation?: () => void;
@@ -36,7 +36,7 @@ interface TransformTabProps {
  * the Position row, the compact Rotation / Scale / Opacity trio, control points,
  * and the canonical animation-data actions.
  *
- * R5-14 — Details states the transform and nothing else: no "Reset 0°", no
+ * Details states the transform and nothing else: no "Reset 0°", no
  * labelled aspect-lock button and no keyframe action, because keyframing is the
  * timeline property row's authority. R5-15 — the layer's paint order is not
  * repeated here either: Arrange lives on the authoring toolbar, which writes

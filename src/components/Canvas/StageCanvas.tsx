@@ -73,7 +73,7 @@ import { Sparkles } from 'lucide-react';
 import './StageCanvas.css';
 
 /**
- * C7 — a fitted camera centre on WHOLE device pixels. The centre of a stage
+ * A fitted camera centre on WHOLE device pixels. The centre of a stage
  * with an odd size is a half pixel: the origin's axes then sat exactly on a
  * pixel boundary and the smallest float difference between two frames flipped
  * which pixel they were antialiased into (a flicker on every stage resize).
@@ -164,7 +164,7 @@ export const StageCanvas: React.FC = () => {
     matteReturnTargetId,
     backToMatteTarget,
   } = useAnimator();
-  /** C2: the open Mask Pen draft, for the banner's visible Finish control. */
+  /** The open Mask Pen draft, for the banner's visible Finish control. */
   const [maskPenDraft, setMaskPenDraft] = useState<MaskPenDraftState | null>(null);
   /** WP-02/03: a mask is edited or drawn on the canvas — the layer gestures stand down. */
   const maskInteractionActive = Boolean(maskEditTarget || maskDrawSession);
@@ -281,7 +281,7 @@ export const StageCanvas: React.FC = () => {
       center: snapToDevicePixel({ x: box.left + box.width / 2 + restored.pan.x, y: box.top + box.height / 2 + restored.pan.y }),
       baseScale: getStageFitScale(box, EDITOR_CAMERA_VIEWBOX),
     });
-    // C2: the opening camera, until the user moves it (see REFIT_UNTOUCHED_CAMERA_COMMAND).
+    // The opening camera, until the user moves it (see REFIT_UNTOUCHED_CAMERA_COMMAND).
     if (!openingCameraSeenRef.current) {
       openingCameraSeenRef.current = true;
       openingCameraCenterRef.current = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
@@ -308,7 +308,7 @@ export const StageCanvas: React.FC = () => {
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
   /**
-   * C2-F — one right-button press is EITHER a pan (it moved) OR a context-menu
+   * One right-button press is EITHER a pan (it moved) OR a context-menu
    * request (it did not). Without this the menu opened on release after every
    * right-drag pan, and on platforms that send `contextmenu` on press the pan
    * kept running under the open menu.
@@ -334,7 +334,7 @@ export const StageCanvas: React.FC = () => {
   const groupDragMovedRef = useRef(false);
   const suppressClickSelectRef = useRef(false);
   /**
-   * R5-08 — the selection that was live when the marquee box began, captured
+   * The selection that was live when the marquee box began, captured
    * before the empty-canvas press clears it. The box resolves its hits against
    * exactly the set a click at that moment would have resolved against, so the
    * container-versus-child decision is the same for both gestures.
@@ -441,7 +441,7 @@ export const StageCanvas: React.FC = () => {
         // A finished drawing hands the stage back to Select; a tool switch
         // keeps the tool the user just chose.
         if (reason === 'finish') setActiveTool('select');
-        // C8 — no confirmation for a finish the user asked for; a tool switch
+        // No confirmation for a finish the user asked for; a tool switch
         // finishing it implicitly is still said.
         else showToast('Freeform shape finished when you switched tools', 'info');
       },
@@ -458,7 +458,7 @@ export const StageCanvas: React.FC = () => {
     }, [showToast]),
   });
 
-  // C2 — an open freeform draft owns Undo/Redo (its own points), so the
+  // An open freeform draft owns Undo/Redo (its own points), so the
   // command never reaches the scene history while the drawing is unfinished.
   useEffect(() => {
     if (!freeform.isDrawing) return undefined;
@@ -482,7 +482,7 @@ export const StageCanvas: React.FC = () => {
 
   const startTranslateDragForPart = (partId: string, e: React.MouseEvent) => {
     if (appMode === 'broadcast' || activeTool !== 'select' || e.button !== 0) return;
-    // WP-02: while a mask is edited on the canvas, no layer body starts a move —
+    // While a mask is edited on the canvas, no layer body starts a move —
     // the image under the mask must stay exactly where it is.
     if (maskInteractionActive) return;
     if (e.ctrlKey || e.metaKey) return;
@@ -497,7 +497,7 @@ export const StageCanvas: React.FC = () => {
     }
     e.stopPropagation();
 
-    // R4-09 — the pointer lands on a child, but the gesture belongs to the layer
+    // The pointer lands on a child, but the gesture belongs to the layer
     // the click TARGETS: the child's group, unless the selection already lives
     // inside that group (the explicit drill-in paths: a canvas double-click or an
     // Outliner child row). A gesture that starts inside the selected group box
@@ -531,7 +531,7 @@ export const StageCanvas: React.FC = () => {
     const dragSelectionIds = selectedPartIds.includes(dragTargetId) ? canvasSelectionIds : [dragTargetId];
     const worldOf = (id: string) => getComputedTransform(id, currentFrame);
     const movingTargets = collectArrangeTargets(characterParts, dragSelectionIds, worldOf);
-    // C4 — a move that would carry a locked layer (selected from the layer list,
+    // A move that would carry a locked layer (selected from the layer list,
     // or bonded to a moving one) is refused before it starts: all or nothing.
     const lockRefusal = lockedLayersRefusal(characterParts, tracks, movingTargets.flatMap((target) => resolveBondGroup(characterParts, target.id)));
     if (lockRefusal) {
@@ -620,7 +620,7 @@ export const StageCanvas: React.FC = () => {
       return;
     }
     if (activeTool === 'shape_create' && appMode !== 'broadcast' && pendingShapeType && e.button === 0) {
-      // C2: an armed creation tool owns the press wherever it lands — on empty
+      // An armed creation tool owns the press wherever it lands — on empty
       // stage or on top of an image — so drawing never selects what is below.
       const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
       e.preventDefault();
@@ -646,7 +646,7 @@ export const StageCanvas: React.FC = () => {
     }
 
     if (appMode === 'broadcast' || activeTool !== 'select') return;
-    // WP-02: an empty-stage press in mask editing neither clears the selection
+    // An empty-stage press in mask editing neither clears the selection
     // (which would leave the mode) nor starts a layer marquee.
     if (maskInteractionActive) return;
 
@@ -659,7 +659,7 @@ export const StageCanvas: React.FC = () => {
     ) {
       handleSelectPart(null);
       setFocusModeNodeId(null);
-      // R5-08: remembered BEFORE the press clears the selection — the box's
+      // Remembered BEFORE the press clears the selection — the box's
       // container-versus-child decision reads the set that was live on the way
       // down, exactly like a click's does.
       marqueeSelectionOriginRef.current = canvasSelectionIds;
@@ -691,7 +691,7 @@ export const StageCanvas: React.FC = () => {
       : { transform: world };
   };
 
-  /** C4 — the gizmo of a locked layer (selected from the layer list) does not edit it. */
+  /** The gizmo of a locked layer (selected from the layer list) does not edit it. */
   const refuseLockedGizmo = (e: React.MouseEvent): boolean => {
     const lockRefusal = selectedPart ? lockedLayersRefusal(characterParts, tracks, resolveBondGroup(characterParts, selectedPart.id)) : null;
     if (!lockRefusal) return false;
@@ -910,13 +910,13 @@ export const StageCanvas: React.FC = () => {
         EDITOR_CAMERA_CENTER.y,
         (part) => (
           tracks.find((track) => track.partId === part.id)?.editVisible !== false
-          // C4 — a locked layer is not picked by the box (nor by a click).
+          // A locked layer is not picked by the box (nor by a click).
           && !tracks.find((track) => track.partId === part.id)?.locked
           && (!part.booleanGroupId || part.booleanGroupId === booleanOperandEditingGroupId)
           && (!booleanOperandEditingGroupId || !part.booleanOperandIds?.length)
         ),
       );
-      // R5-08: the box's hits become the CANONICAL selection — a container when
+      // The box's hits become the CANONICAL selection — a container when
       // the children it enclosed belong to one (and no child border is drawn for
       // a normalized group), the layers themselves only when the user is already
       // working inside the group.
@@ -927,7 +927,7 @@ export const StageCanvas: React.FC = () => {
       }
     }
 
-    // R4-09: a gesture that began inside a group and never moved is a plain click
+    // A gesture that began inside a group and never moved is a plain click
     // on the group — the container selected on pointerdown stays the selection,
     // and the child under the pointer is never selected by a click-through. The
     // gesture refs only retire here.
@@ -1147,7 +1147,7 @@ export const StageCanvas: React.FC = () => {
   const sortedParts = useMemo(() => stackingOrder(characterParts), [characterParts]);
 
   const selectPartFromStage = (id: string, event: React.MouseEvent) => {
-    // WP-02: a canvas click does not retarget the selection while
+    // A canvas click does not retarget the selection while
     // a mask is edited; the Outliner or Exit leaves the mode.
     if (maskInteractionActive) return;
     // The browser still fires a click when a drag ends on the
@@ -1157,7 +1157,7 @@ export const StageCanvas: React.FC = () => {
       suppressClickSelectRef.current = false;
       return;
     }
-    // R4-09: a plain click selects the GROUP the geometry belongs
+    // A plain click selects the GROUP the geometry belongs
     // to; the layer itself is selected through an explicit
     // drill-in (`onDrillIn`) or from the timeline Outliner.
     handleSelectPart(
@@ -1175,7 +1175,7 @@ export const StageCanvas: React.FC = () => {
     setSelectedPartIds([id]);
   };
   /**
-   * C3 — the part layers are memoized: a camera or dock-layout frame (which
+   * The part layers are memoized: a camera or dock-layout frame (which
    * re-renders this canvas) re-renders no layer whose inputs are unchanged
    * (measured: every dock frame re-rendered every part). Their actions are one
    * stable bag that reads the latest handlers at call time.
@@ -1195,7 +1195,7 @@ export const StageCanvas: React.FC = () => {
   // tool exits it, and the cursor returns with the state change itself.
   const isDrawToolArmed = (activeTool === 'shape_create' && Boolean(pendingShapeType)) || activeTool === 'freeform_draw';
   /*
-   * C7 — the edit camera lives in the viewBox, not in a CSS scale.
+   * The edit camera lives in the viewBox, not in a CSS scale.
    *
    * The viewBox spans the stage box at the camera's final scale
    * (baseScale × zoom), so the browser rasterises the world directly at the
@@ -1230,7 +1230,7 @@ export const StageCanvas: React.FC = () => {
     }
     : null;
   /*
-   * C12 — screen pixels per stage unit. An authored shape stroke is drawn
+   * Screen pixels per stage unit. An authored shape stroke is drawn
    * non-scaling (so the layer's own scale, uniform or not, never thickens it:
    * a large rectangle is drawn as a scaled 120-unit one) and multiplied by
    * this, so it still zooms with the view. It is a CSS variable on the SVG:
@@ -1241,7 +1241,7 @@ export const StageCanvas: React.FC = () => {
     : cameraScale > 0
       ? cameraScale
       : (stageBox ? getStageFitScale(stageBox, EDITOR_CAMERA_VIEWBOX) : 1);
-  // C12 — the part of the camera space the stage box shows (the axis badges
+  // The part of the camera space the stage box shows (the axis badges
   // sit at the visible end of each axis, not past the window's edge).
   const visibleCameraRect = cameraView && stageBox && cameraScale > 0
     ? {
@@ -1259,7 +1259,7 @@ export const StageCanvas: React.FC = () => {
     }
     : null;
   /**
-   * C2-D — the stage's dotted backdrop is anchored to the CAMERA, not to the
+   * The stage's dotted backdrop is anchored to the CAMERA, not to the
    * container's corner. Opening or closing a panel moves the container's edge
    * while the world keeps its screen position; a corner-anchored pattern then
    * slid under the content for the whole dock transition (measured: its phase
@@ -1272,7 +1272,7 @@ export const StageCanvas: React.FC = () => {
     : undefined;
 
   /**
-   * C2 — pointer ownership. While a creation tool (Rectangle/Circle armed,
+   * Pointer ownership. While a creation tool (Rectangle/Circle armed,
    * Pen), the Hand or the crop mode is active, the TOOL owns a primary press
    * on the stage: it is handled in the capture phase, before any layer body,
    * group frame or transform gizmo can turn it into a selection or a move, and
@@ -1311,7 +1311,7 @@ export const StageCanvas: React.FC = () => {
   };
 
   /**
-   * WP-02 — the canvas mask-editing context: the owner, its mask as the
+   * The canvas mask-editing context: the owner, its mask as the
    * renderer evaluates it at this frame of the active sequence, the owner's
    * evaluated pose, and the reason editing is refused (locked mask, an IN/OUT
    * preset moving the layer, a collapsed map), if any.
@@ -1339,7 +1339,7 @@ export const StageCanvas: React.FC = () => {
     return { owner, mask, transform, block };
   })();
 
-  /** WP-03 — the mask-drawing context: owner, pose and refusal reason. */
+  /** The mask-drawing context: owner, pose and refusal reason. */
   const maskDrawing = (() => {
     if (!maskDrawSession || appMode === 'broadcast') return null;
     const owner = characterParts.find((part) => part.id === maskDrawSession.ownerPartId);
@@ -1359,7 +1359,7 @@ export const StageCanvas: React.FC = () => {
     return { owner, shape: maskDrawSession.shape, transform, block };
   })();
 
-  /** C5 — what is being edited: one description for the strip and the Inspector. */
+  /** What is being edited: one description for the strip and the Inspector. */
   const editTarget = resolveEditTarget({
     characterParts,
     selectedPartId,
@@ -1917,7 +1917,7 @@ export const StageCanvas: React.FC = () => {
           );
         }
         if (editTarget.kind === 'matte-source') {
-          // C10 — only the way back: no "Matte source · matte of …" caption.
+          // Only the way back: no "Matte source · matte of …" caption.
           const returnTarget = characterParts.find((part) => part.id === matteReturnTargetId);
           return (
             <EditTargetStrip target={editTarget} testId="edit-target-strip" bare>

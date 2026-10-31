@@ -64,14 +64,14 @@ export interface EditorShortcutCommands {
   setIsPlaying?: React.Dispatch<React.SetStateAction<boolean>>;
   appMode?: AppMode;
   openShortcutReference?: () => void;
-  /** C4 — locks the selected layers, or unlocks them when all are locked. */
+  /** Locks the selected layers, or unlocks them when all are locked. */
   toggleSelectionLock?: () => void;
   /** F9 — Easy Ease on the selected keyframes; false when none is selected. */
   easySelectedKeyframes?: () => boolean;
-  /** C4 — unlocks every layer. */
+  /** Unlocks every layer. */
   unlockAllLayers?: () => void;
   /**
-   * C8 — the arrow-key nudge, run through the arrange authority: `beginNudge`
+   * The arrow-key nudge, run through the arrange authority: `beginNudge`
    * opens one batch and returns the mover (total offset since the start), or
    * null when nothing can move; `endNudge` closes the batch on key release.
    */
@@ -165,7 +165,7 @@ export const useKeyboardShortcuts = ({
   // Detected once per session: the platform cannot change under a running app.
   const platformRef = useRef<ShortcutPlatform>(detectShortcutPlatform());
 
-  // C8 — a held arrow key is ONE nudge session (one batch, one undo step). The
+  // A held arrow key is ONE nudge session (one batch, one undo step). The
   // session outlives the listener re-binding below, so it lives in a ref, and
   // the latest begin/end are read at event time.
   const nudgeSessionRef = useRef<{ move: (dx: number, dy: number) => void; x: number; y: number } | null>(null);
@@ -391,7 +391,7 @@ export const useKeyboardShortcuts = ({
 
       const command = resolveShortcutCommand(event, platformRef.current);
       if (!command) return;
-      // C4 — Broadcast shows no editor: its keys must not edit, select, create
+      // Broadcast shows no editor: its keys must not edit, select, create
       // or undo anything in the scene behind it. Only the shortcut reference
       // (read-only help) is still offered there.
       if (appMode === 'broadcast' && command.id !== 'shortcut-reference') return;

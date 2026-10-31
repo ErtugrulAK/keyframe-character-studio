@@ -11,7 +11,7 @@ interface TransformPositionCardProps {
 }
 
 /**
- * R5-14 — the TRANSFORM section's Position row: the project-space X and Y
+ * The TRANSFORM section's Position row: the project-space X and Y
  * columns, side by side. The field reports the evaluated transform at the
  * current frame and every edit goes through the canonical transform path.
  */

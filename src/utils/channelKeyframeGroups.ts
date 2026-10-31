@@ -1,5 +1,5 @@
 /**
- * M3 — Frame-based grouping of canonical channel keyframes.
+ * Frame-based grouping of canonical channel keyframes.
  *
  * The editor UI treats "a keyframe" as one frame holding several property
  * keyframes (legacy composite keyframe semantics). This helper groups the
@@ -14,7 +14,7 @@ import { fillChannelsFromLegacyKeyframes } from './legacyKeyframeConversion';
 import { relationshipParentId } from './partBinding';
 
 const MASK_SCALAR_PROPERTIES = ['opacity', 'feather', 'expansion'] as const;
-/** K3 — a per-mask scalar channel (`maskId:opacity|feather|expansion`). Path
+/** A per-mask scalar channel (`maskId:opacity|feather|expansion`). Path
  * channels carry geometry, not a number, and stay outside this pair. */
 const asMaskScalarChannel = (channel: string): string | null => {
   if (!channel.includes(':')) return null;
@@ -116,7 +116,7 @@ export function groupChannelKeyframesByFrame(
 }
 
 /**
- * M7: snapshot an evaluated transform into the 6 canonical channel values at
+ * Snapshot an evaluated transform into the 6 canonical channel values at
  * the current frame (used by the Outliner "Add Composite Keyframe" button —
  * same data the keyframe add command writes).
  */
@@ -210,7 +210,7 @@ export const applyChannelStaticValue = (
   }
 };
 
-/** K1 — the arm value: the property's value at a frame, read from the SAME
+/** The arm value: the property's value at a frame, read from the SAME
  * authored-local pose the aggregate `+` captures (finding F safe) and the
  * part fields the trim/mask-offset channels are authored in. */
 export const channelArmValue = (
@@ -218,7 +218,7 @@ export const channelArmValue = (
   authored: Transform,
   part: CharacterPart,
 ): number => {
-  // K3 — a per-mask scalar arms from its own mask's authored static value.
+  // A per-mask scalar arms from its own mask's authored static value.
   const maskScalar = asMaskScalarChannel(channel);
   if (maskScalar) {
     const [maskId, property] = maskScalar.split(':') as [string, 'opacity' | 'feather' | 'expansion'];

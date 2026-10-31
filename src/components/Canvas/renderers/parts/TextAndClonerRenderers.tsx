@@ -32,7 +32,7 @@ export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, current
       stroke: textStroke,
       strokeOpacity: paint.strokeOpacity,
       strokeWidth: paint.strokeWidth,
-      // C10 — an authored outline scales with the layer and the view; only the
+      // An authored outline scales with the layer and the view; only the
       // selection highlight (outline switched off) stays screen-constant.
       ...(appearance.strokeEnabled ? {} : { vectorEffect: 'non-scaling-stroke' as const }),
     };

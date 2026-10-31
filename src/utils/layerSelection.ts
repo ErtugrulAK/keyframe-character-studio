@@ -6,7 +6,7 @@
  * which layer ends up primary. The layer array's own order decides the primary
  * layer (its last member), exactly as the outliner presents it.
  *
- * C4 — "all" is everything the canvas can pick: locked layers (`lockedIds`)
+ * "all" is everything the canvas can pick: locked layers (`lockedIds`)
  * are left out, as After Effects leaves locked layers out of a selection.
  */
 interface LayerSelectionSetters {

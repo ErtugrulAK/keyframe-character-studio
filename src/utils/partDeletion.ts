@@ -147,7 +147,7 @@ export interface DeletionDependent {
 }
 
 /**
- * C2 — the layers whose active matte reads a layer this deletion removes and
+ * The layers whose active matte reads a layer this deletion removes and
  * that themselves survive it. Deletion never rewrites them: their relationship
  * stays as authored and reports a missing source until the source is restored
  * (Undo) or replaced by the user. The caller shows these BEFORE deleting.
@@ -167,7 +167,7 @@ export const matteDependentsOfDeletion = (
 };
 
 /**
- * C5 — what a delete takes and what it keeps, named BEFORE anything changes.
+ * What a delete takes and what it keeps, named BEFORE anything changes.
  *
  * A group (and a Boolean group) is a CONTAINER: its layers are deleted with it
  * (`ownedContents`). A plain layer that other layers are parented to is a

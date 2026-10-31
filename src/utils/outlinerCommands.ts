@@ -1,5 +1,5 @@
 /**
- * C2-E — commands another surface (the context menu) sends to the layer tree.
+ * Commands another surface (the context menu) sends to the layer tree.
  * The tree owns its transient UI state (which row is being renamed); a request
  * is a window event, the same pattern as the stage's viewport commands, so no
  * UI-only state leaks into the scene context.

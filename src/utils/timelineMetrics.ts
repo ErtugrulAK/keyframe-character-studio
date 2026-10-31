@@ -1,5 +1,5 @@
 /**
- * M5 — Timeline metric helpers (pure, testable).
+ * Timeline metric helpers (pure, testable).
  *
  * Extracted from SequencerTimeline so the timeline-length (maxFrame) and
  * bezier-target resolution can be regression-tested without rendering the
@@ -133,7 +133,7 @@ export function resolveChannelKeyframeFrames(
   activeTemplateId: string,
   basePose?: Partial<Transform>,
 ): number[] {
-  // K3 — per-mask channels read their own stores; the projection behind the
+  // Per-mask channels read their own stores; the projection behind the
   // transform channels stays exactly as it was.
   const keyframes = channel.includes(':')
     ? ((channel.endsWith(':path')
@@ -144,7 +144,7 @@ export function resolveChannelKeyframeFrames(
 }
 
 /**
- * R3-07 — the frames a layer's animation occupies in one template, ascending
+ * The frames a layer's animation occupies in one template, ascending
  * and deduplicated.
  *
  * The read is exactly what the aggregate layer row DRAWS, so a frame the user
@@ -182,7 +182,7 @@ export function resolveLayerKeyframeFrames(
 }
 
 /**
- * R4-08 — the visible interpolation connector of one lane, as SEGMENTS.
+ * The visible interpolation connector of one lane, as SEGMENTS.
  *
  * Each segment spans the gap between two neighbouring keyframes and stops
  * `glyphGapPx` short of the keyframe at either end, so the line can never be
@@ -206,12 +206,12 @@ export function resolveConnectorSegments(
 }
 
 /**
- * R3-07 — the nearest keyframe frame strictly BEFORE (previous) or AFTER
+ * The nearest keyframe frame strictly BEFORE (previous) or AFTER
  * (next) `frame`. Null when the layer has no keyframe on that side, so the
  * control disables itself instead of jumping to a frame the layer never
  * animates. Pure navigation: this only ever resolves a frame number.
  *
- * R4-05 — the ONE policy every keyframe navigation control obeys (the per-layer
+ * The ONE policy every keyframe navigation control obeys (the per-layer
  * pair and the per-property pairs), so no control can promise a jump it cannot
  * make:
  *   - 0 keys:      both directions are null (both controls disabled).

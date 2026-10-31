@@ -10,7 +10,7 @@ import { InlineRename } from '../Shared/InlineRename';
 
 interface TrackOutlinerRowProps {
   track: Track;
-  /** WP-05: the layer's derived display ordinal (shared with the Outliner). */
+  /** The layer's derived display ordinal (shared with the Outliner). */
   ordinal?: number;
   /** Total layer count, for the ordinal's description. */
   layerCount?: number;
@@ -36,14 +36,14 @@ interface TrackOutlinerRowProps {
   onAddChannelKeyframe: (trackId: string, channel: AnimationChannel, partId: string) => void;
   /** K1 (D2) — arm an unanimated property (C10: its "+"), or ask to remove all its keys (C10: the row's menu). */
   onToggleChannelAnimation: (trackId: string, channel: AnimationChannel) => void;
-  /** R3-07 — moves the playhead to a frame. Navigation only: never a document write. */
+  /** Moves the playhead to a frame. Navigation only: never a document write. */
   onJumpToFrame: (frame: number) => void;
   isGroupExpanded: (key: string, defaultVal?: boolean) => boolean;
   onToggleSubGroup: (key: string, defaultVal?: boolean) => void;
 }
 
 /**
- * R3-05 — the tree label of a channel is its own name inside a named parent:
+ * The tree label of a channel is its own name inside a named parent:
  * the hierarchy reads Layer > Transform > { Position > {X, Y}, Rotation,
  * Scale > {X, Y}, Opacity } and Layer > Trim Path > {Start, End, Offset}. The
  * full channel name stays on the row's own add button and on the lane diamonds,
@@ -59,7 +59,7 @@ const TREE_LABEL: Partial<Record<TrackChannel, string>> = {
   trimPathOffset: 'Offset',
 };
 
-/** C7 — a mask property row reads like other motion tools: Path, Feather, Opacity, Expansion. */
+/** A mask property row reads like other motion tools: Path, Feather, Opacity, Expansion. */
 const MASK_PROPERTY_LABEL: Record<string, string> = {
   path: 'Path',
   feather: 'Feather',
@@ -126,7 +126,7 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
   // `resolveTrackChannels`). Navigation reads exactly what the rows draw.
   const basePose = resolveAuthoredBasePose(parts, track.partId);
   const isTrackExpanded = track.expanded === true;
-  // C10 — a property row's right-click menu (only for an animated property).
+  // A property row's right-click menu (only for an animated property).
   const [channelMenu, setChannelMenu] = useState<{ channel: AnimationChannel; label: string; x: number; y: number } | null>(null);
   const channelMenuRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -143,12 +143,12 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
       window.removeEventListener('keydown', close);
     };
   }, [channelMenu]);
-  // K3 / C7 — the layer's masks name their property groups.
+  // The layer's masks name their property groups.
   const owningPart = parts.find((p) => p.id === track.partId);
   const partMasks = owningPart?.masks ?? [];
 
   /**
-   * R3-07 — the layer's own keyframe endpoints. Both endpoints are resolved from
+   * The layer's own keyframe endpoints. Both endpoints are resolved from
    * the SAME projection the lane diamonds are painted from, so the navigation can
    * neither skip a visible keyframe nor stop on a frame the layer does not animate.
    */
@@ -179,7 +179,7 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
     const storeKeys = channelKeysFor(ch);
     const chKfs = filterByTemplate ? storeKeys.filter((k) => (k.templateId || 'Sequence') === activeTmpl) : storeKeys;
     /*
-     * R4-05 — the property's OWN endpoints, resolved from the same channel
+     * The property's OWN endpoints, resolved from the same channel
      * projection the property's lane diamonds are painted from: the arrows can
      * neither skip a key this property holds nor stop on a frame that belongs to
      * a sibling channel. Same policy as the layer pair (see
@@ -199,7 +199,7 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
         data-animation-state={animationState}
         style={{ height: CHANNEL_ROW_HEIGHT }}
         onContextMenu={(event) => {
-          // C10 — "Remove all keyframes" replaces the stopwatch's disarm.
+          // "Remove all keyframes" replaces the stopwatch's disarm.
           event.preventDefault();
           event.stopPropagation();
           setChannelMenu(animationState === 'off' ? null : { channel: ch, label: meta.label, x: event.clientX, y: event.clientY });
@@ -496,7 +496,7 @@ const collapsedRowNavigation = (props: TrackOutlinerRowProps): string => {
 };
 
 /**
- * C3 — a playhead frame re-renders only what shows the frame. Every prop is
+ * A playhead frame re-renders only what shows the frame. Every prop is
  * compared by identity (the parent passes stable actions that read the latest
  * handlers at call time), except the frame: an expanded row shows per-channel
  * state at the frame, a collapsed one only its previous/next keyframe

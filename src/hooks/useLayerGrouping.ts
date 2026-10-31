@@ -86,7 +86,7 @@ export const createLayerGroupingActions = ({
       showToast(outcome.reason, 'error');
       return;
     }
-    // C4 — refused whole when it would change a locked layer (nothing written).
+    // Refused whole when it would change a locked layer (nothing written).
     const lockRefusal = lockedOutcomeRefusal(characterParts, tracks, outcome.parts, outcome.tracks);
     if (lockRefusal) {
       showToast(lockRefusal, 'error');
@@ -110,7 +110,7 @@ export const createLayerGroupingActions = ({
       showToast(outcome.reason, 'error');
       return;
     }
-    // C4 — refused whole when it would change a locked layer (nothing written).
+    // Refused whole when it would change a locked layer (nothing written).
     const lockRefusal = lockedOutcomeRefusal(characterParts, tracks, outcome.parts, outcome.tracks);
     if (lockRefusal) {
       showToast(lockRefusal, 'error');

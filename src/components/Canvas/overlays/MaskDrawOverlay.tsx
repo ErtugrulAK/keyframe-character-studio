@@ -44,30 +44,30 @@ interface MaskDrawOverlayProps {
   onCommit: (path: BezierPath) => void;
   /** Reports a degenerate attempt (nothing was created). */
   onDegenerate: (message: string) => void;
-  /** C2: an open pen draft claims Undo/Redo (null releases it). */
+  /** An open pen draft claims Undo/Redo (null releases it). */
   registerDraftHistory?: (owner: DraftHistoryOwner | null) => void;
-  /** C2: the pen draft's state for the visible Finish control (null: no draft). */
+  /** The pen draft's state for the visible Finish control (null: no draft). */
   onPenDraftChange?: (state: MaskPenDraftState | null) => void;
   /**
-   * C5 — the session ended (Esc, Cancel, another selection or mode) while the
+   * The session ended (Esc, Cancel, another selection or mode) while the
    * pen draft still held points: they were not committed, so the user is told.
    */
   onDiscardDraft?: (pointCount: number) => void;
 }
 
 /**
- * WP-03 — drawing a NEW mask on the owner layer. Points are converted into the
+ * Drawing a NEW mask on the owner layer. Points are converted into the
  * owner's normalized mask space through the same frozen map the editor and
  * renderer use, so a rectangle is layer-aligned and the committed path draws
  * exactly where it was previewed. Nothing is written until commit; the draft
  * is transient, so Escape (handled by the editor's Escape chain) leaves no
  * trace.
  *
- * C6 — the mask Pen follows the shape Pen: a click is a corner point, a
+ * The mask Pen follows the shape Pen: a click is a corner point, a
  * press-and-drag is ONE smooth point whose tangent follows the pointer, and
  * "place + shape its tangent" is one draft undo step.
  *
- * C2 — the pen draft keeps its own undo/redo (one step per point) and owns the
+ * The pen draft keeps its own undo/redo (one step per point) and owns the
  * editor's Undo/Redo while it is open; the first point shows a close target on
  * hover and closes on click; Finish is also a visible control.
  */
@@ -138,7 +138,7 @@ export const MaskDrawOverlay: React.FC<MaskDrawOverlayProps> = ({
     future: current.future.slice(0, -1),
   })), []);
 
-  // C5 — an uncommitted pen draft is never dropped silently: when the overlay
+  // An uncommitted pen draft is never dropped silently: when the overlay
   // goes away (the session ended) with points still open, the user is told.
   const committedRef = useRef(false);
   const openPointsRef = useRef(0);

@@ -38,7 +38,7 @@ interface InteractiveCubicBezierEditorProps {
 const clampControlPoint = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));
 
-/** C12 — the curve graph's size and inner padding (drawing and dragging share them). */
+/** The curve graph's size and inner padding (drawing and dragging share them). */
 const GRAPH = { width: 640, height: 300, padX: 44, padY: 30 } as const;
 /** The graph's value range: the 0..1 unit box plus room to overshoot (-1..2). */
 const Y_MIN = -1;
@@ -173,7 +173,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
     onChange([newP1.x, newP1.y, newP2.x, newP2.y]);
   }, [onChange]);
 
-  // C10 — paste easing code from elsewhere (CSS cubic-bezier, an array, four
+  // Paste easing code from elsewhere (CSS cubic-bezier, an array, four
   // numbers or a CSS keyword); a value the curve cannot take says why.
   const [pasteText, setPasteText] = useState('');
   const [pasteError, setPasteError] = useState<string | null>(null);
@@ -247,7 +247,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
   };
 
   /**
-   * C12 — the curve graph: the 0..1 unit box with a quiet grid and the linear
+   * The curve graph: the 0..1 unit box with a quiet grid and the linear
    * diagonal, the overshoot room above and below it (-1..2) shaded instead of
    * labelled, and two handles without captions (their values are the fields
    * under the graph).

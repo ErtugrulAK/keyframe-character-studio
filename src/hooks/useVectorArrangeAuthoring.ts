@@ -106,7 +106,7 @@ export const createVectorArrangeActions = ({
     // A command that would not move anything writes nothing at all: no empty
     // history entry and no keyframe on a property that did not change.
     if (entries.length === 0) return;
-    // C4 — every target is written or none: a locked one refuses the command.
+    // Every target is written or none: a locked one refuses the command.
     const lockRefusal = lockedLayersRefusal(characterParts, tracks, entries.map(([id]) => id));
     if (lockRefusal) {
       showToast?.(lockRefusal, 'error');

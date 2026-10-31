@@ -24,7 +24,7 @@ interface TrackLaneProps {
   totalFrames: number;
   activeTemplateId: string | null;
   isGroupExpanded: (key: string, defaultVal?: boolean) => boolean;
-  /** C7 — the layer's property groups (masks, Trim Paths), the same context the property tree reads. */
+  /** The layer's property groups (masks, Trim Paths), the same context the property tree reads. */
   laneContext?: LaneContext;
   /** Replace the selection with this one key (null clears it). */
   onSelectKeyframe: (id: string | null) => void;
@@ -161,7 +161,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
 }) => {
   const isTrackExpanded = track.expanded === true;
 
-  // M27 — minimal keyframe context menu (right-click on any keyframe).
+  // Minimal keyframe context menu (right-click on any keyframe).
   // The menu exposes "Duplicate Keyframes" (whole frame-group, 27A helper)
   // next to the existing Delete action. Clicking outside closes it.
   const [kfMenu, setKfMenu] = useState<{
@@ -189,7 +189,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
     setKfMenu({ trackId: track.id, frame, x: e.clientX, y: e.clientY, onDelete });
   };
 
-  // M28 — paste menu on an EMPTY timeline location of this lane (no
+  // Paste menu on an EMPTY timeline location of this lane (no
   // keyframe): target frame = the exact right-clicked frame (28B passes the
   // existing mouse→frame conversion from SequencerTimeline; no reimplemented
   // math here). Only offered when the timeline keyframe clipboard holds data.
@@ -214,7 +214,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
   };
 
   const activeTmpl = activeTemplateId || 'Sequence';
-  // M6/R3-10: ONE read truth. The layer row and the channel lanes are both
+  // ONE read truth. The layer row and the channel lanes are both
   // projections of the keyframes the evaluator resolves (`resolveTrackChannels`),
   // so no store — canonical or legacy — can show on one row and hide on another.
   const resolvedChannels = resolveTrackChannels(track, basePose);
@@ -233,7 +233,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
    * browser fires afterwards must not collapse that set to the key under the
    * pointer. A press that did not travel is a click and selects as it always has.
    *
-   * R5-05: the frame cursor travels with the same decision. What a click reveals
+   * The frame cursor travels with the same decision. What a click reveals
    * (the frame of the key it landed on) is a READ of the key under the pointer,
    * and after a drag that key is somewhere else: following it would move the
    * playhead to wherever the drag released, so the whole reveal is suppressed
@@ -270,7 +270,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
     e.preventDefault();
     onDeleteKeyframeGroup(track.id, frame);
   };
-  /** C7 — the frames a closed property group holds keys on (its header lane's summary ticks). */
+  /** The frames a closed property group holds keys on (its header lane's summary ticks). */
   const groupSummaryFrames = (channels: AnimationChannel[]): number[] => {
     const frames = new Set<number>();
     for (const ch of channels) {
@@ -495,7 +495,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
           {resolveLaneRows(track, isGroupExpanded, laneContext).map((row) => {
             if (row.kind === 'track') return null;
             if (row.kind === 'header') {
-              // C7 — a closed group still shows WHEN its members are keyed:
+              // A closed group still shows WHEN its members are keyed:
               // small summary ticks (not selectable; open the group to edit them).
               const closed = !isGroupExpanded(`${track.id}_${row.group}`, row.defaultExpanded);
               const summaryFrames = closed ? groupSummaryFrames(row.channels) : [];
@@ -610,7 +610,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
 };
 
 /**
- * C3 — a lane draws no playhead state, so it re-renders only when its own
+ * A lane draws no playhead state, so it re-renders only when its own
  * props change; the parent passes stable actions and a memoized base pose.
  */
 export const TrackLane = React.memo(TrackLaneView);

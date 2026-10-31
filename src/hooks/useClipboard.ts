@@ -254,14 +254,14 @@ export const useClipboard = ({
   );
 
   /**
-   * M26 — paste the copied ANIMATION onto an EXISTING selected part.
+   * Paste the copied ANIMATION onto an EXISTING selected part.
    * The target part is NOT replaced: only animation data is transferred
    * (Track.channels + legacy keyframes + IN/OUT presets + durations). The
    * target keeps its id/name/transform/matte/parent/geometry/media and its
    * track keeps its id + visible/locked metadata. Fresh keyframe ids are
    * generated; custom preset IDs are referenced, never duplicated.
    *
-   * C8 — the transfer is RELATIVE to the target's own base transform: the
+   * The transfer is RELATIVE to the target's own base transform: the
    * target keeps its place and proportions and performs the source's motion
    * (see `cloneAnimationOntoTarget`). Exact values stay the job of the
    * timeline's keyframe copy/paste.

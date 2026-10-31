@@ -19,7 +19,7 @@ import { makeEmptyChannels } from './defaults';
  * M8 SAFE: copies EXISTING Track.channels/keyframes — no new channel type,
  * no evaluateFrame/playback/serialization change.
  *
- * C8 — RELATIVE transfer. With `options.targetBase` (the target's own base
+ * RELATIVE transfer. With `options.targetBase` (the target's own base
  * transform) the MOTION is transferred, not the source's pose: the target stays
  * where it is and keeps its proportions.
  *   - x, y, rotation: target base + (key − source base)

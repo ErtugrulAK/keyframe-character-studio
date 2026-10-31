@@ -58,7 +58,7 @@ export const usePartPropertyAuthoring = (): PartPropertyAuthoring => {
   };
 
   /**
-   * WP-01: the mask fields display the ACTIVE sequence's evaluated masks, so an
+   * The mask fields display the ACTIVE sequence's evaluated masks, so an
    * edit is resolved against that same evaluation. Only a scalar the user
    * CHANGED is written: to its channel at the playhead when the channel is
    * animated in the active sequence (an exact key keeps its metadata, a

@@ -161,7 +161,7 @@ function applyBuiltin(id: string, eased: number, mode: 'in' | 'out'): DeltaResul
     case 'slide-right': return { x: -300 * (1 - eased) * sign, y: 0, rot: 0, sx: 1, sy: 1, opacity: eased };
     case 'slide-up':    return { x: 0, y: 300 * (1 - eased) * sign, rot: 0, sx: 1, sy: 1, opacity: eased };
     case 'slide-down':  return { x: 0, y: -300 * (1 - eased) * sign, rot: 0, sx: 1, sy: 1, opacity: eased };
-    // M24 — builtin COMBINATION presets (Option A: new IDs, same switch).
+    // Builtin COMBINATION presets (Option A: new IDs, same switch).
     // Genuinely NEW behavior only: every existing builtin already carries
     // opacity=eased, so "fade+slide" ≡ slide and "fade+scale" ≡ pop — those
     // are intentionally NOT added (discovery finding). Combinations combine

@@ -30,7 +30,7 @@ const fnv1a = (text: string): string => {
 };
 
 /**
- * C12 — React keys for one layer's ordered mask stack. Each step after the
+ * React keys for one layer's ordered mask stack. Each step after the
  * first draws the previous step through `mask="url(#previous)"`, and Chromium
  * does not repaint a layer when only such a NESTED mask changes: editing the
  * first of two masks kept painting its old shape until the editor re-mounted.
@@ -51,7 +51,7 @@ const layerMaskId = (partId: string, maskId: string): string => `kcs-layer-mask-
 export const layerMaskFilterId = (maskId: string): string => `kcs-layer-mask-filter-${maskId}`;
 
 /**
- * WP-01: the mask IDs a track still animates. Channel keys are
+ * The mask IDs a track still animates. Channel keys are
  * `${maskId}:${property}`, so the ID is everything before the LAST colon —
  * an imported ID that itself contains a colon stays intact.
  */
@@ -63,7 +63,7 @@ export const layerMaskIdsReferencedByTrack = (
 };
 
 /**
- * WP-01: a fresh `mask-N` ID for a new mask on one layer. It never repeats an
+ * A fresh `mask-N` ID for a new mask on one layer. It never repeats an
  * ID the layer's masks hold (an imported `mask-2` stays unique) nor one its
  * track still animates (a deleted mask's channels are not inherited). Existing
  * IDs are never renamed.

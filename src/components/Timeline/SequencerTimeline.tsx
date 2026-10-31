@@ -75,7 +75,7 @@ interface KeyframePressArm {
   originClientX: number;
   /** The element the press landed on: it keeps the pointer captured while dragging. */
   captureTarget: Element | null;
-  /** K2: the pressed diamond's owner track (the duplicate lands there). */
+  /** The pressed diamond's owner track (the duplicate lands there). */
   trackId: string;
   /** Alt at press time arms the duplicate gesture once travel crosses the threshold. */
   altKey: boolean;
@@ -90,10 +90,10 @@ interface KeyframeDrag {
   expandFrameGroups: boolean;
   /** The pointer that owns the drag; -1 when the event carried no identity. */
   pointerId: number;
-  /** K2: 'duplicate' copies the source group to `appliedFrame`; source unmoved.
+  /** 'duplicate' copies the source group to `appliedFrame`; source unmoved.
    *  C10: 'stretch' rescales the selection in time about its other end. */
   mode: 'move' | 'duplicate' | 'stretch';
-  /** C10 — the stretch session ('stretch' mode only). */
+  /** The stretch session ('stretch' mode only). */
   stretch?: KeyframeStretchSession;
   /** The track the copy lands on (duplicate) — the pressed diamond's owner. */
   trackId: string;
@@ -162,7 +162,7 @@ export const SequencerTimeline: React.FC = () => {
     deleteMotionTemplate,
     updateMotionTemplateDuration,
   } = useAnimator();
-  // WP-05: the derived display ordinal, the same projection the Outliner shows.
+  // The derived display ordinal, the same projection the Outliner shows.
   const layerOrdinals = useMemo(() => projectLayerOrdinals(characterParts), [characterParts]);
   // Sequencer Tree Modal Toggle State & Inline Sequence Rename
   const [isSeqTreeOpen, setIsSeqTreeOpen] = useState<boolean>(false);
@@ -229,7 +229,7 @@ export const SequencerTimeline: React.FC = () => {
   const timelineBodyRef = useRef<HTMLDivElement>(null);
   const outlinerRef = useRef<HTMLDivElement>(null);
 
-  // M28 — timeline-LOCAL keyframe clipboard (not persisted; not the part
+  // Timeline-LOCAL keyframe clipboard (not persisted; not the part
   // clipboard; survives track/part/frame changes until replaced).
   const [kfClipboard, setKfClipboard] = useState<KeyframeCopyPayload | null>(null);
   const handleCopyKeyframes = useCallback(
@@ -449,7 +449,7 @@ export const SequencerTimeline: React.FC = () => {
       event.preventDefault();
       endMarquee(true);
     };
-    // C5 — edge auto-scroll: while the pointer rests at (or beyond) an edge of
+    // Edge auto-scroll: while the pointer rests at (or beyond) an edge of
     // the lane viewport, the grid scrolls on a gesture-scoped timer (a UI
     // gesture helper, not a playback clock) and the box grows with it.
     const autoScroll = window.setInterval(() => {
@@ -478,7 +478,7 @@ export const SequencerTimeline: React.FC = () => {
   }, [isMarqueeActive, updateMarquee, endMarquee]);
 
   const handleCropToContent = () => {
-    // M5: timeline length accounts for BOTH legacy keyframes and canonical
+    // Timeline length accounts for BOTH legacy keyframes and canonical
     // channel keyframes (max across all templates — same behavior as before,
     // now via the pure, tested computeMaxFrame helper).
     const maxFrame = computeMaxFrame(tracks);
@@ -560,7 +560,7 @@ export const SequencerTimeline: React.FC = () => {
     [totalFrames, setCurrentFrame]
   );
 
-  // K2 — duplicate-mode drop frame: RAW, no clamp. Clamping would turn a
+  // Duplicate-mode drop frame: RAW, no clamp. Clamping would turn a
   // drop past the timeline edge into a legal-looking frame; D1 demands a
   // refusal with one warning instead of a silent relocation.
   const getDuplicateDropFrame = useCallback(
@@ -671,7 +671,7 @@ export const SequencerTimeline: React.FC = () => {
         endTimelineGesture();
         return;
       }
-      // R3-04: ONE drag gesture moves the WHOLE captured set by the pointer's
+      // ONE drag gesture moves the WHOLE captured set by the pointer's
       // frame delta. `getFrameFromMouse` clamps to [0, totalFrames], the
       // mutator clamps again and stops at the first frame it would overwrite,
       // and `appliedFrame` advances by what actually moved — so a clamped drag
@@ -700,7 +700,7 @@ export const SequencerTimeline: React.FC = () => {
     // travel commits as ONE history entry.
     startBatchInteraction();
     if (press.pointerId >= 0) press.captureTarget?.setPointerCapture?.(press.pointerId);
-    // C10 — Alt on the first or last key of a multi-frame selection stretches
+    // Alt on the first or last key of a multi-frame selection stretches
     // the selection in time (After Effects); Alt anywhere else duplicates (K2).
     const stretch = press.altKey && press.ids.length > 1
       ? beginKeyframeStretch(press.ids, press.expandFrameGroups, press.anchorFrame)
@@ -720,7 +720,7 @@ export const SequencerTimeline: React.FC = () => {
       return;
     }
     if (press.altKey) {
-      // K2: the travel arms a duplicate, never a move — the source stays.
+      // The travel arms a duplicate, never a move — the source stays.
       const target = getDuplicateDropFrame(e.clientX);
       setDuplicatePreview(canDropDuplicate(press.trackId, press.anchorFrame, target) ? 'valid' : 'blocked');
       keyframeDragRef.current = {
@@ -777,7 +777,7 @@ export const SequencerTimeline: React.FC = () => {
     };
   }, []);
 
-  // K2/D1: Escape aborts an in-flight duplicate BEFORE any commit — no copy,
+  // Escape aborts an in-flight duplicate BEFORE any commit — no copy,
   // no toast, preview cleared. A plain move drag is deliberately untouched
   // (its semantics predate K2); neutralizing `appliedFrame` makes the
   // release path take the silent neutral-drop branch.
@@ -802,13 +802,13 @@ export const SequencerTimeline: React.FC = () => {
    * other panel size in this editor, which keeps no layout persistence
    * authority of its own.
    *
-   * R5-03: `edgeHeight` is where the panel's edge actually IS right now — the
+   * `edgeHeight` is where the panel's edge actually IS right now — the
    * authored height while expanded, the eased value while collapsing or
    * expanding, the collapsed strip while collapsed. Every write of the authored
    * height writes it too, so it can never disagree with what a drag or a window
    * clamp asked for.
    */
-  // C4 — session UI memory: the opening policy (`resolveOpeningTimelineHeight`,
+  // Session UI memory: the opening policy (`resolveOpeningTimelineHeight`,
   // `shouldOpenTimelineCollapsed`) applies to the session's first mount only;
   // after that the user's height, collapse and column width win, also across
   // an Edit ⇄ Broadcast round trip (the panel unmounts in Broadcast).
@@ -864,7 +864,7 @@ export const SequencerTimeline: React.FC = () => {
       return true;
     };
     window.addEventListener('resize', handleWindowResize);
-    // C2 — the same clamp also applies to the window the editor OPENS in (a
+    // The same clamp also applies to the window the editor OPENS in (a
     // short or 200 %-zoomed window), not only to later resizes; otherwise the
     // default height could leave the stage with almost no room. Deferred one
     // microtask so the synchronous layout commit does not run inside the effect.
@@ -912,7 +912,7 @@ export const SequencerTimeline: React.FC = () => {
   };
 
   /**
-   * R5-03 — collapse and expand EASE the panel's edge, and the camera is
+   * Collapse and expand EASE the panel's edge, and the camera is
    * corrected in the SAME task as every frame's height write.
    *
    * The ease itself is the shared workspace authority's (`createFrameEase`), and
@@ -930,7 +930,7 @@ export const SequencerTimeline: React.FC = () => {
 
   const animateTimelineEdge = useCallback((to: number) => {
     const ease = edgeEaseRef.current ?? (edgeEaseRef.current = createFrameEase(writeEdgeHeight, writeEdgeHeight));
-    // C8 — reduced motion moves the edge in one step, like the side docks.
+    // Reduced motion moves the edge in one step, like the side docks.
     if (prefersReducedMotion()) {
       ease.cancel();
       writeEdgeHeight(to);
@@ -1026,7 +1026,7 @@ export const SequencerTimeline: React.FC = () => {
       armChannel(trackId, channel);
       return;
     }
-    // K3 — the count and the label come from the channel's OWN store and the
+    // The count and the label come from the channel's OWN store and the
     // mask's OWN name, the same reads the row and the lane paint from.
     const store = (channel.includes(':')
       ? (channel.endsWith(':path') ? track.maskPathChannels : track.maskChannels)
@@ -1089,7 +1089,7 @@ export const SequencerTimeline: React.FC = () => {
   };
 
   /**
-   * C3 — the timeline rows and lanes are memoized: a playhead frame re-renders
+   * The timeline rows and lanes are memoized: a playhead frame re-renders
    * neither a lane nor a collapsed layer row (measured as the largest per-frame
    * cost of playback and scrub on a heavy scene). Their actions are ONE stable
    * bag that reads the latest handlers at call time, so a row that skipped a
@@ -1151,14 +1151,14 @@ export const SequencerTimeline: React.FC = () => {
     () => new Map(tracks.map((track) => [track.partId, resolveAuthoredBasePose(characterParts, track.partId)])),
     [characterParts, tracks],
   );
-  /** C7 — which property groups each layer has (masks, Trim Paths): one source for tree, lanes and marquee. */
+  /** Which property groups each layer has (masks, Trim Paths): one source for tree, lanes and marquee. */
   const laneContextByPart = useMemo(
     () => new Map<string, LaneContext>(characterParts.map((part) => [part.id, laneContextOf(part)])),
     [characterParts],
   );
 
   /*
-   * C4 — a long layer list mounts only the tracks near its viewport, in BOTH
+   * A long layer list mounts only the tracks near its viewport, in BOTH
    * columns (layer rows and lanes share one window and one set of spacers, so
    * they stay aligned). A track's height is measured from its mounted layer row
    * (it grows when the track or a channel group expands); an unmeasured one is
@@ -1503,7 +1503,7 @@ export const SequencerTimeline: React.FC = () => {
                   onToggleEditVisible={rowActions.onToggleEditVisible}
                   onToggleVisible={rowActions.onToggleVisible}
                   onToggleLock={rowActions.onToggleLock}
-                  // M7/R3-10: the ONE canonical transform keyframe group action — it
+                  // The ONE canonical transform keyframe group action — it
                   // materializes every transform channel at the frame and migrates
                   // any legacy composite animation instead of hiding it.
                   onAddKeyframe={rowActions.onAddKeyframe}
@@ -1514,7 +1514,7 @@ export const SequencerTimeline: React.FC = () => {
                   onToggleChannelAnimation={rowActions.onToggleChannelAnimation}
                   isGroupExpanded={isGroupExpanded}
                   onToggleSubGroup={rowActions.onToggleSubGroup}
-                  // R3-07 — the layer row's keyframe navigation moves the playhead
+                  // The layer row's keyframe navigation moves the playhead
                   // and nothing else: the callback writes the frame cursor only.
                   onJumpToFrame={rowActions.onJumpToFrame}
                 />

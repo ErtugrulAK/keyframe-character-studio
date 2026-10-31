@@ -7,7 +7,7 @@ import { maskPathNormalizationSize } from './layerMasks';
 import { computeProceduralDelta } from './proceduralAnimation';
 
 /**
- * WP-02 — canvas editing of an EXISTING layer mask path.
+ * Canvas editing of an EXISTING layer mask path.
  *
  * A LayerMask owns no transform of its own: moving a mask moves its path
  * vertices and their absolute tangent handles, never the owner layer. Every map

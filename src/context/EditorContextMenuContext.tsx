@@ -127,7 +127,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
       run: pasteCopiedPart,
     });
     if (hasPrimary) clipboardGroup.push({ id: 'duplicate', label: 'Duplicate', shortcut: hint('duplicate'), run: duplicateSelectedPart });
-    // C5 — the label names the delete's scope: a group takes its layers, a plain
+    // The label names the delete's scope: a group takes its layers, a plain
     // parent keeps its children.
     if (hasPrimary) clipboardGroup.push({ id: 'delete', label: selectedBooleanGroup ? 'Delete' : deletionCommandLabel(describeDeletionScope(characterParts, selectedPartIds.includes(selectedPartId as string) ? selectedPartIds : [selectedPartId as string])), shortcut: hint('delete-selection'), run: deleteSelection });
 
@@ -141,7 +141,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     // Grouping is offered only when it would actually run: an existing group is
     // ungrouped, a valid multi-selection is grouped. Both run the same shared
     // layer-grouping authority the toolbar and the Inspector use.
-    // C2-E — naming and hierarchy for one layer, through the layer tree and the
+    // Naming and hierarchy for one layer, through the layer tree and the
     // one parenting authority (refusals explain themselves in a toast).
     const primaryPart = hasPrimary ? characterParts[index] : undefined;
     const hasParent = Boolean(primaryPart && characterParts.some((part) => part.id === relationshipParentId(primaryPart)));
@@ -150,7 +150,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
       { id: 'nest-above', label: 'Nest into Layer Above', shortcut: hint('layer-nest'), run: () => { nestIntoLayerAbove(primaryPart.id); } },
       { id: 'unparent', label: 'Unparent', shortcut: hint('layer-unparent'), disabled: !hasParent, run: () => { unparentLayer(primaryPart.id); } },
     ] : [];
-    // C5 — the layer row's own switches (stage visibility, lock), reachable by
+    // The layer row's own switches (stage visibility, lock), reachable by
     // keyboard through this menu (Shift+F10) as well as by pointer on the row.
     const primaryTrack = primaryPart ? tracks.find((candidate) => candidate.partId === primaryPart.id) : undefined;
     if (single && primaryPart && primaryTrack) {
@@ -159,7 +159,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
         { id: 'toggle-lock', label: primaryTrack.locked ? 'Unlock' : 'Lock', shortcut: hint('lock-layers'), run: () => setLayersLocked([primaryPart.id], !primaryTrack.locked) },
       );
     }
-    // C6 — a basic shape can become an editable path; a refused case stays
+    // A basic shape can become an editable path; a refused case stays
     // listed, disabled, so the reason is one hover away.
     if (single && primaryPart && isConvertibleShapeType(primaryPart.type)) {
       const blocked = shapeToPathBlockReason(primaryPart, tracks) ?? (primaryTrack?.locked ? 'This layer is locked.' : null);

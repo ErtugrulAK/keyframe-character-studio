@@ -16,7 +16,7 @@ const MODE_LABEL: Record<string, string> = { alpha: 'Alpha', luminance: 'Luma', 
 const nameOf = (part: CharacterPart | undefined, fallbackId: string): string => part?.name || fallbackId;
 
 /**
- * WP-04 — the one Track Matte reading of the selected layer, in product
+ * The one Track Matte reading of the selected layer, in product
  * language: which layer it uses as its matte (V2 or legacy, through the shared
  * precedence authority), whether that source is really painted, which other
  * targets hide it, and the transient navigation between target and source.

@@ -220,7 +220,7 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
     detail: '1 unit, Shift 10. A held key is one undo step. An already animated position is keyed at the current frame.',
   },
 
-  // C2 — owned by the drawing tools while a Pen / Mask Pen draft is open, and
+  // Owned by the drawing tools while a Pen / Mask Pen draft is open, and
   // by the canvas mask editor; listed here so the reference shows them. They
   // are dispatched by their owners, never by the global handler.
   { id: 'draw-finish', label: 'Finish the drawing', category: 'create', gestures: ['enter'], scope: 'drawing', detail: 'Also: click the first point, double-click, or the banner Finish button.' },
@@ -228,13 +228,13 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
   { id: 'draw-discard', label: 'Discard the drawing', category: 'create', gestures: ['escape'], scope: 'drawing', detail: 'A second Escape leaves the tool.' },
   { id: 'mask-point-next', label: 'Select the next mask point', category: 'transform', gestures: [']'], scope: 'mask-edit', detail: 'While a mask is edited on the canvas.' },
   { id: 'mask-point-previous', label: 'Select the previous mask point', category: 'transform', gestures: ['['], scope: 'mask-edit', detail: 'While a mask is edited on the canvas.' },
-  // C4 — the canvas point list is one Tab stop; these keys act on the FOCUSED point.
+  // The canvas point list is one Tab stop; these keys act on the FOCUSED point.
   { id: 'mask-point-focus', label: 'Move keyboard focus into / out of the mask points', category: 'transform', gestures: ['tab', 'shift+tab'], scope: 'mask-edit', detail: 'The points are one Tab stop; focus follows the selected point. Tab again leaves them.' },
   { id: 'mask-point-ends', label: 'Go to the first / last mask point', category: 'transform', gestures: ['home', 'end'], scope: 'mask-edit', detail: 'With a mask point focused.' },
   { id: 'mask-point-type', label: 'Switch the selected point between Corner and Smooth', category: 'transform', gestures: ['c'], scope: 'mask-edit', detail: 'Mask and path points. A double-click on the point does the same (again: the handles retract); Alt-drag a handle to break the two handles apart or link them again, Alt-drag a point to pull out new handles. One undo step.' },
   { id: 'mask-point-nudge', label: 'Nudge the selected mask point', category: 'transform', gestures: ['arrowleft', 'arrowright', 'arrowup', 'arrowdown'], scope: 'mask-edit', detail: 'Shift moves 10 units. With no point selected the whole path moves. A held key is one undo step.' },
 
-  // C2-E — owned by the focused layer tree (its rows are focusable treeitems).
+  // Owned by the focused layer tree (its rows are focusable treeitems).
   { id: 'layer-walk', label: 'Move focus through the layer list', category: 'layers', gestures: ['arrowup', 'arrowdown'], scope: 'layers', detail: 'Home and End jump to the first and last row.' },
   { id: 'layer-expand', label: 'Expand / collapse a parent row', category: 'layers', gestures: ['arrowright', 'arrowleft'], scope: 'layers', detail: 'On a collapsed row → expands; on a child → moves focus to its parent.' },
   { id: 'layer-select', label: 'Select the focused layer', category: 'layers', gestures: ['enter'], scope: 'layers', detail: 'Ctrl/⌘ or Shift+Enter adds it to the selection.' },
@@ -244,7 +244,7 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
   { id: 'layer-nest', label: 'Nest into the layer above (set parent)', category: 'layers', gestures: ['alt+arrowright'], scope: 'layers', detail: 'Keeps the layer where it is on screen. Refused, with the reason, when an animated layer is involved.' },
   { id: 'layer-unparent', label: 'Unparent (move out one level)', category: 'layers', gestures: ['alt+arrowleft'], scope: 'layers', detail: 'Keeps the layer where it is on screen.' },
 
-  // C4 — the After Effects pair (Layer > Switches > Lock / Unlock All Layers).
+  // The After Effects pair (Layer > Switches > Lock / Unlock All Layers).
   { id: 'lock-layers', label: 'Lock / unlock the selected layers', category: 'layers', gestures: ['mod+l'], scope: 'global', detail: 'Locks every selected layer; when all of them are locked already, unlocks them. A locked layer stays visible and animated but cannot be changed.' },
   { id: 'unlock-all-layers', label: 'Unlock all layers', category: 'layers', gestures: ['mod+shift+l'], scope: 'global' },
 

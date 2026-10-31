@@ -114,7 +114,7 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
     const isFreeform = !selectedPart.isGroup && selectedPart.type === 'custom_freeform' && !selectedPart.booleanOperandIds?.length;
 
     const hasActiveMatte = Boolean(selectedPart.matte?.sourcePartId && selectedPart.matte.enabled !== false);
-    // WP-04: a Track Matte source hidden from the composition is not painted,
+    // A Track Matte source hidden from the composition is not painted,
     // so it has no body to press. While it is selected it gets an edit-only
     // move area and a label — its visibility setting is never touched.
     const isHiddenMatteSource = suppressedMatteSourceIds(characterParts).has(selectedPart.id);

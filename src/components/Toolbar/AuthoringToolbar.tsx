@@ -228,13 +228,13 @@ export const AuthoringToolbar: React.FC = () => {
   // actions carry the availability.
   const booleanReady = Boolean(selectedBooleanGroup) || booleanEligibleParts.length >= 2;
   const penActive = activeTool === 'freeform_draw';
-  // C2: a creation button shows the mode the stage is really in, and a second
+  // A creation button shows the mode the stage is really in, and a second
   // press disarms it (back to Select) — the toolbar never disagrees with the stage.
   const rectangleArmed = activeTool === 'shape_create' && pendingShapeType === 'custom_rect';
   const circleArmed = activeTool === 'shape_create' && pendingShapeType === 'custom_circle';
   const activeCanvasToolIndex = CANVAS_TOOLS.indexOf(activeTool as 'select' | 'pan');
 
-  // C3 — the narrow strip's two menus: the same commands as the wide bands.
+  // The narrow strip's two menus: the same commands as the wide bands.
   const alignMenuItems: ToolbarMenuItem[] = [
     ...[...ALIGN_EDGE_ITEMS, ...CENTER_ITEMS].map(({ id, label, note, icon }) => ({
       id: `align-${id}`,

@@ -1,5 +1,5 @@
 /**
- * C10 — reads easing code people copy from elsewhere into the four control
+ * Reads easing code people copy from elsewhere into the four control
  * values of a cubic-bezier curve:
  *   `cubic-bezier(0.25, 0.1, 0.25, 1)` (CSS), `[0.25, 0.1, 0.25, 1]`
  *   (arrays, e.g. JS/Lottie) or just `0.25, 0.1, 0.25, 1` / `.25 .1 .25 1`.

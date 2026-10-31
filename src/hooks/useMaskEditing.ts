@@ -6,7 +6,7 @@ import { applyPathOrderEditEverywhere, planPathOrderEdit, type PathOrderCommand 
 import { layerMaskPathChannel } from '../types/animator';
 
 /**
- * WP-02 — the canvas mask-editing target. Transient editor state only: it is
+ * The canvas mask-editing target. Transient editor state only: it is
  * never part of scene JSON, history snapshots or the preset library.
  */
 export interface MaskEditTarget {
@@ -14,15 +14,15 @@ export interface MaskEditTarget {
   maskId: string;
 }
 
-/** WP-03 — the shape a new mask is being drawn as on the canvas. */
+/** The shape a new mask is being drawn as on the canvas. */
 export type MaskDrawShape = 'rectangle' | 'ellipse' | 'pen';
 
-/** WP-03 — a transient mask-drawing session on one owner layer. */
+/** A transient mask-drawing session on one owner layer. */
 export interface MaskDrawSession {
   ownerPartId: string;
   shape: MaskDrawShape;
   /**
-   * WP-08 — 'effect': the drawn mask is EFFECT-ONLY (it does not cut the
+   * 'effect': the drawn mask is EFFECT-ONLY (it does not cut the
    * layer) and becomes the scope of the layer's colour correction, in the
    * same single write. Absent / 'alpha': a normal mask.
    */
@@ -133,7 +133,7 @@ export const useMaskEditing = ({
   }, []);
 
   /**
-   * WP-03 — arms drawing a NEW mask on the owner (Rectangle, Ellipse or Pen).
+   * Arms drawing a NEW mask on the owner (Rectangle, Ellipse or Pen).
    * Nothing is written until the drawing is committed.
    */
   const startMaskDraw = useCallback((ownerPartId: string, shape: MaskDrawShape, purpose: 'alpha' | 'effect' = 'alpha'): string | null => {
@@ -207,7 +207,7 @@ export const useMaskEditing = ({
   }, [maskDrawSession, maskEditTarget]);
 
   /**
-   * WP-03 — writes a topology change (a vertex added or removed) to the BASE
+   * Writes a topology change (a vertex added or removed) to the BASE
    * mask path. A path keyed in any sequence refuses with a visible reason
    * (D-08), and a refused or impossible edit writes nothing.
    */
@@ -237,7 +237,7 @@ export const useMaskEditing = ({
   }, [characterParts, setCharacterParts, showToast, tracks]);
 
   /**
-   * C4 — a mask path structure command (close/open, reverse direction, first
+   * A mask path structure command (close/open, reverse direction, first
    * point, move a point earlier/later in the path order) as ONE undo step. The
    * same id-level edit is applied to the static path and to every keyframe of
    * an animated path, so the animation keeps one point identity order; when a

@@ -31,12 +31,12 @@ interface GraphPoint {
   value: number;
 }
 
-// C8: the Motion Curve Editor gives the graph its full width (~760 px).
+// The Motion Curve Editor gives the graph its full width (~760 px).
 const WIDTH = 760;
 const HEIGHT = 190;
 const PAD = 24;
 /**
- * C8 — the left gutter holds the value labels right-aligned beside the axis,
+ * The left gutter holds the value labels right-aligned beside the axis,
  * so a label like "-300" no longer runs into the axis and the first point.
  * Only x uses it; the drag maps y alone, so the drag mapping is unchanged.
  */

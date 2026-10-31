@@ -45,7 +45,7 @@ const mapPath = (path: BezierPath, map: (p: { x: number; y: number }) => { x: nu
 });
 
 /**
- * C6 — the shape's geometry in the Inspector, stated plainly:
+ * The shape's geometry in the Inspector, stated plainly:
  * - a basic shape is PARAMETRIC (its outline comes from its type): it offers
  *   "Convert to editable path", or says why it cannot be converted;
  * - an editable path lists its points for Corner/Smooth, add/remove and

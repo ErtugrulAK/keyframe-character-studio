@@ -93,7 +93,7 @@ export interface SceneLayer {
   masks?: LayerMask[];
   /** V6 track matte relationship. */
   trackMatte?: TrackMatteV2;
-  /** WP-08 — layer effects (colour correction); present only in version 3 scenes. */
+  /** Layer effects (colour correction); present only in version 3 scenes. */
   effects?: ColorCorrectionEffect[];
   booleanGroupId?: string;
   booleanOperation?: 'union' | 'subtract' | 'intersect' | 'exclude';
@@ -128,7 +128,7 @@ export interface SceneLayer {
   shadowOffsetX?: number;
   shadowOffsetY?: number;
   borderRadius?: number;
-  /** C6 — stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
+  /** Stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
   strokeLinejoin?: 'miter' | 'round';
 
   // Content — type-dependent; only fields actually read by PartRenderer sub-renderers
@@ -272,14 +272,14 @@ export interface LayerContent {
   masks?: LayerMask[];
   /** V6 track matte relationship. */
   trackMatte?: TrackMatteV2;
-  /** WP-08 — layer effects (colour correction); present only in version 3 scenes. */
+  /** Layer effects (colour correction); present only in version 3 scenes. */
   effects?: ColorCorrectionEffect[];
   shadowColor?: string;
   shadowBlur?: number;
   shadowOffsetX?: number;
   shadowOffsetY?: number;
   borderRadius?: number;
-  /** C6 — stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
+  /** Stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
   strokeLinejoin?: 'miter' | 'round';
   trimPathEnabled?: boolean;
   trimPathStart?: number;

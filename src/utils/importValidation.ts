@@ -179,7 +179,7 @@ const REIMPORT_ACTION = 'Re-export the project from Keyframe Studio and import t
 const SUPPORTED_SCENE_VERSIONS: readonly number[] = [1, 2, 3];
 
 /**
- * N3 PR-1 — bounded numeric acceptance. These limits mirror the editor's own
+ * Bounded numeric acceptance. These limits mirror the editor's own
  * authored behaviour: the state clamps `totalFrames` into [10, 1200] and the
  * FPS sanitizer rounds to a whole rate, so accepting anything outside these
  * ranges would mean "accepted ≠ applied" — a document the boundary promised
@@ -276,7 +276,7 @@ const pathProblem = (value: unknown, path: string, owner: string, code: string):
 
 /**
  * The V6 same-layer masks; the migration dereferences `mask.path` unguarded.
- * N3 PR-2d: `mask.id` keys the channel lookup (`${id}:opacity`), the animated
+ * `mask.id` keys the channel lookup (`${id}:opacity`), the animated
  * path channel and the SVG def id (`kcs-layer-mask-<part>-<id>`), so two masks
  * of one layer sharing a present id collide their data and their defs. A mask
  * WITHOUT an id keeps the documented acceptance (C11 open decision).
@@ -474,7 +474,7 @@ const legacyPartProblem = (value: unknown, index: number, seenIds: Set<string>):
 };
 
 /**
- * N3 PR-2d: one keyframe-id register per track. `locateKeyframe` addresses a
+ * One keyframe-id register per track. `locateKeyframe` addresses a
  * keyframe by id across ALL stores of one track (legacy composite first, then
  * channels, mask channels, mask paths), so an id repeated anywhere inside a
  * track makes every timeline edit hit the first holder. Ids shared between
@@ -602,7 +602,7 @@ const trackProblem = (value: unknown, index: number, seenPartIds: Set<string>): 
   if (typeof partId !== 'string' || partId.length === 0) {
     return sceneProblem('KCS_IMPORT_INVALID_TRACK', `${path}.partId`, `Track ${index} names no layer, so its animation cannot be attached.`);
   }
-  // N3 PR-2d: the evaluator addresses tracks by partId with a first-match
+  // The evaluator addresses tracks by partId with a first-match
   // find, and the apply path DERIVES `track_<partId>` as the track id, so a
   // second track naming the same layer is never evaluated, selected or edited
   // and collides with the first on the derived id. The editor keeps one track

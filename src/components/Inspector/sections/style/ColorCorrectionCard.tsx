@@ -41,7 +41,7 @@ const DRAW_SHAPES: { shape: MaskDrawShape; label: string }[] = [
 ];
 
 /**
- * WP-08 — Inspector › Color Correction (first slice: images). One correction
+ * Inspector › Color Correction (first slice: images). One correction
  * per layer: enable/bypass, reset to neutral, the scope (whole layer or one of
  * this layer's masks — an effect-only mask can be drawn for it), brightness,
  * contrast, saturation and amount. A slider drag is ONE undo step (the

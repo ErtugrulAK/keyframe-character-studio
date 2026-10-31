@@ -11,7 +11,7 @@ interface TransformVertexEditorProps {
   coordinateSystem: SceneCoordinateSystem;
   onPartPropChange: (key: keyof CharacterPart, value: unknown) => void;
   /**
-   * C6 — writes the canonical path. The canvas draws `path` whenever it exists,
+   * Writes the canonical path. The canvas draws `path` whenever it exists,
    * so a vertex typed here must move THAT point (with its handles); writing the
    * legacy `points` alone changed nothing on screen.
    */

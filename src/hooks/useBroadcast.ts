@@ -40,7 +40,7 @@ export const useBroadcast = ({
   const changeAppMode = useCallback((mode: AppMode) => {
     if (mode !== appModeRef.current) {
       appModeRef.current = mode;
-      // C2-G — under reduced motion the stylesheet runs no enter animation, so
+      // Under reduced motion the stylesheet runs no enter animation, so
       // no `animationend` would ever lower the flag: it is not raised at all.
       const reducedMotion = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
         && window.matchMedia('(prefers-reduced-motion: reduce)').matches;

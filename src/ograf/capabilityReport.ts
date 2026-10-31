@@ -1,7 +1,7 @@
 import type { OGrafExportDiagnostic } from './types';
 
 /**
- * WP-07 — a per-layer reading of what an OGraf export would do, BEFORE the
+ * A per-layer reading of what an OGraf export would do, BEFORE the
  * user exports. It is derived only from the diagnostics the real export
  * pipeline produces (the same compile the Export command runs), so the report
  * can never promise more than the exporter delivers:

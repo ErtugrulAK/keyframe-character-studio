@@ -60,7 +60,7 @@ interface StagePartLayersProps {
   onSelect: (id: string, event: React.MouseEvent) => void;
   onStartTranslateDrag: (partId: string, e: React.MouseEvent) => void;
   /**
-   * R4-09 — the explicit drill-in of the canvas: a double-click on a layer
+   * The explicit drill-in of the canvas: a double-click on a layer
    * selects that layer instead of the group it belongs to.
    */
   onDrillIn: (partId: string) => void;
@@ -221,7 +221,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
     const stack: LayerMaskSvgDefinition[] = [];
     let previousId: string | undefined;
     for (const mask of evaluatedMasks) {
-      // WP-08 — an effect-only mask scopes an effect; it never cuts the layer.
+      // An effect-only mask scopes an effect; it never cuts the layer.
       if (isEffectOnlyMask(mask)) continue;
       const definition = buildLayerMaskDefinition(part, mask, evaluated.transform, outputOrigin);
       if (!definition) continue;
@@ -241,7 +241,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
     }
   }
 
-  // WP-08 — colour correction: per corrected layer one sRGB filter (F) and,
+  // Colour correction: per corrected layer one sRGB filter (F) and,
   // for a mask scope, a coverage mask (w) and its inverse (1 - w), both
   // luminance masks in the same world space as the layer masks. A correction
   // that resolves to anything but 'applied' (off, neutral, missing or
@@ -281,19 +281,19 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
   const matteClips = new Map<string, MatteClipPath>();
   const matteMasks = new Map<string, MatteMask>();
   const maskPathCache = new Map<string, string>(); // sourceId → pathD (shared across mask modes)
-  // M17 — world-space <linearGradient> defs, deduped by deterministic id
+  // World-space <linearGradient> defs, deduped by deterministic id
   // kcs-mg-{sourceId}-{normalizedAngle}-{mode} (mode is part of the identity:
   // alpha/luminance use different default stops).
-  // M20 — radial gradients share the same Map/dedupe; the def value is a
+  // Radial gradients share the same Map/dedupe; the def value is a
   // discriminated union (kind: 'linear' → x1/y1/x2/y2, kind: 'radial' →
   // cx/cy/r) so linear and radial variants of the same source never collide.
   const matteGradients = new Map<string, { id: string; kind: 'linear' | 'radial'; stops: MatteGradientStop[]; x1?: number; y1?: number; x2?: number; y2?: number; cx?: number; cy?: number; r?: number }>();
-  // M18/M21 — TEXT/IMAGE masks carry NO path geometry; the mask content is a
+  // TEXT/IMAGE masks carry NO path geometry; the mask content is a
   // transform-baked <text> or <image> element. The source's evaluated world
   // transform is stored per mask id (render-only, recomputed every frame —
   // never stale).
   const contentTransforms = new Map<string, WorldTransform>();
-  // M21 — nested content masks for image × gradient composition (7A): the
+  // Nested content masks for image × gradient composition (7A): the
   // image alpha rides its own <mask> def (kcs-mask-{src}-img) that the final
   // mask wraps around the gradient rect — pure SVG multiplication, no canvas.
   const imageContentMasks = new Map<string, { id: string; content: MatteImageContent; transform: WorldTransform; opacity?: number }>();
@@ -331,19 +331,19 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
     if (mode !== 'alpha' && mode !== 'luminance') continue; // TS narrowing (unreachable)
     const inverted = matte.inverted === true;
     const feather = normalizeFeather(matte.feather);
-    // M16: strength < 1 gets a deterministic -s{strength} suffix so the same
+    // Strength < 1 gets a deterministic -s{strength} suffix so the same
     // (source, mode, inverted, feather) with DIFFERENT strengths never
     // collides. strength undefined/1 = legacy behavior = full strength (1).
     const strength = normalizeStrength(matte.strength);
-    // M17: gradient (mask modes only) — the -g suffix keeps gradient variants apart.
+    // Gradient (mask modes only) — the -g suffix keeps gradient variants apart.
     const gradientAngle = matte.gradient
       ? normalizeGradientAngle(matte.gradient.angle) ?? 0
       : undefined;
-    // M14: when feathered, the mask id gets a deterministic -f{feather} suffix
+    // When feathered, the mask id gets a deterministic -f{feather} suffix
     // so the same (source, mode, inverted) with DIFFERENT feather values never
     // collides (each target's mask keeps its own blur). feather 0/undefined →
     // M13 id, byte-for-byte.
-    // M19 — the -g suffix carries the STOPS identity too (matteMaskGradientSuffix):
+    // The -g suffix carries the STOPS identity too (matteMaskGradientSuffix):
     // two targets with the same source+mode+inverted+feather+strength+angle but
     // DIFFERENT stops must never share one mask (dedupe Map key). Legacy
     // gradients (no stops) keep the byte-for-byte `-g{angle}` suffix.
@@ -351,7 +351,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
     const maskId = `${baseMaskId}${feather > 0 ? `-f${feather}` : ''}${strength < 1 ? `-s${strength}` : ''}${matteMaskGradientSuffix(matte.gradient)}`;
     if (matteMasks.has(maskId)) continue; // same (source, mode, inverted, feather, strength, gradient) already built
 
-    // M18 — TEXT source: buildMattePath stays null (text has NO path
+    // TEXT source: buildMattePath stays null (text has NO path
     // geometry). The glyphs become the mask CONTENT element; content/fonts
     // are read from the source at runtime (never persisted — sourcePartId is
     // the only persistent link).
@@ -366,7 +366,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
         strength < 1 ? strength : undefined,
       );
     } else if (source.type === 'custom_image') {
-      // M21 — IMAGE source: buildMattePath stays null (no path geometry); the
+      // IMAGE source: buildMattePath stays null (no path geometry); the
       // <image> is the mask CONTENT element (7A pixel-verified). href/dims are
       // read from the source at runtime (never persisted — sourcePartId is the
       // only persistent link).
@@ -391,17 +391,17 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
       );
     }
 
-    // M17 — build (or reuse) the world-space <linearGradient> def. The mode is
+    // Build (or reuse) the world-space <linearGradient> def. The mode is
     // part of the def identity: alpha and luminance masks use DIFFERENT
     // default stops, so the same (source, angle) across modes must NOT share
     // one def. Endpoints follow the source's evaluated world transform.
-    // M18 — TEXT sources: (a) inverted text always renders the LUMINANCE
+    // TEXT sources: (a) inverted text always renders the LUMINANCE
     // structure (4A: alpha masks ignore a second element — white rect + black
     // text, mask-type luminance), so the def key/stops follow that structure;
     // (b) the def coords are the source-LOCAL endpoints (a gradient referenced
     // from a <text> inside a transformed <g> resolves in the text's local
     // space — 4A pixel-verified) via gradientEndpointsLocal.
-    // M20 — radial gradients plug into the SAME pass: <radialGradient> with
+    // Radial gradients plug into the SAME pass: <radialGradient> with
     // the 6B-derived geometry (WORLD for shape/freeform/inverted text, LOCAL
     // for non-inverted text). Geometry is recomputed from the EVALUATED
     // transform every frame — animated sources never go stale.
@@ -466,7 +466,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
       ...(maskGradientId ? { gradientId: maskGradientId } : {}),
     });
     if (mask.text || mask.image) contentTransforms.set(maskId, sourceEl.transform);
-    // M21 — nested content mask (image alpha) for the image × gradient
+    // Nested content mask (image alpha) for the image × gradient
     // composition: only non-inverted image + gradient needs the separate def.
     // Deduped by the deterministic kcs-mask-{src}-img id (one def per source).
     if (mask.image && maskGradientId && !mask.inverted && mask.imageContentMaskId) {
@@ -527,7 +527,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
   const featherUrl = (mask: MatteMask): string | undefined =>
     (mask.feather ?? 0) > 0 ? `url(#${featherFilterId(mask.id)})` : undefined;
 
-  // M18 — the TEXT mask content: a <text> element baked through the SAME
+  // The TEXT mask content: a <text> element baked through the SAME
   // world-map spelling the app's text renderer uses (PartRenderer inner <g>,
   // via the shared affineSvgTransform: the historical
   // translate(CX+tx, CY+ty) rotate(r) scale(sx,sy) form whenever a TRS
@@ -563,7 +563,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
     );
   };
 
-  // M21 — the IMAGE mask content: an <image> element baked through the SAME
+  // The IMAGE mask content: an <image> element baked through the SAME
   // transform spelling as text (the shared affineSvgTransform)
   // and the app's MediaPartRenderer layout convention (width×height centered
   // at the local origin, preserveAspectRatio xMidYMid slice). STRENGTH
@@ -629,7 +629,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
           const auxiliary = definition.previousId && operation === 'difference'
             ? <><mask id={shapeId} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse"><path d={definition.pathD} fill="white" /></mask><mask id={inverseId} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse"><rect x={region.x} y={region.y} width={region.width} height={region.height} fill="white" /><rect x={region.x} y={region.y} width={region.width} height={region.height} fill="black" mask={`url(#${definition.previousId})`} /></mask><mask id={`${definition.id}-inverse`} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse"><rect x={region.x} y={region.y} width={region.width} height={region.height} fill="white" /><path d={definition.pathD} fill="black" /></mask></>
             : null;
-          // C12 — luminance, not alpha: a hole step paints its shape BLACK over
+          // Luminance, not alpha: a hole step paints its shape BLACK over
           // the previous stack, and in an alpha mask opaque black still shows
           // the layer (the "Cut a hole" of a second mask cut nothing). White
           // content keeps every other step identical.
@@ -767,7 +767,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
             height={region.height}
             maskUnits="userSpaceOnUse"
             maskContentUnits="userSpaceOnUse"
-            // M18/M21 — inverted TEXT/IMAGE always render the luminance
+            // Inverted TEXT/IMAGE always render the luminance
             // structure (4A decision: alpha masks ignore a second element —
             // a white rect + black text hole only works as a luminance mask;
             // 7A: an inverted IMAGE cannot be repainted black — the luminance
@@ -784,7 +784,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
                 renderTextMaskContent(mask, contentTransforms.get(mask.id)!)
               )
             ) : mask.image ? (
-              // M21 — IMAGE mask content (7A pixel-verified semantics):
+              // IMAGE mask content (7A pixel-verified semantics):
               // inverted → luminance structure: white/graduated region rect
               // BELOW the real image (dark image pixels punch the hole —
               // the image is NEVER repainted black).
@@ -846,7 +846,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
             const part = sortedParts.find((candidate) => candidate.id === el.id);
             return !hiddenMatteSources.has(el.id) && part?.booleanGroupId === booleanOperandEditingGroupId;
           }));
-        // C4 — a locked layer is drawn exactly as before but is not picked on
+        // A locked layer is drawn exactly as before but is not picked on
         // the canvas: clicks fall through to the layer beneath (edit mode only).
         const lockedIds = appMode === 'edit' ? new Set(tracks.filter((track) => track.locked).map((track) => track.partId)) : null;
         return layers.map((el) => {
@@ -883,7 +883,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
 };
 
 /**
- * C3 — rendering is a pure function of these props (no context read here), so
+ * Rendering is a pure function of these props (no context read here), so
  * the layers re-render only when one of them changes: a camera pan/zoom or a
  * dock-layout frame of the canvas does not re-evaluate and re-render every
  * part. Evaluation and SVG output are unchanged.

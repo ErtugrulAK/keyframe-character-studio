@@ -6,7 +6,7 @@ import type { MotionTemplate, ClonerConfig, ParticleConfig } from '../types/anim
 export const AUTOSAVE_STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
 /**
- * SAFE-02: the Web Lock name that serializes the cooperative autosave
+ * The Web Lock name that serializes the cooperative autosave
  * read-compare-write across same-origin tabs. Namespaced by the storage key
  * it guards so no other feature can collide into it by name.
  */

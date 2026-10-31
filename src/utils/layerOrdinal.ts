@@ -1,7 +1,7 @@
 import type { CharacterPart } from '../types/animator';
 
 /**
- * WP-05 — the DISPLAY ordinal of every authored layer: its 1-based position in
+ * The DISPLAY ordinal of every authored layer: its 1-based position in
  * the full layer list, top to bottom, exactly as the Outliner tree lays it out
  * (authored array order, each container followed depth-first by its children —
  * a group's children and a Boolean group's operands).

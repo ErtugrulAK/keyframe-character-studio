@@ -1,5 +1,5 @@
 /**
- * M2 — Legacy composite Keyframe[] → canonical channels conversion.
+ * Legacy composite Keyframe[] → canonical channels conversion.
  *
  * Pure, deterministic helper used at SceneData import time so that old files
  * (which only wrote `keyframes[]`) migrate into the canonical per-property

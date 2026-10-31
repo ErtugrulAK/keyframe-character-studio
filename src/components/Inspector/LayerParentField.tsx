@@ -12,13 +12,13 @@ interface LayerParentFieldProps {
 }
 
 /**
- * C2-E — the keyboard- and screen-reader-friendly way to set a layer's parent
+ * The keyboard- and screen-reader-friendly way to set a layer's parent
  * (the layer tree's drag and drop is the pointer way). It lists every layer the
  * part could be parented to — never itself, nothing inside it, no Boolean
  * structure — and writes through the one parenting authority, which keeps the
  * layer where it is on screen. A refusal is shown here, with its reason.
  *
- * C6 — one labelled row (label · choice · remove) and one sentence that says
+ * One labelled row (label · choice · remove) and one sentence that says
  * WHICH relation it is: membership of a GROUP (a container: the layer moves,
  * hides and is deleted with it) or a transform PARENT (the layer follows it;
  * deleting the parent keeps the layer). Track Matte is not a parent and is not

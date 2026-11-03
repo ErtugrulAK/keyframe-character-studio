@@ -713,7 +713,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
               r={g.r}
             >
               {g.stops.map((s, i) => (
-                <stop key={i} offset={`${s.offset * 100}%`} stop-color={s.color} stop-opacity={s.opacity} />
+                <stop key={i} offset={`${s.offset * 100}%`} stopColor={s.color} stopOpacity={s.opacity} />
               ))}
             </radialGradient>
           ) : (
@@ -727,7 +727,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
               y2={g.y2}
             >
               {g.stops.map((s, i) => (
-                <stop key={i} offset={`${s.offset * 100}%`} stop-color={s.color} stop-opacity={s.opacity} />
+                <stop key={i} offset={`${s.offset * 100}%`} stopColor={s.color} stopOpacity={s.opacity} />
               ))}
             </linearGradient>
           ),

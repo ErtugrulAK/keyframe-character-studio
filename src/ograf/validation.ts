@@ -552,9 +552,11 @@ function createPublicStateSchema(
   const properties: Record<string, Record<string, unknown>> = Object.create(null);
   for (const field of textFields) {
     if (isPrototypeSensitiveKey(field.id)) continue;
+    // GDD: a KCS text is one line. Text names the graphic in playout lists.
     properties[field.id] = {
       type: 'string',
-      ...(field.title ? { title: field.title } : {}),
+      gddType: 'single-line',
+      ...(field.title ? { title: field.title, label: field.title } : {}),
       ...(field.defaultValue !== undefined ? { default: field.defaultValue } : {}),
       ...(field.maxLength !== undefined ? { maxLength: field.maxLength } : {}),
     };
@@ -562,10 +564,13 @@ function createPublicStateSchema(
   const packagedImageValues = assets.filter((asset) => asset.kind === 'image').map((asset) => asset.packagedPath);
   for (const field of imageFields) {
     if (isPrototypeSensitiveKey(field.id)) continue;
+    // GDD: a choice among the packaged images; an image path does not name the graphic.
     properties[field.id] = {
       type: 'string',
       enum: field.options || packagedImageValues,
-      ...(field.title ? { title: field.title } : {}),
+      gddType: 'select',
+      hidden: true,
+      ...(field.title ? { title: field.title, label: field.title } : {}),
       ...(field.defaultValue !== undefined ? { default: field.defaultValue } : {}),
     };
   }
@@ -576,7 +581,8 @@ function createPublicStateSchema(
       format: 'color',
       gddType: 'color-rrggbb',
       pattern: '^#[0-9a-f]{6}$',
-      ...(field.title ? { title: field.title } : {}),
+      hidden: true,
+      ...(field.title ? { title: field.title, label: field.title } : {}),
       ...(field.defaultValue !== undefined ? { default: field.defaultValue.toLowerCase() } : {}),
     };
   }

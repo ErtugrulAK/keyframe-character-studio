@@ -6,7 +6,20 @@ interface TransformGizmoMetrics {
   hitRadius: number;
 }
 
-const clampGizmoValue = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
+const RESIZE_CURSORS = ['ew-resize', 'nwse-resize', 'ns-resize', 'nesw-resize'] as const;
+
+/**
+ * The double-arrow cursor nearest a handle's outward direction ON SCREEN
+ * (y grows downward). A rotated frame passes its rotated direction, so the
+ * arrow follows the frame instead of staying axis-aligned.
+ */
+export const resizeCursorFor = (dx: number, dy: number): string => {
+  if (dx === 0 && dy === 0) return RESIZE_CURSORS[0];
+  const degrees = (((Math.atan2(dy, dx) * 180) / Math.PI) % 180 + 180) % 180;
+  return RESIZE_CURSORS[Math.round(degrees / 45) % 4];
+};
+
+const clampGizmoValue =(value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 
 export const getTransformGizmoMetrics = (boundsWidth: number, boundsHeight: number, zScale: number): TransformGizmoMetrics => {
   const safeZScale = clampGizmoValue(Number.isFinite(zScale) && zScale > 0 ? zScale : 1, 0.25, 4);

@@ -271,6 +271,15 @@ function validateLayerInput(layer: SceneLayer, diagnostics: OGrafExportDiagnosti
   if (layer.trackMatte && !['alpha', 'luminance'].includes(layer.trackMatte.mode)) {
     invalidProject(diagnostics, `Track matte mode "${describeOGrafValueForDiagnostics(String(layer.trackMatte.mode))}" is not supported.`, layer, 'track-matte');
   }
+  if (layer.trackMatte) {
+    validateFiniteFields(layer.trackMatte as unknown as Record<string, unknown>, ['feather', 'strength'], diagnostics, layer, 'track-matte');
+    if (layer.trackMatte.gradient) {
+      if (layer.trackMatte.gradient.type !== undefined && !['linear', 'radial'].includes(layer.trackMatte.gradient.type)) {
+        invalidProject(diagnostics, `Track matte gradient type "${describeOGrafValueForDiagnostics(String(layer.trackMatte.gradient.type))}" is not supported.`, layer, 'track-matte');
+      }
+      validateFiniteFields(layer.trackMatte.gradient as unknown as Record<string, unknown>, ['angle'], diagnostics, layer, 'track-matte');
+    }
+  }
 }
 function validateTrackInput(
   track: unknown,
@@ -505,6 +514,20 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
     }
     if (mode !== 'clip' && matte.strength !== undefined && matte.strength !== 1) {
       diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_ALPHA_MATTE', 'ERROR', 'Legacy matte strength cannot be emitted faithfully by OGraf Export V1.', layer, 'matte'));
+    }
+  }
+  // The Track Matte's soft edge, strength and gradient are editor render
+  // parameters the export does not emit yet; refusing beats a silent hard edge.
+  const trackMatte = layer.trackMatte;
+  if (trackMatte && trackMatte.enabled !== false) {
+    if (trackMatte.feather && trackMatte.feather > 0) {
+      diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_FEATHER_MATTE', 'ERROR', 'Track matte feather cannot be emitted faithfully by OGraf Export V1.', layer, 'track-matte'));
+    }
+    if (trackMatte.gradient) {
+      diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_GRADIENT_MATTE', 'ERROR', 'Track matte gradients cannot be emitted faithfully by OGraf Export V1.', layer, 'track-matte'));
+    }
+    if (trackMatte.strength !== undefined && trackMatte.strength !== 1) {
+      diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_ALPHA_MATTE', 'ERROR', 'Track matte strength cannot be emitted faithfully by OGraf Export V1.', layer, 'track-matte'));
     }
   }
   if (layer.trackMatte && layer.trackMatte.sourceLayerId === layer.id) {

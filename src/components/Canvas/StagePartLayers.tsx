@@ -97,6 +97,9 @@ function getEffectiveMatte(part: CharacterPart): CharacterPart['matte'] {
       mode: part.trackMatte.mode,
       inverted: part.trackMatte.inverted === true,
       enabled: true,
+      feather: part.trackMatte.feather,
+      strength: part.trackMatte.strength,
+      gradient: part.trackMatte.gradient,
     };
   }
   return part.matte;

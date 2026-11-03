@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, PenLine, X } from 'lucide-react';
 import type { BezierPath, CharacterPart, LayerMask, MatteMode, PartMatte, Track } from '../../../../types/animator';
 import { maskPathTopologyLockReason } from '../../../../utils/geometry/maskPathCreation';
@@ -8,10 +8,10 @@ import { pickedTrackMatte, trackMattePickVerdict } from '../../../../utils/layer
 import { requestMaskPointsFocus } from '../../../../utils/geometry/maskPointFocus';
 import type { PathOrderCommand } from '../../../../utils/geometry/maskPathOrder';
 import type { MaskDrawShape } from '../../../../hooks/useMaskEditing';
-import { resolveMatteSource, resolveMatteMode, normalizeFeather, isMatteEligible, suppressedMatteSourceIds, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/layers/matte';
-import type { MatteGradientStop } from '../../../../utils/layers/matte';
+import { resolveMatteSource, resolveMatteMode, isMatteEligible, suppressedMatteSourceIds } from '../../../../utils/layers/matte';
 import { StyleCard } from './StyleCard';
 import { TrackMatteSummary } from './TrackMatteSummary';
+import { MatteRenderControls } from './MatteRenderControls';
 interface StyleMatteSectionProps {
   /** Opens/closes ONE undo entry around a continuous pointer gesture in this section. */
   onInteractionStart?: () => void;
@@ -124,30 +124,6 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
     onBlur: onInteractionEnd,
   };
   const matte = selectedPart.matte;
-  const authoredAngle = normalizeGradientAngle(matte?.gradient?.angle) ?? 0;
-  const angleSourceKey = `${selectedPart.id}:${String(matte?.gradient?.angle)}`;
-  const [angleDisplay, setAngleDisplay] = useState<number | null>(null);
-  const pendingAngleUpdate = useRef<{ partId: string; value: number } | null>(null);
-  const previousAngleSourceKey = useRef(angleSourceKey);
-
-  // Keep the 360° endpoint visible while the normalized authored value is
-  // transiently 0. External part/project changes still clear this local-only
-  // display so the matte object remains the sole persisted authority.
-  useEffect(() => {
-    if (angleSourceKey === previousAngleSourceKey.current) return;
-    previousAngleSourceKey.current = angleSourceKey;
-    if (
-      pendingAngleUpdate.current
-      && pendingAngleUpdate.current.partId === selectedPart.id
-      && pendingAngleUpdate.current.value === authoredAngle
-    ) {
-      pendingAngleUpdate.current = null;
-      return;
-    }
-    pendingAngleUpdate.current = null;
-    setAngleDisplay(null);
-  }, [angleSourceKey, authoredAngle, selectedPart.id]);
-
   // M15 3D: eligible = static shape geometry OR custom_freeform (points-based).
   // Self-reference still excluded. Text/image/video stay ineligible.
   const eligibleSources = characterParts.filter(
@@ -205,138 +181,12 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
     setMatte({ ...matte, inverted: matte.inverted === true ? false : true });
   };
 
-  const onChangeFeather = (value: number) => {
-    if (!matte) return;
-    // Preserve sourcePartId / mode / inverted / enabled — only feather changes
-    setMatte({ ...matte, feather: value });
-  };
-
-  const onChangeStrength = (value: number) => {
-    if (!matte) return;
-    // Preserve sourcePartId / mode / inverted / enabled / feather — only strength changes
-    setMatte({ ...matte, strength: value });
-  };
-
-  // M17 gradient: matte.gradient remains the ONLY persisted source of truth.
-  // The local endpoint display is transient and exists solely to keep 360°
-  // visually at the right edge while the callback normalizes it to 0.
-  const onToggleGradient = () => {
-    if (!matte) return;
-    pendingAngleUpdate.current = null;
-    setAngleDisplay(null);
-    if (matte.gradient) {
-      setMatte({ ...matte, gradient: undefined });
-    } else {
-      setMatte({ ...matte, gradient: { angle: 0 } });
-    }
-  };
-
-  const onChangeGradientAngle = (value: number) => {
-    if (!matte) return;
-    const nextAngle = Math.max(0, Math.min(360, value));
-    const normalizedAngle = normalizeGradientAngle(nextAngle) ?? 0;
-    pendingAngleUpdate.current = { partId: selectedPart.id, value: normalizedAngle };
-    setAngleDisplay(nextAngle);
-    // Preserve every other matte field — only the angle changes; the
-    // serialized value keeps the existing normalized 360° ≡ 0° semantics.
-    setMatte({ ...matte, gradient: { ...matte.gradient, angle: normalizedAngle } });
-  };
-
-  // Gradient TYPE (linear | radial) is derived from matte.gradient via
-  // the shared pure normalizeGradientType authority (no local state; a
-  // malformed/missing type always displays as Linear). Radial geometry is
-  // automatic (center/radius derived from source bounds) — the MVP exposes
-  // only the type switch; the angle control is hidden for radial (the
-  // renderer ignores angle for radial; a stored angle stays inert and is
-  // preserved for a Linear switch-back — no redundant radial angle UI).
-  const gradientTypeValue = normalizeGradientType(matte?.gradient?.type);
-
-  const onChangeGradientType = (value: string) => {
-    if (!matte?.gradient) return;
-    const type = normalizeGradientType(value);
-    const { type: _oldType, ...legacy } = matte.gradient;
-    // Radial → persist type: 'radial' (discriminator — stops/angle preserved).
-    // Linear → canonical LEGACY form: `type` is OMITTED (missing type ≡ linear,
-    // byte-for-byte M17/M19; explicit 'linear' would only trigger a needless
-    // schema rewrite). Every other field stays untouched.
-    setMatte({ ...matte, gradient: type === 'radial' ? { ...legacy, type: 'radial' } : legacy });
-  };
-
   const onRemove = () => setMatte(undefined);
 
   const selectValue = matte && !sourceMissing ? matte.sourcePartId : '';
   // Runtime-resolved values — legacy data without mode/inverted shows Clip / OFF
   const modeValue = matte ? resolveMatteMode(matte) ?? 'clip' : 'clip';
   const invertedValue = matte?.inverted === true;
-  // Feather: normalized for display — negative/NaN/Infinity/undefined → 0.
-  // The raw value is written back only when the user moves the slider (no
-  // automatic serialization migration of legacy data).
-  const featherValue = normalizeFeather(matte?.feather);
-  // M14 renderer applies feather ONLY on the alpha/luminance <mask> pipeline
-  // (StagePartLayers: clip mode is a pure clipPath — feGaussianBlur cannot
-  // blur a clip). The control stays visible but disabled in Clip mode so the
-  // user's value is preserved for when they switch to Alpha/Luminance.
-  const featherDisabled = modeValue === 'clip';
-  // M16 strength: 0-1 → 0-100% display. undefined/legacy → 100% (full
-  // strength); 0 is VALID (matte disabled) — never collapse with `||`.
-  // Same clip-mode rule: clipPath cannot express opacity → disabled in Clip.
-  const strengthValue = Math.round(normalizeStrength(matte?.strength) * 100);
-  const strengthDisabled = modeValue === 'clip';
-  // M17 gradient: the persisted angle is normalized for render/serialization
-  // compatibility; `angleDisplay` is a transient endpoint-preserving overlay.
-  const gradientEnabled = matte?.gradient !== undefined;
-  const gradientDisabled = modeValue === 'clip';
-  const angleValue = Math.round(angleDisplay ?? authoredAngle);
-
-  // ─── M19: multi-stop gradient editor — static paint data ─────────────────
-  // The displayed stop list is ALWAYS the 5B-normalized form (legacy {angle}
-  // without stops shows the mode defaults — the user never sees a raw/empty
-  // list). Editing ANY stop materializes `gradient.stops` explicitly (the
-  // first edit writes the defaults + the edit); a legacy {angle} gradient
-  // stays byte-for-byte untouched until the user actually edits a stop.
-  // No local state — everything derives from matte.gradient.
-  const stopsDisplayMode: 'alpha' | 'luminance' = modeValue === 'luminance' ? 'luminance' : 'alpha';
-  const displayStops = matte?.gradient
-    ? normalizeGradientStops(matte.gradient.stops, stopsDisplayMode)
-    : [];
-
-  /** Write a new explicit stops array, preserving every other matte field.
-   *  M20: the full gradient is spread (type/angle survive — a radial gradient
-   *  must keep its discriminator when the user edits stops). */
-  const writeStops = (stops: MatteGradientStop[]) => {
-    if (!matte?.gradient) return;
-    setMatte({ ...matte, gradient: { ...matte.gradient, stops } });
-  };
-
-  // Add: largest offset gap's deterministic midpoint; inherits the left
-  // stop's color/opacity (the paint character stays continuous). Max 4.
-  const onAddStop = () => {
-    if (!matte?.gradient || displayStops.length >= 4) return;
-    let bestGap = -1, bestIdx = 0;
-    for (let i = 0; i < displayStops.length - 1; i++) {
-      const gap = displayStops[i + 1].offset - displayStops[i].offset;
-      if (gap > bestGap) { bestGap = gap; bestIdx = i; }
-    }
-    const left = displayStops[bestIdx];
-    const next = displayStops[bestIdx + 1];
-    const offset = bestGap >= 0 ? (left.offset + next.offset) / 2 : 0.5;
-    const fresh = [
-      ...displayStops.slice(0, bestIdx + 1),
-      { offset, color: left.color, opacity: left.opacity },
-      ...displayStops.slice(bestIdx + 1),
-    ];
-    writeStops(fresh);
-  };
-
-  const onRemoveStop = (index: number) => {
-    if (!matte?.gradient || displayStops.length <= 2) return;
-    writeStops(displayStops.filter((_, i) => i !== index));
-  };
-
-  const onChangeStop = (index: number, patch: Partial<{ offset: number; color: string; opacity: number }>) => {
-    if (!matte?.gradient) return;
-    writeStops(displayStops.map((s, i) => (i === index ? { ...s, ...patch } : s)));
-  };
   const layerMasks = selectedPart.masks ?? [];
   const [selectedLayerMaskId, setSelectedLayerMaskId] = useState<string | undefined>(layerMasks[0]?.id);
   // While a mask is edited on the canvas, the Inspector shows that same mask:
@@ -561,8 +411,8 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
     )}
     <StyleCard title="TRACK MATTE" collapsible retainKey="track-matte" badge={trackMatte && !trackMatteSourceMissing ? (trackMatte.enabled !== false ? 'On' : 'Off') : undefined}>
       <p className="matte-section-intro" data-testid="track-matte-intro">
-        Shows this layer only where another layer is (its alpha) or as bright as it is (its luminance).
-        This is the matte to use for new work.
+        Shows this layer only where another layer is (its alpha) or as bright as it is (its luminance),
+        with an optional soft edge, strength and gradient.
       </p>
       <div className="matte-control-grid">
         <div className="matte-field matte-source-field matte-span-full">
@@ -620,21 +470,32 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
               <input type="checkbox" checked={trackMatte.sourceVisible !== false} onChange={(event) => setTrackMatte({ ...trackMatte, sourceVisible: event.target.checked })} />
               Show source
             </label>
+            <MatteRenderControls
+              partId={selectedPart.id}
+              value={trackMatte}
+              mode={trackMatte.mode}
+              onChange={(patch) => setTrackMatte({ ...trackMatte, ...patch })}
+              rangeGesture={rangeGesture}
+              compactSelectStyle={compactSelectStyle}
+            />
           </>
         )}
       </div>
     </StyleCard>
+    {/* One matte card for new work: the Track Matte carries every matte
+        setting. The legacy card shows only on a layer that already has a legacy
+        matte, so older projects stay editable and render as before. */}
+    {matte && (
     <StyleCard
       title="LEGACY CLIP MATTE"
       collapsible
-      retainKey={matte ? 'legacy-clip-matte' : 'legacy-clip-matte-unused'}
-      badge={!matte ? 'Advanced' : trackMatte && trackMatte.enabled !== false ? 'Kept · not applied' : matte.enabled === false ? 'Off' : 'In use'}
-      tone={matte ? 'default' : 'quiet'}
+      retainKey="legacy-clip-matte"
+      badge={trackMatte && trackMatte.enabled !== false ? 'Kept · not applied' : matte.enabled === false ? 'Off' : 'In use'}
     >
       <p className="matte-section-intro" data-testid="legacy-matte-intro">
-        The older matte: clips this layer by another layer&apos;s outline, or by its alpha/luminance with
-        feather, strength and gradient. It is kept so older projects look the same, and it is never converted
-        automatically. A Track Matte that is on always wins over it.
+        The older matte of this layer, kept so the project looks the same. New mattes are made in the
+        Track Matte card above, which has the same settings; a Track Matte that is on always wins over this one.
+        Remove this matte and the card goes away.
       </p>
       {matte && trackMatte && trackMatte.enabled !== false && (
         <div className="matte-span-full matte-legacy-status" role="note" style={{ fontSize: 11, color: '#f59e0b', marginBottom: 8 }}>
@@ -694,151 +555,14 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
               />
             </div>
 
-            <div className="matte-field">
-              <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>FEATHER</span>
-                <span style={{ color: '#4a8fe8', fontWeight: 600, opacity: featherDisabled ? 0.45 : 1 }}>{featherValue}px</span>
-              </label>
-              <input
-                {...rangeGesture}
-                type="range"
-                aria-label="Feather"
-                min={0}
-                max={100}
-                step={1}
-                value={featherValue}
-                disabled={featherDisabled}
-                onChange={(e) => onChangeFeather(parseInt(e.target.value, 10))}
-                style={{ width: '100%', cursor: featherDisabled ? 'not-allowed' : 'pointer', opacity: featherDisabled ? 0.45 : 1 }}
-              />
-            </div>
-
-            <div className="matte-field">
-              <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>STRENGTH</span>
-                <span style={{ color: '#4a8fe8', fontWeight: 600, opacity: strengthDisabled ? 0.45 : 1 }}>{strengthValue}%</span>
-              </label>
-              <input
-                {...rangeGesture}
-                type="range"
-                aria-label="Strength"
-                min={0}
-                max={100}
-                step={1}
-                value={strengthValue}
-                disabled={strengthDisabled}
-                onChange={(e) => onChangeStrength(parseInt(e.target.value, 10) / 100)}
-                style={{ width: '100%', cursor: strengthDisabled ? 'not-allowed' : 'pointer', opacity: strengthDisabled ? 0.45 : 1 }}
-              />
-            </div>
-
-            <div className="matte-toggle-field">
-              <label className="form-label" style={{ margin: 0 }}>GRADIENT</label>
-              <input
-                type="checkbox"
-                aria-label="Gradient"
-                checked={gradientEnabled}
-                disabled={gradientDisabled}
-                onChange={onToggleGradient}
-                style={{ accentColor: '#4a8fe8' }}
-              />
-            </div>
-
-            {gradientEnabled && (
-              <div className="matte-field matte-compact-field">
-                <label className="form-label">TYPE</label>
-                <select
-                  className="select-control"
-                  aria-label="Gradient type"
-                  style={compactSelectStyle}
-                  value={gradientTypeValue}
-                  disabled={gradientDisabled}
-                  onChange={(e) => onChangeGradientType(e.target.value)}
-                >
-                  <option value="linear">Linear</option>
-                  <option value="radial">Radial</option>
-                </select>
-              </div>
-            )}
-
-            {gradientEnabled && gradientTypeValue === 'linear' && (
-              <div className="matte-field">
-                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>ANGLE</span>
-                  <span style={{ color: '#4a8fe8', fontWeight: 600, opacity: gradientDisabled ? 0.45 : 1 }}>{angleValue}°</span>
-                </label>
-                <input
-                  {...rangeGesture}
-                  type="range"
-                  aria-label="Gradient angle"
-                  min={0}
-                  max={360}
-                  step={1}
-                  value={angleValue}
-                  disabled={gradientDisabled}
-                  onChange={(e) => onChangeGradientAngle(parseInt(e.target.value, 10))}
-                  style={{ width: '100%', cursor: gradientDisabled ? 'not-allowed' : 'pointer', opacity: gradientDisabled ? 0.45 : 1 }}
-                />
-              </div>
-            )}
-
-            {gradientEnabled && displayStops.length > 0 && (
-              <div className="matte-field matte-span-full">
-                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>STOPS ({displayStops.length}/4)</span>
-                  <button
-                    className="btn-icon-small"
-                    aria-label="Add gradient stop"
-                    disabled={gradientDisabled || displayStops.length >= 4}
-                    onClick={onAddStop}
-                    style={{ fontSize: 11, padding: '1px 8px', opacity: gradientDisabled || displayStops.length >= 4 ? 0.45 : 1 }}
-                  >
-                    + Add
-                  </button>
-                </label>
-                {displayStops.map((stop, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                    <input
-                      type="color"
-                      aria-label={`Gradient stop ${i} color`}
-                      value={stop.color.startsWith('#') ? stop.color : '#ffffff'}
-                      disabled={gradientDisabled}
-                      onChange={(e) => onChangeStop(i, { color: e.target.value })}
-                      style={{ width: 26, height: 22, padding: 0, border: '1px solid var(--border-color)', background: 'transparent', cursor: gradientDisabled ? 'not-allowed' : 'pointer' }}
-                    />
-                    <NumberField
-                      aria-label={`Gradient stop ${i} offset`}
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      value={Math.round(stop.offset * 100) / 100}
-                      disabled={gradientDisabled}
-                      onValue={(offset) => onChangeStop(i, { offset })}
-                      style={{ width: 52, height: 22, background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: 4, color: '#fff', fontSize: 11, padding: '0 4px' }}
-                    />
-                    <NumberField
-                      aria-label={`Gradient stop ${i} opacity`}
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      value={stop.opacity}
-                      disabled={gradientDisabled}
-                      onValue={(opacity) => onChangeStop(i, { opacity })}
-                      style={{ width: 52, height: 22, background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: 4, color: '#fff', fontSize: 11, padding: '0 4px' }}
-                    />
-                    <button
-                      className="btn-icon-small"
-                      aria-label={`Remove gradient stop ${i}`}
-                      disabled={gradientDisabled || displayStops.length <= 2}
-                      onClick={() => onRemoveStop(i)}
-                      style={{ fontSize: 11, padding: '1px 6px', opacity: gradientDisabled || displayStops.length <= 2 ? 0.45 : 1 }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <MatteRenderControls
+              partId={selectedPart.id}
+              value={matte}
+              mode={modeValue}
+              onChange={(patch) => setMatte({ ...matte, ...patch })}
+              rangeGesture={rangeGesture}
+              compactSelectStyle={compactSelectStyle}
+            />
 
             <label className="matte-toggle-field matte-span-full" style={{ fontSize: 11, color: '#d6d6d6', cursor: 'pointer' }}>
               <input
@@ -868,6 +592,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
         </div>
       )}
     </StyleCard>
+    )}
     </>
   );
 };

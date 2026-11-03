@@ -339,8 +339,14 @@ export const HeaderBar: React.FC = () => {
       if (notifyOGrafDiagnostics(showToast, plan.diagnostics)) return;
 
       setOgrafStage('package');
-      const { createOGrafBrowserZip } = await import('../../ograf/browserZip');
-      const archive = await createOGrafBrowserZip(plan);
+      const [{ createOGrafBrowserZip }, { renderOGrafThumbnail }] = await Promise.all([
+        import('../../ograf/browserZip'),
+        import('../../export/ografThumbnail'),
+      ]);
+      // A thumbnail lets renderers list the graphic with a preview; a package
+      // without one is still complete, so a failed render never blocks it.
+      const thumbnail = await renderOGrafThumbnail(plan).catch(() => undefined);
+      const archive = await createOGrafBrowserZip(plan, { thumbnail });
       downloadBlob(archive.bytes, archive.fileName, 'application/zip');
     } catch (error) {
       const remediation = describeOGrafPackageWriteFailure(error);

@@ -1,4 +1,5 @@
 import type { SceneData, SceneLayer } from '../types/composition';
+import { limitLength } from '../utils/layers/textFit';
 import type {
   OGrafAssetPlan,
   OGrafExportOptions,
@@ -129,6 +130,14 @@ export function resolveOGrafPublicControls(
         property: 'strokeColor',
       });
     }
+  }
+
+  // A text box's character limit is the field's limit, and the default respects it.
+  for (const field of textFields) {
+    const limit = layers.find((layer) => layer.id === field.layerId)?.textFit?.maxLength;
+    if (typeof limit !== 'number' || !Number.isFinite(limit) || limit < 1) continue;
+    field.maxLength = Math.floor(limit);
+    if (field.defaultValue !== undefined) field.defaultValue = limitLength(field.defaultValue, field.maxLength);
   }
 
   return { textFields, imageFields, colorFields };

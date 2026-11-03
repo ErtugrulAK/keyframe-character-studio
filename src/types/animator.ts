@@ -1,4 +1,5 @@
 import type { MatteGradientStop } from '../utils/layers/matte';
+import type { FitToTextSettings, TextFitSettings } from '../utils/layers/textFit';
 
 export type EasingType =
   | 'linear'
@@ -414,6 +415,10 @@ export interface CharacterPart {
   baseTransform: Transform;
   textValue?: string;
   fontSize?: number;
+  /** Text: the box it fits (`utils/layers/textFit`). */
+  textFit?: TextFitSettings;
+  /** Box-like shape: the text layer whose width it follows (`utils/layers/textFit`). */
+  fitToText?: FitToTextSettings;
   cardCategory?: string;
   cardTitle?: string;
   cardButtonText?: string;

@@ -4,7 +4,7 @@ import { TEXT_BOX_CENTRE_EM } from '../utils/geometry/textOrigin';
 import {
   runtimeCompareByStackingOrder,
   runtimeDescribePaint,
-  runtimeDescribeText,
+  runtimeDescribeText, runtimeTextFit,
   runtimeGraphicFactory,
   runtimeResolveShapeAppearance,
   runtimeResolveMatteSource,
@@ -61,6 +61,7 @@ const RUNTIME = (${runtimeGraphicFactory()})({
   resolveShapeAppearance: ${runtimeResolveShapeAppearance()},
   describePaint: ${runtimeDescribePaint()},
   describeText: ${runtimeDescribeText()},
+  textFit: ${runtimeTextFit()},
 });
 export default class Graphic extends RUNTIME.Graphic {}
 `;

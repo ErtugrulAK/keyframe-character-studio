@@ -71,6 +71,7 @@ import { EditTargetStrip } from './overlays/EditTargetStrip';
 import { resolveEditTarget } from '../../utils/layers/editTarget';
 import { Sparkles } from 'lucide-react';
 import './StageCanvas.css';
+import { useTextFit } from '../../hooks/useTextFit';
 
 /**
  * A fitted camera centre on WHOLE device pixels. The centre of a stage
@@ -1146,6 +1147,22 @@ export const StageCanvas: React.FC = () => {
   };
 
   const sortedParts = useMemo(() => stackingOrder(characterParts), [characterParts]);
+  // What the stage paints: text boxes fitted and shapes following their text.
+  const fittedLayers = useTextFit(sortedParts, tracks);
+  // The selection frame outlines what is painted: the fitted layer, and its
+  // transform with the fitted width (scaleX) of a fitted text or shape.
+  const fittedById = useMemo(() => new Map(fittedLayers.parts.map((part) => [part.id, part])), [fittedLayers.parts]);
+  const fitScaleOf = useCallback((id: string): number => {
+    const fitted = fittedById.get(id);
+    const stored = characterParts.find((part) => part.id === id);
+    if (!fitted || !stored || fitted === stored || stored.baseTransform.scaleX === 0) return 1;
+    return fitted.baseTransform.scaleX / stored.baseTransform.scaleX;
+  }, [fittedById, characterParts]);
+  const getDisplayedTransform = useCallback((id: string, frame: number) => {
+    const transform = getComputedTransform(id, frame);
+    const factor = fitScaleOf(id);
+    return factor === 1 || !transform ? transform : { ...transform, scaleX: transform.scaleX * factor };
+  }, [getComputedTransform, fitScaleOf]);
 
   const selectPartFromStage = (id: string, event: React.MouseEvent) => {
     // A canvas click does not retarget the selection while
@@ -1512,7 +1529,7 @@ export const StageCanvas: React.FC = () => {
 
               {/* Character Parts Active Render (Clipped in Broadcast mode, unclipped & visible in Edit mode) */}
               <StagePartLayers
-                sortedParts={sortedParts}
+                sortedParts={fittedLayers.parts}
                 appMode={appMode}
                 broadcastState={broadcastState}
                 broadcastSessionActivated={broadcastSessionActivated}
@@ -1520,7 +1537,7 @@ export const StageCanvas: React.FC = () => {
                 activeTemplateId={activeTemplateId}
                 currentFrame={currentFrame}
                 totalFrames={totalFrames}
-                tracks={tracks}
+                tracks={fittedLayers.tracks}
                 selectedPartId={selectedPartId}
                 selectedPartIds={selectedPartIds}
                 booleanOperandEditingGroupId={booleanOperandEditingGroupId}
@@ -1747,11 +1764,11 @@ export const StageCanvas: React.FC = () => {
               {appMode !== 'broadcast' && !maskInteractionActive && (
                 <SelectionGizmo
                   selectedPartIds={selectedPartIds}
-                  characterParts={characterParts}
-                  getComputedTransform={getComputedTransform}
+                  characterParts={fittedLayers.parts}
+                  getComputedTransform={getDisplayedTransform}
                   currentFrame={currentFrame}
-                  selectedPart={selectedPart}
-                  selectedTransform={selectedTransform}
+                  selectedPart={selectedPart ? fittedById.get(selectedPart.id) ?? selectedPart : selectedPart}
+                  selectedTransform={selectedPartId ? getDisplayedTransform(selectedPartId, currentFrame) : selectedTransform}
                   tracks={tracks}
                   zScale={zScale}
                   booleanOperandEditingGroupId={booleanOperandEditingGroupId}

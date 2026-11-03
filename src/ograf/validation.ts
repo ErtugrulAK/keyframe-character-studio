@@ -568,6 +568,7 @@ function createPublicStateSchema(
       type: 'string',
       ...(field.title ? { title: field.title } : {}),
       ...(field.defaultValue !== undefined ? { default: field.defaultValue } : {}),
+      ...(field.maxLength !== undefined ? { maxLength: field.maxLength } : {}),
     };
   }
   const packagedImageValues = assets.filter((asset) => asset.kind === 'image').map((asset) => asset.packagedPath);

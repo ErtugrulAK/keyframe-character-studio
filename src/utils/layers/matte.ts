@@ -251,6 +251,35 @@ export interface MatteMask {
  * undefined/0 → 0 (sharp M13 edge); negative/NaN/±Infinity → 0.
  * Pure; NEVER touches geometry (feather is a render parameter only).
  */
+/**
+ * The filter region of a soft TEXT or IMAGE matte, in the source's own space.
+ *
+ * Those masks blur the glyphs or the image inside the source's transform, so
+ * their filter region is read in that local space. A world-space region there
+ * missed the content (a text at the origin lost its left half, or all of it)
+ * and the feathered matte painted nothing. The box is generous: a text is
+ * measured nowhere here, so it allows a wide face (0.8 em per character) plus
+ * a font size each side, two font sizes up and down, and the blur's reach.
+ * Self-contained: the OGraf runtime embeds its source.
+ */
+export function matteContentBlurBox(
+  content: { kind: 'text' | 'image'; text?: string; fontSize?: number; width?: number; height?: number },
+  feather: number,
+): { x: number; y: number; width: number; height: number } {
+  const reach = 2 * Math.max(0, feather);
+  let halfWidth: number;
+  let halfHeight: number;
+  if (content.kind === 'text') {
+    const size = typeof content.fontSize === 'number' && content.fontSize > 0 ? content.fontSize : 24;
+    halfWidth = (Array.from(String(content.text || 'TEXT')).length * size * 0.8) / 2 + size;
+    halfHeight = 2 * size;
+  } else {
+    halfWidth = (typeof content.width === 'number' && content.width > 0 ? content.width : 180) / 2;
+    halfHeight = (typeof content.height === 'number' && content.height > 0 ? content.height : 120) / 2;
+  }
+  return { x: -halfWidth - reach, y: -halfHeight - reach, width: 2 * (halfWidth + reach), height: 2 * (halfHeight + reach) };
+}
+
 export function normalizeFeather(value: number | undefined): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
   return Math.max(0, value);

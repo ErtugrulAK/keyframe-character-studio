@@ -17,6 +17,7 @@ import {
   buildMatteMaskFromPath,
   buildMatteTextMask,
   normalizeFeather,
+  matteContentBlurBox,
   normalizeStrength,
   normalizeGradientAngle,
   gradientId,
@@ -685,15 +686,22 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
           .filter((m) => (m.feather ?? 0) > 0)
           .map((mask) => {
             const f = normalizeFeather(mask.feather);
+            // A text or image mask blurs inside the source's transform: its
+            // region is in that local space (`matteContentBlurBox`).
+            const box = mask.text
+              ? matteContentBlurBox({ kind: 'text', text: mask.text.content, fontSize: mask.text.fontSize }, f)
+              : mask.image
+                ? matteContentBlurBox({ kind: 'image', width: mask.image.width, height: mask.image.height }, f)
+                : { x: region.x - f, y: region.y - f, width: region.width + f * 2, height: region.height + f * 2 };
             return (
               <filter
                 key={featherFilterId(mask.id)}
                 id={featherFilterId(mask.id)}
                 filterUnits="userSpaceOnUse"
-                x={region.x - f}
-                y={region.y - f}
-                width={region.width + f * 2}
-                height={region.height + f * 2}
+                x={box.x}
+                y={box.y}
+                width={box.width}
+                height={box.height}
               >
                 {/* stdDeviation = feather/2 → visible transition ≈ feather world px */}
                 <feGaussianBlur stdDeviation={f / 2} />

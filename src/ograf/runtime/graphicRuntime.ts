@@ -19,6 +19,7 @@ import type { Transform } from '../../types/animator';
 import type { createWorldAffineAlgebra, WorldAffine } from '../../utils/geometry/containerMath';
 import type { createShapeAppearance } from '../../utils/layers/shapeAppearance';
 import type { describePaint, describeText } from '../../utils/layers/drawDescriptor';
+import type { createTrackMatteMarkup, TrackMatteGradientInput } from '../trackMatteMarkup';
 import type { createLayoutModifiers, FitToTextSettings, FollowSettings, JustifySettings, RepeaterSettings, TextFitSettings } from '../../utils/layers/layoutModifiers';
 
 export interface RuntimePoint {
@@ -106,7 +107,15 @@ export interface RuntimeLayer {
   trimPathOffset?: number;
   masks?: RuntimeMask[];
   matte?: { sourcePartId?: string; mode?: string; inverted?: boolean; enabled?: boolean };
-  trackMatte?: { sourceLayerId: string; mode: string; inverted?: boolean; sourceVisible?: boolean; enabled?: boolean };
+  trackMatte?: {
+    sourceLayerId: string;
+    mode: string;
+    inverted?: boolean;
+    sourceVisible?: boolean;
+    enabled?: boolean;
+    /** Soft edge, strength and gradient, normalised when the package is built (`trackMatteRenderParameters`). */
+    render?: { feather: number; strength: number; gradient?: TrackMatteGradientInput };
+  };
   [field: string]: unknown;
 }
 
@@ -183,6 +192,8 @@ export interface GraphicRuntimeEnvironment {
   describeText: typeof describeText;
   /** Layout modifiers: text boxes, auto size, follow, justify, repeater (`utils/layers/layoutModifiers`). */
   layout: ReturnType<typeof createLayoutModifiers>;
+  /** The Track Matte mask, as the editor draws it (`ograf/trackMatteMarkup`). */
+  trackMatteMarkup: ReturnType<typeof createTrackMatteMarkup>;
 }
 
 export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
@@ -200,6 +211,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     describePaint,
     describeText,
     layout,
+    trackMatteMarkup,
   } = environment;
   const { affineOfTransform, composeWorldTransform, composeAffine, applyAffine, withWorldAffine, worldAffineOf, affineTrsReading } = environment.affine;
 
@@ -724,7 +736,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
   // The precedence decision is the editor's resolver. Only the clip exclusion
   // stays local: the resolver names the source, it does not decide which SVG
   // mechanism consumes it.
-  function matteRelationship(layer: RuntimeLayer): { sourceLayerId: string; mode: string; inverted: boolean; sourceVisible: boolean } | undefined {
+  function matteRelationship(layer: RuntimeLayer): { sourceLayerId: string; mode: string; inverted: boolean; sourceVisible: boolean; render?: NonNullable<RuntimeLayer['trackMatte']>['render'] } | undefined {
     const ref = resolveMatteSource(layer);
     if (!ref) return undefined;
     // The resolver names a legacy source only from `matte`, a track source only
@@ -735,7 +747,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       return { sourceLayerId: ref.sourceId, mode: matte.mode || 'alpha', inverted: matte.inverted === true, sourceVisible: true };
     }
     const v2 = layer.trackMatte!;
-    return { sourceLayerId: v2.sourceLayerId, mode: v2.mode, inverted: v2.inverted === true, sourceVisible: v2.sourceVisible !== false };
+    return { sourceLayerId: v2.sourceLayerId, mode: v2.mode, inverted: v2.inverted === true, sourceVisible: v2.sourceVisible !== false, render: v2.render };
   }
 
   /**
@@ -848,13 +860,33 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       const source = evaluated.find((candidate) => candidate.id === relation.sourceLayerId);
       if (!source) throw new Error('Missing track matte source: ' + relation.sourceLayerId);
       const id = runtimeId('kcs-ograf-track-matte', layer.id, source.id, relation.mode, relation.inverted ? 'inverted' : '');
+      ids[layer.id] = id;
+      if (!relation.sourceVisible) hidden[relation.sourceLayerId] = true;
+      if (relation.render) {
+        // A Track Matte: soft edge, strength and gradient as the editor draws them.
+        const affine = worldAffineOf(source.transform);
+        defs.push(trackMatteMarkup.trackMatteMask({
+          id,
+          width: scene.width,
+          height: scene.height,
+          mode: relation.mode === 'luminance' ? 'luminance' : 'alpha',
+          inverted: relation.inverted,
+          feather: relation.render.feather,
+          strength: relation.render.strength,
+          gradient: relation.render.gradient,
+          source: { type: source.type, points: source.points, width: source.width, height: source.height, fontSize: source.fontSize, textValue: source.textValue },
+          transform: transform(scene, source),
+          affine: { a: affine.a, b: affine.b, c: affine.c, d: affine.d, e: affine.e + scene.width / 2, f: affine.f + scene.height / 2 },
+          silhouette: (fill) => silhouette(source, IMAGE_REFERENCES, fill),
+          fillColor: source.fillColor || 'white',
+        }));
+        return;
+      }
       const sourceFill = relation.inverted ? 'black' : (relation.mode === 'luminance' ? escapeXml(source.fillColor || 'white') : 'white');
       const sourceBody = silhouette(source, IMAGE_REFERENCES, sourceFill);
       const sourceShape = '<g transform="' + transform(scene, source) + '">' + sourceBody + '</g>';
       const body = relation.inverted ? '<rect x="0" y="0" width="' + scene.width + '" height="' + scene.height + '" fill="white" />' + sourceShape : sourceShape;
       defs.push('<mask id="' + id + '" x="0" y="0" width="' + scene.width + '" height="' + scene.height + '" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="' + (relation.inverted ? 'luminance' : relation.mode) + '">' + body + '</mask>');
-      ids[layer.id] = id;
-      if (!relation.sourceVisible) hidden[relation.sourceLayerId] = true;
     });
     return { defs: defs.join(''), ids, hidden };
   }

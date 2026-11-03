@@ -516,20 +516,8 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
       diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_ALPHA_MATTE', 'ERROR', 'Legacy matte strength cannot be emitted faithfully by OGraf Export V1.', layer, 'matte'));
     }
   }
-  // The Track Matte's soft edge, strength and gradient are editor render
-  // parameters the export does not emit yet; refusing beats a silent hard edge.
-  const trackMatte = layer.trackMatte;
-  if (trackMatte && trackMatte.enabled !== false) {
-    if (trackMatte.feather && trackMatte.feather > 0) {
-      diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_FEATHER_MATTE', 'ERROR', 'Track matte feather cannot be emitted faithfully by OGraf Export V1.', layer, 'track-matte'));
-    }
-    if (trackMatte.gradient) {
-      diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_GRADIENT_MATTE', 'ERROR', 'Track matte gradients cannot be emitted faithfully by OGraf Export V1.', layer, 'track-matte'));
-    }
-    if (trackMatte.strength !== undefined && trackMatte.strength !== 1) {
-      diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_ALPHA_MATTE', 'ERROR', 'Track matte strength cannot be emitted faithfully by OGraf Export V1.', layer, 'track-matte'));
-    }
-  }
+  // A Track Matte's soft edge, strength and gradient are emitted as the editor
+  // draws them (`ograf/trackMatteMarkup`).
   if (layer.trackMatte && layer.trackMatte.sourceLayerId === layer.id) {
     diagnostics.push(diagnostic('OGRAF_INVALID_TRACK_MATTE', 'ERROR', 'Track Matte V2 cannot reference its own layer.', layer, 'track-matte'));
   }

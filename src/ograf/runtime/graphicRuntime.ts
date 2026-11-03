@@ -672,6 +672,9 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       stroke: silhouette ? silhouette.stroke : paint.stroke,
       'stroke-opacity': paint.strokeOpacity,
       'stroke-width': paint.strokeWidth,
+      // Under the fill, as in the editor: overlapping glyph contours would
+      // otherwise show their inner edges.
+      'paint-order': 'stroke',
       'font-size': glyphs.fontSize,
       'font-weight': glyphs.fontWeight,
       'font-family': glyphs.fontFamily,

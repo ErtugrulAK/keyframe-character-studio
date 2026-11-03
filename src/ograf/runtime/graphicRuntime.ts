@@ -506,24 +506,59 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     const fallback = bounds[layer.type] || [120, 80];
     const width = Number.isFinite(layer.width) ? layer.width! : fallback[0];
     const height = Number.isFinite(layer.height) ? layer.height! : fallback[1];
-    const radians = layer.transform.rotation * Math.PI / 180;
+    return pathD(mask.path, (point) => worldPoint(layer, scene, mask.path.coordinateSpace === 'normalized' ? { x: (point.x - 0.5) * width, y: (point.y - 0.5) * height } : point));
+  }
+
+  /**
+   * A layer-local point in scene pixels. Mask paths are world geometry, so they
+   * follow the layer's own world map: the exact derived affine when the nesting
+   * is not a TRS, and the historical TRS arithmetic (unchanged, byte for byte)
+   * otherwise.
+   */
+  function worldPoint(layer: EvaluatedRuntimeLayer, scene: RuntimeScene, local: RuntimePoint): RuntimePoint {
     const worldAffine = layer.transform.affine;
-    // A mask path is world geometry, so it follows the layer's own world map: the
-    // exact derived affine when the nesting is not a TRS, and the historical TRS
-    // arithmetic (unchanged, byte for byte) otherwise.
-    return pathD(mask.path, (point) => {
-      const local = mask.path.coordinateSpace === 'normalized' ? { x: (point.x - 0.5) * width, y: (point.y - 0.5) * height } : point;
-      if (worldAffine) {
-        const mapped = applyAffine(worldAffine, local);
-        return { x: scene.width / 2 + mapped.x, y: scene.height / 2 + mapped.y };
-      }
-      const x = local.x * layer.transform.scaleX;
-      const y = local.y * layer.transform.scaleY;
-      return {
-        x: scene.width / 2 + layer.transform.x + x * Math.cos(radians) - y * Math.sin(radians),
-        y: scene.height / 2 + layer.transform.y + x * Math.sin(radians) + y * Math.cos(radians),
-      };
+    if (worldAffine) {
+      const mapped = applyAffine(worldAffine, local);
+      return { x: scene.width / 2 + mapped.x, y: scene.height / 2 + mapped.y };
+    }
+    const radians = layer.transform.rotation * Math.PI / 180;
+    const x = local.x * layer.transform.scaleX;
+    const y = local.y * layer.transform.scaleY;
+    return {
+      x: scene.width / 2 + layer.transform.x + x * Math.cos(radians) - y * Math.sin(radians),
+      y: scene.height / 2 + layer.transform.y + x * Math.sin(radians) + y * Math.cos(radians),
+    };
+  }
+
+  /** The local box each fixed primitive of `geometry` is drawn in. */
+  const PRIMITIVE_EXTENTS: Record<string, [number, number]> = {
+    custom_circle: [30, 30], custom_box: [30, 30], custom_rect: [60, 30], custom_capsule: [50, 20],
+    custom_triangle: [35, 35], custom_diamond: [35, 35], custom_star: [35, 35], custom_parallelogram: [85, 30],
+  };
+
+  /**
+   * Where a shape layer can paint, in scene pixels: its primitive's box mapped
+   * to the world, padded by the (non-scaling) stroke. Null when the layer's
+   * extent is not known here (text, image, path-less shapes): no bound.
+   */
+  function layerPaintBounds(layer: EvaluatedRuntimeLayer, scene: RuntimeScene): { minX: number; minY: number; maxX: number; maxY: number } | null {
+    const extent = PRIMITIVE_EXTENTS[layer.type];
+    if (!extent || layer.path || (layer.points && layer.points.length >= 3)) return null;
+    // The same world map `transform` paints the layer with.
+    const affine = worldAffineOf(layer.transform);
+    const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sy]) => {
+      const mapped = applyAffine(affine, { x: sx * extent[0], y: sy * extent[1] });
+      return { x: scene.width / 2 + mapped.x, y: scene.height / 2 + mapped.y };
     });
+    if (corners.some((corner) => !Number.isFinite(corner.x) || !Number.isFinite(corner.y))) return null;
+    const stroke = Number.isFinite(layer.strokeWidth) ? Math.abs(layer.strokeWidth as number) : 0;
+    const pad = stroke * 2 + 2;
+    return {
+      minX: Math.min(...corners.map((corner) => corner.x)) - pad,
+      minY: Math.min(...corners.map((corner) => corner.y)) - pad,
+      maxX: Math.max(...corners.map((corner) => corner.x)) + pad,
+      maxY: Math.max(...corners.map((corner) => corner.y)) + pad,
+    };
   }
 
   // The same stacking rule the editor stage uses: ascending zIndex paints first.
@@ -690,6 +725,22 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     return { sourceLayerId: v2.sourceLayerId, mode: v2.mode, inverted: v2.inverted === true, sourceVisible: v2.sourceVisible !== false };
   }
 
+  /**
+   * The area a world-space mask path can cover: every number in `pathD` output
+   * is an x/y pair (M, L, C, Z only), and a cubic stays inside its control
+   * points, so their box is a safe bound.
+   */
+  function pathBounds(d: string): { minX: number; minY: number; maxX: number; maxY: number } | null {
+    const numbers = d.replace(/[MLCZ,]/g, ' ').split(/\s+/).filter((token) => token !== '').map(Number);
+    if (numbers.length < 2 || numbers.some((value) => !Number.isFinite(value))) return null;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let index = 0; index + 1 < numbers.length; index += 2) {
+      minX = Math.min(minX, numbers[index]); maxX = Math.max(maxX, numbers[index]);
+      minY = Math.min(minY, numbers[index + 1]); maxY = Math.max(maxY, numbers[index + 1]);
+    }
+    return { minX, minY, maxX, maxY };
+  }
+
   function maskDefs(scene: RuntimeScene, layer: EvaluatedRuntimeLayer): { defs: string; ids: string[] } {
     const masks = layer.masks || [];
     const defs: string[] = [];
@@ -697,6 +748,30 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     const region = 'M 0 0 H ' + scene.width + ' V ' + scene.height + ' H 0 Z';
     const box = '" x="0" y="0" width="' + scene.width + '" height="' + scene.height + '"';
     let previousId: string | null = null;
+    // Where the chain can be non-zero so far; null = anywhere. A mask region is
+    // painted offscreen every frame, and a full-scene region per mask halved
+    // the frame rate of a masked scene. Outside this bound every chain mask is
+    // zero, so clipping the region to it changes no pixel.
+    type Bound = { minX: number; minY: number; maxX: number; maxY: number };
+    let bound: Bound | null = null;
+    const union = (a: Bound, b: Bound): Bound => ({ minX: Math.min(a.minX, b.minX), minY: Math.min(a.minY, b.minY), maxX: Math.max(a.maxX, b.maxX), maxY: Math.max(a.maxY, b.maxY) });
+    const intersect = (a: Bound, b: Bound): Bound => {
+      const minX = Math.max(a.minX, b.minX), minY = Math.max(a.minY, b.minY);
+      return { minX, minY, maxX: Math.max(minX, Math.min(a.maxX, b.maxX)), maxY: Math.max(minY, Math.min(a.maxY, b.maxY)) };
+    };
+    // Outside where the layer itself paints the mask value is never seen, so a
+    // hole mask (white everywhere but the path) is bounded by the layer too. A
+    // blur runs inside the region, so the region's own edge would bleed in: the
+    // layer bound keeps the widest blur's reach outside the painted area.
+    const reach = masks.reduce((widest, mask) => (mask.enabled === false ? widest : Math.max(widest, mask.feather * 2 + Math.abs(mask.expansion))), 0);
+    const painted = layerPaintBounds(layer, scene);
+    const paint = painted && { minX: painted.minX - reach, minY: painted.minY - reach, maxX: painted.maxX + reach, maxY: painted.maxY + reach };
+    const regionOf = (value: Bound | null): string => {
+      const limit = value && paint ? intersect(value, paint) : (value || paint);
+      if (!limit) return box;
+      const clipped = intersect(limit, { minX: 0, minY: 0, maxX: scene.width, maxY: scene.height });
+      return '" x="' + clipped.minX + '" y="' + clipped.minY + '" width="' + (clipped.maxX - clipped.minX) + '" height="' + (clipped.maxY - clipped.minY) + '"';
+    };
     const filterMarkup = (id: string, mask: EvaluatedRuntimeMask): string => {
       const filterId = 'kcs-layer-mask-filter-' + id;
       return mask.feather > 0 || mask.expansion !== 0
@@ -713,6 +788,13 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       const filterId = 'kcs-layer-mask-filter-' + id;
       const filterAttribute = mask.feather > 0 || mask.expansion !== 0 ? ' filter="url(#' + filterId + ')"' : '';
       const opacity = mask.opacity === undefined ? 1 : mask.opacity;
+      const raw = pathBounds(d);
+      // A blur is spent within four standard deviations (feather / 2 each); a dilation adds its radius.
+      const pad = mask.feather * 2 + Math.max(0, mask.expansion) + 1;
+      const shape: Bound | null = raw ? { minX: raw.minX - pad, minY: raw.minY - pad, maxX: raw.maxX + pad, maxY: raw.maxY + pad } : null;
+      if (!previousId) bound = mode === 'subtract' || mode === 'difference' || !shape ? null : shape;
+      else if (mode === 'intersect') bound = shape && bound ? intersect(bound, shape) : (shape || bound);
+      else if (mode === 'add' || mode === 'difference') bound = bound && shape ? union(bound, shape) : null;
       const fullRect = '<rect x="0" y="0" width="' + scene.width + '" height="' + scene.height + '"';
       let body: string;
       if (!previousId) {
@@ -725,9 +807,9 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
         const previousInverse = runtimeId(previousId, 'inverse');
         const currentInverse = runtimeId(id, 'inverse');
         defs.push(
-          '<mask id="' + shapeId + box + ' maskUnits="userSpaceOnUse"><path d="' + escapeXml(d) + '" fill="white" /></mask>'
-          + '<mask id="' + previousInverse + box + ' maskUnits="userSpaceOnUse">' + fullRect + ' fill="white" />' + fullRect + ' fill="black" mask="url(#' + previousId + ')" /></mask>'
-          + '<mask id="' + currentInverse + box + ' maskUnits="userSpaceOnUse">' + fullRect + ' fill="white" /><path d="' + escapeXml(d) + '" fill="black" /></mask>',
+          '<mask id="' + shapeId + regionOf(shape) + ' maskUnits="userSpaceOnUse"><path d="' + escapeXml(d) + '" fill="white" /></mask>'
+          + '<mask id="' + previousInverse + regionOf(null) + ' maskUnits="userSpaceOnUse">' + fullRect + ' fill="white" />' + fullRect + ' fill="black" mask="url(#' + previousId + ')" /></mask>'
+          + '<mask id="' + currentInverse + regionOf(null) + ' maskUnits="userSpaceOnUse">' + fullRect + ' fill="white" /><path d="' + escapeXml(d) + '" fill="black" /></mask>',
         );
         body = '<g mask="url(#' + currentInverse + ')">' + fullRect + ' fill="white" mask="url(#' + previousId + ')" /></g>'
           + '<g mask="url(#' + previousInverse + ')">' + fullRect + ' fill="white" mask="url(#' + shapeId + ')" /></g>';
@@ -736,7 +818,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       } else {
         body = fullRect + ' fill="white" mask="url(#' + previousId + ')" /><path d="' + escapeXml(d) + '" fill="black" fill-opacity="' + opacity + '"' + filterAttribute + ' />';
       }
-      defs.push(filter + '<mask id="' + id + box + ' maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="luminance" data-mask-operation="' + mode + '">' + body + '</mask>');
+      defs.push(filter + '<mask id="' + id + regionOf(bound) + ' maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="luminance" data-mask-operation="' + mode + '">' + body + '</mask>');
       previousId = id;
     });
     if (previousId) ids.push(previousId);

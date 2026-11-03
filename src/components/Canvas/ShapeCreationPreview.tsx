@@ -8,14 +8,15 @@ interface ShapeCreationPreviewProps {
   type: BodyPartType;
   bounds: ShapeCreationBounds;
   outputOrigin: CoordinatePoint;
-  zoom: number;
 }
 
-export const ShapeCreationPreview: React.FC<ShapeCreationPreviewProps> = ({ type, bounds, outputOrigin, zoom }) => {
+export const ShapeCreationPreview: React.FC<ShapeCreationPreviewProps> = ({ type, bounds, outputOrigin }) => {
   const geometry = getShapeGeometry(type);
   const placement = getShapeCreationPlacement(type, bounds);
   if (!geometry || !placement) return null;
-  const strokeWidth = 1.5 / Math.max(0.15, zoom);
+  // A non-scaling stroke is already measured in screen pixels; dividing by the
+  // zoom as well made the outline swell when zoomed out.
+  const strokeWidth = 1.5;
   const fill = 'rgba(56, 189, 248, 0.18)';
   const stroke = '#38bdf8';
   const common = { fill, stroke, strokeWidth, strokeDasharray: '6 4', vectorEffect: 'non-scaling-stroke' as const };

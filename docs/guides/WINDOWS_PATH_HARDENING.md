@@ -32,7 +32,7 @@ Windows-safe filename and package-relative path handling for KCS exports, OGraf 
 The OGraf package structure remains:
 
 ```text
-<sanitized-graphic-name>-ograf.zip
+<sanitized-graphic-name>.ograf.zip
 ├── <sanitized-graphic-name>.ograf.json
 ├── graphic.mjs
 ├── scene.kcs

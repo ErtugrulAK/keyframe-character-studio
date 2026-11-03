@@ -7,7 +7,7 @@ test('editor exports the current project as an OGraf ZIP', async ({ page }) => {
   await page.getByRole('menuitem', { name: 'OGraf Package', exact: true }).click();
   const download = await downloadPromise;
 
-  expect(download.suggestedFilename()).toMatch(/-ograf\.zip$/u);
+  expect(download.suggestedFilename()).toMatch(/\.ograf\.zip$/u);
   const path = await download.path();
   expect(path).toBeTruthy();
 });

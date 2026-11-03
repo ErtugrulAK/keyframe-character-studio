@@ -139,6 +139,9 @@ export interface AnimatorContextType {
   getPersistenceSafety: () => PersistenceSafety;
   /** Forced durable write resolving true only when the key advanced. */
   forceSaveNow: () => Promise<boolean>;
+  /** Autosave delay in seconds (this browser's editor preference). */
+  autosaveIntervalSeconds: number;
+  setAutosaveIntervalSeconds: (seconds: number) => void;
 
   // Undo / Redo History
   /**
@@ -650,10 +653,12 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     characterParts,
     tracks,
     selectedPartId,
+    selectedPartIds,
     showToast,
     setTracks: editSetTracks,
     setCharacterParts: editSetCharacterParts,
     setSelectedPartId,
+    setSelectedPartIds,
   });
 
 
@@ -1011,6 +1016,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     importProject,
     resetProject,
     migrateLegacyCoordinates,
+    autosaveIntervalSeconds,
+    setAutosaveIntervalSeconds,
   } = useSerialization({
     fps,
     setFps,
@@ -1157,6 +1164,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     triggerManualSave,
     getPersistenceSafety,
     forceSaveNow,
+    autosaveIntervalSeconds,
+    setAutosaveIntervalSeconds,
     undo: draftAwareUndo,
     redo: draftAwareRedo,
     canUndo: draftHistory ? draftHistory.canUndo : canUndo,

@@ -699,7 +699,10 @@ export const SequencerTimeline: React.FC = () => {
     // The gesture is real now: it owns the pointer from here on, and its whole
     // travel commits as ONE history entry.
     startBatchInteraction();
-    if (press.pointerId >= 0) press.captureTarget?.setPointerCapture?.(press.pointerId);
+    // The capture goes to the grid, not the pressed diamond: when a dragged key
+    // passes another, React reorders the diamonds, and moving the captured node
+    // in the DOM makes the browser drop the capture, which ended the drag mid-way.
+    if (press.pointerId >= 0) (timelineGridRef.current ?? press.captureTarget)?.setPointerCapture?.(press.pointerId);
     // Alt on the first or last key of a multi-frame selection stretches
     // the selection in time (After Effects); Alt anywhere else duplicates (K2).
     const stretch = press.altKey && press.ids.length > 1
@@ -1536,6 +1539,9 @@ export const SequencerTimeline: React.FC = () => {
 
         {/* ── RIGHT SCROLLABLE GRID ── */}
         <div className="timeline-grid-container timeline-graph-pane" ref={timelineGridRef} onScroll={handleGridScroll} onMouseDown={handleMarqueeStart}>
+          {/* The content box spans every lane, so the playhead line reaches the
+              last track instead of stopping at the visible height. */}
+          <div className="timeline-grid-content">
           {/* Time Ruler */}
           <TimeRuler
             frameNumbers={frameNumbers}
@@ -1603,6 +1609,7 @@ export const SequencerTimeline: React.FC = () => {
               }}
             />
           )}
+          </div>
         </div>
       </div>
 

@@ -44,8 +44,10 @@ export async function createOGrafBrowserZip(plan: OGrafGeneratedPackage): Promis
     }
   }
 
+  // `<name>.ograf.zip`: Windows "Extract All" makes a `<name>.ograf` folder,
+  // the folder name Reality Hub looks for (one ending in `-ograf` was not listed).
   return {
-    fileName: `${sanitizeOGrafDownloadName(plan.manifest.name)}-ograf.zip`,
+    fileName: `${sanitizeOGrafDownloadName(plan.manifest.name)}.ograf.zip`,
     bytes: zipSync(files),
   };
 }

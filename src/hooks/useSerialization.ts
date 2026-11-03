@@ -42,6 +42,7 @@ const readMotionTemplates = (value: unknown): MotionTemplate[] | undefined => {
 import { normalizeBezierPath } from '../utils/geometry/bezierPath';
 import { SCENE_VERSION_WITH_EFFECTS, sceneUsesEffectFeatures } from '../utils/layers/colorCorrection';
 import { validateImportedDocument, type ImportResult } from '../utils/persistence/importValidation';
+import { DEFAULT_AUTOSAVE_SECONDS, readAutosaveSeconds, writeAutosaveSeconds } from '../utils/persistence/autosaveInterval';
 const noopSetCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>> = () => undefined;
 // A module-level stable default: a per-render inline default would join the
 // restore effect's dependencies and re-arm the one-shot sync on every render.
@@ -429,9 +430,10 @@ const MANUAL_SAVE_LOCK_WAIT_MS = 1_000;
  * Autosave writes unsaved changes at most this long after the FIRST change
  * that is not yet saved. Further edits never push the deadline back, so
  * continuous editing cannot postpone the save indefinitely; a failed or
- * deferred attempt is retried this long after it.
+ * deferred attempt is retried this long after it. This is the default; the
+ * user sets their own in the header (`autosaveIntervalSeconds`).
  */
-export const AUTOSAVE_DELAY_MS = 10_000;
+export const AUTOSAVE_DELAY_MS = DEFAULT_AUTOSAVE_SECONDS * 1000;
 /** How often the autosave deadline is checked (cheap: refs only). */
 const AUTOSAVE_CHECK_INTERVAL_MS = 1_000;
 
@@ -519,6 +521,10 @@ export interface UseSerializationApi {
   importProject: (jsonStr: string, defaultName?: string) => ImportResult;
   resetProject: () => void;
   migrateLegacyCoordinates: () => boolean;
+  /** The autosave delay in seconds: this browser's editor preference, not scene data. */
+  autosaveIntervalSeconds: number;
+  /** Sets (normalizes and stores) the delay; a pending change is re-timed from its start. */
+  setAutosaveIntervalSeconds: (seconds: number) => void;
 }
 
 export const useSerialization = ({
@@ -596,6 +602,17 @@ export const useSerialization = ({
   const unsavedSinceRef = useRef<number | null>(null);
   /** When the next autosave attempt is due. */
   const nextAttemptAtRef = useRef<number>(0);
+  const [autosaveIntervalSeconds, setAutosaveIntervalState] = useState<number>(readAutosaveSeconds);
+  /** The delay the stable autosave clock reads. */
+  const autosaveDelayMsRef = useRef<number>(autosaveIntervalSeconds * 1000);
+  const setAutosaveIntervalSeconds = useCallback((seconds: number) => {
+    const next = writeAutosaveSeconds(seconds);
+    autosaveDelayMsRef.current = next * 1000;
+    // A change waiting to be saved follows the new delay from when it started:
+    // shortening it saves sooner, lengthening it waits longer.
+    if (unsavedSinceRef.current !== null) nextAttemptAtRef.current = unsavedSinceRef.current + next * 1000;
+    setAutosaveIntervalState(next);
+  }, []);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const clearUnsaved = useCallback(() => {
@@ -746,7 +763,7 @@ export const useSerialization = ({
     void assetStore.ingest(characterParts as unknown as Array<Record<string, unknown>>);
   }, [assetStore, assetSessionReady, characterParts]);
 
-  // 2. Auto-Save: SceneData format, at most AUTOSAVE_DELAY_MS after the first unsaved change (SAFE-01 write discipline).
+  // 2. Auto-Save: SceneData format, at most the user's autosave delay after the first unsaved change (SAFE-01 write discipline).
   const buildSceneJson = useCallback((): string => {
     const scene = toSceneData(characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId);
     scene.name = sceneTitle || 'Untitled';
@@ -786,7 +803,7 @@ export const useSerialization = ({
     if (same) return;
     const now = Date.now();
     unsavedSinceRef.current = now;
-    nextAttemptAtRef.current = now + AUTOSAVE_DELAY_MS;
+    nextAttemptAtRef.current = now + autosaveDelayMsRef.current;
     // The document changed: the header must say so (an external, committed edit).
     // oxlint-disable-next-line react/set-state-in-effect
     setHasUnsavedChanges(true);
@@ -879,7 +896,7 @@ export const useSerialization = ({
     // Whatever the outcome, the next attempt is one delay away: a success
     // clears the unsaved state; a failure, a busy lock (SAFE-02: never a queue
     // behind another writer) or a rejected lock call keeps it and retries.
-    nextAttemptAtRef.current = Date.now() + AUTOSAVE_DELAY_MS;
+    nextAttemptAtRef.current = Date.now() + autosaveDelayMsRef.current;
     setIsSaving(true);
     void runWithAutosaveLock(() => casWrite(false), 'try')
       .catch(() => undefined)
@@ -889,7 +906,7 @@ export const useSerialization = ({
   }, [buildSceneJson, casWrite, clearUnsaved, runWithAutosaveLock]);
 
   // One stable clock (it is never re-created by edits, which used to restart a
-  // 10 s interval on every change and postpone the save while the user kept
+  // fixed interval on every change and postpone the save while the user kept
   // editing). It only reads refs; the save runs when the deadline is due.
   const performSaveRef = useRef(performSave);
   useEffect(() => {
@@ -1173,5 +1190,7 @@ export const useSerialization = ({
     importProject,
     resetProject,
     migrateLegacyCoordinates,
+    autosaveIntervalSeconds,
+    setAutosaveIntervalSeconds,
   };
 };

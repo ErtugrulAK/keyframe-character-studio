@@ -60,3 +60,20 @@ describe('WP-07 OGraf matte validation follows the active relationship', () => {
     expect(matteErrors(data)).toEqual([]);
   });
 });
+
+describe('Track Matte soft edge, strength and gradient', () => {
+  const codes = (data: SceneData) => validateSceneForOGraf(data).diagnostics
+    .filter((diagnostic) => diagnostic.severity === 'ERROR' && diagnostic.feature === 'track-matte')
+    .map((diagnostic) => diagnostic.code);
+
+  test('block the export instead of silently exporting a hard matte', () => {
+    expect(codes(scene([layer('a', { trackMatte: { sourceLayerId: 'b', mode: 'alpha', feather: 8 } }), layer('b')]))).toContain('OGRAF_UNSUPPORTED_FEATHER_MATTE');
+    expect(codes(scene([layer('a', { trackMatte: { sourceLayerId: 'b', mode: 'alpha', strength: 0.5 } }), layer('b')]))).toContain('OGRAF_UNSUPPORTED_ALPHA_MATTE');
+    expect(codes(scene([layer('a', { trackMatte: { sourceLayerId: 'b', mode: 'alpha', gradient: { angle: 0 } } }), layer('b')]))).toContain('OGRAF_UNSUPPORTED_GRADIENT_MATTE');
+  });
+
+  test('neutral values and a disabled Track Matte export as before', () => {
+    expect(codes(scene([layer('a', { trackMatte: { sourceLayerId: 'b', mode: 'alpha', feather: 0, strength: 1 } }), layer('b')]))).toEqual([]);
+    expect(codes(scene([layer('a', { trackMatte: { sourceLayerId: 'b', mode: 'alpha', enabled: false, feather: 8, gradient: { angle: 0 } } }), layer('b')]))).toEqual([]);
+  });
+});

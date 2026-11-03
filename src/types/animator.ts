@@ -114,6 +114,11 @@ export interface TrackMatteV2 {
   inverted?: boolean;
   enabled?: boolean;
   sourceVisible?: boolean;
+  /** Soft edge, strength and gradient: the same render parameters, with the
+   *  same meaning and defaults, as the legacy matte's (see `PartMatte`). */
+  feather?: number;
+  strength?: number;
+  gradient?: PartMatte['gradient'];
 }
 
 export interface ProjectTemplate {

@@ -141,7 +141,7 @@ describe('R4-13 — the exported ZIP is structurally portable', () => {
 
     // The user-facing download name is ASCII-folded, so the file a macOS user
     // saves cannot be mangled by an encoding it never declared.
-    expect(fileName).toBe('cafe-demo-ograf.zip');
+    expect(fileName).toBe('cafe-demo.ograf.zip');
     expect([...fileName].every((character) => character.charCodeAt(0) < 0x80)).toBe(true);
 
     const names = Object.keys(unzipSync(bytes));

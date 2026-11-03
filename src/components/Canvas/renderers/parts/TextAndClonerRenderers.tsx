@@ -34,7 +34,10 @@ export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, current
       strokeWidth: paint.strokeWidth,
       // An authored outline scales with the layer and the view; only the
       // selection highlight (outline switched off) stays screen-constant.
-      ...(appearance.strokeEnabled ? {} : { vectorEffect: 'non-scaling-stroke' as const }),
+      // An authored outline is painted under the fill: variable fonts build
+      // glyphs from overlapping contours, and a stroke on top drew their inner
+      // edges as lines inside the letters. The outer half is unchanged.
+      ...(appearance.strokeEnabled ? { paintOrder: 'stroke' } : { vectorEffect: 'non-scaling-stroke' as const }),
     };
 
     if (isStaggered) {

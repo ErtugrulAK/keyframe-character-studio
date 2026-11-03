@@ -19,7 +19,7 @@ describe('FirstExportGuide', () => {
     expect(screen.getByText(/readiness check/)).toBeTruthy();
     expect(screen.getByText(/OGraf Package/)).toBeTruthy();
     // The step names the archive the ZIP writer really produces.
-    expect(screen.getByText(/-ograf\.zip archive/)).toBeTruthy();
+    expect(screen.getByText(/\.ograf\.zip archive/)).toBeTruthy();
     expect(screen.getByText(/Nothing is written until you export/)).toBeTruthy();
   });
 

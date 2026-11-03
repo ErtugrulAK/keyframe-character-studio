@@ -102,7 +102,7 @@ function renderText(layer: EvaluatedLayer, props: SvgAttributes = {}): string {
   const strokeColor = stroke === undefined ? paint.stroke : String(stroke);
   const fillColor = fill === undefined ? paint.fill : String(fill);
   const resolvedFillOpacity = fillOpacity === undefined ? paint.fillOpacity : Number(fillOpacity);
-  return `<text x="0" y="${svgNumber(glyphs.y)}" text-anchor="middle" fill="${escapeXml(fillColor || 'none')}" fill-opacity="${svgNumber(resolvedFillOpacity ?? 1)}" stroke="${escapeXml(strokeColor || 'none')}" stroke-opacity="${svgNumber(paint.strokeOpacity)}" stroke-width="${svgNumber(paint.strokeWidth)}" font-size="${svgNumber(glyphs.fontSize)}" font-weight="${glyphs.fontWeight}" font-family="${escapeXml(glyphs.fontFamily)}"${attributes(rest)}>${escapeXml(glyphs.text)}</text>`;
+  return `<text x="0" y="${svgNumber(glyphs.y)}" text-anchor="middle" fill="${escapeXml(fillColor || 'none')}" fill-opacity="${svgNumber(resolvedFillOpacity ?? 1)}" stroke="${escapeXml(strokeColor || 'none')}" stroke-opacity="${svgNumber(paint.strokeOpacity)}" stroke-width="${svgNumber(paint.strokeWidth)}" paint-order="stroke" font-size="${svgNumber(glyphs.fontSize)}" font-weight="${glyphs.fontWeight}" font-family="${escapeXml(glyphs.fontFamily)}"${attributes(rest)}>${escapeXml(glyphs.text)}</text>`;
 }
 
 function renderImage(layer: EvaluatedLayer, options: OGrafSvgRenderOptions, props: SvgAttributes = {}): string {

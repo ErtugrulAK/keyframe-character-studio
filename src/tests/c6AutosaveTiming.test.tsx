@@ -4,6 +4,7 @@ import { act, renderHook } from '@testing-library/react';
 import { AUTOSAVE_DELAY_MS, useSerialization, type UseSerializationApi } from '../hooks/useSerialization';
 import { AUTOSAVE_STORAGE_KEY } from '../utils/editor/constants';
 import { describeSaveStatus, formatSaveAge } from '../utils/persistence/saveStatus';
+import { AUTOSAVE_INTERVAL_STORAGE_KEY } from '../utils/persistence/autosaveInterval';
 import type { CharacterPart, MotionTemplate, Track } from '../types/animator';
 import type { SceneCoordinateSystem } from '../types/composition';
 
@@ -189,5 +190,71 @@ describe('C6 — save status wording', () => {
       describeSaveStatus({ ...base, lastSavedAt: 100_000 - 59_000 }).label,
     ];
     for (const label of labels) expect(label.length).toBeLessThanOrEqual(15);
+  });
+});
+
+describe('the autosave delay is the user\'s setting', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('a shorter delay saves sooner, and the choice is remembered by this browser', () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const harness = renderSession();
+    act(() => harness.api.setAutosaveIntervalSeconds(3));
+    expect(harness.api.autosaveIntervalSeconds).toBe(3);
+    expect(window.localStorage.getItem(AUTOSAVE_INTERVAL_STORAGE_KEY)).toBe('3');
+    act(() => harness.setCharacterParts([rectPart('a')]));
+    advance(2000);
+    expect(autosaveWrites(setItem)).toBe(0);
+    advance(2000); // 3 s after the change (+ at most one check tick)
+    expect(autosaveWrites(setItem)).toBe(1);
+    // A new session starts from the stored preference.
+    expect(renderSession().api.autosaveIntervalSeconds).toBe(3);
+  });
+
+  it('a longer delay waits longer', () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const harness = renderSession();
+    act(() => harness.api.setAutosaveIntervalSeconds(50));
+    act(() => harness.setCharacterParts([rectPart('a')]));
+    advance(45_000);
+    expect(autosaveWrites(setItem)).toBe(0);
+    advance(7_000);
+    expect(autosaveWrites(setItem)).toBe(1);
+  });
+
+  it('changing it while a change waits re-times that change from when it was made', () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const harness = renderSession();
+    act(() => harness.setCharacterParts([rectPart('a')]));
+    advance(4000);
+    expect(autosaveWrites(setItem)).toBe(0);
+    // 4 s in, the user asks for 3 s: the change is already overdue and saves on the next tick.
+    act(() => harness.api.setAutosaveIntervalSeconds(3));
+    advance(1500);
+    expect(autosaveWrites(setItem)).toBe(1);
+  });
+
+  it('keeps the setting within 1-600 whole seconds', () => {
+    const harness = renderSession();
+    act(() => harness.api.setAutosaveIntervalSeconds(0));
+    expect(harness.api.autosaveIntervalSeconds).toBe(1);
+    act(() => harness.api.setAutosaveIntervalSeconds(5000));
+    expect(harness.api.autosaveIntervalSeconds).toBe(600);
+    act(() => harness.api.setAutosaveIntervalSeconds(7.4));
+    expect(harness.api.autosaveIntervalSeconds).toBe(7);
+  });
+
+  it('the header status names the chosen delay', () => {
+    const base = { conflict: false, error: null, saving: false, unsaved: true, lastSavedAt: null, now: 0 };
+    expect(describeSaveStatus({ ...base, intervalSeconds: 3 }).detail).toContain('within 3 seconds');
+    expect(describeSaveStatus({ ...base, intervalSeconds: 1 }).detail).toContain('within 1 second ');
+    expect(describeSaveStatus(base).detail).toContain('within 10 seconds');
   });
 });

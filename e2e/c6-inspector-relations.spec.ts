@@ -99,7 +99,7 @@ test('header and Parent row: plain kind, long names contained, group vs parent s
   await expect(relation).not.toContainText(/matte/i);
 });
 
-test('Track Matte leads; the legacy clip matte is quiet when unused and explicit when used; viewing changes nothing', async ({ page }) => {
+test('Track Matte leads; the legacy clip matte shows only where it is used, and explicitly; viewing changes nothing', async ({ page }) => {
   await seed(page);
   const before = await savedScene(page);
   const legacyCard = () => page.locator('.inspector-section-card', { has: page.locator('.inspector-section-title', { hasText: 'LEGACY CLIP MATTE' }) });
@@ -109,14 +109,14 @@ test('Track Matte leads; the legacy clip matte is quiet when unused and explicit
   // C7 — both mattes live on the Inspector's Masks tab.
   await openDetailsTab(page, 'Masks');
   await expect(trackCard().locator('.inspector-section-badge')).toHaveText('On');
-  await expect(legacyCard()).toHaveClass(/is-quiet/);
-  await expect(legacyCard().locator('.inspector-section-badge')).toHaveText('Advanced');
-  // Track Matte comes first.
-  const order = await page.evaluate(() => [...document.querySelectorAll('.inspector-section-title')].map((node) => node.textContent));
-  expect(order.indexOf('TRACK MATTE')).toBeLessThan(order.indexOf('LEGACY CLIP MATTE'));
+  // One matte card for new work: no legacy card on a layer without a legacy matte.
+  await expect(legacyCard()).toHaveCount(0);
 
   await select(page, 'legacy');
   await expect(legacyCard()).not.toHaveClass(/is-quiet/);
+  // Track Matte comes first.
+  const order = await page.evaluate(() => [...document.querySelectorAll('.inspector-section-title')].map((node) => node.textContent));
+  expect(order.indexOf('TRACK MATTE')).toBeLessThan(order.indexOf('LEGACY CLIP MATTE'));
   await expect(legacyCard().locator('.inspector-section-badge')).toHaveText('Kept · not applied');
   await page.getByRole('button', { name: 'Expand LEGACY CLIP MATTE' }).click();
   await expect(legacyCard().locator('.matte-legacy-status')).toContainText('Not applied right now');

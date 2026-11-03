@@ -78,6 +78,11 @@ async function settleForCapture(page: Page): Promise<void> {
 }
 
 test.describe('@visual — stable region baselines', () => {
+  // The capture viewport is set before the first navigation: the timeline's
+  // opening height depends on the window the editor opens in, so a page opened
+  // at the device default and resized afterwards captures a different layout.
+  test.use({ viewport: { width: 1440, height: 900 } });
+
   test.beforeEach(async ({ page }) => {
     await seedVisualScene(page);
     await settleForCapture(page);

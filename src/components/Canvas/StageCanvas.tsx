@@ -1598,7 +1598,6 @@ export const StageCanvas: React.FC = () => {
                   type={pendingShapeType}
                   bounds={shapeCreationPreview.bounds}
                   outputOrigin={EDITOR_CAMERA_CENTER}
-                  zoom={zoomLevel}
                 />
               )}
 

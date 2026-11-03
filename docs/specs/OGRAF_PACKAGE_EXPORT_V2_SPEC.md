@@ -9,7 +9,7 @@ V2 is a KCS exporter version. The generated document remains OGraf v1 and keeps 
 ## Evidence-backed output tree
 
 ```text
-<sanitized-graphic-name>-ograf.zip
+<sanitized-graphic-name>.ograf.zip
 ├── <sanitized-graphic-name>.ograf.json
 ├── graphic.mjs
 ├── scene.kcs

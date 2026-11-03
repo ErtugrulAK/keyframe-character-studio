@@ -76,7 +76,7 @@ describe('browser OGraf ZIP writer', () => {
     const first = await actualWriter.createOGrafBrowserZip(plan);
     const second = await actualWriter.createOGrafBrowserZip(plan);
     const firstFiles = Object.keys(unzipSync(first.bytes)).sort();
-    expect(first.fileName).toBe('my-project-demo-ograf.zip');
+    expect(first.fileName).toBe('my-project-demo.ograf.zip');
     expect(first.bytes).toEqual(second.bytes);
     expect(firstFiles).toEqual(['graphic.mjs', 'my-project-demo.ograf.json', 'scene.kcs']);
     expect(new TextDecoder().decode(unzipSync(first.bytes)['scene.kcs'])).toContain('project-unit-center-v1');
@@ -105,7 +105,7 @@ describe('browser OGraf ZIP writer', () => {
 describe('HeaderBar OGraf export integration', () => {
   it('exposes one Export menu with JSON and explicit OGraf choices; Video is absent', async () => {
     context.exportProject.mockReturnValue(JSON.stringify(makeScene()));
-    createZipMock.mockResolvedValue({ fileName: 'my-project-demo-ograf.zip', bytes: new Uint8Array([80, 75, 3, 4]) });
+    createZipMock.mockResolvedValue({ fileName: 'my-project-demo.ograf.zip', bytes: new Uint8Array([80, 75, 3, 4]) });
     stubObjectUrls(vi.fn(() => 'blob:ograf'));
     const downloads: string[] = [];
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function () { downloads.push(this.download); });
@@ -122,7 +122,7 @@ describe('HeaderBar OGraf export integration', () => {
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['JSON', 'OGraf Package', 'Animated GIF', 'Check OGraf Export…']);
     fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
     await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
-    expect(downloads[0]).toBe('my-project-demo-ograf.zip');
+    expect(downloads[0]).toBe('my-project-demo.ograf.zip');
 
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'JSON', exact: true }));
@@ -215,7 +215,7 @@ describe('HeaderBar OGraf export integration', () => {
       makeLayer({ id: 'target', name: 'Target', matte: { sourcePartId: 'mask', mode: 'clip' } }),
     ];
     context.exportProject.mockReturnValue(JSON.stringify(scene));
-    createZipMock.mockResolvedValue({ fileName: 'my-project-demo-ograf.zip', bytes: new Uint8Array([80, 75, 3, 4]) });
+    createZipMock.mockResolvedValue({ fileName: 'my-project-demo.ograf.zip', bytes: new Uint8Array([80, 75, 3, 4]) });
     stubObjectUrls(vi.fn(() => 'blob:ograf'));
 
     render(<HeaderBar />);
@@ -267,7 +267,7 @@ describe('HeaderBar OGraf export integration', () => {
     fireEvent.click(menuItems[1]);
     expect(createZipMock).toHaveBeenCalledTimes(1);
 
-    resolveZip?.({ fileName: 'project-ograf.zip', bytes: new Uint8Array([1]) });
+    resolveZip?.({ fileName: 'project.ograf.zip', bytes: new Uint8Array([1]) });
     await waitFor(() => expect((screen.getAllByRole('menuitem') as HTMLButtonElement[])[1].disabled).toBe(false));
   });
 
@@ -288,7 +288,7 @@ describe('HeaderBar OGraf export integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
     expect((screen.getAllByRole('menuitem') as HTMLButtonElement[])[1].textContent).toContain('Packaging OGraf');
 
-    resolveZip({ fileName: 'project-ograf.zip', bytes: new Uint8Array([1]) });
+    resolveZip({ fileName: 'project.ograf.zip', bytes: new Uint8Array([1]) });
     await waitFor(() => expect((screen.getAllByRole('menuitem') as HTMLButtonElement[])[1].disabled).toBe(false));
     expect((screen.getAllByRole('menuitem') as HTMLButtonElement[])[1].textContent).toContain('OGraf Package');
   });
@@ -313,7 +313,7 @@ describe('HeaderBar OGraf export integration', () => {
   it('refuses an unreadable OGraf package with a report instead of applying it', async () => {
     render(<HeaderBar />);
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-    fireEvent.change(input, { target: { files: [new File(['PK'], 'graphic-ograf.zip', { type: 'application/zip' })] } });
+    fireEvent.change(input, { target: { files: [new File(['PK'], 'graphic.ograf.zip', { type: 'application/zip' })] } });
 
     const dialog = await screen.findByRole('dialog', { name: 'OGraf package import report' });
     expect(dialog.textContent).toContain('OGRAF_PACKAGE_UNREADABLE');

@@ -559,12 +559,27 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
   };
 
   /**
-   * Where a shape layer can paint, in scene pixels: its primitive's box mapped
-   * to the world, padded by the (non-scaling) stroke. Null when the layer's
-   * extent is not known here (text, image, path-less shapes): no bound.
+   * The local half-box a text or an image paints in. A text's is generous: it
+   * is measured before its packaged face may have loaded, so it allows a wider
+   * face, overhanging glyphs, and the baseline offset.
+   */
+  function contentExtent(layer: EvaluatedRuntimeLayer): [number, number] | null {
+    if (layer.type === 'custom_image') return [(layer.width || 180) / 2, (layer.height || 120) / 2];
+    if (layer.type !== 'custom_text') return null;
+    const size = layer.fontSize || 24;
+    const text = String(layer.textValue || 'TEXT');
+    const measured = layout.measureTextWidth(text, size, layer.fontFamily || 'Outfit');
+    const width = Math.max(measured * 1.25, Array.from(text).length * size * 0.9);
+    return [width / 2 + size, size * 2];
+  }
+
+  /**
+   * Where a layer can paint, in scene pixels: its primitive's (or its text's or
+   * image's) box mapped to the world, padded by the (non-scaling) stroke. Null
+   * when the layer's extent is not known here (a path): no bound.
    */
   function layerPaintBounds(layer: EvaluatedRuntimeLayer, scene: RuntimeScene): { minX: number; minY: number; maxX: number; maxY: number } | null {
-    const extent = PRIMITIVE_EXTENTS[layer.type];
+    const extent = layer.type === 'custom_text' || layer.type === 'custom_image' ? contentExtent(layer) : PRIMITIVE_EXTENTS[layer.type];
     if (!extent || layer.path || (layer.points && layer.points.length >= 3)) return null;
     // The same world map `transform` paints the layer with.
     const affine = worldAffineOf(layer.transform);

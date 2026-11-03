@@ -7,6 +7,7 @@ import type { OGrafGeneratedPackage } from '../ograf/types';
 import { compileOGrafPackage } from '../ograf/packageCompiler';
 import { OGrafPackageWriteError } from '../ograf/diagnostics';
 import { materializeOGrafPackage } from '../ograf/packageWriter';
+import { onAir } from './helpers/ografOnAir';
 
 function makeLayer(overrides: Partial<SceneLayer> = {}): SceneLayer {
   return {

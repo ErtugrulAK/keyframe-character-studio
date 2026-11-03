@@ -916,7 +916,14 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     return '<g data-layer-id="' + escapeXml(layer.id) + '" data-z-index="' + layer.zIndex + '" opacity="' + layer.opacity + '"' + clip + '>' + inner + '</g>';
   }
 
-  function renderScene(scene: RuntimeScene, frame: number, stopped: boolean): string {
+  /**
+   * The scene as one SVG. It fills the element the renderer sizes to its output
+   * (the viewBox keeps the authored aspect), so a 1280x720 renderer scales the
+   * graphic instead of cropping it. The graphic element keeps the @font-face
+   * rules in a style of its own (`includeFontStyles: false`), so fonts are not
+   * re-declared every frame.
+   */
+  function renderScene(scene: RuntimeScene, frame: number, stopped: boolean, includeFontStyles = true): string {
     const evaluated = evaluateScene(scene, frame);
     const defs = [clipDefs(scene, evaluated)];
     const maskMap: Record<string, string[]> = Object.create(null);
@@ -927,11 +934,22 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     });
     const matte = matteDefs(scene, evaluated);
     defs.push(matte.defs);
-    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + scene.width + '" height="' + scene.height + '" viewBox="0 0 ' + scene.width + ' ' + scene.height + '">'
-      + '<style>' + fontStyles() + '</style><defs>' + defs.join('') + '</defs>'
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 ' + scene.width + ' ' + scene.height + '" style="display:block">'
+      + (includeFontStyles ? '<style>' + fontStyles() + '</style>' : '') + '<defs>' + defs.join('') + '</defs>'
       + evaluated.map((layer) => renderLayer(scene, layer, maskMap, matte.ids[layer.id], stopped || matte.hidden[layer.id])).join('')
       + '</svg>';
   }
+
+  /** The OGraf target step of a playAction (spec step model, stepCount 1); undefined = the end. */
+  function nextStepOf(current: number | undefined, params: { goto?: number; delta?: number }): number | undefined {
+    const goto = typeof params.goto === 'number' && params.goto >= 0 ? params.goto : undefined;
+    const delta = typeof params.delta === 'number' ? params.delta : 1;
+    const targetStep = goto === undefined ? (current === undefined ? -1 : current) + delta : goto;
+    const stepCount = 1;
+    return targetStep >= stepCount ? undefined : Math.max(0, targetStep);
+  }
+
+  type ScheduledAction = { timestamp: number; action: { type: string; params?: Record<string, unknown> } };
 
   /** The OGraf graphic element: the host's load / play / stop / update / dispose contract. */
   class Graphic extends elementBase {
@@ -942,6 +960,9 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     declare _raf: number | null;
     declare _token: number;
     declare _resolveAction: ((result: RuntimeActionResult) => void) | null;
+    declare _loadData: Record<string, unknown> | undefined;
+    declare _schedule: ScheduledAction[];
+    declare _svg: Element | null;
 
     _cancel(): void {
       this._token += 1;
@@ -963,10 +984,38 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       this._raf = null;
       this._token = 0;
       this._resolveAction = null;
+      this._loadData = undefined;
+      this._schedule = [];
+      this._svg = null;
     }
 
+    /**
+     * Paints the current frame. The @font-face rules live in a style element of
+     * their own, written once; only the SVG is replaced per frame.
+     */
     _render(): void {
-      this.innerHTML = renderScene(this._scene, this._currentFrame, this._stopped);
+      const markup = renderScene(this._scene, this._currentFrame, this._stopped, false);
+      if (!this._svg || this._svg.parentNode !== this) {
+        this.innerHTML = '<style>' + fontStyles() + '</style>' + markup;
+        this._svg = this.lastElementChild;
+        return;
+      }
+      const holder = document.createElement('template');
+      holder.innerHTML = markup;
+      const next = holder.content.firstElementChild;
+      if (!next) return;
+      this.replaceChild(next, this._svg);
+      this._svg = next;
+    }
+
+    /** Waits (at most 3 s) until the packaged fonts the text uses are loaded, so no frame shows a fallback face. */
+    async _fontsReady(): Promise<void> {
+      const fonts = typeof document === 'object' ? document.fonts : undefined;
+      const families = Object.keys(FONT_REFERENCES);
+      if (!fonts || typeof fonts.load !== 'function' || families.length === 0) return;
+      const sample = this._scene.layers.map((layer) => String(layer.textValue || '')).join('') || ' ';
+      const loads = Promise.all(families.map((family) => fonts.load('bold 16px ' + cssString(family), sample).catch(() => undefined)));
+      await Promise.race([loads, new Promise((resolve) => setTimeout(resolve, 3000))]);
     }
 
     _applyData(data: Record<string, unknown> | undefined): RuntimeActionResult | undefined {
@@ -992,13 +1041,21 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
 
     async load(params?: { renderType?: string; data?: Record<string, unknown> }): Promise<RuntimeActionResult> {
       this._cancel();
-      if (params && params.renderType && params.renderType !== 'realtime') return { statusCode: 400, statusMessage: 'Only realtime rendering is supported' };
+      const renderType = params && params.renderType ? params.renderType : 'realtime';
+      if (renderType !== 'realtime' && renderType !== 'non-realtime') return { statusCode: 400, statusMessage: 'Unknown render type: ' + String(renderType) };
+      this._scene = JSON.parse(JSON.stringify(SCENE));
       const error = this._applyData(params && params.data);
       if (error) return error;
+      this._loadData = params && params.data ? JSON.parse(JSON.stringify(params.data)) : undefined;
+      this._schedule = [];
       this._currentFrame = 0;
       this._currentStep = undefined;
-      this._stopped = false;
+      // OGraf: nothing is painted before the first playAction. A renderer that
+      // loads the next instance while the previous one is still on air would
+      // otherwise show this instance's first frame on top of it.
+      this._stopped = true;
       this._render();
+      await this._fontsReady();
       return { statusCode: 200 };
     }
 
@@ -1045,11 +1102,10 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
 
     async playAction(params: { goto?: number; delta?: number; skipAnimation?: boolean } = {}): Promise<RuntimeActionResult> {
       const current = this._currentStep;
-      const goto = typeof params.goto === 'number' && params.goto >= 0 ? params.goto : undefined;
-      const delta = typeof params.delta === 'number' ? params.delta : 1;
-      const targetStep = goto === undefined ? (current === undefined ? -1 : current) + delta : goto;
-      const stepCount = 1;
-      const nextStep = targetStep >= stepCount ? undefined : Math.max(0, targetStep);
+      const nextStep = nextStepOf(current, params);
+      // From the start (or after a stop) the graphic plays in from its first
+      // frame again, instead of showing the last frame it reached.
+      if (current === undefined && nextStep !== undefined) this._currentFrame = 0;
       this._currentStep = nextStep;
       this._stopped = nextStep === undefined;
       const result = await this._animate(this._scene.totalFrames, params.skipAnimation === true);
@@ -1076,6 +1132,79 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
 
     async customAction(): Promise<RuntimeActionResult> {
       return { statusCode: 400, statusMessage: 'No custom actions supported' };
+    }
+
+    /** Non-real-time: stores the actions to run at their timestamps (ms); replaces any earlier schedule. */
+    async setActionsSchedule(params?: { schedule?: unknown }): Promise<RuntimeActionResult> {
+      const entries = params && Array.isArray(params.schedule) ? params.schedule as ScheduledAction[] : [];
+      this._schedule = entries
+        .filter((entry) => entry && Number.isFinite(entry.timestamp) && entry.action && typeof entry.action.type === 'string')
+        .map((entry) => ({ timestamp: Number(entry.timestamp), action: { type: entry.action.type, params: entry.action.params } }))
+        .sort((a, b) => a.timestamp - b.timestamp);
+      return { statusCode: 200 };
+    }
+
+    /**
+     * Non-real-time: renders the frame at `timestamp` (ms) by replaying the
+     * schedule from the loaded state with the real-time rules: a play runs the
+     * timeline at the scene's frame rate, a stop finishes it and then hides.
+     */
+    async goToTime(params?: { timestamp?: number }): Promise<RuntimeActionResult> {
+      const time = params ? Number(params.timestamp) : NaN;
+      if (!Number.isFinite(time)) return { statusCode: 400, statusMessage: 'timestamp must be a number of milliseconds' };
+      this._cancel();
+      this._scene = JSON.parse(JSON.stringify(SCENE));
+      this._applyData(this._loadData);
+      const fps = this._scene.fps;
+      const end = this._scene.totalFrames;
+      let frame = 0;
+      let step: number | undefined;
+      let stopped = true;
+      let motion: { from: number; at: number; hideAtEnd: boolean } | null = null;
+      const advance = (now: number) => {
+        if (!motion) return;
+        const reached = motion.from + (now - motion.at) / 1000 * fps;
+        if (reached < end) {
+          frame = reached;
+          return;
+        }
+        frame = end;
+        if (motion.hideAtEnd) {
+          stopped = true;
+          step = undefined;
+        }
+        motion = null;
+      };
+      for (const entry of this._schedule) {
+        if (entry.timestamp > time) break;
+        advance(entry.timestamp);
+        const actionParams = (entry.action.params || {}) as { goto?: number; delta?: number; skipAnimation?: boolean; data?: Record<string, unknown> };
+        if (entry.action.type === 'playAction') {
+          const next = nextStepOf(step, actionParams);
+          if (step === undefined && next !== undefined) frame = 0;
+          step = next;
+          stopped = next === undefined;
+          motion = stopped || actionParams.skipAnimation === true ? null : { from: frame, at: entry.timestamp, hideAtEnd: false };
+          if (!stopped && actionParams.skipAnimation === true) frame = end;
+        } else if (entry.action.type === 'stopAction') {
+          if (actionParams.skipAnimation === true || stopped) {
+            frame = end;
+            stopped = true;
+            step = undefined;
+            motion = null;
+          } else {
+            motion = { from: frame, at: entry.timestamp, hideAtEnd: true };
+          }
+        } else if (entry.action.type === 'updateAction') {
+          this._applyData(actionParams.data);
+        }
+      }
+      advance(time);
+      this._currentFrame = frame;
+      this._currentStep = step;
+      this._stopped = stopped;
+      this._render();
+      return { statusCode: 200 };
     }
   }
 

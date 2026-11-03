@@ -209,3 +209,27 @@ describe('R4-13 — the download name is a safe file name on every platform', ()
     expect(sanitizeOGrafDownloadName('')).toBe('graphic');
   });
 });
+
+describe('the package thumbnail', () => {
+  const PNG_SIGNATURE = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+  it('is packaged at thumbnail.png and listed in the manifest with its resolution', async () => {
+    const plan = compileOGrafPackage(scene([shape()]));
+    const { bytes } = await createOGrafBrowserZip(plan, { thumbnail: { bytes: PNG_SIGNATURE, width: 320, height: 180 } });
+    const files = unzipSync(bytes);
+    expect(files['thumbnail.png']).toEqual(PNG_SIGNATURE);
+    const manifestPath = Object.keys(files).find((path) => path.endsWith('.ograf.json'))!;
+    const manifest = JSON.parse(new TextDecoder().decode(files[manifestPath]));
+    expect(manifest.thumbnails).toEqual([{ file: 'thumbnail.png', resolution: { width: 320, height: 180 } }]);
+    // Every other manifest field is unchanged.
+    const { thumbnails: _added, ...rest } = manifest;
+    expect(rest).toEqual(plan.manifest);
+  });
+
+  it('is optional: without one the manifest lists none', async () => {
+    const files = unzipSync((await exportZip(scene([shape()]))).bytes);
+    expect(files['thumbnail.png']).toBeUndefined();
+    const manifestPath = Object.keys(files).find((path) => path.endsWith('.ograf.json'))!;
+    expect(JSON.parse(new TextDecoder().decode(files[manifestPath])).thumbnails).toBeUndefined();
+  });
+});

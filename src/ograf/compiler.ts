@@ -88,8 +88,15 @@ export function compileOGrafManifest(sceneData: SceneData, options: OGrafExportO
     main: (options.main?.trim() || OGRAF_DEFAULT_MAIN).replace(/\\/gu, '/'),
     version: options.version?.trim() || OGRAF_DEFAULT_VERSION,
     supportsRealTime: true,
-    supportsNonRealTime: false,
+    supportsNonRealTime: true,
     stepCount: 1,
+    // A play runs the whole timeline at the scene's frame rate; a stop after it
+    // and an update apply at once.
+    actionDurations: [
+      { type: 'playAction', duration: Math.round((sceneData.totalFrames / sceneData.fps) * 1000) },
+      { type: 'stopAction', duration: 0 },
+      { type: 'updateAction', duration: 0 },
+    ],
     schema: validated.publicStateSchema,
     ...(options.description?.trim() ? { description: options.description.trim() } : {}),
     ...(options.emitRenderRequirements === false ? {} : {

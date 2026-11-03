@@ -4,6 +4,7 @@ import type { SceneData, SceneLayer } from '../types/composition';
 import { evaluateOGrafScene } from '../ograf/evaluation';
 import { compileOGrafPackage } from '../ograf/packageCompiler';
 import { renderOGrafSvg } from '../ograf/svgRenderer';
+import { onAir } from './helpers/ografOnAir';
 
 function layer(overrides: Partial<SceneLayer> = {}): SceneLayer {
   return {
@@ -100,6 +101,7 @@ describe('generated runtime parity', () => {
     expect(plan.status).toBe('ready-to-materialize');
     const graphic = instantiateGraphic(plan.files.find((file) => file.path === 'graphic.mjs')?.content || '');
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
 
     // 320x180 scene: the runtime and the canonical renderer both place the
     // origin at the artboard centre (160, 90).
@@ -122,6 +124,7 @@ describe('generated runtime parity', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
 
     const canonical = renderOGrafSvg(evaluateOGrafScene(authored, 0));
     const generated = graphic.innerHTML;
@@ -166,6 +169,7 @@ describe('generated runtime parity', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
 
     const canonical = renderOGrafSvg(evaluateOGrafScene(authored, 0));
     expect(graphic.innerHTML).toContain('clipPath id="kcs-clip-source"');
@@ -218,6 +222,7 @@ describe('generated runtime parity', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic, 0);
     const canonical = renderOGrafSvg(evaluateOGrafScene(authored, 0));
     const filterId = 'kcs-layer-mask-filter-kcs-ograf-layer-mask-shape-subtract';
     expect(graphic.innerHTML).toContain(`id="${filterId}"`);
@@ -249,6 +254,7 @@ describe('generated runtime parity', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
     const canonical = renderOGrafSvg(evaluateOGrafScene(authored, 0));
     const id = 'kcs-ograf-track-matte-target-source-alpha-inverted';
 
@@ -282,6 +288,7 @@ describe('generated runtime parity', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
     const canonical = renderOGrafSvg(evaluateOGrafScene(authored, 0));
     const id = 'kcs-ograf-track-matte-target-source-alpha';
 
@@ -341,6 +348,7 @@ describe('generated runtime parity', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
     expect(graphic.innerHTML).toContain('id="kcs-clip-source___hostile"');
     expect(graphic.innerHTML).toContain('clip-path="url(#kcs-clip-source___hostile)"');
     expect(graphic.innerHTML).toContain('id="kcs-ograf-layer-mask-target___hostile-mask___hostile-add"');
@@ -368,6 +376,7 @@ describe('generated runtime parity', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
     const updated = await graphic.updateAction({
       data: {
         headline: 'After',

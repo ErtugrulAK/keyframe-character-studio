@@ -411,7 +411,8 @@ export const HeaderBar: React.FC = () => {
         showToast('The selected file could not be read as text.', 'error');
         return;
       }
-      switch (classifyImport(file.name, text)) {
+      const kind = classifyImport(file.name, text);
+      switch (kind) {
         case 'ograf-package':
         case 'ograf-manifest':
           showToast('This is an OGraf graphic manifest. Import the .zip/.ograf package it belongs to, or export the KCS project again.', 'error');
@@ -426,6 +427,9 @@ export const HeaderBar: React.FC = () => {
         default: {
           const result = importProject(text, fileNameWithoutExt);
           if (result.ok) {
+            // A scene replaces the ACTIVE tab, which takes the file's name (a
+            // legacy project already opens in a new tab named after it).
+            if (kind === 'kcs-scene' && fileNameWithoutExt) renameProjectTemplate(activeProjectTemplateId, fileNameWithoutExt);
             // A successful import replaces the active template's content (a
             // legacy project document opens as a new tab); it can still carry
             // warnings (for example the legacy migration notice), and those

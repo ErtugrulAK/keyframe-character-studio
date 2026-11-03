@@ -852,6 +852,13 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   scrollbar-width: thin;
   scrollbar-color: var(--border-color) transparent;
 }
+/* The scrolled content: as tall and wide as the lanes, and at least the pane. */
+.timeline-grid-content {
+  position: relative;
+  width: max-content;
+  min-width: 100%;
+  min-height: 100%;
+}
 .timeline-grid-container::-webkit-scrollbar { width: 6px; height: 6px; }
 .timeline-grid-container::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: var(--radius-xs); }
 
@@ -895,8 +902,9 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   pointer-events: none;
   box-shadow: none;
 }
+/* Sticky like the ruler, so the frame badge stays on it while the lanes scroll. */
 .playhead-head {
-  position: absolute; top: 0; left: -11px;
+  position: sticky; top: 0; margin-left: -11px;
   width: 24px; height: 18px;
   background: var(--accent-teal);
   clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%);

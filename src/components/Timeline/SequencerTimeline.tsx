@@ -1536,6 +1536,9 @@ export const SequencerTimeline: React.FC = () => {
 
         {/* ── RIGHT SCROLLABLE GRID ── */}
         <div className="timeline-grid-container timeline-graph-pane" ref={timelineGridRef} onScroll={handleGridScroll} onMouseDown={handleMarqueeStart}>
+          {/* The content box spans every lane, so the playhead line reaches the
+              last track instead of stopping at the visible height. */}
+          <div className="timeline-grid-content">
           {/* Time Ruler */}
           <TimeRuler
             frameNumbers={frameNumbers}
@@ -1603,6 +1606,7 @@ export const SequencerTimeline: React.FC = () => {
               }}
             />
           )}
+          </div>
         </div>
       </div>
 

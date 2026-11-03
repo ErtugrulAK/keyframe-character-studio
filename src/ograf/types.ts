@@ -75,6 +75,8 @@ export interface OGrafPublicTextField {
   title?: string;
   defaultValue?: string;
   layerId: string;
+  /** The text layer's character limit (`textFit.maxLength`): the field accepts no more. */
+  maxLength?: number;
 }
 
 export interface OGrafPublicImageField {

@@ -5,6 +5,7 @@ import { StyleColorSection } from './style/StyleColorSection';
 import { StyleAppearanceSection } from './style/StyleAppearanceSection';
 import { isShapeAppearanceEligible } from '../../../utils/layers/shapeAppearance';
 import { StyleTextFields } from './style/StyleTextFields';
+import { FitToTextCard, TextBoxCard } from './style/StyleTextFitSection';
 import { StyleClonerSection } from './style/StyleClonerSection';
 import { StyleParticleSection } from './style/StyleParticleSection';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
@@ -145,6 +146,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         onColorInteractionStart={onColorInteractionStart}
         onColorInteractionEnd={onColorInteractionEnd}
       />
+      <TextBoxCard selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
+      <FitToTextCard selectedPart={selectedPart} characterParts={characterParts} onPartPropChange={handlePartPropChange} />
       {colorCorrection && selectedPart.type === 'custom_image' && (
         <ColorCorrectionCard
           part={selectedPart}

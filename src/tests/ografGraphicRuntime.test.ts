@@ -12,6 +12,7 @@ import { createWorldAffineAlgebra } from '../utils/geometry/containerMath';
 import { TEXT_BOX_CENTRE_EM } from '../utils/geometry/textOrigin';
 import { resolveShapeAppearance } from '../utils/layers/shapeAppearance';
 import { describePaint, describeText } from '../utils/layers/drawDescriptor';
+import { createTextFit } from '../utils/layers/textFit';
 import { onAir } from './helpers/ografOnAir';
 
 class HostElement { innerHTML = ''; }
@@ -36,6 +37,7 @@ const environmentFor = (scene: RuntimeScene): GraphicRuntimeEnvironment => ({
   resolveShapeAppearance: resolveShapeAppearance as GraphicRuntimeEnvironment['resolveShapeAppearance'],
   describePaint,
   describeText,
+  textFit: createTextFit(),
 });
 
 const runtimeFor = (scene: RuntimeScene) => createGraphicRuntime(environmentFor(scene));

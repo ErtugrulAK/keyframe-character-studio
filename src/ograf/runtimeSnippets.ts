@@ -25,6 +25,7 @@ import { createWorldAffineAlgebra } from '../utils/geometry/containerMath';
 import { createGraphicRuntime } from './runtime/graphicRuntime';
 import { createShapeAppearance } from '../utils/layers/shapeAppearance';
 import { describePaint, describeText } from '../utils/layers/drawDescriptor';
+import { createTextFit } from '../utils/layers/textFit';
 
 /**
  * A helper's source, as the runtime will receive it.
@@ -60,6 +61,8 @@ export const runtimeResolveShapeAppearance = (): string => `(${sourceOf(createSh
 /** The shared draw descriptors (`utils/layers/drawDescriptor`): what a layer paints and writes. */
 export const runtimeDescribePaint = (): string => sourceOf(describePaint as (...args: never[]) => unknown);
 export const runtimeDescribeText = (): string => sourceOf(describeText as (...args: never[]) => unknown);
+
+export const runtimeTextFit = (): string => `(${sourceOf(createTextFit as (...args: never[]) => unknown)})()`;
 
 /**
  * The graphic runtime factory itself. Like the affine algebra it is one

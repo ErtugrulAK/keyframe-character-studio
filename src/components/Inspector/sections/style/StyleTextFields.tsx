@@ -79,6 +79,7 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({
             type="text"
             value={selectedPart.textValue || ''}
             placeholder="Enter text..."
+            maxLength={selectedPart.type === 'custom_text' ? selectedPart.textFit?.maxLength : undefined}
             onFocus={(e) => e.target.select()}
             onChange={(e) => onPartPropChange('textValue', e.target.value)}
           />

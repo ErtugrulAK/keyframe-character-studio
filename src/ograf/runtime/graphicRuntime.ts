@@ -19,6 +19,7 @@ import type { Transform } from '../../types/animator';
 import type { createWorldAffineAlgebra, WorldAffine } from '../../utils/geometry/containerMath';
 import type { createShapeAppearance } from '../../utils/layers/shapeAppearance';
 import type { describePaint, describeText } from '../../utils/layers/drawDescriptor';
+import type { createTextFit, FitToTextSettings, TextFitSettings } from '../../utils/layers/textFit';
 
 export interface RuntimePoint {
   x: number;
@@ -65,6 +66,8 @@ export interface RuntimeLayer {
   id: string;
   type: string;
   zIndex: number;
+  textFit?: TextFitSettings;
+  fitToText?: FitToTextSettings;
   x: number;
   y: number;
   rotation: number;
@@ -174,6 +177,8 @@ export interface GraphicRuntimeEnvironment {
   /** What a layer paints and writes (`utils/layers/drawDescriptor`). */
   describePaint: typeof describePaint;
   describeText: typeof describeText;
+  /** Text boxes and shapes that follow their text (`utils/layers/textFit`). */
+  textFit: ReturnType<typeof createTextFit>;
 }
 
 export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
@@ -190,6 +195,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     resolveShapeAppearance,
     describePaint,
     describeText,
+    textFit,
   } = environment;
   const { affineOfTransform, composeWorldTransform, composeAffine, applyAffine, withWorldAffine, worldAffineOf, affineTrsReading } = environment.affine;
 
@@ -963,6 +969,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     declare _loadData: Record<string, unknown> | undefined;
     declare _schedule: ScheduledAction[];
     declare _svg: Element | null;
+    declare _fitted: RuntimeScene | null;
 
     _cancel(): void {
       this._token += 1;
@@ -987,6 +994,12 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       this._loadData = undefined;
       this._schedule = [];
       this._svg = null;
+      this._fitted = null;
+    }
+
+    /** Re-fits text boxes (and the shapes that follow them) to the current data and loaded fonts. */
+    _refit(): void {
+      this._fitted = textFit.applyTextFitToScene(this._scene);
     }
 
     /**
@@ -994,7 +1007,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
      * their own, written once; only the SVG is replaced per frame.
      */
     _render(): void {
-      const markup = renderScene(this._scene, this._currentFrame, this._stopped, false);
+      const markup = renderScene(this._fitted || this._scene, this._currentFrame, this._stopped, false);
       if (!this._svg || this._svg.parentNode !== this) {
         this.innerHTML = '<style>' + fontStyles() + '</style>' + markup;
         this._svg = this.lastElementChild;
@@ -1054,14 +1067,18 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       // loads the next instance while the previous one is still on air would
       // otherwise show this instance's first frame on top of it.
       this._stopped = true;
+      this._refit();
       this._render();
       await this._fontsReady();
+      // Measured again with the packaged faces loaded.
+      this._refit();
       return { statusCode: 200 };
     }
 
     async dispose(): Promise<RuntimeActionResult> {
       this._cancel();
       this._scene = JSON.parse(JSON.stringify(SCENE));
+      this._fitted = null;
       this._stopped = false;
       this.innerHTML = '';
       return { statusCode: 200 };
@@ -1126,6 +1143,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       this._cancel();
       const error = this._applyData(params && params.data);
       if (error) return error;
+      this._refit();
       this._render();
       return { statusCode: 200 };
     }
@@ -1200,6 +1218,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
         }
       }
       advance(time);
+      this._refit();
       this._currentFrame = frame;
       this._currentStep = step;
       this._stopped = stopped;

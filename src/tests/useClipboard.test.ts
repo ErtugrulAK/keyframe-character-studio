@@ -203,6 +203,22 @@ describe('useClipboard — copying a multi-layer selection (rc.6 QA)', () => {
     expect(otherCopy.matte?.sourcePartId).toBe('outside');
   });
 
+  it('remaps Track Matte sources and text-box links between copied layers', () => {
+    const parts = [
+      layer('src', 1),
+      layer('target', 2, { trackMatte: { sourceLayerId: 'src', mode: 'alpha' } } as Partial<CharacterPart>),
+      layer('title', 3, { type: 'custom_text', textValue: 'Hi' } as Partial<CharacterPart>),
+      layer('bar', 4, { fitToText: { textLayerId: 'title', padding: 10 } } as Partial<CharacterPart>),
+      layer('loneBar', 5, { fitToText: { textLayerId: 'outsideText' } } as Partial<CharacterPart>),
+    ];
+    const { pastedParts } = setup(parts, ['src', 'target', 'title', 'bar', 'loneBar']);
+    const [srcCopy, targetCopy, titleCopy, barCopy, loneBarCopy] = pastedParts;
+
+    expect(targetCopy.trackMatte?.sourceLayerId).toBe(srcCopy.id);
+    expect(barCopy.fitToText).toEqual({ textLayerId: titleCopy.id, padding: 10 });
+    expect(loneBarCopy.fitToText?.textLayerId).toBe('outsideText');
+  });
+
   it('copies a selected group with its contents and re-parents them to the copied group', () => {
     const parts = [
       layer('group', 1, { isGroup: true } as Partial<CharacterPart>),

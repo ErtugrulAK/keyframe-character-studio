@@ -3,6 +3,7 @@ import type { EvaluatedFrame, EvaluatedLayer, RuntimeData, RuntimeTrackState, Sc
 import { evaluateFrame } from '../utils/animation/evaluateFrame';
 import { validateSceneForOGraf } from './validation';
 import type { OGrafExportOptions } from './types';
+import { applyTextFitToScene } from '../utils/layers/textFit';
 
 export interface OGrafEvaluatedScene {
   frame: number;
@@ -106,10 +107,13 @@ export function evaluateSceneFrame(
   sequenceId?: string,
 ): OGrafEvaluatedScene {
   const activeSequenceId = sequenceId || sceneData.activeTemplateId || 'Sequence';
-  const layers = sceneData.layers.map(toCharacterPart);
+  // Text boxes and shapes that follow their text: the same fit the stage and
+  // the runtime apply (`utils/layers/textFit`).
+  const fitted = applyTextFitToScene(sceneData);
+  const layers = fitted.layers.map(toCharacterPart);
   const evaluated: EvaluatedFrame = evaluateFrame(
     layers,
-    toRuntimeTracks(sceneData),
+    toRuntimeTracks(fitted),
     sceneData.totalFrames,
     frame,
     createRuntime(),

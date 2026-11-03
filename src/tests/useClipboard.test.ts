@@ -139,3 +139,91 @@ describe('useClipboard Hook', () => {
     expect(mockShowToast).not.toHaveBeenCalled();
   });
 });
+
+describe('useClipboard — copying a multi-layer selection (rc.6 QA)', () => {
+  const base = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+  const layer = (id: string, zIndex: number, extra: Partial<CharacterPart> = {}): CharacterPart => ({
+    id, type: 'custom_rect', name: id.toUpperCase(), zIndex, fillColor: '#fff', strokeColor: '#000',
+    baseTransform: { ...base, x: zIndex * 10 }, ...extra,
+  } as CharacterPart);
+  const trackOf = (partId: string): Track => ({
+    id: `t-${partId}`, partId, name: partId, color: '#3b82f6', keyframes: [], visible: true, locked: false, expanded: false,
+    channels: { ...makeEmptyChannels(), x: [{ id: `k-${partId}`, frame: 0, value: 1, easing: 'linear' }] },
+  } as Track);
+
+  const setup = (parts: CharacterPart[], selected: string[], primary = selected[selected.length - 1]) => {
+    const setTracks = vi.fn();
+    const setCharacterParts = vi.fn();
+    const setSelectedPartId = vi.fn();
+    const setSelectedPartIds = vi.fn();
+    const hook = renderHook(() => useClipboard({
+      characterParts: parts,
+      tracks: parts.map((part) => trackOf(part.id)),
+      selectedPartId: primary,
+      selectedPartIds: selected,
+      showToast: vi.fn(),
+      setTracks,
+      setCharacterParts,
+      setSelectedPartId,
+      setSelectedPartIds,
+    }));
+    act(() => hook.result.current.copySelectedPart());
+    act(() => hook.result.current.pasteCopiedPart());
+    const pastedParts = (setCharacterParts.mock.calls[0][0] as (prev: CharacterPart[]) => CharacterPart[])(parts).slice(0, -parts.length || undefined);
+    const pastedTracks = (setTracks.mock.calls[0][0] as (prev: Track[]) => Track[])([]);
+    return { pastedParts, pastedTracks, setSelectedPartId, setSelectedPartIds };
+  };
+
+  it('pastes every selected layer, with its animation, as copies above the scene', () => {
+    const parts = [layer('a', 1), layer('b', 2), layer('c', 3)];
+    const { pastedParts, pastedTracks, setSelectedPartIds, setSelectedPartId } = setup(parts, ['a', 'c']);
+
+    expect(pastedParts.map((part) => part.name)).toEqual(['A Copy', 'C Copy']);
+    expect(pastedParts.every((part) => !['a', 'b', 'c'].includes(part.id))).toBe(true);
+    // Stacking order kept, above the three existing layers.
+    expect(pastedParts.map((part) => part.zIndex)).toEqual([4, 5]);
+    expect(pastedParts.map((part) => part.baseTransform.x)).toEqual([30, 50]);
+    expect(pastedTracks.map((track) => track.partId)).toEqual(pastedParts.map((part) => part.id));
+    expect(pastedTracks.every((track) => track.channels.x.length === 1 && !track.channels.x[0].id.startsWith('k-'))).toBe(true);
+    expect(setSelectedPartIds).toHaveBeenCalledWith(pastedParts.map((part) => part.id));
+    expect(setSelectedPartId).toHaveBeenCalledWith(pastedParts[1].id);
+  });
+
+  it('links the copies to each other, and leaves links to uncopied layers on the original', () => {
+    const parts = [
+      layer('src', 1),
+      layer('target', 2, { matte: { sourcePartId: 'src', mode: 'alpha' } } as Partial<CharacterPart>),
+      layer('other', 3, { matte: { sourcePartId: 'outside', mode: 'alpha' } } as Partial<CharacterPart>),
+      layer('outside', 4),
+    ];
+    const { pastedParts } = setup(parts, ['src', 'target', 'other']);
+    const [srcCopy, targetCopy, otherCopy] = pastedParts;
+
+    expect(targetCopy.matte?.sourcePartId).toBe(srcCopy.id);
+    expect(otherCopy.matte?.sourcePartId).toBe('outside');
+  });
+
+  it('copies a selected group with its contents and re-parents them to the copied group', () => {
+    const parts = [
+      layer('group', 1, { isGroup: true } as Partial<CharacterPart>),
+      layer('child', 2, { parentId: 'group' }),
+      layer('loose', 3),
+    ];
+    const { pastedParts, setSelectedPartIds } = setup(parts, ['group', 'loose'], 'loose');
+    const [groupCopy, childCopy, looseCopy] = pastedParts;
+
+    expect(childCopy.parentId).toBe(groupCopy.id);
+    // Only the outermost copies move by the paste offset; a child keeps its place in the group.
+    expect(childCopy.baseTransform.x).toBe(20);
+    expect(groupCopy.baseTransform.x).toBe(30);
+    expect(setSelectedPartIds).toHaveBeenCalledWith([groupCopy.id, looseCopy.id]);
+  });
+
+  it('copies only the primary layer when the selection does not include it', () => {
+    const parts = [layer('a', 1), layer('b', 2)];
+    const { pastedParts, setSelectedPartIds } = setup(parts, ['a'], 'b');
+
+    expect(pastedParts.map((part) => part.name)).toEqual(['B Copy']);
+    expect(setSelectedPartIds).not.toHaveBeenCalled();
+  });
+});

@@ -650,10 +650,12 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     characterParts,
     tracks,
     selectedPartId,
+    selectedPartIds,
     showToast,
     setTracks: editSetTracks,
     setCharacterParts: editSetCharacterParts,
     setSelectedPartId,
+    setSelectedPartIds,
   });
 
 

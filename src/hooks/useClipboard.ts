@@ -10,58 +10,33 @@ interface UseClipboardOptions {
   characterParts: CharacterPart[];
   tracks: Track[];
   selectedPartId: string | null;
+  /** The whole selection; the primary `selectedPartId` is one of them. */
+  selectedPartIds?: string[];
   showToast: (message: string, type?: 'info' | 'success' | 'error') => void;
   setTracks: React.Dispatch<React.SetStateAction<Track[]>>;
   setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>;
   setSelectedPartId: (id: string | null) => void;
+  setSelectedPartIds?: (ids: string[]) => void;
 }
 
-export const useClipboard = ({
-  characterParts,
-  tracks,
-  selectedPartId,
-  showToast,
-  setTracks,
-  setCharacterParts,
-  setSelectedPartId,
-}: UseClipboardOptions) => {
-  const [clipboardData, setClipboardData] = useState<{ part: CharacterPart; track?: Track } | null>(null);
+interface ClipboardEntry {
+  part: CharacterPart;
+  track?: Track;
+}
 
-  const copySelectedPart = useCallback(() => {
-    if (!selectedPartId) return;
-    const part = characterParts.find((p) => p.id === selectedPartId);
-    if (!part) return;
-    const track = tracks.find((t) => t.partId === selectedPartId);
-    setClipboardData({
-      part: structuredClone(part),
-      track: track ? structuredClone(track) : undefined,
-    });
-  }, [selectedPartId, characterParts, tracks]);
+/**
+ * `part`/`track` are the PRIMARY layer (the one animation paste reads);
+ * `entries` are every copied layer, in scene order, the primary among them.
+ */
+type ClipboardData = ClipboardEntry & { entries: ClipboardEntry[] };
 
-  const pasteCopiedPart = useCallback(() => {
-    if (!clipboardData) {
-      showToast('Clipboard is empty', 'error');
-      return;
-    }
-    const newPartId = generateId('part');
-    const newPart: CharacterPart = {
-      ...structuredClone(clipboardData.part),
-      id: newPartId,
-      name: `${clipboardData.part.name} Copy`,
-      zIndex: characterParts.length + 1,
-      // A copy is not bonded to the original's partners.
-      boundPartIds: undefined,
-      baseTransform: {
-        ...clipboardData.part.baseTransform,
-        x: clipboardData.part.baseTransform.x + 20,
-        y: clipboardData.part.baseTransform.y + 20,
-      },
-    };
-
-    let newTrack: Track = {
+/** A track for `cloneId`: the source's animation under fresh ids, or an empty track. */
+const cloneTrackOnto = (source: Track | undefined, cloneId: string, name: string): Track => {
+  if (!source) {
+    return {
       id: generateId('track'),
-      partId: newPartId,
-      name: newPart.name,
+      partId: cloneId,
+      name,
       color: '#3b82f6',
       keyframes: [],
       channels: makeEmptyChannels(),
@@ -69,34 +44,112 @@ export const useClipboard = ({
       locked: false,
       expanded: false,
     };
-
-    if (clipboardData.track) {
-      const clonedTrack: Track = structuredClone(clipboardData.track);
-      const newChannels = makeEmptyChannels();
-      if (clonedTrack.channels) {
-        (Object.keys(clonedTrack.channels) as TrackChannel[]).forEach((ch) => {
-          if (clonedTrack.channels[ch]) {
-            newChannels[ch] = clonedTrack.channels[ch].map((pk) => ({ ...pk, id: generateId(`pkf_${ch}`) }));
-          }
-        });
+  }
+  const clonedTrack: Track = structuredClone(source);
+  const newChannels = makeEmptyChannels();
+  if (clonedTrack.channels) {
+    (Object.keys(clonedTrack.channels) as TrackChannel[]).forEach((ch) => {
+      if (clonedTrack.channels[ch]) {
+        newChannels[ch] = clonedTrack.channels[ch].map((pk) => ({ ...pk, id: generateId(`pkf_${ch}`) }));
       }
-      newTrack = {
-        ...clonedTrack,
-        id: generateId('track'),
-        partId: newPartId,
-        name: newPart.name,
-        keyframes: (clonedTrack.keyframes || []).map((k) => ({
-          ...k,
-          id: generateId('kf'),
-        })),
-        channels: newChannels,
-      };
-    }
+    });
+  }
+  return {
+    ...clonedTrack,
+    id: generateId('track'),
+    partId: cloneId,
+    name,
+    keyframes: (clonedTrack.keyframes || []).map((k) => ({ ...k, id: generateId('kf') })),
+    channels: newChannels,
+  };
+};
 
-    setTracks((prevTracks) => [newTrack, ...prevTracks]);
-    setCharacterParts((prevParts) => [newPart, ...prevParts]);
-    setSelectedPartId(newPartId);
-  }, [clipboardData, characterParts, setTracks, setCharacterParts, setSelectedPartId, showToast]);
+export const useClipboard = ({
+  characterParts,
+  tracks,
+  selectedPartId,
+  selectedPartIds = [],
+  showToast,
+  setTracks,
+  setCharacterParts,
+  setSelectedPartId,
+  setSelectedPartIds,
+}: UseClipboardOptions) => {
+  const [clipboardData, setClipboardData] = useState<ClipboardData | null>(null);
+
+  /**
+   * Copies the selection: every selected layer, a selected group with its
+   * contents. A single layer copies exactly as before.
+   */
+  const copySelectedPart = useCallback(() => {
+    if (!selectedPartId) return;
+    const primary = characterParts.find((p) => p.id === selectedPartId);
+    if (!primary) return;
+    const chosen = new Set(selectedPartIds.includes(selectedPartId) ? selectedPartIds : [selectedPartId]);
+    for (const id of [...chosen]) {
+      const part = characterParts.find((p) => p.id === id);
+      if (part?.isGroup) getGroupDescendants(characterParts, id).forEach((child) => chosen.add(child.id));
+    }
+    const entryFor = (part: CharacterPart): ClipboardEntry => {
+      const track = tracks.find((t) => t.partId === part.id);
+      return { part: structuredClone(part), track: track ? structuredClone(track) : undefined };
+    };
+    setClipboardData({
+      ...entryFor(primary),
+      entries: characterParts.filter((part) => chosen.has(part.id)).map(entryFor),
+    });
+  }, [selectedPartId, selectedPartIds, characterParts, tracks]);
+
+  /**
+   * Pastes every copied layer under fresh ids, as ONE scene edit. Links between
+   * the copied layers (group parent, matte source, boolean group) point at the
+   * copies; a link to a layer that was not copied stays on the original, as a
+   * single-layer paste always did. The copies keep their stacking order above
+   * the scene, and the outermost ones move by the usual paste offset.
+   */
+  const pasteCopiedPart = useCallback(() => {
+    if (!clipboardData) {
+      showToast('Clipboard is empty', 'error');
+      return;
+    }
+    const entries = clipboardData.entries.length > 0 ? clipboardData.entries : [clipboardData];
+    const idMap = new Map(entries.map((entry) => [entry.part.id, generateId('part')]));
+    const remap = (id: string) => idMap.get(id) ?? id;
+    const stacking = [...entries].sort((a, b) => (a.part.zIndex ?? 0) - (b.part.zIndex ?? 0));
+    const zIndexOf = new Map(stacking.map((entry, rank) => [entry.part.id, characterParts.length + 1 + rank]));
+
+    const newParts: CharacterPart[] = [];
+    const newTracks: Track[] = [];
+    const outermostIds: string[] = [];
+    entries.forEach(({ part, track }) => {
+      const cloneId = idMap.get(part.id)!;
+      const outermost = !part.parentId || !idMap.has(part.parentId);
+      const clone: CharacterPart = {
+        ...structuredClone(part),
+        id: cloneId,
+        name: `${part.name} Copy`,
+        zIndex: zIndexOf.get(part.id)!,
+        // A copy is not bonded to the original's partners.
+        boundPartIds: undefined,
+        baseTransform: outermost
+          ? { ...part.baseTransform, x: part.baseTransform.x + 20, y: part.baseTransform.y + 20 }
+          : { ...part.baseTransform },
+      };
+      if (part.parentId) clone.parentId = remap(part.parentId);
+      if (clone.matte?.sourcePartId) clone.matte = { ...clone.matte, sourcePartId: remap(clone.matte.sourcePartId) };
+      if (part.booleanGroupId) clone.booleanGroupId = remap(part.booleanGroupId);
+      if (part.booleanOperandIds) clone.booleanOperandIds = part.booleanOperandIds.map(remap);
+      if (outermost) outermostIds.push(cloneId);
+      newParts.push(clone);
+      newTracks.push(cloneTrackOnto(track, cloneId, clone.name));
+    });
+
+    const primaryCloneId = idMap.get(clipboardData.part.id) ?? newParts[0].id;
+    setTracks((prevTracks) => [...newTracks, ...prevTracks]);
+    setCharacterParts((prevParts) => [...newParts, ...prevParts]);
+    if (outermostIds.length > 1) setSelectedPartIds?.(outermostIds);
+    setSelectedPartId(outermostIds.includes(primaryCloneId) ? primaryCloneId : outermostIds[outermostIds.length - 1] ?? primaryCloneId);
+  }, [clipboardData, characterParts, setTracks, setCharacterParts, setSelectedPartId, setSelectedPartIds, showToast]);
 
   const duplicateSelectedPart = useCallback(() => {
     if (!selectedPartId) return;
@@ -112,39 +165,7 @@ export const useClipboard = ({
     const idMap = new Map<string, string>();
     sources.forEach((source) => idMap.set(source.id, source.id === part.id ? newPartId : generateId('part')));
 
-    const cloneTrackFor = (sourceId: string, cloneId: string, name: string): Track => {
-      const source = tracks.find((t) => t.partId === sourceId);
-      if (!source) {
-        return {
-          id: generateId('track'),
-          partId: cloneId,
-          name,
-          color: '#3b82f6',
-          keyframes: [],
-          channels: makeEmptyChannels(),
-          visible: true,
-          locked: false,
-          expanded: false,
-        };
-      }
-      const clonedTrack: Track = structuredClone(source);
-      const newChannels = makeEmptyChannels();
-      if (clonedTrack.channels) {
-        (Object.keys(clonedTrack.channels) as TrackChannel[]).forEach((ch) => {
-          if (clonedTrack.channels[ch]) {
-            newChannels[ch] = clonedTrack.channels[ch].map((pk) => ({ ...pk, id: generateId(`pkf_${ch}`) }));
-          }
-        });
-      }
-      return {
-        ...clonedTrack,
-        id: generateId('track'),
-        partId: cloneId,
-        name,
-        keyframes: (clonedTrack.keyframes || []).map((k) => ({ ...k, id: generateId('kf') })),
-        channels: newChannels,
-      };
-    };
+    const cloneTrackFor = (sourceId: string, cloneId: string, name: string): Track => cloneTrackOnto(tracks.find((t) => t.partId === sourceId), cloneId, name);
 
     const newParts: CharacterPart[] = [];
     const newTracks: Track[] = [];

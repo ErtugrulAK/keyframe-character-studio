@@ -341,7 +341,7 @@ const sharedLayerValueProblem = (record: Record<string, unknown>, path: string, 
     const effectError = effectsValidationError(record.effects, owner, maskIds);
     if (effectError) return sceneProblem('KCS_IMPORT_INVALID_EFFECT', `${path}.effects`, effectError, REIMPORT_ACTION);
   }
-  for (const field of ['matte', 'trackMatte', 'textFit', 'fitToText'] as const) {
+  for (const field of ['matte', 'trackMatte', 'textFit', 'fitToText', 'follow', 'justify', 'repeater'] as const) {
     if (record[field] !== undefined && !asRecord(record[field])) {
       return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.${field}`, `${owner} declares a ${field} that is not an object.`);
     }

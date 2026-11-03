@@ -19,7 +19,7 @@ import type { Transform } from '../../types/animator';
 import type { createWorldAffineAlgebra, WorldAffine } from '../../utils/geometry/containerMath';
 import type { createShapeAppearance } from '../../utils/layers/shapeAppearance';
 import type { describePaint, describeText } from '../../utils/layers/drawDescriptor';
-import type { createTextFit, FitToTextSettings, TextFitSettings } from '../../utils/layers/textFit';
+import type { createLayoutModifiers, FitToTextSettings, FollowSettings, JustifySettings, RepeaterSettings, TextFitSettings } from '../../utils/layers/layoutModifiers';
 
 export interface RuntimePoint {
   x: number;
@@ -68,6 +68,10 @@ export interface RuntimeLayer {
   zIndex: number;
   textFit?: TextFitSettings;
   fitToText?: FitToTextSettings;
+  follow?: FollowSettings;
+  justify?: JustifySettings;
+  repeater?: RepeaterSettings;
+  isGroup?: boolean;
   x: number;
   y: number;
   rotation: number;
@@ -177,8 +181,8 @@ export interface GraphicRuntimeEnvironment {
   /** What a layer paints and writes (`utils/layers/drawDescriptor`). */
   describePaint: typeof describePaint;
   describeText: typeof describeText;
-  /** Text boxes and shapes that follow their text (`utils/layers/textFit`). */
-  textFit: ReturnType<typeof createTextFit>;
+  /** Layout modifiers: text boxes, auto size, follow, justify, repeater (`utils/layers/layoutModifiers`). */
+  layout: ReturnType<typeof createLayoutModifiers>;
 }
 
 export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
@@ -195,7 +199,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     resolveShapeAppearance,
     describePaint,
     describeText,
-    textFit,
+    layout,
   } = environment;
   const { affineOfTransform, composeWorldTransform, composeAffine, applyAffine, withWorldAffine, worldAffineOf, affineTrsReading } = environment.affine;
 
@@ -997,9 +1001,9 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       this._fitted = null;
     }
 
-    /** Re-fits text boxes (and the shapes that follow them) to the current data and loaded fonts. */
+    /** Lays the scene out again (text boxes, auto size, follow, justify, repeater) for the current data and loaded fonts. */
     _refit(): void {
-      this._fitted = textFit.applyTextFitToScene(this._scene);
+      this._fitted = layout.applyLayoutToScene(this._scene);
     }
 
     /**

@@ -71,7 +71,7 @@ import { EditTargetStrip } from './overlays/EditTargetStrip';
 import { resolveEditTarget } from '../../utils/layers/editTarget';
 import { Sparkles } from 'lucide-react';
 import './StageCanvas.css';
-import { useTextFit } from '../../hooks/useTextFit';
+import { useLayoutModifiers } from '../../hooks/useLayoutModifiers';
 
 /**
  * A fitted camera centre on WHOLE device pixels. The centre of a stage
@@ -1147,22 +1147,14 @@ export const StageCanvas: React.FC = () => {
   };
 
   const sortedParts = useMemo(() => stackingOrder(characterParts), [characterParts]);
-  // What the stage paints: text boxes fitted and shapes following their text.
-  const fittedLayers = useTextFit(sortedParts, tracks);
-  // The selection frame outlines what is painted: the fitted layer, and its
-  // transform with the fitted width (scaleX) of a fitted text or shape.
+  // What the stage paints: the layers laid out by their modifiers (text boxes,
+  // auto size, follow, justify, repeated copies). The selection frame outlines
+  // what is painted: the laid-out layer and its laid-out transform.
+  const fittedLayers = useLayoutModifiers(sortedParts, tracks, activeTemplateId || 'Sequence', getComputedTransform);
   const fittedById = useMemo(() => new Map(fittedLayers.parts.map((part) => [part.id, part])), [fittedLayers.parts]);
-  const fitScaleOf = useCallback((id: string): number => {
-    const fitted = fittedById.get(id);
-    const stored = characterParts.find((part) => part.id === id);
-    if (!fitted || !stored || fitted === stored || stored.baseTransform.scaleX === 0) return 1;
-    return fitted.baseTransform.scaleX / stored.baseTransform.scaleX;
-  }, [fittedById, characterParts]);
-  const getDisplayedTransform = useCallback((id: string, frame: number) => {
-    const transform = getComputedTransform(id, frame);
-    const factor = fitScaleOf(id);
-    return factor === 1 || !transform ? transform : { ...transform, scaleX: transform.scaleX * factor };
-  }, [getComputedTransform, fitScaleOf]);
+  const getDisplayedTransform = fittedLayers.displayedTransform;
+  /** A repeated copy is picked and dragged as the layer it repeats. */
+  const stagePartIdOf = (id: string): string => fittedById.get(id)?.repeatSourceId ?? id;
 
   const selectPartFromStage = (id: string, event: React.MouseEvent) => {
     // A canvas click does not retarget the selection while
@@ -1198,14 +1190,14 @@ export const StageCanvas: React.FC = () => {
    * (measured: every dock frame re-rendered every part). Their actions are one
    * stable bag that reads the latest handlers at call time.
    */
-  const partLayerLatest = useRef({ selectPartFromStage, drillIntoPart, startTranslateDragForPart });
+  const partLayerLatest = useRef({ selectPartFromStage, drillIntoPart, startTranslateDragForPart, stagePartIdOf });
   useLayoutEffect(() => {
-    partLayerLatest.current = { selectPartFromStage, drillIntoPart, startTranslateDragForPart };
+    partLayerLatest.current = { selectPartFromStage, drillIntoPart, startTranslateDragForPart, stagePartIdOf };
   });
   const partLayerActions = useMemo(() => ({
-    onSelect: (id: string, event: React.MouseEvent) => partLayerLatest.current.selectPartFromStage(id, event),
-    onDrillIn: (id: string) => partLayerLatest.current.drillIntoPart(id),
-    onStartTranslateDrag: (partId: string, event: React.MouseEvent) => partLayerLatest.current.startTranslateDragForPart(partId, event),
+    onSelect: (id: string, event: React.MouseEvent) => partLayerLatest.current.selectPartFromStage(partLayerLatest.current.stagePartIdOf(id), event),
+    onDrillIn: (id: string) => partLayerLatest.current.drillIntoPart(partLayerLatest.current.stagePartIdOf(id)),
+    onStartTranslateDrag: (partId: string, event: React.MouseEvent) => partLayerLatest.current.startTranslateDragForPart(partLayerLatest.current.stagePartIdOf(partId), event),
   }), []);
   const isPanning = activeTool === 'pan' || (isDragging && dragMode === 'pan');
   // A primitive draw tool that is armed (waiting for its drag) owns the stage

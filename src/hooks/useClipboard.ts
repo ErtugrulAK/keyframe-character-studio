@@ -141,6 +141,7 @@ export const useClipboard = ({
       if (part.booleanGroupId) clone.booleanGroupId = remap(part.booleanGroupId);
       if (part.booleanOperandIds) clone.booleanOperandIds = part.booleanOperandIds.map(remap);
       if (clone.fitToText) clone.fitToText = { ...clone.fitToText, textLayerId: remap(clone.fitToText.textLayerId) };
+      if (clone.follow) clone.follow = { ...clone.follow, targetLayerId: remap(clone.follow.targetLayerId) };
       if (outermost) outermostIds.push(cloneId);
       newParts.push(clone);
       newTracks.push(cloneTrackOnto(track, cloneId, clone.name));

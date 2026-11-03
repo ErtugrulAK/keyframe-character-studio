@@ -1,6 +1,7 @@
 import type { CharacterPart, Track } from '../../types/animator';
 import { releaseChildrenOfDeletedParents } from './layerGrouping';
 import { resolveMatteSource } from './matte';
+import { compensateLayoutChange, mapTrack, measureTextWidth, resolveLayout } from './layoutModifiers';
 
 interface DeletePartsResult {
   parts: CharacterPart[];
@@ -111,7 +112,37 @@ export const planPartDeletion = (
   const closure = collectOwnedDeletionIds(parts, requestedIds);
   const release = releaseChildrenOfDeletedParents(parts, tracks, closure);
   if (!release.ok) return release;
-  const deletion = deleteParts(release.parts, release.tracks, [...closure]);
+  const removed = deleteParts(release.parts, release.tracks, [...closure]);
+  // A layer that followed or sized to a deleted layer lets go of it and stays
+  // as it is on the stage: where it was (its x was the gap to that layer's
+  // edge), and as wide as it was (the fitted width becomes its own).
+  const widths = removed.parts.some((part) => part.fitToText && closure.has(part.fitToText.textLayerId))
+    ? resolveLayout(release.parts, (layer) => (layer as CharacterPart).baseTransform, measureTextWidth).adjustments
+    : {};
+  const bakedWidths: Record<string, number> = {};
+  const unlinked = removed.parts.map((part) => {
+    const dropFollow = part.follow && closure.has(part.follow.targetLayerId);
+    const dropFit = part.fitToText && closure.has(part.fitToText.textLayerId);
+    if (!dropFollow && !dropFit) return part;
+    const next = { ...part };
+    if (dropFollow) delete next.follow;
+    if (dropFit) {
+      delete next.fitToText;
+      const factor = widths[part.id]?.scaleXFactor;
+      if (factor !== undefined) {
+        bakedWidths[part.id] = factor;
+        next.baseTransform = { ...next.baseTransform, scaleX: next.baseTransform.scaleX * factor };
+      }
+    }
+    return next;
+  });
+  const unlinkedTracks = removed.tracks.map((track) => (bakedWidths[track.partId] !== undefined
+    ? mapTrack(track, { scaleX: (value) => value * bakedWidths[track.partId] })
+    : track));
+  const settled = unlinked.some((part, index) => part !== removed.parts[index])
+    ? compensateLayoutChange(release.parts, unlinked, unlinkedTracks)
+    : { parts: removed.parts, tracks: removed.tracks };
+  const deletion = { ...removed, parts: settled.parts, tracks: settled.tracks };
   const bakedChildren = release.releasedChildIds.flatMap((childId): BakedChild[] => {
     const before = tracks.find((track) => track.partId === childId);
     const after = deletion.tracks.find((track) => track.partId === childId);

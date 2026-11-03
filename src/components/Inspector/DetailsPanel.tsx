@@ -10,6 +10,8 @@ import { TransformTab } from './sections/TransformTab';
 import { LayerParentField } from './LayerParentField';
 import { editTargetText, layerTypeLabel, resolveEditTarget } from '../../utils/layers/editTarget';
 import { StyleTab } from './sections/StyleTab';
+import { ModifiersCard } from './sections/style/ModifiersCard';
+import { useModifierEditing } from '../../hooks/useModifierEditing';
 import { evaluateTrimPath } from '../../utils/geometry/trimPath';
 import { AnimationDataCard } from './sections/AnimationDataCard';
 import { StyleCard } from './sections/style/StyleCard';
@@ -115,6 +117,7 @@ export const DetailsPanel: React.FC = () => {
   }, [opensMasksTab, selectedPartId, setDetailsTab]);
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
+  const changeModifiers = useModifierEditing({ characterParts, tracks, setCharacterParts, setTracks, startBatchInteraction, endBatchInteraction });
   const selectedTrack = selectedPartId ? tracks.find((track) => track.partId === selectedPartId) : undefined;
   // The Inspector shows the ACTIVE sequence's mask, as the renderer does.
   const evaluatedMasks = selectedPart && selectedTrack
@@ -352,6 +355,12 @@ export const DetailsPanel: React.FC = () => {
               }}
                 />
               )}
+              <ModifiersCard
+                selectedPart={selectedPart}
+                characterParts={characterParts}
+                onChangeModifiers={changeModifiers}
+                readOnly={isLocked}
+              />
             </Tabs.Content>
 
             {hasMasksTab && (

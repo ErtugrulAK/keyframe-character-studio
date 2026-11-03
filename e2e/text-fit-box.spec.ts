@@ -48,6 +48,11 @@ const expandCard = async (page: Page, title: string) => {
   if (await expand.count()) await expand.click();
 };
 
+const addModifier = async (page: Page, kind: string) => {
+  await expandCard(page, 'MODIFIERS');
+  await page.getByLabel('Add modifier').selectOption(kind);
+};
+
 test('a bar bound to a text hugs it, stops at its max width, and the text shrinks', async ({ page }) => {
   await seed(page);
   const before = await widths(page);
@@ -56,8 +61,9 @@ test('a bar bound to a text hugs it, stops at its max width, and the text shrink
   // Bind the bar to the title: its max width is today's 960 px.
   await select(page, 'Bar');
   await openDetailsTab(page, 'Properties');
-  await expandCard(page, 'FIT TO TEXT');
-  await page.getByLabel('Fit to text layer').selectOption('title');
+  // Auto Size binds the nearest text above the shape.
+  await addModifier(page, 'autoSize');
+  await expect(page.getByLabel('Fit to text layer')).toHaveValue('title');
   await expect.poll(async () => (await widths(page)).bar).toBeLessThan(before.bar / 2);
   // Short text: the bar is the text plus 24 px on each side.
   const short = await widths(page);
@@ -88,7 +94,7 @@ test('the text box character limit cuts what the stage shows', async ({ page }) 
   await seed(page);
   await select(page, 'Title');
   await openDetailsTab(page, 'Properties');
-  await expandCard(page, 'TEXT BOX');
+  await addModifier(page, 'textBox');
   const limit = page.getByLabel('Text max characters');
   await limit.fill('5');
   await limit.press('Enter');

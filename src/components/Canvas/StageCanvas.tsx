@@ -821,7 +821,8 @@ export const StageCanvas: React.FC = () => {
             bounds: getShapeCreationBounds(
               { x: shapeCreationStart.svgX, y: shapeCreationStart.svgY },
               { x: svgX, y: svgY },
-              pendingShapeType === 'custom_box',
+              // Shift draws an equal-sided shape (a square, a circle), as in other editors.
+              pendingShapeType === 'custom_box' || e.shiftKey,
             ),
           });
         }

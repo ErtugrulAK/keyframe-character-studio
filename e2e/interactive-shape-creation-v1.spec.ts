@@ -121,3 +121,27 @@ test('primitive creation stays armed for consecutive shapes, with one undo per s
   await expect(page.getByRole('button', { name: 'Pan', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(rectangle).not.toHaveClass(/active/);
 });
+
+test('Shift while drawing a rectangle draws a square', async ({ page }) => {
+  await openElements(page);
+  const canvas = page.locator('.stage-canvas-container');
+  const box = await canvas.boundingBox();
+  expect(box).not.toBeNull();
+
+  await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+  // A wide, short drag: without Shift this is a flat rectangle.
+  await page.mouse.move(box!.x + box!.width * 0.3, box!.y + box!.height * 0.4);
+  await page.mouse.down();
+  await page.keyboard.down('Shift');
+  await page.mouse.move(box!.x + box!.width * 0.6, box!.y + box!.height * 0.45, { steps: 4 });
+  await page.mouse.up();
+  await page.keyboard.up('Shift');
+
+  const layer = page.locator('.actor-node', { hasText: 'Rectangle' });
+  await expect(layer).toHaveCount(1);
+  const partId = await layer.getAttribute('data-layer-id');
+  const drawn = await page.locator(`.stage-canvas-container [data-part-id="${partId}"]`).first().boundingBox();
+  expect(drawn).not.toBeNull();
+  // The drawn element includes its stroke, so the sides agree to a few percent, not to the pixel.
+  expect(Math.abs(drawn!.width - drawn!.height) / Math.max(drawn!.width, drawn!.height), 'Shift did not keep the sides equal').toBeLessThanOrEqual(0.03);
+});

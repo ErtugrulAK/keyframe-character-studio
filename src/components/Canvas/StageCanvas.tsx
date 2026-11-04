@@ -1769,6 +1769,7 @@ export const StageCanvas: React.FC = () => {
                   onScaleStart={startScale}
                   onTranslateStart={startTranslateDragForPart}
                   outputOrigin={EDITOR_CAMERA_CENTER}
+                  isPlaying={isPlaying}
                 />
               )}
 

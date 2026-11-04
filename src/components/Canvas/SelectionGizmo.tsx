@@ -34,6 +34,8 @@ interface SelectionGizmoProps {
   onScaleStart: (e: React.MouseEvent, mode: ScaleMode, bounds?: CornerBounds) => void;
   onTranslateStart: (partId: string, e: React.MouseEvent) => void;
   outputOrigin?: CoordinatePoint;
+  /** Playback is running: a large selection's frame is not drawn. */
+  isPlaying?: boolean;
 }
 
 /**
@@ -56,6 +58,7 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
   onScaleStart,
   onTranslateStart,
   outputOrigin = EDITOR_CAMERA_CENTER,
+  isPlaying = false,
 }) => {
   /**
    * A container whose every child is selected adds nothing to a multi-selection:
@@ -81,6 +84,10 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
     // A very large selection is framed by ONE box around all of it: a frame per
     // layer is thousands of gizmos redrawn on every frame of a drag or playback.
     if (selectedPartIds.length > LARGE_SELECTION) {
+      // While playing, its box would be measured over every selected layer on
+      // every frame; it comes back on the frame playback stops (After Effects
+      // hides layer handles during a preview, too).
+      if (isPlaying) return null;
       const boxes = selectedPartIds
         .map((id) => (framed(id) ? getLayerWorldBounds(characterParts, id, (partId) => getComputedTransform(partId, currentFrame)) : null))
         .filter((box): box is NonNullable<typeof box> => box !== null);

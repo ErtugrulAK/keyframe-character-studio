@@ -1551,7 +1551,6 @@ export const StageCanvas: React.FC = () => {
                   origin={EDITOR_CAMERA_CENTER}
                   zScale={zScale}
                   visibleRect={visibleCameraRect}
-                  selectedTransform={selectedTransform}
                 />
               )}
 

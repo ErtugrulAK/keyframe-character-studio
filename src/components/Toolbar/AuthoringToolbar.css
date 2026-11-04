@@ -117,18 +117,6 @@
   color: var(--kcs-accent);
 }
 
-.authoring-toolbar-group[aria-label="Canvas tools"] .authoring-toolbar-button.active::after,
-.authoring-toolbar-group[aria-label="Create"] .authoring-toolbar-button.active::after {
-  content: '';
-  position: absolute;
-  left: 6px;
-  right: 6px;
-  bottom: 2px;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--kcs-accent);
-}
-
 .authoring-toolbar-button:focus-visible {
   outline: 2px solid var(--kcs-focus);
   outline-offset: -2px;

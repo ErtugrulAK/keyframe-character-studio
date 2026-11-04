@@ -114,19 +114,22 @@ async function selectPart(page: Page, name: string, id: string): Promise<void> {
   await expect(page.getByTestId('coordinate-readout')).toBeVisible();
 }
 
-async function selectedCentres(page: Page, partId: string) {
-  return page.evaluate((id) => {
-    const marker = document.querySelector('[data-testid="coordinate-selection-marker"]');
-    const ring = marker?.querySelector('circle');
-    const part = document.querySelector(`[data-part-id="${id}"]`);
-    if (!ring || !part) throw new Error('coordinate marker or selected part unavailable');
-    const markerBox = ring.getBoundingClientRect();
-    const partBox = part.getBoundingClientRect();
-    return {
-      marker: { x: markerBox.left + markerBox.width / 2, y: markerBox.top + markerBox.height / 2 },
-      part: { x: partBox.left + partBox.width / 2, y: partBox.top + partBox.height / 2 },
-    };
-  }, partId);
+/**
+ * Screen offsets between each edge marker's tip and the axis it marks: the
+ * triangles ride the stage edges and must sit exactly on their axes.
+ */
+async function markerOffsets(page: Page) {
+  return page.evaluate(() => {
+    const overlay = document.querySelector('[data-testid="coordinate-overlay"]');
+    const box = (selector: string) => overlay?.querySelector(selector)?.getBoundingClientRect();
+    const xAxis = box('[data-axis="x"]');
+    const yAxis = box('[data-axis="y"]');
+    const markers = ['left', 'right', 'top', 'bottom'].map((side) => [side, box(`[data-testid="coordinate-axis-marker-${side}"]`)] as const);
+    if (!xAxis || !yAxis || markers.some(([, rect]) => !rect)) throw new Error('axes or markers unavailable');
+    return markers.map(([side, rect]) => side === 'left' || side === 'right'
+      ? Math.abs(rect!.top + rect!.height / 2 - (xAxis.top + xAxis.height / 2))
+      : Math.abs(rect!.left + rect!.width / 2 - (yAxis.left + yAxis.width / 2)));
+  });
 }
 
 async function inspectorPosition(page: Page): Promise<{ x: string; y: string }> {
@@ -138,7 +141,7 @@ async function inspectorPosition(page: Page): Promise<{ x: string; y: string }> 
   };
 }
 
-test('axes, selected marker and Inspector agree; toggle is presentation-only', async ({ page }) => {
+test('axes, edge markers and Inspector agree; toggle is presentation-only', async ({ page }) => {
   await seed(page, childScene());
   await selectPart(page, 'Child', 'child');
 
@@ -151,9 +154,10 @@ test('axes, selected marker and Inspector agree; toggle is presentation-only', a
   expect(await xAxis.getAttribute('y1')).toBe('240');
   expect(await yAxis.getAttribute('x1')).toBe('300');
 
-  const centres = await selectedCentres(page, 'child');
-  expect(Math.abs(centres.marker.x - centres.part.x)).toBeLessThanOrEqual(1);
-  expect(Math.abs(centres.marker.y - centres.part.y)).toBeLessThanOrEqual(1);
+  for (const offset of await markerOffsets(page)) expect(offset).toBeLessThanOrEqual(1);
+  // No origin or selection centre marker on the stage.
+  await expect(page.getByTestId('coordinate-origin')).toHaveCount(0);
+  await expect(page.getByTestId('coordinate-selection-marker')).toHaveCount(0);
 
   const inspector = await inspectorPosition(page);
   expect(Number(inspector.x)).toBeCloseTo(186.6025, 2);
@@ -196,7 +200,7 @@ test('legacy centi-unit scenes use the Inspector display scale in the readout', 
   await expect(page.getByTestId('coordinate-readout-y')).toHaveText('100');
 });
 
-test('marker and axes stay aligned through zoom, pan and resize', async ({ page }) => {
+test('edge markers and axes stay aligned through zoom, pan and resize', async ({ page }) => {
   await seed(page, childScene());
   await selectPart(page, 'Child', 'child');
   const fromInspector = await inspectorPosition(page);
@@ -204,9 +208,7 @@ test('marker and axes stay aligned through zoom, pan and resize', async ({ page 
   await expect(page.getByTestId('coordinate-readout-y')).toHaveText(fromInspector.y);
 
   const assertAligned = async (label: string) => {
-    const centres = await selectedCentres(page, 'child');
-    expect(Math.abs(centres.marker.x - centres.part.x), `${label}: marker x drifted`).toBeLessThanOrEqual(1);
-    expect(Math.abs(centres.marker.y - centres.part.y), `${label}: marker y drifted`).toBeLessThanOrEqual(1);
+    for (const offset of await markerOffsets(page)) expect(offset, `${label}: a marker left its axis`).toBeLessThanOrEqual(1);
     await expect(page.getByTestId('coordinate-readout-x')).toHaveText(fromInspector.x);
     await expect(page.getByTestId('coordinate-readout-y')).toHaveText(fromInspector.y);
     await expect(page.getByTestId('coordinate-overlay')).toHaveCount(1);

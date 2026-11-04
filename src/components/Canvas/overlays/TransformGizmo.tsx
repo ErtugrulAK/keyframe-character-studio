@@ -168,7 +168,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         height={metrics.cornerSize}
         fill="#4a8fe7"
         stroke="#ffffff"
-        strokeWidth={1.5 * zScale}
+        strokeWidth={1 * zScale}
         style={{ cursor, pointerEvents: 'auto' }}
         onMouseDown={(e) => onScaleMouseDown(e, corner.mode, resizeBounds)}
       />
@@ -189,7 +189,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   /** One edge handle (plus its hit target) at a point of the frame's own space. */
   const renderEdgeHandle = (point: { x: number; y: number }, cursor: string, mode: ScaleMode, fill: string) => (
     <g>
-      <circle cx={point.x} cy={point.y} r={metrics.edgeRadius} fill={fill} stroke="#ffffff" strokeWidth={1.5 * zScale} style={{ cursor, pointerEvents: 'auto' }} onMouseDown={(e) => onScaleMouseDown(e, mode, resizeBounds)} />
+      <circle cx={point.x} cy={point.y} r={metrics.edgeRadius} fill={fill} stroke="#ffffff" strokeWidth={1 * zScale} style={{ cursor, pointerEvents: 'auto' }} onMouseDown={(e) => onScaleMouseDown(e, mode, resizeBounds)} />
       <circle data-testid="gizmo-hit-target" cx={point.x} cy={point.y} r={metrics.hitRadius} fill="transparent" pointerEvents="auto" style={{ cursor }} onMouseDown={(e) => onScaleMouseDown(e, mode, resizeBounds)} />
     </g>
   );

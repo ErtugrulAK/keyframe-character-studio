@@ -99,8 +99,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .main-layout { background: var(--kcs-bg-canvas); }
 
 .header-bar {
-  min-height: 79px;
-  height: 79px;
+  min-height: 42px;
+  height: 42px;
   padding: 0 12px;
   gap: 12px;
   background: #232323;
@@ -179,14 +179,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
      icon-only header actions (HeaderBar.css, ≤ 860 px) the header fits one row,
      and it still wraps naturally when it really does not fit. */
   .header-center-controls { flex: 0 0 auto; }
-  .header-bar { height: auto; min-height: 48px; padding-block: 4px; }
+  .header-bar { height: auto; min-height: 40px; padding-block: 3px; }
   .app-container { --left-drawer-width: 196px; --right-inspector-width: 286px; }
 }
 @media (prefers-reduced-motion: reduce) {
   button, .motion-design-right-sidebar, .left-toolbar-container { transition: none !important; }
 }
 
-/* UI polish: preserve the 79px shell frame while tightening internal rhythm. */
+/* UI polish: a slim 42 px shell frame with a tight internal rhythm. */
 .header-bar {
   align-items: center;
   gap: 8px;
@@ -956,7 +956,7 @@ button:disabled {
  * spare 31 px to the stage. Tall windows keep the 79 px frame.
  */
 @media (max-height: 820px) {
-  .header-bar { height: auto; min-height: 48px; padding-block: 4px; }
+  .header-bar { height: auto; min-height: 40px; padding-block: 3px; }
 }
 
 /*

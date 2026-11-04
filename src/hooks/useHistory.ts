@@ -111,6 +111,19 @@ export const useHistory = ({
   const committedSelectionRef = useRef<HistorySelection | undefined>(selection);
   const batchSelectionRef = useRef<HistorySelection | undefined>(undefined);
   const selectionKey = selection ? `${selection.primary}|${selection.ids.join(',')}` : '';
+  /**
+   * Whether undo/redo puts the remembered selection back: when the selection
+   * on screen is still the one the step left (the user has not picked anything
+   * since), or when it would be lost (nothing selected, or a layer the step
+   * removes). A layer the user picked since, still present, stays selected.
+   */
+  const shouldRestoreSelection = (parts: CharacterPart[], leftByStep: HistorySelection | undefined): boolean => {
+    const current = selectionRef.current;
+    if (!current || current.ids.length === 0) return true;
+    if (leftByStep && current.primary === leftByStep.primary && current.ids.join(',') === leftByStep.ids.join(',')) return true;
+    const present = new Set(parts.map((part) => part.id));
+    return current.ids.some((id) => !present.has(id));
+  };
   // Undo / Redo Stack State
   const [history, setHistory] = useState<HistoryState[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
@@ -273,8 +286,8 @@ export const useHistory = ({
         // The document-level state goes back with the layers: restoring only the
         // layers would leave an imported frame rate or canvas on the old scene.
         if (targetState.document) restoreDocumentState(targetState.document);
-        const before = selectionAroundRef.current.get(historyRef.current[idx])?.before;
-        if (before && restoreSelection) restoreSelection(before);
+        const around = selectionAroundRef.current.get(historyRef.current[idx]);
+        if (around?.before && restoreSelection && shouldRestoreSelection(targetState.characterParts, around.after)) restoreSelection(around.before);
         setHistoryIndex(idx - 1);
         historyIndexRef.current = idx - 1;
       }
@@ -296,8 +309,8 @@ export const useHistory = ({
           setMotionTemplates(targetState.motionTemplates);
         }
         if (targetState.document) restoreDocumentState(targetState.document);
-        const after = selectionAroundRef.current.get(targetState)?.after;
-        if (after && restoreSelection) restoreSelection(after);
+        const around = selectionAroundRef.current.get(targetState);
+        if (around?.after && restoreSelection && shouldRestoreSelection(targetState.characterParts, around.before)) restoreSelection(around.after);
         setHistoryIndex(idx + 1);
         historyIndexRef.current = idx + 1;
       }

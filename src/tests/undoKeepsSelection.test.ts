@@ -31,6 +31,8 @@ describe('undo keeps the selection the edit started from', () => {
     rerender({ parts: withGroup, selection: { primary: 'bool', ids: ['bool'] } });
     act(() => result.current.undo());
     expect(restoreSelection).toHaveBeenLastCalledWith(three);
+    // The app applies it: the undone scene shows with the three selected.
+    rerender({ parts: shapes, selection: three });
     act(() => result.current.redo());
     expect(restoreSelection).toHaveBeenLastCalledWith({ primary: 'bool', ids: ['bool'] });
   });
@@ -56,5 +58,27 @@ describe('undo keeps the selection the edit started from', () => {
     act(() => result.current.endBatchInteraction());
     act(() => result.current.undo());
     expect(restoreSelection).toHaveBeenLastCalledWith(selection);
+  });
+});
+
+describe('undo leaves a selection the user made since the edit alone', () => {
+  it('delete a layer, select another one, undo: the other layer stays selected', () => {
+    const all = [part('a'), part('b')];
+    const withoutA = [part('b')];
+    const restoreSelection = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ parts, selection }: { parts: CharacterPart[]; selection: HistorySelection }) => useHistory({
+        tracks, setTracks: vi.fn(), tracksRef: { current: tracks },
+        characterParts: parts, setCharacterParts: vi.fn(), characterPartsRef: { current: parts },
+        documentState, restoreDocumentState: vi.fn(),
+        selection, restoreSelection,
+      }),
+      { initialProps: { parts: all, selection: { primary: 'a', ids: ['a'] } as HistorySelection } },
+    );
+    // Delete A (the selection empties), then the user selects B.
+    rerender({ parts: withoutA, selection: { primary: null, ids: [] } });
+    rerender({ parts: withoutA, selection: { primary: 'b', ids: ['b'] } });
+    act(() => result.current.undo());
+    expect(restoreSelection).not.toHaveBeenCalled();
   });
 });

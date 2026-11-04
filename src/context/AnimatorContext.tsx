@@ -214,6 +214,8 @@ export interface AnimatorContextType {
   renameMotionTemplate: (oldId: string, newName: string) => void;
   deleteMotionTemplate: (id: string) => void;
   updateMotionTemplateDuration: (id: string, durationFrames: number) => void;
+  /** Sets a sequence's OGraf step markers (`utils/animation/stepMarkers`). */
+  setMotionTemplateStepMarkers: (id: string, markers: number[]) => void;
   renamePartAndTrack: (partId: string, newName: string) => void;
   reorderParts: (dragIndex: number, hoverIndex: number) => void;
   deletePart: (partId: string) => void;
@@ -483,6 +485,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     renameMotionTemplate,
     deleteMotionTemplate,
     updateMotionTemplateDuration,
+    setMotionTemplateStepMarkers,
     setActiveProjectTemplateId,
     addProjectTemplate,
     renameProjectTemplate,
@@ -1284,6 +1287,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     renameMotionTemplate,
     deleteMotionTemplate,
     updateMotionTemplateDuration,
+    setMotionTemplateStepMarkers,
   };
   // The same value as a subscription source: `useAnimatorSlice` readers
   // render only when the fields they read change, not on every frame. It is

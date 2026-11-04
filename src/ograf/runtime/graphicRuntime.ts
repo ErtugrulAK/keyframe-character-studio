@@ -194,6 +194,11 @@ export interface GraphicRuntimeEnvironment {
   layout: ReturnType<typeof createLayoutModifiers>;
   /** The Track Matte mask, as the editor draws it (`ograf/trackMatteMarkup`). */
   trackMatteMarkup: ReturnType<typeof createTrackMatteMarkup>;
+  /**
+   * The frame each step ends on (`utils/animation/stepMarkers`): the sequence's
+   * step markers, then its last frame. One entry = one step.
+   */
+  stepEnds?: number[];
 }
 
 export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
@@ -213,6 +218,9 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     layout,
     trackMatteMarkup,
   } = environment;
+  const STEP_ENDS = environment.stepEnds && environment.stepEnds.length > 0 ? environment.stepEnds : [SCENE.totalFrames];
+  /** The frame a step starts on: 0, then the previous step's end. */
+  const stepStart = (step: number): number => (step <= 0 ? 0 : STEP_ENDS[step - 1]);
   const { affineOfTransform, composeWorldTransform, composeAffine, applyAffine, withWorldAffine, worldAffineOf, affineTrsReading } = environment.affine;
 
   function clamp(value: number, min: number, max: number): number {
@@ -1010,13 +1018,26 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       + '</svg>';
   }
 
-  /** The OGraf target step of a playAction (spec step model, stepCount 1); undefined = the end. */
+  /** The OGraf target step of a playAction (spec step model, one step per step end); undefined = the end. */
   function nextStepOf(current: number | undefined, params: { goto?: number; delta?: number }): number | undefined {
     const goto = typeof params.goto === 'number' && params.goto >= 0 ? params.goto : undefined;
     const delta = typeof params.delta === 'number' ? params.delta : 1;
     const targetStep = goto === undefined ? (current === undefined ? -1 : current) + delta : goto;
-    const stepCount = 1;
-    return targetStep >= stepCount ? undefined : Math.max(0, targetStep);
+    return targetStep >= STEP_ENDS.length ? undefined : Math.max(0, targetStep);
+  }
+
+  /**
+   * Where a play to `next` starts and ends: from the start (or after a stop)
+   * at frame 0; back to the same or an earlier step at that step's start;
+   * forward from where the graphic is. It ends on the step's end, or the
+   * scene's last frame past the last step.
+   */
+  function stepMotion(current: number | undefined, next: number | undefined, frame: number): { from: number; to: number } {
+    const to = next === undefined ? SCENE.totalFrames : STEP_ENDS[next];
+    if (next === undefined) return { from: frame, to };
+    if (current === undefined) return { from: 0, to };
+    if (next <= current) return { from: stepStart(next), to };
+    return { from: frame, to };
   }
 
   type ScheduledAction = { timestamp: number; action: { type: string; params?: Record<string, unknown> } };
@@ -1185,11 +1206,13 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       const current = this._currentStep;
       const nextStep = nextStepOf(current, params);
       // From the start (or after a stop) the graphic plays in from its first
-      // frame again, instead of showing the last frame it reached.
-      if (current === undefined && nextStep !== undefined) this._currentFrame = 0;
+      // frame again, instead of showing the last frame it reached; a step
+      // plays to its own end and holds there.
+      const motion = stepMotion(current, nextStep, this._currentFrame);
+      this._currentFrame = motion.from;
       this._currentStep = nextStep;
       this._stopped = nextStep === undefined;
-      const result = await this._animate(this._scene.totalFrames, params.skipAnimation === true);
+      const result = await this._animate(motion.to, params.skipAnimation === true);
       return Object.assign({}, result, { currentStep: this._currentStep });
     }
 
@@ -1242,15 +1265,15 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       let frame = 0;
       let step: number | undefined;
       let stopped = true;
-      let motion: { from: number; at: number; hideAtEnd: boolean } | null = null;
+      let motion: { from: number; to: number; at: number; hideAtEnd: boolean } | null = null;
       const advance = (now: number) => {
         if (!motion) return;
         const reached = motion.from + (now - motion.at) / 1000 * fps;
-        if (reached < end) {
+        if (reached < motion.to) {
           frame = reached;
           return;
         }
-        frame = end;
+        frame = motion.to;
         if (motion.hideAtEnd) {
           stopped = true;
           step = undefined;
@@ -1263,11 +1286,12 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
         const actionParams = (entry.action.params || {}) as { goto?: number; delta?: number; skipAnimation?: boolean; data?: Record<string, unknown> };
         if (entry.action.type === 'playAction') {
           const next = nextStepOf(step, actionParams);
-          if (step === undefined && next !== undefined) frame = 0;
+          const stepped = stepMotion(step, next, frame);
+          frame = stepped.from;
           step = next;
           stopped = next === undefined;
-          motion = stopped || actionParams.skipAnimation === true ? null : { from: frame, at: entry.timestamp, hideAtEnd: false };
-          if (!stopped && actionParams.skipAnimation === true) frame = end;
+          motion = stopped || actionParams.skipAnimation === true ? null : { from: frame, to: stepped.to, at: entry.timestamp, hideAtEnd: false };
+          if (!stopped && actionParams.skipAnimation === true) frame = stepped.to;
         } else if (entry.action.type === 'stopAction') {
           if (actionParams.skipAnimation === true || stopped) {
             frame = end;
@@ -1275,7 +1299,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
             step = undefined;
             motion = null;
           } else {
-            motion = { from: frame, at: entry.timestamp, hideAtEnd: true };
+            motion = { from: frame, to: end, at: entry.timestamp, hideAtEnd: true };
           }
         } else if (entry.action.type === 'updateAction') {
           this._applyData(actionParams.data);

@@ -134,7 +134,8 @@ export interface OGrafManifest {
   supportsRealTime: true;
   /** The runtime implements goToTime() and setActionsSchedule(). */
   supportsNonRealTime: true;
-  stepCount: 1;
+  /** One step per step marker of the exported sequence, plus one (`utils/animation/stepMarkers`). */
+  stepCount: number;
   /** How long the normal (animated) actions take, in milliseconds. */
   actionDurations: Array<{ type: 'playAction' | 'stopAction' | 'updateAction'; duration: number }>;
   schema: OGrafPublicStateSchema;

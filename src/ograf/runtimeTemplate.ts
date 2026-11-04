@@ -2,6 +2,7 @@ import type { SceneData } from '../types/composition';
 import type { OGrafPublicColorField, OGrafPublicImageField, OGrafPublicTextField } from './types';
 import { TEXT_BOX_CENTRE_EM } from '../utils/geometry/textOrigin';
 import { trackMatteRenderParameters } from './trackMatteMarkup';
+import { sceneStepMarkers, stepEndFrames } from '../utils/animation/stepMarkers';
 import {
   runtimeCompareByStackingOrder,
   runtimeDescribePaint,
@@ -81,6 +82,7 @@ const RUNTIME = (${runtimeGraphicFactory()})({
   describeText: ${runtimeDescribeText()},
   layout: ${runtimeLayoutModifiers()},
   trackMatteMarkup: ${runtimeTrackMatteMarkup()},
+  stepEnds: ${JSON.stringify(stepEndFrames(sceneStepMarkers(sceneData), sceneData.totalFrames))},
 });
 export default class Graphic extends RUNTIME.Graphic {}
 `;

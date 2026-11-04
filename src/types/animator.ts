@@ -608,4 +608,6 @@ export interface MotionTemplate {
   type: 'in' | 'out' | 'stunt';
   durationFrames: number;
   description?: string;
+  /** Frames that split the sequence into OGraf steps (`utils/animation/stepMarkers`); absent = one step. */
+  stepMarkers?: number[];
 }

@@ -25,11 +25,13 @@ import {
   Redo2,
   Clock,
   Scissors,
+  Flag,
   TrendingUp,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
+import { addStepMarker, normalizeStepMarkers, removeStepMarker } from '../../utils/animation/stepMarkers';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { TimeRuler } from './TimeRuler';
 import { TrackLane, type KeyframePress } from './TrackLane';
@@ -166,6 +168,7 @@ export const SequencerTimeline: React.FC = () => {
     renameMotionTemplate,
     deleteMotionTemplate,
     updateMotionTemplateDuration,
+    setMotionTemplateStepMarkers,
   } = useAnimator();
   // The derived display ordinal, the same projection the Outliner shows.
   const layerOrdinals = useMemo(() => projectLayerOrdinals(characterParts), [characterParts]);
@@ -494,6 +497,28 @@ export const SequencerTimeline: React.FC = () => {
     }
     updateMotionTemplateDuration(activeTemplateId, durationFrames);
     setTotalFrames(durationFrames);
+  };
+
+  /*
+   * Step markers split the sequence into OGraf steps: each play (Next) in a
+   * playout runs to the next marker and holds (`utils/animation/stepMarkers`).
+   */
+  const activeStepMarkers = useMemo(
+    () => normalizeStepMarkers(motionTemplates.find((template) => template.id === activeTemplateId)?.stepMarkers, activeSequenceDurationFrames),
+    [motionTemplates, activeTemplateId, activeSequenceDurationFrames],
+  );
+  const stepMarkerAtPlayhead = activeStepMarkers.includes(Math.round(currentFrame));
+  const handleToggleStepMarker = () => {
+    const frame = Math.round(currentFrame);
+    if (stepMarkerAtPlayhead) {
+      setMotionTemplateStepMarkers(activeTemplateId, removeStepMarker(activeStepMarkers, frame, activeSequenceDurationFrames));
+      return;
+    }
+    if (frame <= 0 || frame >= activeSequenceDurationFrames) {
+      showToast('A step marker goes inside the sequence: move the playhead between its first and last frame.', 'info');
+      return;
+    }
+    setMotionTemplateStepMarkers(activeTemplateId, addStepMarker(activeStepMarkers, frame, activeSequenceDurationFrames));
   };
 
   // Wheel zoom handler
@@ -1470,6 +1495,18 @@ export const SequencerTimeline: React.FC = () => {
         <div className="timeline-header-right timeline-actions-band">
           <button
             type="button"
+            className="fit-pill-btn step-marker-btn"
+            onClick={handleToggleStepMarker}
+            aria-pressed={stepMarkerAtPlayhead}
+            aria-label="Step marker at the playhead"
+            title={stepMarkerAtPlayhead
+              ? 'Remove the step marker at the playhead'
+              : 'Add a step marker at the playhead: the exported graphic stops here until the next play (Next)'}
+          >
+            <Flag size={12} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
             className="btn-director active motion-curves-btn"
             onClick={() => setIsCurveModalOpen(true)}
             title="Open Expanded Pro Cubic Bezier Motion Curve Studio Modal"
@@ -1567,6 +1604,8 @@ export const SequencerTimeline: React.FC = () => {
             currentFrame={currentFrame}
             onPointerDown={handleRulerPointerDown}
             onSeekFrame={handleRulerKeySeek}
+            stepMarkers={activeStepMarkers}
+            onRemoveStepMarker={(frame) => setMotionTemplateStepMarkers(activeTemplateId, removeStepMarker(activeStepMarkers, frame, activeSequenceDurationFrames))}
           />
 
           {/* Playhead */}

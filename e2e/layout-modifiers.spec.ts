@@ -47,7 +47,7 @@ const boxOf = (page: Page, id: string) => page.evaluate((partId) => {
 
 const select = (page: Page, name: string) => page.locator('.actor-node', { has: page.locator('.actor-name', { hasText: name }) }).first().click();
 
-const MODIFIER_LABELS: Record<string, string> = { textBox: 'Text Box', hideWhenEmpty: 'Hide When Empty', autoSize: 'Auto Size', follow: 'Auto Follow', justify: 'Justify', repeater: 'Repeater' };
+const MODIFIER_LABELS: Record<string, string> = { textBox: 'Text Box', hideWhenEmpty: 'Hide When Empty', autoSize: 'Auto Size', follow: 'Auto Follow', lookAt: 'Look At', justify: 'Justify', repeater: 'Repeater' };
 
 const addModifier = async (page: Page, kind: string) => {
   await openDetailsTab(page, 'Properties');
@@ -158,4 +158,38 @@ test('Auto Size binds every text on the bar and takes the widest; the modifier i
   await page.getByLabel('Auto Size modifier', { exact: true }).uncheck();
   await expect(page.getByRole('checkbox', { name: 'Size to Title' })).toHaveCount(0);
   expect(padding).toBeGreaterThan(0);
+});
+
+const verticalOf = (page: Page, id: string) => page.evaluate((partId) => {
+  const rect = document.querySelector(`.stage-canvas-container [data-part-id="${partId}"]`)!.getBoundingClientRect();
+  return { top: rect.top, bottom: rect.bottom, centre: rect.top + rect.height / 2 };
+}, id);
+
+test('Auto Size can fit the height too: the bar wraps the title and a subtitle under it', async ({ page }) => {
+  await seed(page, 400, [layer('sub', 'Subtitle', { type: 'custom_text', textValue: 'Second line', fontSize: 30, fillColor: '#ffffff', textOrigin: 'center', y: 240, zIndex: 4 })]);
+  await select(page, 'Bar');
+  await addModifier(page, 'autoSize');
+  await page.getByLabel('Fit height', { exact: true }).check();
+  await expect(page.getByLabel('Fit padding Y', { exact: true })).toBeVisible();
+  const bar = await verticalOf(page, 'bar');
+  const title = await verticalOf(page, 'title');
+  const sub = await verticalOf(page, 'sub');
+  // The bar starts above the title and ends below the subtitle, centred on them.
+  expect(bar.top).toBeLessThan(title.top);
+  expect(bar.bottom).toBeGreaterThan(sub.bottom);
+  expect(Math.abs(bar.centre - (title.top + sub.bottom) / 2)).toBeLessThan(12);
+});
+
+test('Look At turns a layer to face its target', async ({ page }) => {
+  await seed(page);
+  await select(page, 'Tag');
+  await addModifier(page, 'lookAt');
+  await page.getByLabel('Look at target', { exact: true }).selectOption({ label: 'Bar' });
+  // The tag (400, 0) faces the bar (0, 200): its rotation is atan2(200, -400).
+  const expected = (Math.atan2(200, -400) * 180) / Math.PI;
+  await expect.poll(async () => page.evaluate(() => {
+    const node = document.querySelector('.stage-canvas-container [data-part-id="tag"] [transform]');
+    const match = /rotate\(([-\d.]+)/u.exec(node?.getAttribute('transform') ?? '');
+    return match ? Number(match[1]) : null;
+  })).toBeCloseTo(expected, 0);
 });

@@ -20,7 +20,7 @@ import type { createWorldAffineAlgebra, WorldAffine } from '../../utils/geometry
 import type { createShapeAppearance } from '../../utils/layers/shapeAppearance';
 import type { describePaint, describeText } from '../../utils/layers/drawDescriptor';
 import type { createTrackMatteMarkup, TrackMatteGradientInput } from '../trackMatteMarkup';
-import type { createLayoutModifiers, FitToTextSettings, FollowSettings, JustifySettings, RepeaterSettings, TextFitSettings } from '../../utils/layers/layoutModifiers';
+import type { createLayoutModifiers, FitToTextSettings, FollowSettings, JustifySettings, LookAtSettings, RepeaterSettings, TextFitSettings } from '../../utils/layers/layoutModifiers';
 
 export interface RuntimePoint {
   x: number;
@@ -70,6 +70,7 @@ export interface RuntimeLayer {
   textFit?: TextFitSettings;
   fitToText?: FitToTextSettings;
   follow?: FollowSettings;
+  lookAt?: LookAtSettings;
   justify?: JustifySettings;
   repeater?: RepeaterSettings;
   isGroup?: boolean;

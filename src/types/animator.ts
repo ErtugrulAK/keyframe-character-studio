@@ -1,5 +1,5 @@
 import type { MatteGradientStop } from '../utils/layers/matte';
-import type { FitToTextSettings, FollowSettings, JustifySettings, RepeaterSettings, TextFitSettings } from '../utils/layers/layoutModifiers';
+import type { FitToTextSettings, FollowSettings, JustifySettings, LookAtSettings, RepeaterSettings, TextFitSettings } from '../utils/layers/layoutModifiers';
 
 export type EasingType =
   | 'linear'
@@ -421,6 +421,8 @@ export interface CharacterPart {
   fitToText?: FitToTextSettings;
   /** Auto Follow: sits next to another layer's edge; x is the gap (`utils/layers/layoutModifiers`). */
   follow?: FollowSettings;
+  /** Look At: turns to face another layer (`utils/layers/layoutModifiers`). */
+  lookAt?: LookAtSettings;
   /** Group: Justify, where its children's combined bounds sit (`utils/layers/layoutModifiers`). */
   justify?: JustifySettings;
   /** Repeater: copies in a line, grid or ring (`utils/layers/layoutModifiers`). */

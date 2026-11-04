@@ -11,12 +11,13 @@ import { StyleCard } from './StyleCard';
 const SIZABLE: ReadonlyArray<CharacterPart['type']> = ['custom_box', 'custom_rect', 'custom_banner', 'custom_capsule', 'custom_card'];
 const DEFAULT_PADDING = 24;
 
-type ModifierKind = 'textBox' | 'hideWhenEmpty' | 'autoSize' | 'follow' | 'justify' | 'repeater';
+type ModifierKind = 'textBox' | 'hideWhenEmpty' | 'autoSize' | 'follow' | 'lookAt' | 'justify' | 'repeater';
 const MODIFIER_NAMES: Record<ModifierKind, string> = {
   textBox: 'Text Box',
   hideWhenEmpty: 'Hide When Empty',
   autoSize: 'Auto Size',
   follow: 'Auto Follow',
+  lookAt: 'Look At',
   justify: 'Justify',
   repeater: 'Repeater',
 };
@@ -25,6 +26,7 @@ const MODIFIER_HINTS: Record<ModifierKind, string> = {
   hideWhenEmpty: 'Hides the text, and every shape sized to it, when it is empty.',
   autoSize: 'The width follows the texts on it, plus padding.',
   follow: "Sits next to another layer's edge and moves as it grows or moves.",
+  lookAt: 'Turns to face another layer, wherever it is placed.',
   justify: "Keeps the group's layers aligned on its origin as they resize.",
   repeater: 'Copies of this layer, each a step further.',
 };
@@ -91,6 +93,7 @@ export const ModifiersCard: React.FC<ModifiersCardProps> = ({ selectedPart, char
   const texts = characterParts.filter((candidate) => candidate.type === 'custom_text' && candidate.id !== part.id);
   const excluded = followersOf(characterParts, part.id);
   const followTargets = characterParts.filter((candidate) => candidate.id !== part.id && !excluded.has(candidate.id) && sameParent(candidate, part));
+  const lookAtTargets = characterParts.filter((candidate) => candidate.id !== part.id && sameParent(candidate, part));
 
   // A text box is any text setting but Hide When Empty, which is its own modifier.
   const hasTextBox = Boolean(part.textFit && Object.keys(part.textFit).some((key) => key !== 'hideWhenEmpty'));
@@ -101,6 +104,7 @@ export const ModifiersCard: React.FC<ModifiersCardProps> = ({ selectedPart, char
   if (isText) offered.push({ kind: 'hideWhenEmpty', on: Boolean(part.textFit?.hideWhenEmpty) });
   if (isSizable) offered.push({ kind: 'autoSize', on: Boolean(part.fitToText), unavailable: texts.length === 0 ? 'Needs a text layer in the scene.' : undefined });
   if (!isGroup) offered.push({ kind: 'follow', on: Boolean(part.follow), unavailable: followTargets.length === 0 ? 'Needs another layer at the same level.' : undefined });
+  if (!isGroup) offered.push({ kind: 'lookAt', on: Boolean(part.lookAt), unavailable: lookAtTargets.length === 0 ? 'Needs another layer at the same level.' : undefined });
   if (isGroup) offered.push({ kind: 'justify', on: Boolean(part.justify) });
   if (!isGroup && part.type !== 'mograph_cloner' && part.type !== 'particle_system') offered.push({ kind: 'repeater', on: Boolean(part.repeater) });
   const activeCount = offered.filter((entry) => entry.on).length;
@@ -135,6 +139,9 @@ export const ModifiersCard: React.FC<ModifiersCardProps> = ({ selectedPart, char
         write({ follow: { targetLayerId: target.id, side: 'right', vertical: true } });
         break;
       }
+      case 'lookAt':
+        write({ lookAt: { targetLayerId: lookAtTargets[0].id, offset: 0 } });
+        break;
       case 'justify':
         write({ justify: { horizontal: 'center' } });
         break;
@@ -161,6 +168,9 @@ export const ModifiersCard: React.FC<ModifiersCardProps> = ({ selectedPart, char
         break;
       case 'follow':
         write({ follow: undefined });
+        break;
+      case 'lookAt':
+        write({ lookAt: undefined });
         break;
       case 'justify':
         write({ justify: undefined });
@@ -251,6 +261,17 @@ export const ModifiersCard: React.FC<ModifiersCardProps> = ({ selectedPart, char
             {field('PADDING (PX)', <SmartNumberInput ariaLabel="Fit padding" value={fit.padding ?? DEFAULT_PADDING} min={0} max={1000} deferCommit onChange={(value) => writeFit({ padding: value })} />)}
             {field('MIN WIDTH (PX)', <SmartNumberInput ariaLabel="Fit min width" value={fit.minWidth ?? 0} min={0} max={10000} deferCommit onChange={(value) => writeFit({ minWidth: limitOrUndefined(value) })} />, { title: NO_LIMIT })}
             {field('MAX WIDTH (PX)', <SmartNumberInput ariaLabel="Fit max width" value={fit.maxWidth ?? 0} min={0} max={10000} deferCommit onChange={(value) => writeFit({ maxWidth: limitOrUndefined(value) })} />, { title: `${NO_LIMIT}; past it the text gets smaller` })}
+            <label className="modifier-text-option matte-span-full">
+              <input
+                type="checkbox"
+                aria-label="Fit height"
+                checked={fit.vertical === true}
+                disabled={readOnly}
+                onChange={(event) => writeFit({ vertical: event.target.checked || undefined })}
+              />
+              <span>Fit the height too (wraps a title and a subtitle)</span>
+            </label>
+            {fit.vertical === true && field('PADDING Y (PX)', <SmartNumberInput ariaLabel="Fit padding Y" value={fit.paddingY ?? 12} min={0} max={1000} deferCommit onChange={(value) => writeFit({ paddingY: value })} />)}
           </>
         );
       case 'follow':
@@ -283,6 +304,18 @@ export const ModifiersCard: React.FC<ModifiersCardProps> = ({ selectedPart, char
                 ? 'X is now the gap to the target’s edge, Y the offset from the target.'
                 : 'X is now the gap to the target’s edge.'}
             </p>
+          </>
+        );
+      case 'lookAt':
+        return part.lookAt && (
+          <>
+            {field('TARGET', (
+              <select className="select-control" aria-label="Look at target" value={part.lookAt.targetLayerId} disabled={readOnly} onChange={(event) => write({ lookAt: { ...part.lookAt!, targetLayerId: event.target.value } })}>
+                {!lookAtTargets.some((target) => target.id === part.lookAt!.targetLayerId) && <option value={part.lookAt.targetLayerId}>(missing layer)</option>}
+                {lookAtTargets.map((target) => <option key={target.id} value={target.id}>{target.name || target.id}</option>)}
+              </select>
+            ), { wide: true })}
+            {field('OFFSET (°)', <SmartNumberInput ariaLabel="Look at offset" value={part.lookAt.offset ?? 0} min={-360} max={360} deferCommit onChange={(value) => write({ lookAt: { ...part.lookAt!, offset: value } })} />, { title: 'Added to the facing angle: 0 points the layer’s right side at the target' })}
           </>
         );
       case 'justify':

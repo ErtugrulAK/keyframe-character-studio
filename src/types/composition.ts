@@ -9,7 +9,7 @@
 // (partId-based, canonical). `SceneData.tracks` references it directly —
 // there is no separate AnimationTrack type (P4-S3).
 import type { AnimationTrackData, BezierPath, ColorCorrectionEffect, ImageContentBounds, LayerMask, MotionTemplate, PartMatte, TrackMatteV2 } from './animator';
-import type { FitToTextSettings, FollowSettings, JustifySettings, RepeaterSettings, TextFitSettings } from '../utils/layers/layoutModifiers';
+import type { FitToTextSettings, FollowSettings, JustifySettings, LookAtSettings, RepeaterSettings, TextFitSettings } from '../utils/layers/layoutModifiers';
 import type { WorldAffine } from '../utils/geometry/containerMath';
 /**
  * Coordinate-unit semantics for persisted scene data.
@@ -142,6 +142,8 @@ export interface SceneLayer {
   fitToText?: FitToTextSettings;
   /** Auto Follow: sits next to another layer's edge; x is the gap (`utils/layers/layoutModifiers`). */
   follow?: FollowSettings;
+  /** Look At: turns to face another layer (`utils/layers/layoutModifiers`). */
+  lookAt?: LookAtSettings;
   /** Group: Justify, where its children's combined bounds sit (`utils/layers/layoutModifiers`). */
   justify?: JustifySettings;
   /** Repeater: copies in a line, grid or ring (`utils/layers/layoutModifiers`). */
@@ -281,6 +283,8 @@ export interface LayerContent {
   fitToText?: FitToTextSettings;
   /** Auto Follow: sits next to another layer's edge; x is the gap (`utils/layers/layoutModifiers`). */
   follow?: FollowSettings;
+  /** Look At: turns to face another layer (`utils/layers/layoutModifiers`). */
+  lookAt?: LookAtSettings;
   /** Group: Justify, where its children's combined bounds sit (`utils/layers/layoutModifiers`). */
   justify?: JustifySettings;
   /** Repeater: copies in a line, grid or ring (`utils/layers/layoutModifiers`). */

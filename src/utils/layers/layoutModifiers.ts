@@ -14,6 +14,8 @@
  * - Auto follow (`follow`, any layer): the layer sits next to another layer's
  *   edge and moves when that layer grows. Its x becomes the gap to that edge;
  *   with `vertical` its y becomes the offset from the target's y.
+ * - Look At (`lookAt`, any layer): the layer turns to face another layer's
+ *   position; `offset` adds degrees (a shape drawn pointing up takes -90 or 90).
  * - Justify (`justify`, groups): the group's children keep their combined
  *   bounds left, centred or right on the group's origin as their sizes change.
  * - Repeater (`repeater`, any layer but a group): copies of the layer in a line,
@@ -59,6 +61,10 @@ export interface FitToTextSettings {
   maxWidth?: number;
   /** The edge that stays in place as the shape grows: left, centre (default) or right. */
   anchor?: HorizontalAlign;
+  /** The height fits the texts too: from the top of the highest to the bottom of the lowest, plus `paddingY`. */
+  vertical?: boolean;
+  /** Space above and below the texts, in scene pixels (default 12). */
+  paddingY?: number;
 }
 
 export interface FollowSettings {
@@ -68,6 +74,13 @@ export interface FollowSettings {
   side?: 'left' | 'right';
   /** The layer also moves up and down with the target; its y is then the offset from the target's y. */
   vertical?: boolean;
+}
+
+export interface LookAtSettings {
+  /** The layer this one faces (same parent). */
+  targetLayerId: string;
+  /** Degrees added to the facing angle (0 = the layer's +x axis points at the target). */
+  offset?: number;
 }
 
 export interface JustifySettings {
@@ -100,8 +113,8 @@ export interface RepeaterSettings {
 /** Width of `text` set in bold `fontFamily` at `fontSize` px, unscaled. */
 export type TextMeasure = (text: string, fontSize: number, fontFamily: string) => number;
 
-/** The local horizontal extent of each shape type with static geometry. */
-export type ShapeExtents = Record<string, { minX: number; maxX: number }>;
+/** The local extent of each shape type with static geometry (vertical where it is known). */
+export type ShapeExtents = Record<string, { minX: number; maxX: number; minY?: number; maxY?: number }>;
 
 /** What layout changes on one layer; absent fields are unchanged. */
 export interface LayoutAdjustment {
@@ -109,6 +122,10 @@ export interface LayoutAdjustment {
   textValue?: string;
   /** Multiplies the layer's base scaleX and every scaleX key. */
   scaleXFactor?: number;
+  /** Multiplies the layer's base scaleY and every scaleY key. */
+  scaleYFactor?: number;
+  /** Added to the layer's base rotation and every rotation key, in degrees. */
+  rotation?: number;
   /** Added to the layer's base position and every position key (parent space). */
   dx?: number;
   dy?: number;
@@ -153,11 +170,14 @@ interface LayoutLayer {
   textValue?: string;
   fontSize?: number;
   fontFamily?: string;
+  /** Where a text's origin sits: on its baseline (absent) or its box centre (`utils/geometry/textOrigin`). */
+  textOrigin?: string;
   width?: number;
   points?: Array<{ x: number; y: number }>;
   textFit?: TextFitSettings;
   fitToText?: FitToTextSettings;
   follow?: FollowSettings;
+  lookAt?: LookAtSettings;
   justify?: JustifySettings;
   repeater?: RepeaterSettings;
 }
@@ -165,6 +185,10 @@ interface LayoutLayer {
 export function createLayoutModifiers(shapeExtents: ShapeExtents) {
   const DEFAULT_MIN_SCALE = 0.5;
   const DEFAULT_PADDING = 24;
+  const DEFAULT_PADDING_Y = 12;
+  /** A text's box in em: its half height and its centre above the baseline (`utils/geometry/bounds` getTextMetrics). */
+  const TEXT_HALF_HEIGHT_EM = 0.561;
+  const TEXT_BOX_CENTRE_EM = 0.346;
   const MAX_COPIES = 200;
   /** The box-like primitives a text can size (`utils/geometry/shapeGeometry`). */
   const SIZABLE = ['custom_box', 'custom_rect', 'custom_banner', 'custom_capsule', 'custom_card'];
@@ -343,6 +367,43 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
       if (!Number.isFinite(factor) || factor <= 0) continue;
       if (factor !== 1) adjust(shape.id).scaleXFactor = factor;
       shiftAlong(shape, (alignSign(settings.anchor) * (width - authored)) / 2);
+      if (settings.vertical === true) fitHeight(shape, settings);
+    }
+
+    /**
+     * The shape's height spans its texts, from the top of the highest to the
+     * bottom of the lowest, plus `paddingY`, and its centre moves to theirs
+     * (in the parent's space, for an unturned shape).
+     */
+    function fitHeight(shape: LayoutLayer, settings: FitToTextSettings): void {
+      const extent = shapeExtents[shape.type];
+      if (!extent || extent.minY === undefined || extent.maxY === undefined) return;
+      let top = Infinity;
+      let bottom = -Infinity;
+      for (const id of fitTextIds(settings)) {
+        const text = byId[id];
+        if (!text || text.type !== 'custom_text' || parentOf(text) !== parentOf(shape)) continue;
+        const own = adjustments[id];
+        if (own && own.hidden) continue;
+        const size = (own && own.fontSize) || positive(text.fontSize) || 24;
+        const scaleY = Math.abs(pose(text).scaleY) || 1;
+        const centre = pose(text).y + ((own && own.dy) || 0) - (text.textOrigin === 'center' ? 0 : TEXT_BOX_CENTRE_EM * size * scaleY);
+        const half = TEXT_HALF_HEIGHT_EM * size * scaleY;
+        top = Math.min(top, centre - half);
+        bottom = Math.max(bottom, centre + half);
+      }
+      if (!(top <= bottom)) return;
+      const height = bottom - top + 2 * Math.max(0, finite(settings.paddingY) ?? DEFAULT_PADDING_Y);
+      const baseY = pose(shape).scaleY;
+      const authored = (extent.maxY - extent.minY) * Math.abs(baseY);
+      if (!(authored > 0)) return;
+      const factor = height / authored;
+      if (!Number.isFinite(factor) || factor <= 0) return;
+      if (factor !== 1) adjust(shape.id).scaleYFactor = factor;
+      const own = adjustments[shape.id];
+      const centreNow = pose(shape).y + ((own && own.dy) || 0) + ((extent.minY + extent.maxY) / 2) * baseY * factor;
+      const shift = (top + bottom) / 2 - centreNow;
+      if (shift) adjust(shape.id).dy = ((own && own.dy) || 0) + shift;
     }
 
     // 3. Horizontal extents in the parent's space, as laid out so far. A
@@ -459,7 +520,25 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
       }
     }
 
-    // 5. Repeated copies.
+    // 5. Look At: turned to face the target's laid-out position.
+    for (const layer of layers) {
+      const settings = layer.lookAt;
+      if (!settings || typeof settings.targetLayerId !== 'string') continue;
+      const target = byId[settings.targetLayerId];
+      if (!target || target.id === layer.id || parentOf(target) !== parentOf(layer)) continue;
+      const own = adjustments[layer.id];
+      const theirs = adjustments[target.id];
+      const dx = pose(target).x + ((theirs && theirs.dx) || 0) - (pose(layer).x + ((own && own.dx) || 0));
+      const dy = pose(target).y + ((theirs && theirs.dy) || 0) - (pose(layer).y + ((own && own.dy) || 0));
+      if (dx === 0 && dy === 0) continue;
+      const facing = (Math.atan2(dy, dx) * 180) / Math.PI + (finite(settings.offset) ?? 0);
+      // The nearest turn: the layer keeps its winding (no 359° spin).
+      let turn = facing - pose(layer).rotation;
+      turn -= 360 * Math.round(turn / 360);
+      if (turn) adjust(layer.id).rotation = turn;
+    }
+
+    // 6. Repeated copies.
     for (const layer of layers) {
       const settings = layer.repeater;
       if (!settings || layer.isGroup) continue;
@@ -549,8 +628,11 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
     if (!adjustment) return map;
     const factor = adjustment.scaleXFactor;
     if (factor !== undefined) map.scaleX = (value) => value * factor;
+    const factorY = adjustment.scaleYFactor;
+    if (factorY !== undefined) map.scaleY = (value) => value * factorY;
     if (adjustment.dx) map.x = (value) => value + adjustment.dx!;
     if (adjustment.dy) map.y = (value) => value + adjustment.dy!;
+    if (adjustment.rotation) map.rotation = (value) => value + adjustment.rotation!;
     if (adjustment.hidden) map.opacity = () => 0;
     return map;
   }
@@ -598,8 +680,10 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
       } as L;
       const posePatch: Partial<LayoutPose & { opacity: number }> = {};
       if (adjustment.scaleXFactor !== undefined) posePatch.scaleX = current.scaleX * adjustment.scaleXFactor;
+      if (adjustment.scaleYFactor !== undefined) posePatch.scaleY = current.scaleY * adjustment.scaleYFactor;
       if (adjustment.dx) posePatch.x = current.x + adjustment.dx;
       if (adjustment.dy) posePatch.y = current.y + adjustment.dy;
+      if (adjustment.rotation) posePatch.rotation = current.rotation + adjustment.rotation;
       if (adjustment.hidden) posePatch.opacity = 0;
       if (Object.keys(posePatch).length > 0) next = writePose(next, posePatch);
       return next;
@@ -624,6 +708,7 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
       const clone = { ...source, id, name: (source.name || source.id) + ' ' + (copy.index + 1), repeatSourceId: source.id } as unknown as Record<string, unknown>;
       delete clone.fitToText;
       delete clone.follow;
+      delete clone.lookAt;
       delete clone.repeater;
       delete clone.textFit;
       if (copy.delay) {
@@ -675,16 +760,22 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
   return { resolveLayout, applyLayout, applyLayoutToScene, mapTrack, measureTextWidth, limitLength, copyIdOf, fitTextIds };
 }
 
-/** The horizontal extent of every shape type with static geometry. */
+/** The extent of every shape type with static geometry. */
 export const SHAPE_EXTENTS: ShapeExtents = (() => {
   const types: BodyPartType[] = ['custom_star', 'custom_circle', 'custom_box', 'custom_rect', 'custom_triangle', 'custom_parallelogram', 'custom_banner', 'custom_capsule', 'custom_diamond', 'custom_card'];
   const extents: ShapeExtents = {};
   for (const type of types) {
     const geometry = getShapeGeometry(type);
     if (!geometry) continue;
-    if (geometry.kind === 'circle') extents[type] = { minX: -geometry.r, maxX: geometry.r };
-    else if (geometry.kind === 'polygon') extents[type] = { minX: Math.min(...geometry.points.map((point) => point.x)), maxX: Math.max(...geometry.points.map((point) => point.x)) };
-    else extents[type] = { minX: geometry.x, maxX: geometry.x + geometry.width };
+    if (geometry.kind === 'circle') extents[type] = { minX: -geometry.r, maxX: geometry.r, minY: -geometry.r, maxY: geometry.r };
+    else if (geometry.kind === 'polygon') {
+      extents[type] = {
+        minX: Math.min(...geometry.points.map((point) => point.x)),
+        maxX: Math.max(...geometry.points.map((point) => point.x)),
+        minY: Math.min(...geometry.points.map((point) => point.y)),
+        maxY: Math.max(...geometry.points.map((point) => point.y)),
+      };
+    } else extents[type] = { minX: geometry.x, maxX: geometry.x + geometry.width, minY: geometry.y, maxY: geometry.y + geometry.height };
   }
   return extents;
 })();
@@ -758,7 +849,8 @@ export function compensateLayoutChange<P extends EditorPart, T extends { id: str
       const have = current[part.id];
       if (!want || !have) continue;
       const x = want.x - have.x;
-      const y = want.y - have.y;
+      // A shape whose height fits its texts is placed by them vertically.
+      const y = part.fitToText?.vertical === true ? 0 : want.y - have.y;
       if (Math.abs(x) > 1e-6 || Math.abs(y) > 1e-6) moves[part.id] = { x, y };
     }
     if (Object.keys(moves).length === 0) break;

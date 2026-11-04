@@ -100,6 +100,41 @@ describe('text box and auto size', () => {
   });
 });
 
+describe('auto size height', () => {
+  // Title (20 px, baseline origin) at y 0 and a 10 px subtitle at y 40: their
+  // boxes span -18.14 .. 42.15 (half height 0.561 em, centre 0.346 em up).
+  const sub = { id: 'sub', type: 'custom_text', textValue: 'Sub', fontSize: 10, y: 40 };
+  const fit = (extra: Record<string, unknown> = {}) => bar({ fitToText: { textLayerId: 'title', extraTextLayerIds: ['sub'], padding: 10, vertical: true, ...extra } });
+
+  it('wraps the title and the subtitle with paddingY, centred on them', () => {
+    const { adjustments } = layout([text('Hi'), sub, fit()]);
+    const top = -0.346 * 20 - 0.561 * 20;
+    const bottom = 40 - 0.346 * 10 + 0.561 * 10;
+    // custom_rect is 60 high: the factor is the wanted height over it.
+    expect(adjustments.bar.scaleYFactor).toBeCloseTo((bottom - top + 24) / 60);
+    expect(adjustments.bar.dy).toBeCloseTo((top + bottom) / 2);
+    // paddingY 0 hugs the texts.
+    expect(layout([text('Hi'), sub, fit({ paddingY: 0 })]).adjustments.bar.scaleYFactor).toBeCloseTo((bottom - top) / 60);
+  });
+
+  it('a centre-origin text is centred on its own position; off, the height is left alone', () => {
+    const centred = layout([text('Hi', { textOrigin: 'center' }), bar({ fitToText: { textLayerId: 'title', padding: 10, vertical: true, paddingY: 0 } })]).adjustments;
+    expect(centred.bar.scaleYFactor).toBeCloseTo((2 * 0.561 * 20) / 60);
+    expect(centred.bar.dy ?? 0).toBeCloseTo(0);
+    expect(layout([text('Hi'), sub, bar({ fitToText: { textLayerId: 'title', extraTextLayerIds: ['sub'], padding: 10 } })]).adjustments.bar.scaleYFactor).toBeUndefined();
+  });
+
+  it('scales the scaleY keys with the base pose', () => {
+    const scene = applyLayoutToScene({
+      layers: [text('Hi', { textOrigin: 'center' }), bar({ fitToText: { textLayerId: 'title', padding: 10, vertical: true, paddingY: 0 } })],
+      tracks: [{ id: 't', partId: 'bar', channels: { scaleY: [{ frame: 0, value: 1 }, { frame: 10, value: 2 }] } }],
+    }, measure);
+    const factor = (2 * 0.561 * 20) / 60;
+    expect(scene.layers[1].scaleY).toBeCloseTo(factor);
+    expect((scene.tracks![0].channels!.scaleY as Array<{ value: number }>).map((key) => key.value)).toEqual([factor, 2 * factor].map((value) => expect.closeTo(value)) as never);
+  });
+});
+
 describe('auto follow', () => {
   // A 60 px box whose x is its gap to the text's edge.
   const tag = (extra: Record<string, unknown> = {}) => ({ id: 'tag', type: 'custom_box', x: 8, follow: { targetLayerId: 'title' }, ...extra });
@@ -134,6 +169,37 @@ describe('auto follow', () => {
     expect(layout([text('Hi', { y: 120 }), tag({ y: -5, ...vertical })]).adjustments.tag.dy).toBeCloseTo(120);
     expect(layout([text('Hi', { y: -40 }), tag({ y: -5, ...vertical })]).adjustments.tag.dy).toBeCloseTo(-40);
     expect(layout([text('Hi', { y: 120 }), tag({ y: -5 })]).adjustments.tag.dy).toBeUndefined();
+  });
+});
+
+describe('look at', () => {
+  const arrow = (extra: Record<string, unknown> = {}) => ({ id: 'arrow', type: 'custom_triangle', x: 0, y: 0, lookAt: { targetLayerId: 'goal' }, ...extra });
+  const goal = (x: number, y: number, extra: Record<string, unknown> = {}) => ({ id: 'goal', type: 'custom_circle', x, y, ...extra });
+
+  it('turns the layer to face the target, plus its offset, by the nearest turn', () => {
+    expect(layout([arrow(), goal(100, 0)]).adjustments.arrow).toBeUndefined();
+    expect(layout([arrow(), goal(0, 100)]).adjustments.arrow.rotation).toBeCloseTo(90);
+    expect(Math.abs(layout([arrow(), goal(-100, 0)]).adjustments.arrow.rotation!)).toBeCloseTo(180);
+    expect(layout([arrow({ lookAt: { targetLayerId: 'goal', offset: -90 } }), goal(0, 100)]).adjustments.arrow).toBeUndefined();
+    // Already turned 350°: facing 0° is a +10° turn, not -350°.
+    expect(layout([arrow({ rotation: 350 }), goal(100, 0)]).adjustments.arrow.rotation).toBeCloseTo(10);
+  });
+
+  it("faces the target's laid-out place, and leaves another parent or a missing target alone", () => {
+    // The goal follows a text: it ends 40 px further right than authored.
+    const followed = layout([text('Hi'), arrow({ y: 100 }), goal(8, 0, { type: 'custom_box', follow: { targetLayerId: 'title' } })]).adjustments;
+    expect(followed.arrow.rotation).toBeCloseTo((Math.atan2(-100, 48) * 180) / Math.PI);
+    expect(layout([arrow({ parentId: 'g' }), goal(0, 100)]).adjustments.arrow).toBeUndefined();
+    expect(layout([arrow()]).adjustments.arrow).toBeUndefined();
+  });
+
+  it('adds its turn to the rotation keys', () => {
+    const scene = applyLayoutToScene({
+      layers: [arrow(), goal(0, 100)],
+      tracks: [{ id: 't', partId: 'arrow', channels: { rotation: [{ frame: 0, value: 0 }, { frame: 10, value: 30 }] } }],
+    }, measure);
+    expect(scene.layers[0].rotation).toBeCloseTo(90);
+    expect((scene.tracks![0].channels!.rotation as Array<{ value: number }>).map((key) => key.value)).toEqual([90, 120]);
   });
 });
 
@@ -226,6 +292,19 @@ describe('settings edits keep the picture still', () => {
     expect(tag.baseTransform.y + (shown.adjustments.tag.dy ?? 0)).toBeCloseTo(180);
   });
 
+  it('turning on the height fit moves the shape onto its texts instead of keeping it where it was', () => {
+    const before = [
+      part('title', 'custom_text', 0, { textValue: 'Hi', textOrigin: 'center', baseTransform: { x: 0, y: 50, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } }),
+      part('bar', 'custom_rect', 0, { fitToText: { textLayerId: 'title', padding: 10 }, baseTransform: { x: 0, y: 200, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } }),
+    ];
+    const after = before.map((item) => (item.id === 'bar' ? { ...item, fitToText: { textLayerId: 'title', padding: 10, vertical: true, paddingY: 0 } } : item));
+    const settled = compensateLayoutChange(before as never, after as never, [], measure);
+    const bar = (settled.parts as typeof after).find((item) => item.id === 'bar')!;
+    expect(bar.baseTransform.y).toBe(200);
+    const shown = resolveLayout(settled.parts as never, ((layer: { baseTransform: unknown }) => layer.baseTransform) as never, measure);
+    expect(bar.baseTransform.y + (shown.adjustments.bar.dy ?? 0)).toBeCloseTo(50);
+  });
+
   it("changing a followed text's alignment moves neither the text nor its follower", () => {
     const before = [part('title', 'custom_text', 0, { textValue: 'Hello' }), part('tag', 'custom_box', 0, { follow: { targetLayerId: 'title' } })];
     const after = before.map((item) => (item.id === 'title' ? { ...item, textFit: { align: 'left' } } : item));
@@ -253,6 +332,23 @@ describe('settings edits keep the picture still', () => {
 });
 
 describe('deleting a layer a modifier reads', () => {
+  it('a layer facing a deleted layer keeps the turn it had, keys included', () => {
+    const base = (x: number, y: number) => ({ x, y, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 });
+    const parts = [
+      { id: 'goal', type: 'custom_circle', name: 'Goal', zIndex: 2, pivot: { x: 0, y: 0 }, fillColor: '#fff', strokeColor: '#000', baseTransform: base(0, 100) },
+      { id: 'arrow', type: 'custom_triangle', name: 'Arrow', zIndex: 1, pivot: { x: 0, y: 0 }, fillColor: '#fff', strokeColor: '#000', baseTransform: base(0, 0), lookAt: { targetLayerId: 'goal' } },
+    ];
+    const tracks = parts.map((part) => ({ id: `t-${part.id}`, partId: part.id, name: part.name, keyframes: [], channels: part.id === 'arrow' ? { rotation: [{ id: 'r0', frame: 0, value: 0, easing: 'linear' }, { id: 'r10', frame: 10, value: 30, easing: 'linear' }] } : {}, color: '#fff', visible: true, locked: false }));
+    const plan = planPartDeletion(parts as never, tracks as never, ['goal']);
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    const arrow = plan.parts.find((part) => part.id === 'arrow')!;
+    expect(arrow.lookAt).toBeUndefined();
+    expect(arrow.baseTransform.rotation).toBeCloseTo(90);
+    const keys = (plan.tracks.find((track) => track.partId === 'arrow')!.channels.rotation as Array<{ value: number }>).map((key) => key.value);
+    expect(keys).toEqual([90, 120]);
+  });
+
   it('lets the follower and the sized shape go, each left where it is', () => {
     const base = (x: number) => ({ x, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 });
     const parts = [

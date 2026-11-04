@@ -113,24 +113,37 @@ export const planPartDeletion = (
   const release = releaseChildrenOfDeletedParents(parts, tracks, closure);
   if (!release.ok) return release;
   const removed = deleteParts(release.parts, release.tracks, [...closure]);
-  // A layer that followed or sized to a deleted layer lets go of it and stays
-  // as it is on the stage: where it was (its x was the gap to that layer's
-  // edge), and as wide as it was (the fitted width becomes its own).
+  // A layer that followed, faced or sized to a deleted layer lets go of it and
+  // stays as it is on the stage: where it was (its x was the gap to that
+  // layer's edge), turned as it was, and as wide as it was (the fitted width
+  // becomes its own).
   // An Auto Size shape keeps its other texts; it lets go only when all of them go.
   const keptTexts = (part: CharacterPart) => (part.fitToText ? fitTextIds(part.fitToText).filter((id) => !closure.has(id)) : []);
   const losesFit = (part: CharacterPart) => Boolean(part.fitToText) && keptTexts(part).length === 0;
   const losesText = (part: CharacterPart) => Boolean(part.fitToText) && fitTextIds(part.fitToText!).some((id) => closure.has(id));
-  const widths = removed.parts.some(losesFit)
+  const losesLookAt = (part: CharacterPart) => Boolean(part.lookAt) && closure.has(part.lookAt!.targetLayerId);
+  const widths = removed.parts.some((part) => losesFit(part) || losesLookAt(part))
     ? resolveLayout(release.parts, (layer) => (layer as CharacterPart).baseTransform, measureTextWidth).adjustments
     : {};
   const bakedWidths: Record<string, number> = {};
+  // A layer that faced a deleted layer keeps the turn it had.
+  const bakedTurns: Record<string, number> = {};
   const unlinked = removed.parts.map((part) => {
     const dropFollow = part.follow && closure.has(part.follow.targetLayerId);
+    const dropLookAt = part.lookAt && closure.has(part.lookAt.targetLayerId);
     const dropFit = losesFit(part);
     const dropText = !dropFit && losesText(part);
-    if (!dropFollow && !dropFit && !dropText) return part;
+    if (!dropFollow && !dropLookAt && !dropFit && !dropText) return part;
     const next = { ...part };
     if (dropFollow) delete next.follow;
+    if (dropLookAt) {
+      delete next.lookAt;
+      const turn = widths[part.id]?.rotation;
+      if (turn) {
+        bakedTurns[part.id] = turn;
+        next.baseTransform = { ...next.baseTransform, rotation: next.baseTransform.rotation + turn };
+      }
+    }
     if (dropText) {
       const [textLayerId, ...extra] = keptTexts(part);
       next.fitToText = { ...part.fitToText!, textLayerId, extraTextLayerIds: extra.length > 0 ? extra : undefined };
@@ -146,9 +159,12 @@ export const planPartDeletion = (
     }
     return next;
   });
-  const unlinkedTracks = removed.tracks.map((track) => (bakedWidths[track.partId] !== undefined
-    ? mapTrack(track, { scaleX: (value) => value * bakedWidths[track.partId] })
-    : track));
+  const unlinkedTracks = removed.tracks.map((track) => {
+    let next = track;
+    if (bakedWidths[track.partId] !== undefined) next = mapTrack(next, { scaleX: (value) => value * bakedWidths[track.partId] });
+    if (bakedTurns[track.partId] !== undefined) next = mapTrack(next, { rotation: (value) => value + bakedTurns[track.partId] });
+    return next;
+  });
   const settled = unlinked.some((part, index) => part !== removed.parts[index])
     ? compensateLayoutChange(release.parts, unlinked, unlinkedTracks)
     : { parts: removed.parts, tracks: removed.tracks };

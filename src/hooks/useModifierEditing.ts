@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import type { CharacterPart, Track } from '../types/animator';
 import { compensateLayoutChange } from '../utils/layers/layoutModifiers';
 
-type ModifierField = 'textFit' | 'fitToText' | 'follow' | 'justify' | 'repeater';
+type ModifierField = 'textFit' | 'fitToText' | 'follow' | 'lookAt' | 'justify' | 'repeater';
 export type ModifierPatch = Partial<Pick<CharacterPart, ModifierField>>;
 
 interface ModifierEditingDeps {

@@ -22,7 +22,7 @@ import {
 import { applyEasing, deriveAutoBezierControlPoints, interpolateChannel, lerp, makeEmptyChannels } from '../animation/defaults';
 import { evaluateTransform } from '../animation/evaluateTransform';
 import { generateId } from './idGenerator';
-import { isRelationshipChainRelated, relationshipAncestorIds, relationshipParentId } from './partBinding';
+import { relationshipAncestorIds, relationshipParentId, selectionHasChainRelation } from './partBinding';
 
 /**
  * Layer groups — an authoring surface over the parent-child transform KCS
@@ -505,10 +505,7 @@ export const groupSelectionBlockReason = (parts: CharacterPart[], ids: string[])
   if (selected.some((part) => part.anchor && part.anchor !== 'none')) {
     return 'A layer that uses a stage anchor cannot be grouped yet.';
   }
-  const related = selected.some((part, index) => selected
-    .slice(index + 1)
-    .some((other) => isRelationshipChainRelated(parts, part.id, other.id)));
-  if (related) return 'A layer cannot be grouped with its own child.';
+  if (selectionHasChainRelation(parts, selected.map((part) => part.id))) return 'A layer cannot be grouped with its own child.';
   const parents = new Set(selected.map((part) => relationshipParentId(part)));
   if (parents.size > 1) return 'Group layers that share one parent, or only top-level layers.';
   return null;

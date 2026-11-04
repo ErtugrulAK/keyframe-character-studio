@@ -33,9 +33,25 @@ export const relationshipParentId = (part: CharacterPart | undefined): string | 
   part?.parentId ?? part?.booleanGroupId
 );
 
+/**
+ * Each parts array's id index, built once per array (the arrays are immutable
+ * state snapshots): a chain walk is then one lookup per step, not a scan of
+ * every part, which made a 1500-layer Select All take seconds.
+ */
+const partIndexes = new WeakMap<CharacterPart[], Map<string, CharacterPart>>();
+const partIndexOf = (parts: CharacterPart[]): Map<string, CharacterPart> => {
+  let index = partIndexes.get(parts);
+  if (!index) {
+    index = new Map();
+    for (const part of parts) if (!index.has(part.id)) index.set(part.id, part);
+    partIndexes.set(parts, index);
+  }
+  return index;
+};
+
 /** The relationship a part inherits its transform from; both models use one chain. */
 const relationshipParentOf = (parts: CharacterPart[], partId: string): string | undefined => (
-  relationshipParentId(parts.find((candidate) => candidate.id === partId))
+  relationshipParentId(partIndexOf(parts).get(partId))
 );
 
 /**
@@ -55,6 +71,15 @@ export const relationshipAncestorIds = (parts: CharacterPart[], partId: string):
     cursor = relationshipParentOf(parts, cursor);
   }
   return chain;
+};
+
+/**
+ * True when any of the given parts is another one's ancestor: one chain walk
+ * per part instead of one per pair.
+ */
+export const selectionHasChainRelation = (parts: CharacterPart[], ids: readonly string[]): boolean => {
+  const selected = new Set(ids);
+  return [...selected].some((id) => relationshipAncestorIds(parts, id).some((ancestor) => selected.has(ancestor)));
 };
 
 export const isRelationshipChainRelated = (parts: CharacterPart[], aId: string, bId: string): boolean => (

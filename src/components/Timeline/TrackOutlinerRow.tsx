@@ -57,6 +57,8 @@ const TREE_LABEL: Partial<Record<TrackChannel, string>> = {
   trimPathStart: 'Start',
   trimPathEnd: 'End',
   trimPathOffset: 'Offset',
+  matteFeather: 'Feather',
+  matteStrength: 'Strength',
 };
 
 /** A mask property row reads like other motion tools: Path, Feather, Opacity, Expansion. */

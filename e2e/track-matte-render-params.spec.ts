@@ -81,3 +81,65 @@ test('Ctrl+Z undoes a matte slider change while the slider still has focus (QA r
   await page.keyboard.press('Control+y');
   await expect(feather).not.toHaveValue('0');
 });
+
+/** The playhead on a frame, by the ruler (the default 18 px per frame). */
+async function setFrame(page: Page, frame: number) {
+  const grid = page.locator('.timeline-grid-container');
+  const gridBox = await grid.boundingBox();
+  const rulerBox = await page.locator('.time-ruler').boundingBox();
+  const scrollLeft = await grid.evaluate((node) => node.scrollLeft);
+  await page.mouse.click(gridBox!.x - scrollLeft + frame * 18 + 4, rulerBox!.y + rulerBox!.height / 2);
+  await expect(page.locator('.playhead-frame-label')).toHaveText(String(frame));
+}
+
+test('Feather keys from its keyframe button, animate on the stage and are saved (QA rc6 round 4)', async ({ page }) => {
+  await seed(page, {});
+  await page.locator('[role="tree"] [data-layer-id="tgt"]').click();
+  await openDetailsTab(page, 'Masks');
+  const expand = page.getByRole('button', { name: 'Expand TRACK MATTE', exact: true });
+  if (await expand.count()) await expand.click();
+  const feather = page.getByRole('slider', { name: 'Feather' });
+  const key = page.getByRole('button', { name: 'Feather keyframe' });
+
+  // Frame 0: the button starts the animation with the value shown (0).
+  await expect(key).toHaveAttribute('aria-pressed', 'false');
+  await key.click();
+  await expect(key).toHaveAttribute('aria-pressed', 'true');
+
+  // Frame 20: off a key; moving the slider writes a key here, not the base value.
+  await setFrame(page, 20);
+  await expect(key).toHaveAttribute('aria-pressed', 'false');
+  await feather.focus();
+  for (let step = 0; step < 10; step += 1) await feather.press('ArrowRight');
+  await expect(feather).toHaveValue('10');
+  await expect(key).toHaveAttribute('aria-pressed', 'true');
+  expect((await targetMask(page)).id).toContain('-f10');
+
+  // Back on frame 0 the first key still holds 0, and the stage is sharp.
+  await setFrame(page, 0);
+  await expect(feather).toHaveValue('0');
+  expect((await targetMask(page)).id).not.toContain('-f');
+  // Halfway the stage draws the interpolated soft edge.
+  await setFrame(page, 10);
+  expect((await targetMask(page)).blur).not.toBeNull();
+
+  // The save keeps both keys (the autosave bytes a reload restores from).
+  const before = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
+  await page.locator('.autosave-status-badge').click();
+  await expect
+    .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+    .toBeGreaterThan(Number(before || '0'));
+  const saved = await page.evaluate((storageKey) => {
+    const scene = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    const track = (scene.tracks || []).find((candidate: { partId: string }) => candidate.partId === 'tgt');
+    return (track?.channels?.matteFeather || []).map((keyframe: { frame: number; value: number }) => [keyframe.frame, keyframe.value]);
+  }, STORAGE_KEY);
+  expect(saved).toEqual([[0, 0], [20, 10]]);
+  await setFrame(page, 20);
+
+  // The button on a key removes it; the remaining key holds.
+  await expect(key).toHaveAttribute('aria-pressed', 'true');
+  await key.click();
+  await expect(key).toHaveAttribute('aria-pressed', 'false');
+  expect((await targetMask(page)).id).not.toContain('-f');
+});

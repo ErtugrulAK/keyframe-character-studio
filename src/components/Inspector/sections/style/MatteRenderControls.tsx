@@ -1,8 +1,43 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Diamond } from 'lucide-react';
 import type { PartMatte } from '../../../../types/animator';
 import { NumberField } from '../../inputs/NumberField';
 import { normalizeFeather, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/layers/matte';
 import type { MatteGradientStop } from '../../../../utils/layers/matte';
+
+/**
+ * One keyframe button: 'off' (not animated), 'animated' (keys elsewhere) or
+ * 'key' (a key at the playhead). The caller adds or removes the key.
+ */
+export interface MatteChannelKey {
+  state: 'off' | 'animated' | 'key';
+  onToggle: () => void;
+}
+export interface MatteChannelKeys {
+  feather: MatteChannelKey;
+  strength: MatteChannelKey;
+}
+
+const KEY_TITLES: Record<MatteChannelKey['state'], string> = {
+  off: 'Animate: add a keyframe here',
+  animated: 'Add a keyframe here',
+  key: 'Remove the keyframe here',
+};
+
+/** The keyframe button beside a keyable field (After Effects' keyframe navigator). */
+const KeyButton: React.FC<{ name: string; control: MatteChannelKey; disabled: boolean }> = ({ name, control, disabled }) => (
+  <button
+    type="button"
+    className={`matte-key-button is-${control.state}`}
+    aria-label={`${name} keyframe`}
+    aria-pressed={control.state === 'key'}
+    title={KEY_TITLES[control.state]}
+    disabled={disabled}
+    onClick={control.onToggle}
+  >
+    <Diamond size={11} aria-hidden="true" fill={control.state === 'key' ? 'currentColor' : 'none'} />
+  </button>
+);
 
 /** The render parameters the Track Matte and the legacy matte share. */
 export type MatteRenderParams = Pick<PartMatte, 'feather' | 'strength' | 'gradient'>;
@@ -17,6 +52,8 @@ interface MatteRenderControlsProps {
   onChange: (patch: MatteRenderParams) => void;
   rangeGesture: Pick<React.InputHTMLAttributes<HTMLInputElement>, 'onPointerDown' | 'onPointerUp' | 'onPointerCancel' | 'onBlur'>;
   compactSelectStyle: React.CSSProperties;
+  /** FEATHER and STRENGTH keyframe buttons (Track Matte only); absent = not keyable. */
+  channelKeys?: MatteChannelKeys;
 }
 
 /**
@@ -25,7 +62,7 @@ interface MatteRenderControlsProps {
  * transient angle display that keeps 360° at the slider's right edge while the
  * stored value normalizes to 0.
  */
-export const MatteRenderControls: React.FC<MatteRenderControlsProps> = ({ partId, value, mode, onChange, rangeGesture, compactSelectStyle }) => {
+export const MatteRenderControls: React.FC<MatteRenderControlsProps> = ({ partId, value, mode, onChange, rangeGesture, compactSelectStyle, channelKeys }) => {
   const gradient = value.gradient;
   const authoredAngle = normalizeGradientAngle(gradient?.angle) ?? 0;
   const angleSourceKey = `${partId}:${String(gradient?.angle)}`;
@@ -129,8 +166,8 @@ export const MatteRenderControls: React.FC<MatteRenderControlsProps> = ({ partId
     <>
       <div className="matte-field">
         <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>FEATHER</span>
-          <span style={{ color: '#4a8fe8', fontWeight: 600, opacity: dim(disabled) }}>{featherValue}px</span>
+          <span className="matte-key-label">FEATHER{channelKeys && <KeyButton name="Feather" control={channelKeys.feather} disabled={disabled} />}</span>
+          <span style={{ color: '#4a8fe8', fontWeight: 600, opacity: dim(disabled) }}>{Math.round(featherValue)}px</span>
         </label>
         <input
           {...rangeGesture}
@@ -148,7 +185,7 @@ export const MatteRenderControls: React.FC<MatteRenderControlsProps> = ({ partId
 
       <div className="matte-field">
         <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>STRENGTH</span>
+          <span className="matte-key-label">STRENGTH{channelKeys && <KeyButton name="Strength" control={channelKeys.strength} disabled={disabled} />}</span>
           <span style={{ color: '#4a8fe8', fontWeight: 600, opacity: dim(disabled) }}>{strengthValue}%</span>
         </label>
         <input

@@ -15,6 +15,8 @@ export const CHANNEL_META: Record<TrackChannel, { label: string; color: string; 
   trimPathStart: { label: 'Trim Start', shortLabel: 'TS', color: '#22d3ee' },
   trimPathEnd: { label: 'Trim End', shortLabel: 'TE', color: '#2dd4bf' },
   trimPathOffset: { label: 'Trim Offset', shortLabel: 'TO°', color: '#a78bfa' },
+  matteFeather: { label: 'Matte Feather', shortLabel: 'MF', color: '#f472b6' },
+  matteStrength: { label: 'Matte Strength', shortLabel: 'MSt', color: '#fb923c' },
 };
 
 export const TRACK_ROW_HEIGHT = 30;   // parent track row

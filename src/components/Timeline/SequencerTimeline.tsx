@@ -6,7 +6,8 @@ import { useAnimator } from '../../context/useAnimator';
 import { commitWorkspaceLayout, createFrameEase, prefersReducedMotion, REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, type FrameEase } from '../../utils/editor/workspaceLayout';
 import { type TrackChannel, type AnimationChannel } from '../../types/animator';
 import { computeMaxFrame, resolveChannelAnimationState, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/editor/timelineMetrics';
-import { resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../../utils/animation/channelKeyframeGroups';
+import { channelArmValue, resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../../utils/animation/channelKeyframeGroups';
+import { evaluateTrackMatte } from '../../utils/layers/matte';
 import { locateKeyframe } from '../../utils/animation/trackMutations';
 import { duplicateKeyframeGroup as previewKeyframeDuplicate } from '../../utils/animation/keyframeDuplicate';
 import {
@@ -1071,7 +1072,10 @@ export const SequencerTimeline: React.FC = () => {
           ? (part?.trimPathEnd ?? 1)
           : channel === 'trimPathOffset'
             ? (part?.trimPathOffset ?? 0)
-            : (transform as unknown as Record<string, number>)[channel] ?? (channel === 'maskScale' ? 1 : 0);
+            : channel === 'matteFeather' || channel === 'matteStrength'
+              // The value the stage shows now (keyed or static).
+              ? (part ? channelArmValue(channel, transform, { ...part, trackMatte: evaluateTrackMatte(part.trackMatte, tracks.find((candidate) => candidate.id === trackId), currentFrame, activeTemplateId || 'Sequence') }) : 0)
+              : (transform as unknown as Record<string, number>)[channel] ?? (channel === 'maskScale' ? 1 : 0);
     addPropertyKeyframe(trackId, channel, currentFrame, val);
   };
 

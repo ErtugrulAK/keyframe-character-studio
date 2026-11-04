@@ -1099,6 +1099,43 @@
   align-items: flex-start;
 }
 
+/* A keyable field's name with its keyframe button (After Effects' navigator). */
+.matte-key-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+.matte-key-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.matte-key-button:hover:not(:disabled),
+.matte-key-button:focus-visible {
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+.matte-key-button.is-animated,
+.matte-key-button.is-key {
+  color: var(--accent-teal);
+}
+
+.matte-key-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
 .matte-compact-field > .select-control {
   width: var(--inspector-control-sm);
   max-width: 100%;

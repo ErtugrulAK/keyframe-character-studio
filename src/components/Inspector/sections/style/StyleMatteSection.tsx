@@ -11,7 +11,7 @@ import type { MaskDrawShape } from '../../../../hooks/useMaskEditing';
 import { resolveMatteSource, resolveMatteMode, isMatteEligible, suppressedMatteSourceIds } from '../../../../utils/layers/matte';
 import { StyleCard } from './StyleCard';
 import { TrackMatteSummary } from './TrackMatteSummary';
-import { MatteRenderControls } from './MatteRenderControls';
+import { MatteRenderControls, type MatteChannelKeys } from './MatteRenderControls';
 interface StyleMatteSectionProps {
   /** Opens/closes ONE undo entry around a continuous pointer gesture in this section. */
   onInteractionStart?: () => void;
@@ -41,6 +41,8 @@ interface StyleMatteSectionProps {
   maskPathChannels?: Track['maskPathChannels'];
   maskVertexIndex?: number | null;
   onSelectMaskVertex?: (index: number | null) => void;
+  /** The keyframe buttons of the Track Matte's FEATHER and STRENGTH. */
+  matteChannelKeys?: MatteChannelKeys;
 }
 
 const MASK_DRAW_SHAPES: { shape: MaskDrawShape; label: string }[] = [
@@ -111,6 +113,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   maskPathChannels,
   maskVertexIndex,
   onSelectMaskVertex,
+  matteChannelKeys,
 }) => {
   /**
    * A slider is one continuous gesture: the transaction opens when the pointer
@@ -472,6 +475,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             </label>
             <MatteRenderControls
               partId={selectedPart.id}
+              channelKeys={matteChannelKeys}
               value={trackMatte}
               mode={trackMatte.mode}
               onChange={(patch) => setTrackMatte({ ...trackMatte, ...patch })}

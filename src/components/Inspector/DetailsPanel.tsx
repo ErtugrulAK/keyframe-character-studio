@@ -13,6 +13,9 @@ import { StyleTab } from './sections/StyleTab';
 import { ModifiersCard } from './sections/style/ModifiersCard';
 import { useModifierEditing } from '../../hooks/useModifierEditing';
 import { evaluateTrimPath } from '../../utils/geometry/trimPath';
+import { evaluateTrackMatte, normalizeFeather, normalizeStrength } from '../../utils/layers/matte';
+import { applyChannelStaticValue } from '../../utils/animation/channelKeyframeGroups';
+import type { MatteChannelKeys } from './sections/style/MatteRenderControls';
 import { AnimationDataCard } from './sections/AnimationDataCard';
 import { StyleCard } from './sections/style/StyleCard';
 import { useRetainedUiState } from '../../hooks/useRetainedUiState';
@@ -56,6 +59,8 @@ export const DetailsPanel: React.FC = () => {
     showToast,
     tracks,
     activeTemplateId,
+    addPropertyKeyframe,
+    deletePropertyKeyframe,
       coordinateSystem,
     maskEditTarget,
     enterMaskEditing,
@@ -123,7 +128,49 @@ export const DetailsPanel: React.FC = () => {
   const evaluatedMasks = selectedPart && selectedTrack
     ? evaluateLayerMasks(selectedPart, selectedTrack, currentFrame, activeTemplateId || 'Sequence')
     : undefined;
-  const inspectorPart = selectedPart && evaluatedMasks ? { ...selectedPart, masks: evaluatedMasks } : selectedPart;
+  // The Track Matte's keyed feather/strength read at this frame, like the masks.
+  const evaluatedTrackMatte = selectedPart?.trackMatte
+    ? evaluateTrackMatte(selectedPart.trackMatte, selectedTrack, currentFrame, activeTemplateId || 'Sequence')
+    : undefined;
+  const inspectorPart = selectedPart && (evaluatedMasks || evaluatedTrackMatte !== selectedPart.trackMatte)
+    ? { ...selectedPart, ...(evaluatedMasks ? { masks: evaluatedMasks } : {}), trackMatte: evaluatedTrackMatte }
+    : selectedPart;
+  /**
+   * The keyframe button beside FEATHER and STRENGTH (After Effects' keyframe
+   * navigator): it adds a key at the playhead with the value shown, or removes
+   * the key there. Removing the last key leaves its value as the static one,
+   * as stopping the stopwatch does on the timeline.
+   */
+  const matteChannelKeys: MatteChannelKeys | undefined = selectedPart?.trackMatte && selectedTrack && evaluatedTrackMatte
+    ? (() => {
+      const scope = activeTemplateId || 'Sequence';
+      const control = (channel: 'matteFeather' | 'matteStrength', shown: number) => {
+        const keys = (selectedTrack.channels?.[channel] ?? []).filter((key) => (key.templateId || 'Sequence') === scope);
+        const atFrame = keys.find((key) => key.frame === currentFrame);
+        return {
+          state: atFrame ? 'key' as const : keys.length > 0 ? 'animated' as const : 'off' as const,
+          onToggle: () => {
+            if (!atFrame) {
+              addPropertyKeyframe(selectedTrack.id, channel, currentFrame, shown);
+              return;
+            }
+            if (keys.length > 1) {
+              deletePropertyKeyframe(selectedTrack.id, channel, atFrame.id);
+              return;
+            }
+            startBatchInteraction();
+            setCharacterParts((prev) => prev.map((part) => (part.id === selectedPart.id ? applyChannelStaticValue(part, channel, atFrame.value) : part)));
+            deletePropertyKeyframe(selectedTrack.id, channel, atFrame.id);
+            endBatchInteraction();
+          },
+        };
+      };
+      return {
+        feather: control('matteFeather', normalizeFeather(evaluatedTrackMatte.feather)),
+        strength: control('matteStrength', normalizeStrength(evaluatedTrackMatte.strength)),
+      };
+    })()
+    : undefined;
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
   // A locked layer is inspected, not edited: its controls are disabled
   // (disclosure and navigation stay), and the banner offers the unlock.
@@ -367,6 +414,7 @@ export const DetailsPanel: React.FC = () => {
               <Tabs.Content className="details-tab-panel" value="masks">
                 <StyleTab
                   section="masks"
+              matteChannelKeys={matteChannelKeys}
               selectedPart={inspectorPart ?? selectedPart}
               characterParts={characterParts}
               transform={transform}

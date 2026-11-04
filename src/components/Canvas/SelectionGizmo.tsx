@@ -159,7 +159,6 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
     // A geometryless container with nothing measurable inside it draws no frame
     // at all: there is no geometry to frame, so a box would be an invention.
     if (!frameBounds) return null;
-    const isFreeform = !selectedPart.isGroup && selectedPart.type === 'custom_freeform' && !selectedPart.booleanOperandIds?.length;
 
     const hasActiveMatte = Boolean(selectedPart.matte?.sourcePartId && selectedPart.matte.enabled !== false);
     // A Track Matte source hidden from the composition is not painted,
@@ -198,6 +197,7 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
         onRotateMouseDown={onRotateStart}
         onScaleMouseDown={onScaleStart}
         outputOrigin={outputOrigin}
+        edgeHandles={selectedPart.isGroup || selectedPart.type !== 'custom_freeform' || Boolean(selectedPart.booleanOperandIds?.length)}
         {...selectionFrameGizmoBounds(frameBounds, selectedTransform)}
       />
     );
@@ -205,9 +205,11 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
     return (
       <>
         {matteHitArea}
-        {!isFreeform && (selectedPart.isGroup
+        {/* A freeform path gets the same frame as a shape: its points stay
+            editable, and the frame scales and turns the whole path. */}
+        {selectedPart.isGroup
           ? <g data-testid="group-aggregate-box" data-group-id={selectedPart.id}>{gizmo}</g>
-          : gizmo)}
+          : gizmo}
       </>
     );
   }

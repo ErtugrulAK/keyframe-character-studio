@@ -381,6 +381,8 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
                 <label className="form-label">MASK PATH</label>
               </div>
               <BezierPathEditor
+                // The mask's shape is edited on the canvas: no pad here, only its commands.
+                showShape={false}
                 onInteractionStart={onInteractionStart}
                 onInteractionEnd={onInteractionEnd}
                 path={activeLayerMask.path}

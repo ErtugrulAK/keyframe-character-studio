@@ -7,6 +7,12 @@ import { applyPathOrderEdit, planPathOrderEdit, type PathOrderCommand } from '..
 
 interface BezierPathEditorProps {
   path: BezierPath;
+  /**
+   * Draw the small shape pad (default). A mask is edited on the canvas, so its
+   * Inspector keeps only the commands (point count, Closed path, order, add and
+   * delete) and leaves the pad out.
+   */
+  showShape?: boolean;
   onChange: (path: BezierPath) => void;
   /** Width / height of the shape the path belongs to; the editor keeps that proportion. */
   aspectRatio?: number;
@@ -53,6 +59,7 @@ const clampToView = (value: number): number => Math.max(-VIEW_MARGIN, Math.min(1
  */
 export const BezierPathEditor: React.FC<BezierPathEditorProps> = ({
   path,
+  showShape = true,
   onChange,
   aspectRatio = 260 / 160,
   onInteractionStart,
@@ -208,67 +215,69 @@ export const BezierPathEditor: React.FC<BezierPathEditorProps> = ({
           {selectedIndex !== null ? `Point ${selectedIndex + 1} of ${path.points.length}` : `${path.points.length} points — select one to edit`}
         </span>
       </div>
-      <svg
-        className="bezier-path-editor__canvas"
-        viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="none"
-        role="application"
-        aria-label="Bezier path editor"
-        onMouseMove={handleMouseMove}
-        onMouseUp={endVertexDrag}
-        onMouseLeave={endVertexDrag}
-        onPointerCancel={endVertexDrag}
-        onLostPointerCapture={endVertexDrag}
-      >
-        <rect x={0} y={0} width={width} height={height} fill="rgba(39, 39, 39, 0.65)" stroke="var(--border-color)" />
-        {/* The layer's own 0..1 box, so geometry past the edge reads as such. */}
-        <rect
-          x={(VIEW_MARGIN / span) * width}
-          y={(VIEW_MARGIN / span) * height}
-          width={(1 / span) * width}
-          height={(1 / span) * height}
-          fill="none"
-          stroke="rgba(166, 166, 166, 0.35)"
-          strokeDasharray="4 3"
-          pointerEvents="none"
-        />
-        <path d={pathD} fill="rgba(118, 170, 237, 0.12)" stroke="#76aaed" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-        {path.points.map((point, index) => {
-          const viewPoint = viewPoints[index];
-          const handleIn = point.handleIn ? toView(point.handleIn) : null;
-          const handleOut = point.handleOut ? toView(point.handleOut) : null;
-          const startDrag = (type: DragTarget['type']) => (event: React.MouseEvent) => {
-            event.stopPropagation();
-            selectIndex(index);
-            if (readOnly) return;
-            setDragTarget({ type, index });
-            onInteractionStart?.();
-          };
-          return (
-            <g key={point.id}>
-              {handleIn && <line x1={viewPoint.x} y1={viewPoint.y} x2={handleIn.x} y2={handleIn.y} stroke="#fbbf24" strokeWidth={1} />}
-              {handleOut && <line x1={viewPoint.x} y1={viewPoint.y} x2={handleOut.x} y2={handleOut.y} stroke="#fbbf24" strokeWidth={1} />}
-              {handleIn && <circle cx={handleIn.x} cy={handleIn.y} r={5} fill="#fbbf24" tabIndex={0} role="button" aria-label={`Vertex ${index + 1} incoming handle`} onKeyDown={(event) => handleVertexKeyDown(event, index, 'handleIn')} onMouseDown={startDrag('handleIn')} />}
-              {handleOut && <circle cx={handleOut.x} cy={handleOut.y} r={5} fill="#fbbf24" tabIndex={0} role="button" aria-label={`Vertex ${index + 1} outgoing handle`} onKeyDown={(event) => handleVertexKeyDown(event, index, 'handleOut')} onMouseDown={startDrag('handleOut')} />}
-              <circle
-                cx={viewPoint.x}
-                cy={viewPoint.y}
-                r={7}
-                fill={index === selectedIndex ? '#fafafa' : '#76aaed'}
-                stroke="#272727"
-                strokeWidth={1.5}
-                tabIndex={0}
-                role="button"
-                aria-pressed={index === selectedIndex}
-                onFocus={() => selectIndex(index)}
-                onKeyDown={(event) => handleVertexKeyDown(event, index, 'point')}
-                onMouseDown={startDrag('point')}
-                aria-label={`Vertex ${index + 1}`}
-              />
-            </g>
-          );
-        })}
-      </svg>
+      {showShape && (
+        <svg
+          className="bezier-path-editor__canvas"
+          viewBox={`0 0 ${width} ${height}`}
+          preserveAspectRatio="none"
+          role="application"
+          aria-label="Bezier path editor"
+          onMouseMove={handleMouseMove}
+          onMouseUp={endVertexDrag}
+          onMouseLeave={endVertexDrag}
+          onPointerCancel={endVertexDrag}
+          onLostPointerCapture={endVertexDrag}
+        >
+          <rect x={0} y={0} width={width} height={height} fill="rgba(39, 39, 39, 0.65)" stroke="var(--border-color)" />
+          {/* The layer's own 0..1 box, so geometry past the edge reads as such. */}
+          <rect
+            x={(VIEW_MARGIN / span) * width}
+            y={(VIEW_MARGIN / span) * height}
+            width={(1 / span) * width}
+            height={(1 / span) * height}
+            fill="none"
+            stroke="rgba(166, 166, 166, 0.35)"
+            strokeDasharray="4 3"
+            pointerEvents="none"
+          />
+          <path d={pathD} fill="rgba(118, 170, 237, 0.12)" stroke="#76aaed" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+          {path.points.map((point, index) => {
+            const viewPoint = viewPoints[index];
+            const handleIn = point.handleIn ? toView(point.handleIn) : null;
+            const handleOut = point.handleOut ? toView(point.handleOut) : null;
+            const startDrag = (type: DragTarget['type']) => (event: React.MouseEvent) => {
+              event.stopPropagation();
+              selectIndex(index);
+              if (readOnly) return;
+              setDragTarget({ type, index });
+              onInteractionStart?.();
+            };
+            return (
+              <g key={point.id}>
+                {handleIn && <line x1={viewPoint.x} y1={viewPoint.y} x2={handleIn.x} y2={handleIn.y} stroke="#fbbf24" strokeWidth={1} />}
+                {handleOut && <line x1={viewPoint.x} y1={viewPoint.y} x2={handleOut.x} y2={handleOut.y} stroke="#fbbf24" strokeWidth={1} />}
+                {handleIn && <circle cx={handleIn.x} cy={handleIn.y} r={5} fill="#fbbf24" tabIndex={0} role="button" aria-label={`Vertex ${index + 1} incoming handle`} onKeyDown={(event) => handleVertexKeyDown(event, index, 'handleIn')} onMouseDown={startDrag('handleIn')} />}
+                {handleOut && <circle cx={handleOut.x} cy={handleOut.y} r={5} fill="#fbbf24" tabIndex={0} role="button" aria-label={`Vertex ${index + 1} outgoing handle`} onKeyDown={(event) => handleVertexKeyDown(event, index, 'handleOut')} onMouseDown={startDrag('handleOut')} />}
+                <circle
+                  cx={viewPoint.x}
+                  cy={viewPoint.y}
+                  r={7}
+                  fill={index === selectedIndex ? '#fafafa' : '#76aaed'}
+                  stroke="#272727"
+                  strokeWidth={1.5}
+                  tabIndex={0}
+                  role="button"
+                  aria-pressed={index === selectedIndex}
+                  onFocus={() => selectIndex(index)}
+                  onKeyDown={(event) => handleVertexKeyDown(event, index, 'point')}
+                  onMouseDown={startDrag('point')}
+                  aria-label={`Vertex ${index + 1}`}
+                />
+              </g>
+            );
+          })}
+        </svg>
+      )}
       <div className="bezier-path-editor__row bezier-path-editor__controls" role="group" aria-label="Path shape">
         <button
           type="button"

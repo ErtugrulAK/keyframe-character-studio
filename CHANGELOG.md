@@ -21,8 +21,26 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 - Step markers (the flag button on the timeline, at the playhead) split a sequence into OGraf steps: each Next in a playout plays to the next marker and holds.
 - Crop ends the sequence at the playhead, and DURATION shows the new length (two decimals: 60 frames at 120 fps read 0.5 s).
 - The autosave delay is set in the Project panel.
+- A menu bar (File, Edit, Object, View, Help) above the toolbar runs the editor's commands; File > Project Settings holds the resolution, autosave delay and Library.
+- Tool flyouts: hold (or right-click) the shape button for Rectangle, Square, Triangle, Rhombus, Parallelogram and Star; the picked shape stays on the button. The Text button lists the text styles.
+- The Text tool draws a text box: a drag sets its width and font size, a click places a text.
+- A Media button (and File > Add Image or Video…) opens the file picker directly.
+- Ctrl+V pastes at the mouse; animated copies carry their motion.
+- Alt on a corner or edge handle scales about the centre; Alt while drawing draws from the centre.
+- Reset Transform returns layers to the pose they were made with; the conversion is named Shape to Path.
+- The marquee outlines the layers it will select while it is dragged; undo and redo restore the selection.
+- A rotation ring shows the turn while the rotate handle is dragged.
+- Freeform paths get a transform frame (corners and rotation) beside their points.
+- The timeline groups properties like After Effects (Trim Paths, Masks, Track Matte, Transform) and U shows only animated properties.
 
 ### Changed
+- The left panel is gone: the menu bar, the toolbar flyouts and the Media button replace it. The header is 42 px tall instead of 79 px.
+- The coordinate axes are faint white with small edge markers pointing at the origin; the X/Y badges, the origin mark and the selection centre mark are gone.
+- Zoom reaches 4000 %; transform handles keep one small size at every zoom.
+- Shift and Alt apply the moment they are pressed during a drag.
+- A tool stays on when its button is pressed again; the active tool has no underline; a draw tool keeps the crosshair over layers.
+- The mask path pad left the Inspector (masks are shaped on the canvas); its commands stay.
+- The colour picker's alpha bar fades from transparent to the colour; layer tree drops are coloured by what they do.
 - A dragged layer also snaps by its own position, so a text lands on X/Y = 0.
 - New shapes drawn one after another differ in colour; a new text is 72 px.
 - Inspector cards (Text, Modifiers, Track Matte) start closed on each layer.

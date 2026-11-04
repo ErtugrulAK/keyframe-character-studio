@@ -15,7 +15,7 @@ import { resolveOpeningTimelineHeight } from '../src/components/Timeline/timelin
  * drift rather than a start/end comparison.
  *
  * Coverage: the right inspector (hide, show, and double mid-edge reversals in
- * both directions), the left toolbar (hide and show), repeated chrome toggles,
+ * both directions), repeated chrome toggles,
  * the R5-03 timeline ease, and the inspector at a short, a clamped-narrow and a
  * wide viewport. The panel's own edge is checked in the same pass: on a
  * single-direction toggle it must visit intermediate widths in ONE monotone
@@ -305,27 +305,14 @@ test('the right inspector never counter-moves the world while it animates', asyn
   await settle(page);
 });
 
-test('the left toolbar never counter-moves the world while it animates', async ({ page }) => {
-  await seed(page);
-
-  const hide = await sampleTransition(page, 'Hide Left Toolbar');
-  reportFrames('left toolbar hide', hide);
-  expectStable('left toolbar hide', hide);
-  await settle(page);
-
-  const show = await sampleTransition(page, 'Show Left Toolbar');
-  reportFrames('left toolbar show', show);
-  expectStable('left toolbar show', show);
-  await settle(page);
-});
-
 test('repeated chrome toggles never drift the world on any frame', async ({ page }) => {
   await seed(page);
 
   const toggles = [
-    'Hide Inspector', 'Hide Left Toolbar',
-    'Show Inspector', 'Show Left Toolbar',
-    'Hide Left Toolbar', 'Hide Inspector',
+    // (The left toolbar is gone: the menu bar and the toolbar replaced it.)
+    'Hide Inspector', 'Show Inspector',
+    'Hide Inspector', 'Show Inspector',
+    'Hide Inspector',
   ];
   for (const label of toggles) {
     const frames = await sampleTransition(page, label);

@@ -129,13 +129,22 @@ test('Rectangle → path keeps the picture and every relation; add a point, make
     void svg;
     const a = markers[0];
     const b = markers[1];
-    return { x: (a.x + a.width / 2 + b.x + b.width / 2) / 2, y: (a.y + a.height / 2 + b.y + b.height / 2) / 2 };
+    return {
+      x: (a.x + a.width / 2 + b.x + b.width / 2) / 2,
+      y: (a.y + a.height / 2 + b.y + b.height / 2) / 2,
+      /** Screen pixels between the two corners: the stage's scale for the tolerance below. */
+      span: Math.hypot(b.x - a.x, b.y - a.y),
+    };
   });
-  await page.mouse.dblclick(topMiddle.x, topMiddle.y);
+  // The browser delivers whole pixels: click a whole pixel and expect the point
+  // where that pixel is (the stage scale turns the rounding into world units).
+  const click = { x: Math.round(topMiddle.x), y: Math.round(topMiddle.y) };
+  await page.mouse.dblclick(click.x, click.y);
   await expect(page.getByText('PATH POINTS (5)')).toBeVisible();
   const withPoint = layerOf(await savedScene(page), 'panel');
   expect(withPoint.path.points).toHaveLength(5);
-  expect(withPoint.path.points[1].x).toBeCloseTo(0, 0);
+  const worldPerPixel = Math.hypot(withPoint.path.points[2].x - withPoint.path.points[0].x, withPoint.path.points[2].y - withPoint.path.points[0].y) / topMiddle.span;
+  expect(withPoint.path.points[1].x).toBeCloseTo((click.x - topMiddle.x) * worldPerPixel, 0);
   expect(withPoint.path.points[1].y).toBeCloseTo(-30, 1);
 
   // The new point is the selected one: C makes it Smooth (C10: on the canvas).

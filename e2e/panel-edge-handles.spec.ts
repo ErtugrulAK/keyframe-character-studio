@@ -157,16 +157,15 @@ function expectHandleBoundary(
   }
 }
 
-test('R5-01 — both dock handles are anchored to the panel boundary, never to panel content', async ({ page }) => {
+test('R5-01 — the dock handle is anchored to the panel boundary, never to panel content', async ({ page }) => {
   await seed(page);
   await page.setViewportSize({ width: 1440, height: 900 });
 
   // Default layout.
   const atDefault = await dockBoundaryReport(page);
-  expectHandleBoundary('default', atDefault, 'left', true);
   expectHandleBoundary('default', atDefault, 'right', true);
-  // Symmetric vertical anchor: both handles ride the same inset.
-  expect(Math.abs(atDefault.leftHandle!.y - atDefault.rightHandle!.y)).toBeLessThanOrEqual(TOLERANCE);
+  // The left dock is gone (menu bar and toolbar replaced it).
+  expect(atDefault.leftHandle).toBeNull();
 
   const resizer = page.getByTestId('timeline-height-resizer');
   const timelineHeight = () => page.evaluate(() => document.querySelector('[data-testid="sequencer-timeline"]')!.getBoundingClientRect().height);
@@ -184,7 +183,6 @@ test('R5-01 — both dock handles are anchored to the panel boundary, never to p
   const atMinimum = await timelineHeight();
   expect(atMinimum).toBeLessThan(200);
   const minReport = await dockBoundaryReport(page);
-  expectHandleBoundary('timeline minimum', minReport, 'left', true);
   expectHandleBoundary('timeline minimum', minReport, 'right', true);
 
   // Maximum timeline height.
@@ -197,38 +195,16 @@ test('R5-01 — both dock handles are anchored to the panel boundary, never to p
   }
   expect(atMaximum, 'the drag never resized the panel').toBeGreaterThan(atMinimum + 40);
   const maxReport = await dockBoundaryReport(page);
-  expectHandleBoundary('timeline maximum', maxReport, 'left', true);
   expectHandleBoundary('timeline maximum', maxReport, 'right', true);
 
   // Short viewport (the compact QA window).
   await drag(2000);
   await page.setViewportSize({ width: 1120, height: 620 });
   await expect.poll(timelineHeight).toBeGreaterThan(0);
-  // C11: shrinking to 1120 px left a 388 px stage, so the left dock closed
-  // itself (the narrow-window rule); the user reopens it and the handle
-  // contract is checked with both docks open, as before.
-  await expect(page.locator('.left-toolbar-toggle')).toHaveAttribute('aria-expanded', 'false');
-  await page.getByRole('button', { name: 'Show Left Toolbar' }).click();
-  await expect.poll(() => page.locator('#left-toolbar-panel').evaluate((node) => (node as HTMLElement).style.width)).toBe('');
   const shortReport = await dockBoundaryReport(page);
-  expectHandleBoundary('short viewport', shortReport, 'left', true);
   expectHandleBoundary('short viewport', shortReport, 'right', true);
 
-  // Left panel closed: the handle retires to the viewport edge and stays
-  // reachable, with its accessible name flipped to the restore action.
   await page.setViewportSize({ width: 1440, height: 900 });
-  const leftToggle = page.getByRole('button', { name: 'Hide Left Toolbar' });
-  await expect(leftToggle).toHaveAttribute('aria-controls', 'left-toolbar-panel');
-  expect(await page.locator('#left-toolbar-panel').count()).toBe(1);
-  await leftToggle.click();
-  await expect(page.getByRole('button', { name: 'Show Left Toolbar' })).toBeVisible();
-  // The handle rides the collapsing edge, so let that 240ms ride settle.
-  await expect.poll(async () => Math.round((await dockBoundaryReport(page)).leftHandle!.x)).toBeLessThanOrEqual(TOLERANCE);
-  const drawerClosed = await dockBoundaryReport(page);
-  expectHandleBoundary('left panel closed', drawerClosed, 'left', false);
-  expectHandleBoundary('left panel closed', drawerClosed, 'right', true);
-  await page.getByRole('button', { name: 'Show Left Toolbar' }).click();
-  await expect(page.locator('.left-drawer-panel')).toBeVisible();
 
   // Right panel closed: the same contract on the other side.
   const inspectorToggle = page.getByRole('button', { name: 'Hide Inspector' });
@@ -241,13 +217,12 @@ test('R5-01 — both dock handles are anchored to the panel boundary, never to p
     return Math.round(report.row!.right - report.rightHandle!.right);
   }).toBeLessThanOrEqual(TOLERANCE);
   const inspectorClosed = await dockBoundaryReport(page);
-  expectHandleBoundary('right panel closed', inspectorClosed, 'left', true);
   expectHandleBoundary('right panel closed', inspectorClosed, 'right', false);
   await page.getByRole('button', { name: 'Show Inspector' }).click();
   await expect(page.locator('.motion-design-right-sidebar')).toBeVisible();
 });
 
-test('R5-01 — the dock handles keep their accessible names and a visible keyboard focus ring', async ({ page }) => {
+test('R5-01 — the dock handle keeps its accessible name and a visible keyboard focus ring', async ({ page }) => {
   await seed(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   // C2: the seed's mouse click now focuses the (focusable) layer-tree row, so the
@@ -255,7 +230,7 @@ test('R5-01 — the dock handles keep their accessible names and a visible keybo
   // handles with the keyboard: establish that modality before focusing them.
   await page.keyboard.press('Shift');
 
-  for (const selector of ['.left-toolbar-toggle', '.inspector-dock-toggle']) {
+  for (const selector of ['.inspector-dock-toggle']) {
     const state = await page.evaluate((sel) => {
       const node = document.querySelector(sel) as HTMLElement;
       node.focus();
@@ -298,9 +273,8 @@ test('R5-02 — an open overlay paints over the dock handles, never under them',
       const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2) as HTMLElement | null;
       return Boolean(hit) && (hit === node || node.contains(hit));
     };
-    return { left: owns('.left-toolbar-toggle'), right: owns('.inspector-dock-toggle') };
+    return { right: owns('.inspector-dock-toggle') };
   });
-  expect(withMenu.left, 'the export dropdown covers the left handle').toBe(true);
   expect(withMenu.right, 'the export dropdown covers the right handle').toBe(true);
 
   // GIF panel open: it really overlaps the right handle, and it wins the hit

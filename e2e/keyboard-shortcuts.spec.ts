@@ -110,18 +110,23 @@ test('select all, group and ungroup run from the keyboard', async ({ page }) => 
 
 test('creation keys arm the same flow the toolbar does, and Escape cancels it', async ({ page }) => {
   await seed(page);
-  const leftToolbar = page.locator('.left-toolbar-container');
+  const stage = page.locator('.stage-canvas-container');
 
-  await expect(leftToolbar).not.toHaveClass(/tool-capturing/);
+  await expect(stage).not.toHaveClass(/drawing-tool/);
 
   await page.keyboard.press('r');
-  await expect(leftToolbar).toHaveClass(/tool-capturing/);
+  await expect(stage).toHaveClass(/drawing-tool/);
 
   await page.keyboard.press('Escape');
-  await expect(leftToolbar).not.toHaveClass(/tool-capturing/);
+  await expect(stage).not.toHaveClass(/drawing-tool/);
 
-  // `T` adds a text layer immediately, exactly like the toolbar's text button.
+  // `T` arms the Text tool, like the toolbar's text button: a click on the
+  // stage then places a text layer.
   await page.keyboard.press('t');
+  await expect(stage).toHaveClass(/drawing-tool/);
+  const box = await stage.boundingBox();
+  if (!box) throw new Error('stage has no box');
+  await page.mouse.click(box.x + box.width * 0.7, box.y + box.height * 0.3);
   await expect(page.locator('.actor-node', { hasText: 'Text' })).toHaveCount(1);
   await expect.poll(() => rowCount(page)).toBe(3);
 });
@@ -143,7 +148,7 @@ test('a text field owns the keyboard, so no command fires while typing', async (
   await page.keyboard.press('t');
   await page.keyboard.press(`${modifier}+a`);
 
-  await expect(page.locator('.left-toolbar-container')).not.toHaveClass(/tool-capturing/);
+  await expect(page.locator('.stage-canvas-container')).not.toHaveClass(/drawing-tool/);
   await expect.poll(() => rowCount(page)).toBe(2);
   await expect.poll(() => selectedRowCount(page)).toBe(1);
 });

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openProjectSettings } from './fixtures/toolbarTools';
 
 /**
  * The graphic library keeps templates in IndexedDB across reloads. Opening one
@@ -29,9 +30,9 @@ async function seed(page: Page): Promise<void> {
 }
 
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Library' });
-/** The library lives in the left toolbar's Project drawer. */
+/** The library opens from File > Project Settings. */
 const openLibrary = async (page: Page) => {
-  await page.locator('.sidebar-nav-item', { hasText: 'Project' }).click();
+  await openProjectSettings(page);
   await page.getByRole('button', { name: 'Open Library…' }).click();
 };
 const rows = (page: Page) => dialog(page).getByRole('list', { name: 'Saved graphics' }).getByRole('listitem');

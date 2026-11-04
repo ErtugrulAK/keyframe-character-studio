@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { armTool } from './fixtures/toolbarTools';
 
 /**
  * V3.6 UI POLISH CONTRACTS — the nine manual-QA findings, pinned in the browser.
@@ -61,8 +62,7 @@ const stageCursor = (page: Page) => stage(page).evaluate((el) => getComputedStyl
 test('an armed primitive owns the stage cursor with a crosshair and Escape gives it back', async ({ page }) => {
   await seed(page, [shape('a', 'Alpha', 0, 0)]);
   // The Elements band of the left rail arms the rectangle draw tool.
-  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
-  await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+  await armTool(page, 'Rectangle');
   await expect(stage(page)).toHaveClass(/drawing-tool/);
   expect(await stageCursor(page)).toBe('crosshair');
   // The crosshair is on the drawing surface too, not just its frame.
@@ -75,17 +75,17 @@ test('an armed primitive owns the stage cursor with a crosshair and Escape gives
 
 test('the docked chrome resolves from the shared width tokens', async ({ page }) => {
   await seed(page, []);
-  const [rail, drawer, inspector, handleLeft] = await page.evaluate(() => {
-    const width = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().width;
-    const handle = document.querySelector('.left-toolbar-toggle')!.getBoundingClientRect();
-    return [width('.left-sidebar-nav'), width('.left-drawer-panel'), width('.motion-design-right-sidebar'), handle.left];
-  });
-  // One token contract: rail 56 + drawer 304, inspector 372, and the left dock
-  // handle sits on the rail+drawer boundary (not on a stale 280 assumption).
-  expect(Math.round(rail)).toBe(56);
-  expect(Math.round(drawer)).toBe(304);
+  // The left panel is gone (the menu bar and the toolbar replaced it); the
+  // inspector still takes its width from the shared token, and the stage
+  // starts at the window's left edge.
+  const [inspector, stageLeft, leftDock] = await page.evaluate(() => [
+    document.querySelector('.motion-design-right-sidebar')!.getBoundingClientRect().width,
+    document.querySelector('.stage-canvas-container')!.getBoundingClientRect().left,
+    document.querySelectorAll('.left-toolbar-container, .left-toolbar-toggle').length,
+  ]);
   expect(Math.round(inspector)).toBe(372);
-  expect(Math.round(handleLeft + handleLeft % 1)).toBeCloseTo(56 + 304 - 10, 0);
+  expect(Math.round(stageLeft)).toBe(0);
+  expect(leftDock).toBe(0);
 });
 
 test('the GIF panel closes from its X alone and states the format in tooltips', async ({ page }) => {

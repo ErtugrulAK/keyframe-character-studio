@@ -96,47 +96,11 @@ test('the arrange strip groups align, center, distribute and rotate/flip as four
   expect(glyphs.horizontal).not.toBe(glyphs.vertical);
 });
 
-test('the left rail is compact and its active state is a restrained accent surface', async ({ page }) => {
+test('the left rail is gone: the menu bar and the toolbar replace it', async ({ page }) => {
   await seed(page, []);
-  const rail = page.locator('.left-sidebar-nav');
-  await expect(rail).toBeVisible();
-
-  const measurements = await rail.evaluate((nav) => {
-    const items = [...nav.querySelectorAll<HTMLElement>('.sidebar-nav-item')];
-    return items.map((item) => ({
-      height: item.getBoundingClientRect().height,
-      iconWidth: item.querySelector('.nav-icon')?.getBoundingClientRect().width ?? 0,
-      labelSize: parseFloat(getComputedStyle(item.querySelector<HTMLElement>('.nav-label')!).fontSize),
-    }));
-  });
-  expect(measurements.length).toBe(4);
-  for (const m of measurements) {
-    expect(m.height, 'a rail item grew past the compact ceiling').toBeLessThanOrEqual(43);
-    expect(m.iconWidth).toBe(18);
-    expect(m.labelSize, 'a rail label left the caption scale').toBeLessThanOrEqual(12);
-  }
-
-  // Pressing a category moves the restrained surface and the accent bar, and
-  // nothing shifts the item's box positionally.
-  const before = await rail.evaluate(() => {
-    const active = document.querySelector<HTMLElement>('.sidebar-nav-item.active')!;
-    const inactive = document.querySelector<HTMLElement>('.sidebar-nav-item:not(.active)')!;
-    return {
-      activeBackground: getComputedStyle(active).backgroundColor,
-      inactiveBackground: getComputedStyle(inactive).backgroundColor,
-      activeIconColour: getComputedStyle(active.querySelector<HTMLElement>('.nav-icon')!).color,
-      inactiveIconColour: getComputedStyle(inactive.querySelector<HTMLElement>('.nav-icon')!).color,
-      accentBarWidth: getComputedStyle(active, '::before').width,
-      activeTransform: getComputedStyle(active).transform,
-    };
-  });
-  expect(before.activeBackground).not.toBe(before.inactiveBackground);
-  expect(before.activeIconColour).not.toBe(before.inactiveIconColour);
-  expect(before.accentBarWidth).toBe('2px');
-  expect(before.activeTransform).toBe('none');
-
-  await page.getByRole('button', { name: 'Typography & Headlines' }).click();
-  await expect(page.getByRole('button', { name: 'Typography & Headlines' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.left-sidebar-nav, .left-toolbar-container')).toHaveCount(0);
+  await expect(page.getByRole('menubar', { name: 'Editor menu' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add media' })).toBeVisible();
 });
 
 test('keyboard focus on a toolbar command is the quiet inset ring', async ({ page }) => {
@@ -254,14 +218,12 @@ test('the side handles and the timeline handle share one visual family', async (
       };
     };
     return {
-      left: read('.left-toolbar-toggle'),
       right: read('.inspector-dock-toggle'),
       timeline: read('.timeline-edge-toggle'),
     };
   });
   // Same surface, same ink, same corner; the members differ only in axis.
-  expect(paint.right).toEqual(paint.left);
-  expect(paint.timeline.background).toBe(paint.left.background);
-  expect(paint.timeline.colour).toBe(paint.left.colour);
-  expect(paint.timeline.radius).toBe(paint.left.radius);
+  expect(paint.timeline.background).toBe(paint.right.background);
+  expect(paint.timeline.colour).toBe(paint.right.colour);
+  expect(paint.timeline.radius).toBe(paint.right.radius);
 });

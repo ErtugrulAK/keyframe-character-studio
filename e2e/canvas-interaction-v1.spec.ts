@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { armTool } from './fixtures/toolbarTools';
 
 test('canvas tools and cursor-anchored zoom remain in one interaction surface', async ({ page }) => {
   await page.goto('/');
@@ -15,8 +16,7 @@ test('canvas tools and cursor-anchored zoom remain in one interaction surface', 
   await expect(selectTool).toHaveClass(/active/);
   await expect(canvas).toHaveClass(/select-tool/);
 
-  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
-  await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+  await armTool(page, 'Rectangle');
   const box = await canvas.boundingBox();
   expect(box).not.toBeNull();
 
@@ -98,8 +98,7 @@ test('corner resize preserves the existing transform pipeline', async ({ page })
   const canvas = page.locator('.stage-canvas-container');
   const canvasBox = await canvas.boundingBox();
   expect(canvasBox).not.toBeNull();
-  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
-  await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+  await armTool(page, 'Rectangle');
   await page.mouse.move(canvasBox!.x + canvasBox!.width * 0.68, canvasBox!.y + canvasBox!.height * 0.68);
   await page.mouse.down();
   await page.mouse.move(canvasBox!.x + canvasBox!.width * 0.42, canvasBox!.y + canvasBox!.height * 0.42);
@@ -175,7 +174,9 @@ test('select mode marquee selects intersecting visible objects only', async ({ p
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
   await page.mouse.move(end.x, end.y);
-  await expect(page.locator('rect[stroke="var(--accent-cyan)"]')).toBeVisible();
+  await expect(page.locator('rect[stroke="var(--accent-cyan)"][stroke-dasharray]')).toBeVisible();
+  // While the box is dragged, the layers it will select are already outlined.
+  await expect(page.getByTestId('marquee-preview').locator('rect')).toHaveCount(2);
   await page.mouse.up();
 
   await expect(page.locator('.actor-node', { hasText: 'Marquee A' })).toHaveClass(/selected/);

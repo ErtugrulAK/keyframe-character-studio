@@ -175,7 +175,7 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
 
   { id: 'create-rectangle', label: 'Rectangle', category: 'create', gestures: ['r'], scope: 'global', detail: 'Then drag on the stage to place it.' },
   { id: 'create-circle', label: 'Circle', category: 'create', gestures: ['o'], scope: 'global', detail: 'Then drag on the stage to place it.' },
-  { id: 'create-text', label: 'Text layer', category: 'create', gestures: ['t'], scope: 'global' },
+  { id: 'create-text', label: 'Text tool', category: 'create', gestures: ['t'], scope: 'global', detail: 'Click on the stage to place a text, or drag to draw its box.' },
   { id: 'tool-pen', label: 'Pen / freeform draw', category: 'create', gestures: ['p'], scope: 'global', detail: 'Enter commits the path, Esc cancels it.' },
 
   {

@@ -11,6 +11,24 @@ interface ShapeCreationPreviewProps {
 }
 
 export const ShapeCreationPreview: React.FC<ShapeCreationPreviewProps> = ({ type, bounds, outputOrigin }) => {
+  if (type === 'custom_text') {
+    // The text box being drawn (stage units already).
+    return (
+      <rect
+        data-testid="shape-creation-preview"
+        x={bounds.minX}
+        y={bounds.minY}
+        width={bounds.width}
+        height={bounds.height}
+        fill="none"
+        stroke="#38bdf8"
+        strokeWidth={1}
+        strokeDasharray="4 3"
+        vectorEffect="non-scaling-stroke"
+        pointerEvents="none"
+      />
+    );
+  }
   const geometry = getShapeGeometry(type);
   const placement = getShapeCreationPlacement(type, bounds);
   if (!geometry || !placement) return null;

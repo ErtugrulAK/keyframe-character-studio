@@ -292,7 +292,8 @@ describe('shortcut commands added in round four, part four', () => {
 
     expect(api.armShapeCreation).toHaveBeenNthCalledWith(1, 'custom_rect', 'Rectangle');
     expect(api.armShapeCreation).toHaveBeenNthCalledWith(2, 'custom_circle', 'Circle');
-    expect(api.addCustomPart).toHaveBeenCalledWith('custom_text', 'Text');
+    // T arms the Text tool (click to place, drag to draw the box).
+    expect(api.armShapeCreation).toHaveBeenNthCalledWith(3, 'custom_text', 'Text');
     expect(api.setActiveTool).toHaveBeenCalledWith('freeform_draw');
   });
 

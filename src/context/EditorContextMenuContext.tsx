@@ -248,7 +248,15 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
   const latestOpener = useRef(openMenuWithLatest);
   useLayoutEffect(() => { latestOpener.current = openMenuWithLatest; });
   const openContextMenu = useCallback((request: ContextMenuRequest) => latestOpener.current(request), []);
-  const contextValue = useMemo(() => ({ openContextMenu, closeContextMenu }), [openContextMenu, closeContextMenu]);
+  // Select All and Delete for the menu bar, stable like the opener.
+  const latestCommands = useRef({ selectAll, deleteSelection });
+  useLayoutEffect(() => { latestCommands.current = { selectAll, deleteSelection }; });
+  const selectAllCommand = useCallback(() => latestCommands.current.selectAll(), []);
+  const deleteSelectionCommand = useCallback(() => latestCommands.current.deleteSelection(), []);
+  const contextValue = useMemo(
+    () => ({ openContextMenu, closeContextMenu, selectAll: selectAllCommand, deleteSelection: deleteSelectionCommand }),
+    [openContextMenu, closeContextMenu, selectAllCommand, deleteSelectionCommand],
+  );
 
   // Shift+F10 / the ContextMenu key opens the same menu for the current
   // selection, anchored on the layer's rendered box (or the stage centre).

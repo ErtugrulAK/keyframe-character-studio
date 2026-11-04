@@ -186,6 +186,26 @@ export const getShapeCreationPlacement = (
   };
 };
 
+/**
+ * A text drawn with the Text tool: a click places a text of the default size
+ * at the point; a dragged box places it at the box centre, sizes the font to
+ * the box height and limits its width to the box (the text box shrinks a
+ * longer text to fit). Stage (SVG) units in, layer props out.
+ */
+export const getTextCreationProps = (
+  bounds: ShapeCreationBounds | null,
+  click: { x: number; y: number },
+  canvasCenterX: number = CANVAS_CENTER_X,
+  canvasCenterY: number = CANVAS_CENTER_Y,
+): { baseTransform: { x: number; y: number; rotation: number; scaleX: number; scaleY: number; opacity: number }; fontSize?: number; textFit?: { maxWidth: number } } => {
+  const centre = bounds ? { x: bounds.centerX, y: bounds.centerY } : click;
+  const baseTransform = { x: centre.x - canvasCenterX, y: centre.y - canvasCenterY, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+  if (!bounds || bounds.height < 8) return { baseTransform };
+  // A line of text is about 1.2 font sizes tall.
+  const fontSize = Math.round(Math.min(400, Math.max(8, bounds.height / 1.2)));
+  return { baseTransform, fontSize, ...(bounds.width >= 20 ? { textFit: { maxWidth: Math.round(bounds.width) } } : {}) };
+};
+
 interface CursorAnchoredCameraInput {
   view: StageCameraView;
   clientX: number;

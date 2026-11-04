@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { HEADER_COMMAND_EVENT, type HeaderCommand } from '../../utils/editor/headerCommands';
 import { sanitizeFilenameComponent } from '../../utils/persistence/pathSafety';
 import { packageFileAdmissionProblem, projectFileAdmissionProblem } from '../../utils/persistence/fileAdmission';
 import { downloadBlob } from '../../utils/persistence/fileDownload';
@@ -365,6 +366,27 @@ export const HeaderBar: React.FC = () => {
       setOgrafStage(null);
     }
   };
+
+  // The menu bar's File commands run the header's own handlers.
+  const headerCommandRef = useRef<(command: HeaderCommand) => void>(() => {});
+  // Intentional latest-value mirror: the listener below stays registered once.
+  // oxlint-disable-next-line react/refs
+  headerCommandRef.current = (command: HeaderCommand) => {
+    if (command === 'import') fileInputRef.current?.click();
+    else if (command === 'export-json') handleExport();
+    else if (command === 'export-ograf') void handleOGrafExport();
+    else if (command === 'export-gif') handleOpenGifPanel();
+    else if (command === 'check-ograf') void handleOpenOGrafCheck();
+    else if (command === 'reset-project') requestResetProject();
+  };
+  useEffect(() => {
+    const onCommand = (event: Event) => {
+      const command = (event as CustomEvent<{ command?: HeaderCommand }>).detail?.command;
+      if (command) headerCommandRef.current(command);
+    };
+    window.addEventListener(HEADER_COMMAND_EVENT, onCommand);
+    return () => window.removeEventListener(HEADER_COMMAND_EVENT, onCommand);
+  }, []);
   /**
    * The one import entry: it decides what the file is from its **content** and
    * routes it to the importer that owns that kind. Only a Lottie document opens

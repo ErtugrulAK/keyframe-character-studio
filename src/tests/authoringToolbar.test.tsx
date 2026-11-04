@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CharacterPart } from '../types/animator';
 
@@ -358,13 +358,20 @@ describe('AuthoringToolbar', () => {
   it('creates shapes, text and the freeform path through the existing authorities', () => {
     const view = renderToolbar();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add rectangle' }));
+    // The shape and text buttons run on a pointer press and release (a hold opens their list).
+    const tap = (name: string) => {
+      const button = screen.getByRole('button', { name });
+      fireEvent.pointerDown(button, { button: 0, pointerId: 1 });
+      fireEvent.pointerUp(button, { button: 0, pointerId: 1 });
+    };
+    tap('Add rectangle');
     expect(animatorCtx.armShapeCreation).toHaveBeenCalledWith('custom_rect', 'Rectangle');
     fireEvent.click(screen.getByRole('button', { name: 'Add circle' }));
     expect(animatorCtx.armShapeCreation).toHaveBeenCalledWith('custom_circle', 'Circle');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add text' }));
-    expect(animatorCtx.addCustomPart).toHaveBeenCalledWith('custom_text', 'Text');
+    // Text is a tool now: click to place a text, drag to draw its box.
+    tap('Add text');
+    expect(animatorCtx.armShapeCreation).toHaveBeenCalledWith('custom_text', 'Text');
 
     const pen = screen.getByRole('button', { name: 'Pen' });
     fireEvent.click(pen);
@@ -372,6 +379,41 @@ describe('AuthoringToolbar', () => {
     animatorCtx.activeTool = 'freeform_draw';
     view.rerender(<AuthoringToolbar />);
     expect(screen.getByRole('button', { name: 'Pen' })).toHaveAttribute('aria-pressed', 'true');
+    // A second press keeps the tool: it never drops back to Select.
+    fireEvent.click(screen.getByRole('button', { name: 'Pen' }));
+    expect(animatorCtx.setActiveTool).not.toHaveBeenCalledWith('select');
+  });
+
+  it('holding the shape button opens its flyout; the picked shape becomes the button tool', () => {
+    vi.useFakeTimers();
+    try {
+      const view = renderToolbar();
+      const button = screen.getByRole('button', { name: 'Add rectangle' });
+      fireEvent.pointerDown(button, { button: 0, pointerId: 1 });
+      act(() => { vi.advanceTimersByTime(400); });
+      const menu = screen.getByRole('menu', { name: 'Add rectangle tools' });
+      expect(within(menu).getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual(
+        expect.arrayContaining([expect.stringContaining('Rectangle'), expect.stringContaining('Square'), expect.stringContaining('Rhombus'), expect.stringContaining('Parallelogram'), expect.stringContaining('Star')]),
+      );
+      // A hold that opened the list is not a click: nothing is armed yet.
+      expect(animatorCtx.armShapeCreation).not.toHaveBeenCalled();
+      fireEvent.click(within(menu).getByRole('menuitemradio', { name: /Star/ }));
+      expect(animatorCtx.armShapeCreation).toHaveBeenLastCalledWith('custom_star', 'Star');
+      view.rerender(<AuthoringToolbar />);
+      expect(screen.getByRole('button', { name: 'Add star' })).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('the Media button opens a file picker for images and videos', () => {
+    renderToolbar();
+    const input = screen.getByLabelText('Choose images or videos to add') as HTMLInputElement;
+    const click = vi.spyOn(input, 'click');
+    fireEvent.click(screen.getByRole('button', { name: 'Add media' }));
+    expect(click).toHaveBeenCalledOnce();
+    expect(input.accept).toContain('image/*');
+    expect(input.accept).toContain('video/*');
   });
 
   it('keeps one roving Tab stop on the tool pair and moves it with the arrow keys', () => {

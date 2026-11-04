@@ -218,7 +218,8 @@ export const useKeyboardShortcuts = ({
           armShapeCreation?.('custom_circle', 'Circle');
           return;
         case 'create-text':
-          addCustomPart?.('custom_text', 'Text');
+          // The Text tool: click to place a text, drag to draw its box.
+          armShapeCreation?.('custom_text', 'Text');
           return;
         case 'select-all':
           if (isMaskEditing) {

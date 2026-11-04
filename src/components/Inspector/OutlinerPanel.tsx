@@ -506,7 +506,7 @@ export const OutlinerPanel: React.FC = () => {
           >
             {visibleRows.length === 0 ? (
               <div style={{ padding: '12px 14px', fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                No elements in active template yet. Add shapes or text from left toolbar.
+                No elements in active template yet. Add shapes, text or media from the toolbar.
               </div>
             ) : (
               rowWindow.segments.flatMap((segment) => (segment.kind === 'gap' ? [

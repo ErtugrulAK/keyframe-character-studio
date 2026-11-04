@@ -46,7 +46,7 @@ import {
   stageCropHandleCenters,
   stageSpaceToEditorRect,
 } from '../../utils/geometry/stageCrop';
-import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/geometry/viewportMath';
+import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageFitScale, getTextCreationProps, type StageBox, type StageCameraView } from '../../utils/geometry/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter, type CoordinatePoint } from '../../utils/geometry/projectCoordinates';
 import { REFIT_UNTOUCHED_CAMERA_COMMAND, REMEASURE_STAGE_BOX_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT } from '../../utils/editor/workspaceLayout';
 import { normalizeFreeformPoints } from '../../utils/geometry/freeform';
@@ -58,6 +58,7 @@ import { useFreeformDraw, type FreeformFinishReason } from '../../hooks/useFreef
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
 import { CanvasCoordinateOverlay } from './overlays/CanvasCoordinateOverlay';
 import { rememberStagePointer } from '../../utils/editor/stagePointer';
+import { TEXT_PRESETS } from '../../utils/editor/textPresets';
 import { CanvasCoordinateReadout } from './overlays/CanvasCoordinateReadout';
 import { FreeformTangentOverlay } from './overlays/FreeformTangentOverlay';
 import { isFreeformTangentOverlayEligible } from '../../utils/geometry/freeformTangentEligibility';
@@ -949,7 +950,21 @@ export const StageCanvas: React.FC = () => {
 
   const handleMouseUp = useCallback((commitShape: boolean = true) => {
     if (dragMode === 'shape_create') {
-      if (commitShape && shapeCreationPreview && pendingShapeType && pendingShapeName) {
+      if (commitShape && pendingShapeType === 'custom_text' && pendingShapeName && shapeCreationStart) {
+        // The Text tool: a click places a text, a drag draws its box.
+        // A text style from the tool's flyout gives its font; a drawn box its size.
+        const preset = TEXT_PRESETS.find((candidate) => candidate.label === pendingShapeName);
+        startBatchInteraction();
+        addCustomPart('custom_text', pendingShapeName, {
+          ...(preset ? { fontFamily: preset.fontFamily, fontSize: preset.fontSize } : {}),
+          ...getTextCreationProps(
+            shapeCreationPreview?.bounds ?? null,
+            { x: shapeCreationStart.svgX, y: shapeCreationStart.svgY },
+            EDITOR_CAMERA_CENTER.x,
+            EDITOR_CAMERA_CENTER.y,
+          ),
+        });
+      } else if (commitShape && shapeCreationPreview && pendingShapeType && pendingShapeName) {
         const placement = getShapeCreationPlacement(pendingShapeType, shapeCreationPreview.bounds);
         if (placement) {
           startBatchInteraction();
@@ -986,7 +1001,7 @@ export const StageCanvas: React.FC = () => {
     lastDragPointerRef.current = null;
     setDragMode(null);
     setMarqueeRect(null);
-  }, [dragMode, shapeCreationPreview, pendingShapeType, pendingShapeName, addCustomPart, startBatchInteraction, marqueeRect, marqueeSelectionOf, isDragging, endBatchInteraction, setSelectedPartIds, setSelectedPartId]);
+  }, [dragMode, shapeCreationPreview, shapeCreationStart, pendingShapeType, pendingShapeName, addCustomPart, startBatchInteraction, marqueeRect, marqueeSelectionOf, isDragging, endBatchInteraction, setSelectedPartIds, setSelectedPartId]);
   useEffect(() => {
     handleMouseUpRef.current = handleMouseUp;
   }, [handleMouseUp]);

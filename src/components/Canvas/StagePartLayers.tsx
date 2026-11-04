@@ -91,16 +91,17 @@ function toLiveStuntsRuntime(
   }
   return result;
 }
-function getEffectiveMatte(part: CharacterPart): CharacterPart['matte'] {
-  if (part.trackMatte && part.trackMatte.enabled !== false) {
+/** `trackMatte` is the evaluated record at this frame (keyed feather/strength); the part's by default. */
+function getEffectiveMatte(part: CharacterPart, trackMatte: CharacterPart['trackMatte'] = part.trackMatte): CharacterPart['matte'] {
+  if (trackMatte && trackMatte.enabled !== false) {
     return {
-      sourcePartId: part.trackMatte.sourceLayerId,
-      mode: part.trackMatte.mode,
-      inverted: part.trackMatte.inverted === true,
+      sourcePartId: trackMatte.sourceLayerId,
+      mode: trackMatte.mode,
+      inverted: trackMatte.inverted === true,
       enabled: true,
-      feather: part.trackMatte.feather,
-      strength: part.trackMatte.strength,
-      gradient: part.trackMatte.gradient,
+      feather: trackMatte.feather,
+      strength: trackMatte.strength,
+      gradient: trackMatte.gradient,
     };
   }
   return part.matte;
@@ -301,8 +302,12 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
   // image alpha rides its own <mask> def (kcs-mask-{src}-img) that the final
   // mask wraps around the gradient rect — pure SVG multiplication, no canvas.
   const imageContentMasks = new Map<string, { id: string; content: MatteImageContent; transform: WorldTransform; opacity?: number }>();
+  // The matte at this frame: a keyed feather/strength is the evaluated one,
+  // and the mask id the target refers to is built from the same values.
+  const evaluatedTrackMattes = new Map(evaluatedFrame.layers.map((el) => [el.id, el.content.trackMatte]));
+  const effectiveMatteOf = (part: CharacterPart) => getEffectiveMatte(part, evaluatedTrackMattes.get(part.id) ?? part.trackMatte);
   for (const layer of sortedParts) {
-    const matte = getEffectiveMatte(layer);
+    const matte = effectiveMatteOf(layer);
     if (!matte || !isMatteActive(matte)) continue;
     const source = sortedParts.find((p) => p.id === matte.sourcePartId);
     if (!source) continue; // missing source → no clip/mask (recoverable validation warns)
@@ -486,7 +491,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
   }
 
   const matteAttrFor = (part: CharacterPart): { clipId?: string; maskId?: string } => {
-    const matte = getEffectiveMatte(part);
+    const matte = effectiveMatteOf(part);
     if (!matte || !isMatteActive(matte)) return {};
     if (!sortedParts.some((p) => p.id === matte.sourcePartId)) return {};
     const mode = resolveMatteMode(matte);

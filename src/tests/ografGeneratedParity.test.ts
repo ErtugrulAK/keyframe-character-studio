@@ -274,6 +274,40 @@ describe('generated runtime parity', () => {
     await graphic.dispose();
   });
 
+  test('a keyed Track Matte feather and strength animate the same in the runtime and the canonical SVG', async () => {
+    const keys = (values: [number, number][]): PropertyKeyframe[] => values.map(([frame, value]) => ({ id: `k${frame}-${value}`, frame, value, easing: 'linear' }));
+    const authored = scene([
+      layer({ id: 'source', type: 'custom_circle', strokeEnabled: false, trimPathEnabled: undefined }),
+      layer({
+        id: 'target',
+        zIndex: 1,
+        trackMatte: { sourceLayerId: 'source', mode: 'alpha', inverted: false, sourceVisible: false },
+        trimPathEnabled: undefined,
+      }),
+    ], [{
+      ...track('target', []),
+      channels: { ...track('target', []).channels, matteFeather: keys([[0, 0], [60, 20]]), matteStrength: keys([[0, 1], [60, 0.5]]) },
+    }]);
+    const plan = compileOGrafPackage(authored);
+    const graphic = instantiateGraphic(plan.files.find((file) => file.path === 'graphic.mjs')?.content || '');
+    await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
+    const id = 'kcs-ograf-track-matte-target-source-alpha';
+
+    for (const [frame, blur, strength] of [[0, null, null], [30, '5', '0.75'], [60, '10', '0.5']] as const) {
+      graphic._currentFrame = frame;
+      graphic._render();
+      for (const svg of [graphic.innerHTML, renderOGrafSvg(evaluateOGrafScene(authored, frame))]) {
+        expect(svg).toContain(`<mask id="${id}`);
+        if (blur === null) expect(svg).not.toContain('feGaussianBlur');
+        else expect(svg).toContain(`stdDeviation="${blur}"`);
+        if (strength === null) expect(svg).not.toContain('fill-opacity="0.');
+        else expect(svg).toMatch(new RegExp(`opacity="${strength}"`));
+      }
+    }
+    await graphic.dispose();
+  });
+
   test('a normal alpha track matte keeps the alpha mask it always used', async () => {
     const authored = scene([
       layer({ id: 'source', type: 'custom_circle', strokeEnabled: false, trimPathEnabled: undefined }),

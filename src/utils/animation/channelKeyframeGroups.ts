@@ -12,6 +12,7 @@ import { worldToContainerLocal } from '../geometry/containerMath';
 import { authoredBasePose } from './evaluateTransform';
 import { fillChannelsFromLegacyKeyframes } from './legacyKeyframeConversion';
 import { relationshipParentId } from '../layers/partBinding';
+import { normalizeFeather, normalizeStrength } from '../layers/matte';
 
 const MASK_SCALAR_PROPERTIES = ['opacity', 'feather', 'expansion'] as const;
 /** A per-mask scalar channel (`maskId:opacity|feather|expansion`). Path
@@ -38,7 +39,9 @@ interface ChannelKeyframeGroup {
 /** All channels the editor can animate, in display order (6 main properties) */
 export const DISPLAY_CHANNELS = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'] as const;
 export const TRIM_PATH_CHANNELS = ['trimPathStart', 'trimPathEnd', 'trimPathOffset'] as const;
-export const ANIMATABLE_CHANNELS: TrackChannel[] = [...DISPLAY_CHANNELS, ...TRIM_PATH_CHANNELS];
+/** The Track Matte's soft edge (px) and strength (0-1). */
+export const MATTE_CHANNELS = ['matteFeather', 'matteStrength'] as const;
+export const ANIMATABLE_CHANNELS: TrackChannel[] = [...DISPLAY_CHANNELS, ...TRIM_PATH_CHANNELS, ...MATTE_CHANNELS];
 
 /**
  * The authored base pose of one layer inside a document, or `undefined` when the
@@ -204,6 +207,10 @@ export const applyChannelStaticValue = (
       return { ...part, trimPathEnd: value };
     case 'trimPathOffset':
       return { ...part, trimPathOffset: value };
+    case 'matteFeather':
+      return part.trackMatte ? { ...part, trackMatte: { ...part.trackMatte, feather: Math.max(0, value) } } : part;
+    case 'matteStrength':
+      return part.trackMatte ? { ...part, trackMatte: { ...part.trackMatte, strength: Math.min(1, Math.max(0, value)) } } : part;
     default:
       // Exhaustive over TrackChannel; an unknown channel must never guess-write.
       return part;
@@ -246,6 +253,10 @@ export const channelArmValue = (
       return part.trimPathEnd ?? 1;
     case 'trimPathOffset':
       return part.trimPathOffset ?? 0;
+    case 'matteFeather':
+      return normalizeFeather(part.trackMatte?.feather);
+    case 'matteStrength':
+      return normalizeStrength(part.trackMatte?.strength);
     default:
       // Unreachable for the exhaustive TrackChannel union.
       return authored.x;

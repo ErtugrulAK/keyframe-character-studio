@@ -18,7 +18,8 @@
  * Geometry comes exclusively from `shapeGeometry.ts` — nothing is hardcoded
  * here. `custom_freeform` (and non-shape types) return null → no clip.
  */
-import type { BodyPartType, CharacterPart, MatteMode, PartMatte, TrackMatteV2 } from '../../types/animator';
+import type { AnimationTrackData, BodyPartType, CharacterPart, MatteMode, PartMatte, TrackMatteV2 } from '../../types/animator';
+import { interpolateChannel } from '../animation/defaults';
 import { textBaselineOffset } from '../geometry/textOrigin';
 import { buildBezierPathD, legacyFreeformPointsToPath } from '../geometry/bezierPath';
 import { applyAffine, invertAffine, worldAffineOf, type WorldAffine } from '../geometry/containerMath';
@@ -295,6 +296,31 @@ export function normalizeStrength(value: number | undefined): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return 1;
   if (value < 0 || value > 1) return 1;
   return value;
+}
+
+/**
+ * The Track Matte at a frame: its feather and strength follow the
+ * `matteFeather` / `matteStrength` channels once they are keyed (the record's
+ * own values are the static ones). A curve that overshoots is clamped, so a
+ * strength above 1 never snaps to the legacy "full strength" fallback. The
+ * same record object comes back when neither channel is keyed.
+ */
+export function evaluateTrackMatte(
+  trackMatte: TrackMatteV2 | undefined,
+  track: Pick<AnimationTrackData, 'channels'> | undefined,
+  frame: number,
+  templateId: string,
+): TrackMatteV2 | undefined {
+  if (!trackMatte || !track?.channels) return trackMatte;
+  const keys = (channel: 'matteFeather' | 'matteStrength') =>
+    (track.channels[channel] || []).filter((key) => (key.templateId || 'Sequence') === templateId);
+  const feather = keys('matteFeather');
+  const strength = keys('matteStrength');
+  if (feather.length === 0 && strength.length === 0) return trackMatte;
+  const next: TrackMatteV2 = { ...trackMatte };
+  if (feather.length > 0) next.feather = Math.max(0, interpolateChannel(feather, frame, normalizeFeather(trackMatte.feather)));
+  if (strength.length > 0) next.strength = Math.min(1, Math.max(0, interpolateChannel(strength, frame, normalizeStrength(trackMatte.strength))));
+  return next;
 }
 
 /** One default gradient stop. */

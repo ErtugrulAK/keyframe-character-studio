@@ -649,6 +649,19 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
         trimPathEnd: channelValue(channels.trimPathEnd, frame, layer.trimPathEnd === undefined ? 1 : layer.trimPathEnd),
         trimPathOffset: channelValue(channels.trimPathOffset, frame, layer.trimPathOffset || 0),
       } as EvaluatedRuntimeLayer;
+      // A keyed Track Matte feather / strength, as the editor evaluates it
+      // (`evaluateTrackMatte`): the channel over the packaged value, clamped.
+      const render = layer.trackMatte && layer.trackMatte.render;
+      if (render && (channels.matteFeather || channels.matteStrength)) {
+        evaluated.trackMatte = {
+          ...layer.trackMatte!,
+          render: {
+            ...render,
+            feather: Math.max(0, channelValue(channels.matteFeather, frame, render.feather)),
+            strength: clamp(channelValue(channels.matteStrength, frame, render.strength), 0, 1),
+          },
+        };
+      }
       evaluated.masks = (layer.masks || []).map((mask) => {
         const maskTrack = track && track.maskChannels
           ? { opacity: track.maskChannels[mask.id + ':opacity'], feather: track.maskChannels[mask.id + ':feather'], expansion: track.maskChannels[mask.id + ':expansion'] }

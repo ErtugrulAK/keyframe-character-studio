@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 /**
  * Manual QA (rc.6 round 2, item 7): the Track Matte took over the legacy
@@ -59,4 +60,24 @@ test('a plain Track Matte stays a plain mask', async ({ page }) => {
   expect(mask.id).not.toContain('-f');
   expect(mask.blur).toBeNull();
   expect(mask.gradientFill).toBe(false);
+});
+
+test('Ctrl+Z undoes a matte slider change while the slider still has focus (QA rc6 round 3, item 2)', async ({ page }) => {
+  await seed(page, {});
+  await page.locator('[role="tree"] [data-layer-id="tgt"]').click();
+  await openDetailsTab(page, 'Masks');
+  const expand = page.getByRole('button', { name: 'Expand TRACK MATTE', exact: true });
+  if (await expand.count()) await expand.click();
+  const feather = page.getByRole('slider', { name: 'Feather' });
+  await feather.focus();
+  await feather.press('ArrowRight');
+  await feather.press('ArrowRight');
+  await expect(feather).toHaveValue('2');
+  await expect(feather).toBeFocused();
+  await page.keyboard.press('Control+z');
+  await expect(feather).not.toHaveValue('2');
+  await page.keyboard.press('Control+z');
+  await expect(feather).toHaveValue('0');
+  await page.keyboard.press('Control+y');
+  await expect(feather).not.toHaveValue('0');
 });

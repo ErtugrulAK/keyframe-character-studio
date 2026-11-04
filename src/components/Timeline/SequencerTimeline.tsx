@@ -5,8 +5,10 @@ import { NumberField } from '../Inspector/inputs/NumberField';
 import { useAnimator } from '../../context/useAnimator';
 import { commitWorkspaceLayout, createFrameEase, prefersReducedMotion, REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, type FrameEase } from '../../utils/editor/workspaceLayout';
 import { type TrackChannel, type AnimationChannel } from '../../types/animator';
-import { computeMaxFrame, resolveChannelAnimationState, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/editor/timelineMetrics';
-import { resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../../utils/animation/channelKeyframeGroups';
+import { resolveChannelAnimationState, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/editor/timelineMetrics';
+import { channelArmValue, resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../../utils/animation/channelKeyframeGroups';
+import { evaluateTrackMatte } from '../../utils/layers/matte';
+import { partIndexOf } from '../../utils/layers/partBinding';
 import { locateKeyframe } from '../../utils/animation/trackMutations';
 import { duplicateKeyframeGroup as previewKeyframeDuplicate } from '../../utils/animation/keyframeDuplicate';
 import {
@@ -23,11 +25,13 @@ import {
   Redo2,
   Clock,
   Scissors,
+  Flag,
   TrendingUp,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
+import { addStepMarker, normalizeStepMarkers, removeStepMarker } from '../../utils/animation/stepMarkers';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { TimeRuler } from './TimeRuler';
 import { TrackLane, type KeyframePress } from './TrackLane';
@@ -100,6 +104,9 @@ interface KeyframeDrag {
 }
 
 
+/** Up to this many selected tracks stay mounted while scrolled away; a larger selection keeps only its primary. */
+const PINNED_SELECTION_LIMIT = 32;
+
 export const SequencerTimeline: React.FC = () => {
   const {
     currentFrame,
@@ -161,6 +168,7 @@ export const SequencerTimeline: React.FC = () => {
     renameMotionTemplate,
     deleteMotionTemplate,
     updateMotionTemplateDuration,
+    setMotionTemplateStepMarkers,
   } = useAnimator();
   // The derived display ordinal, the same projection the Outliner shows.
   const layerOrdinals = useMemo(() => projectLayerOrdinals(characterParts), [characterParts]);
@@ -478,11 +486,39 @@ export const SequencerTimeline: React.FC = () => {
   }, [isMarqueeActive, updateMarquee, endMarquee]);
 
   const handleCropToContent = () => {
-    // Timeline length accounts for BOTH legacy keyframes and canonical
-    // channel keyframes (max across all templates — same behavior as before,
-    // now via the pure, tested computeMaxFrame helper).
-    const maxFrame = computeMaxFrame(tracks);
-    setTotalFrames(maxFrame > 0 ? maxFrame : 30);
+    // The sequence ends at the playhead (After Effects' trim to the current
+    // time): keys after it are kept, only outside the sequence. Its own
+    // duration changes with it, so DURATION shows the cropped length (60
+    // frames at 120 fps is 0.5 s). A playhead on frame 0 has nothing to keep.
+    const durationFrames = Math.round(currentFrame);
+    if (durationFrames < 1) {
+      showToast('Move the playhead to where the sequence should end, then Crop.', 'info');
+      return;
+    }
+    updateMotionTemplateDuration(activeTemplateId, durationFrames);
+    setTotalFrames(durationFrames);
+  };
+
+  /*
+   * Step markers split the sequence into OGraf steps: each play (Next) in a
+   * playout runs to the next marker and holds (`utils/animation/stepMarkers`).
+   */
+  const activeStepMarkers = useMemo(
+    () => normalizeStepMarkers(motionTemplates.find((template) => template.id === activeTemplateId)?.stepMarkers, activeSequenceDurationFrames),
+    [motionTemplates, activeTemplateId, activeSequenceDurationFrames],
+  );
+  const stepMarkerAtPlayhead = activeStepMarkers.includes(Math.round(currentFrame));
+  const handleToggleStepMarker = () => {
+    const frame = Math.round(currentFrame);
+    if (stepMarkerAtPlayhead) {
+      setMotionTemplateStepMarkers(activeTemplateId, removeStepMarker(activeStepMarkers, frame, activeSequenceDurationFrames));
+      return;
+    }
+    if (frame <= 0 || frame >= activeSequenceDurationFrames) {
+      showToast('A step marker goes inside the sequence: move the playhead between its first and last frame.', 'info');
+      return;
+    }
+    setMotionTemplateStepMarkers(activeTemplateId, addStepMarker(activeStepMarkers, frame, activeSequenceDurationFrames));
   };
 
   // Wheel zoom handler
@@ -1067,7 +1103,10 @@ export const SequencerTimeline: React.FC = () => {
           ? (part?.trimPathEnd ?? 1)
           : channel === 'trimPathOffset'
             ? (part?.trimPathOffset ?? 0)
-            : (transform as unknown as Record<string, number>)[channel] ?? (channel === 'maskScale' ? 1 : 0);
+            : channel === 'matteFeather' || channel === 'matteStrength'
+              // The value the stage shows now (keyed or static).
+              ? (part ? channelArmValue(channel, transform, { ...part, trackMatte: evaluateTrackMatte(part.trackMatte, tracks.find((candidate) => candidate.id === trackId), currentFrame, activeTemplateId || 'Sequence') }) : 0)
+              : (transform as unknown as Record<string, number>)[channel] ?? (channel === 'maskScale' ? 1 : 0);
     addPropertyKeyframe(trackId, channel, currentFrame, val);
   };
 
@@ -1166,8 +1205,10 @@ export const SequencerTimeline: React.FC = () => {
    * they stay aligned). A track's height is measured from its mounted layer row
    * (it grows when the track or a channel group expands); an unmeasured one is
    * the lane layout's own height (C5: `laneGroupHeight`, the rows the lanes
-   * render), so the spacers stand for expanded tracks exactly. The selected,
-   * renamed and focused tracks stay mounted.
+   * render), so the spacers stand for expanded tracks exactly. The primary,
+   * renamed and focused tracks stay mounted, and the rest of a small selection;
+   * a large one (Select All on thousands of layers) would otherwise mount every
+   * row and keep the whole list in the page.
    */
   const trackHeightsRef = useRef(new Map<string, number>());
   const [trackHeightsVersion, setTrackHeightsVersion] = useState(0);
@@ -1182,7 +1223,8 @@ export const SequencerTimeline: React.FC = () => {
   );
   const [focusedTrackPartId, setFocusedTrackPartId] = useState<string | null>(null);
   const pinnedTracks = useMemo(() => {
-    const keep = new Set<string>([...(selectedPartIds ?? []), ...(editingPartId ? [editingPartId] : []), ...(focusedTrackPartId ? [focusedTrackPartId] : [])]);
+    const selection = (selectedPartIds ?? []).length <= PINNED_SELECTION_LIMIT ? (selectedPartIds ?? []) : [];
+    const keep = new Set<string>([...selection, ...(editingPartId ? [editingPartId] : []), ...(focusedTrackPartId ? [focusedTrackPartId] : [])]);
     if (selectedPartId) keep.add(selectedPartId);
     const pinned: number[] = [];
     tracks.forEach((track, index) => {
@@ -1377,9 +1419,9 @@ export const SequencerTimeline: React.FC = () => {
                 className="duration-input"
                 commit="blur"
                 step={0.5}
-                min={0.5}
+                min={0.01}
                 max={40}
-                value={Number(frameToSeconds(activeSequenceDurationFrames, fps).toFixed(1))}
+                value={Number(frameToSeconds(activeSequenceDurationFrames, fps).toFixed(2))}
                 onFocus={(e) => e.target.select()}
                 onValue={(sec) => {
                   if (sec > 0) {
@@ -1400,7 +1442,7 @@ export const SequencerTimeline: React.FC = () => {
                 }} title={`Set the sequence to ${sec} seconds`} aria-pressed={activeSequenceDurationFrames === secondsToFrame(sec, fps)}>{sec}s</button>
               ))}
             </div>
-            <button className="fit-pill-btn crop-btn" onClick={handleCropToContent} title="Crop the sequence to the last keyframe">
+            <button className="fit-pill-btn crop-btn" onClick={handleCropToContent} title="Crop the sequence at the playhead">
               <Scissors size={12} aria-hidden="true" /><span>Crop</span>
             </button>
           </div>
@@ -1453,6 +1495,18 @@ export const SequencerTimeline: React.FC = () => {
         <div className="timeline-header-right timeline-actions-band">
           <button
             type="button"
+            className="fit-pill-btn step-marker-btn"
+            onClick={handleToggleStepMarker}
+            aria-pressed={stepMarkerAtPlayhead}
+            aria-label="Step marker at the playhead"
+            title={stepMarkerAtPlayhead
+              ? 'Remove the step marker at the playhead'
+              : 'Add a step marker at the playhead: the exported graphic stops here until the next play (Next)'}
+          >
+            <Flag size={12} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
             className="btn-director active motion-curves-btn"
             onClick={() => setIsCurveModalOpen(true)}
             title="Open Expanded Pro Cubic Bezier Motion Curve Studio Modal"
@@ -1482,7 +1536,7 @@ export const SequencerTimeline: React.FC = () => {
 
           <div className="ue-outliner-list" ref={outlinerRef} onScroll={handleOutlinerScroll} onFocus={handleTrackFocus}>
             {renderTrackWindow((track) => {
-              const partItem = characterParts.find((p) => p.id === track.partId);
+              const partItem = partIndexOf(characterParts).get(track.partId);
               const isChildLayer = Boolean(partItem?.parentId);
 
               return (
@@ -1550,6 +1604,8 @@ export const SequencerTimeline: React.FC = () => {
             currentFrame={currentFrame}
             onPointerDown={handleRulerPointerDown}
             onSeekFrame={handleRulerKeySeek}
+            stepMarkers={activeStepMarkers}
+            onRemoveStepMarker={(frame) => setMotionTemplateStepMarkers(activeTemplateId, removeStepMarker(activeStepMarkers, frame, activeSequenceDurationFrames))}
           />
 
           {/* Playhead */}

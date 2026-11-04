@@ -5,7 +5,6 @@ import { StyleColorSection } from './style/StyleColorSection';
 import { StyleAppearanceSection } from './style/StyleAppearanceSection';
 import { isShapeAppearanceEligible } from '../../../utils/layers/shapeAppearance';
 import { StyleTextFields } from './style/StyleTextFields';
-import { FitToTextCard, TextBoxCard } from './style/StyleTextFitSection';
 import { StyleClonerSection } from './style/StyleClonerSection';
 import { StyleParticleSection } from './style/StyleParticleSection';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
@@ -14,6 +13,7 @@ import { ColorCorrectionCard } from './style/ColorCorrectionCard';
 import type { ColorCorrectionEffect, LayerMask } from '../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../types/composition';
 import { StyleMatteSection } from './style/StyleMatteSection';
+import type { MatteChannelKeys } from './style/MatteRenderControls';
 import type { MaskDrawShape } from '../../../hooks/useMaskEditing';
 import { TrimPathSection, type TrimPathChannel } from './style/TrimPathSection';
 import { isTrimPathEligible } from '../../../utils/geometry/trimPath';
@@ -46,6 +46,8 @@ interface StyleTabProps {
   /** Evaluated Trim Path at the current frame; the fields must show what the stage draws. */
   evaluatedTrim?: { start: number; end: number; offset: number };
   onUpdateTrimChannel?: (channel: TrimPathChannel, value: number) => void;
+  /** The keyframe buttons of the Track Matte's FEATHER and STRENGTH. */
+  matteChannelKeys?: MatteChannelKeys;
   /** Opens/closes ONE undo entry around a completed color pointer gesture. */
   onColorInteractionStart?: () => void;
   onColorInteractionEnd?: () => void;
@@ -98,6 +100,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   onSelectMaskVertex,
   evaluatedTrim,
   onUpdateTrimChannel,
+  matteChannelKeys,
   onColorInteractionStart,
   onColorInteractionEnd,
   pathEditing,
@@ -146,8 +149,6 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         onColorInteractionStart={onColorInteractionStart}
         onColorInteractionEnd={onColorInteractionEnd}
       />
-      <TextBoxCard selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
-      <FitToTextCard selectedPart={selectedPart} characterParts={characterParts} onPartPropChange={handlePartPropChange} />
       {colorCorrection && selectedPart.type === 'custom_image' && (
         <ColorCorrectionCard
           part={selectedPart}
@@ -190,6 +191,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   const masks = (
     <StyleMatteSection
       selectedPart={selectedPart}
+      matteChannelKeys={matteChannelKeys}
       characterParts={characterParts}
       onPartPropChange={handlePartPropChange}
       onInteractionStart={onColorInteractionStart}

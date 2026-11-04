@@ -6,6 +6,7 @@ import { laneContextOf, resolveLaneRows } from './timelineLaneLayout';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { resolveAdjacentKeyframeFrame, resolveChannelAnimationState, resolveChannelKeyframeFrames, resolveLayerKeyframeFrames } from '../../utils/editor/timelineMetrics';
 import { resolveAuthoredBasePose } from '../../utils/animation/channelKeyframeGroups';
+import { partIndexOf } from '../../utils/layers/partBinding';
 import { InlineRename } from '../Shared/InlineRename';
 
 interface TrackOutlinerRowProps {
@@ -57,6 +58,9 @@ const TREE_LABEL: Partial<Record<TrackChannel, string>> = {
   trimPathStart: 'Start',
   trimPathEnd: 'End',
   trimPathOffset: 'Offset',
+  matteFeather: 'Feather',
+  matteStrength: 'Strength',
+  matteGradientAngle: 'Gradient Angle',
 };
 
 /** A mask property row reads like other motion tools: Path, Feather, Opacity, Expansion. */
@@ -144,7 +148,7 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
     };
   }, [channelMenu]);
   // The layer's masks name their property groups.
-  const owningPart = parts.find((p) => p.id === track.partId);
+  const owningPart = partIndexOf(parts).get(track.partId);
   const partMasks = owningPart?.masks ?? [];
 
   /**
@@ -152,7 +156,7 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
    * the SAME projection the lane diamonds are painted from, so the navigation can
    * neither skip a visible keyframe nor stop on a frame the layer does not animate.
    */
-  const keyframeFrames = resolveLayerKeyframeFrames(track, activeTemplateId || 'Sequence', basePose);
+  const keyframeFrames = layerKeyframeFrames({ track, activeTemplateId, parts });
   const previousKeyframeFrame = resolveAdjacentKeyframeFrame(keyframeFrames, currentFrame, 'previous');
   const nextKeyframeFrame = resolveAdjacentKeyframeFrame(keyframeFrames, currentFrame, 'next');
 
@@ -490,8 +494,20 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
 };
 
 /** The previous/next keyframe a collapsed row offers at `frame` — all it shows of the playhead. */
+/** A track's keyframe frames, kept while the track, its layer and the sequence are the same (every playhead frame asks again). */
+const keyframeFramesCache = new WeakMap<TrackOutlinerRowProps['track'], { part: unknown; templateId: string; frames: number[] }>();
+const layerKeyframeFrames = (props: Pick<TrackOutlinerRowProps, 'track' | 'activeTemplateId' | 'parts'>): number[] => {
+  const templateId = props.activeTemplateId || 'Sequence';
+  const part = partIndexOf(props.parts).get(props.track.partId);
+  const cached = keyframeFramesCache.get(props.track);
+  if (cached && cached.part === part && cached.templateId === templateId) return cached.frames;
+  const frames = resolveLayerKeyframeFrames(props.track, templateId, resolveAuthoredBasePose(props.parts, props.track.partId));
+  keyframeFramesCache.set(props.track, { part, templateId, frames });
+  return frames;
+};
+
 const collapsedRowNavigation = (props: TrackOutlinerRowProps): string => {
-  const frames = resolveLayerKeyframeFrames(props.track, props.activeTemplateId || 'Sequence', resolveAuthoredBasePose(props.parts, props.track.partId));
+  const frames = layerKeyframeFrames(props);
   return `${resolveAdjacentKeyframeFrame(frames, props.currentFrame, 'previous')}:${resolveAdjacentKeyframeFrame(frames, props.currentFrame, 'next')}`;
 };
 

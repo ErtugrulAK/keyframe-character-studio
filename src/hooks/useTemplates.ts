@@ -1,3 +1,4 @@
+import { normalizeStepMarkers } from '../utils/animation/stepMarkers';
 import { useState, useCallback } from 'react';
 import type { CharacterPart, Track, MotionTemplate, ProjectTemplate, AppMode } from '../types/animator';
 import type { SceneCoordinateSystem } from '../types/composition';
@@ -152,6 +153,16 @@ export const useTemplates = ({
   }, [activeTemplateId, motionTemplates, onSequenceDeleted, setTracks]);
 
 
+  /** The sequence's OGraf step markers (frames inside it), stored normalized. */
+  const setMotionTemplateStepMarkers = useCallback((id: string, markers: number[]) => {
+    setMotionTemplates((prev) => prev.map((template) => {
+      if (template.id !== id) return template;
+      const stepMarkers = normalizeStepMarkers(markers, template.durationFrames);
+      const { stepMarkers: _previous, ...rest } = template;
+      return stepMarkers.length > 0 ? { ...rest, stepMarkers } : rest;
+    }));
+  }, []);
+
   const updateMotionTemplateDuration = useCallback((id: string, durationFrames: number) => {
     const duration = normalizeSequenceDuration(durationFrames);
     setMotionTemplates((prev) => prev.map((template) => (
@@ -296,6 +307,7 @@ export const useTemplates = ({
     renameMotionTemplate,
     deleteMotionTemplate,
     updateMotionTemplateDuration,
+    setMotionTemplateStepMarkers,
     setActiveProjectTemplateId,
     addProjectTemplate,
     renameProjectTemplate,

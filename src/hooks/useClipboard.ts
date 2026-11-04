@@ -140,7 +140,15 @@ export const useClipboard = ({
       if (clone.trackMatte?.sourceLayerId) clone.trackMatte = { ...clone.trackMatte, sourceLayerId: remap(clone.trackMatte.sourceLayerId) };
       if (part.booleanGroupId) clone.booleanGroupId = remap(part.booleanGroupId);
       if (part.booleanOperandIds) clone.booleanOperandIds = part.booleanOperandIds.map(remap);
-      if (clone.fitToText) clone.fitToText = { ...clone.fitToText, textLayerId: remap(clone.fitToText.textLayerId) };
+      if (clone.fitToText) {
+        clone.fitToText = {
+          ...clone.fitToText,
+          textLayerId: remap(clone.fitToText.textLayerId),
+          ...(clone.fitToText.extraTextLayerIds ? { extraTextLayerIds: clone.fitToText.extraTextLayerIds.map(remap) } : {}),
+        };
+      }
+      if (clone.follow) clone.follow = { ...clone.follow, targetLayerId: remap(clone.follow.targetLayerId) };
+      if (clone.lookAt) clone.lookAt = { ...clone.lookAt, targetLayerId: remap(clone.lookAt.targetLayerId) };
       if (outermost) outermostIds.push(cloneId);
       newParts.push(clone);
       newTracks.push(cloneTrackOnto(track, cloneId, clone.name));

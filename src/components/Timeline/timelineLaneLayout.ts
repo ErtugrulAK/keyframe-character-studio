@@ -44,15 +44,19 @@ type GroupExpanded = (key: string, defaultVal?: boolean) => boolean;
 export interface LaneContext {
   masks?: readonly { id: string; name: string }[];
   trimPath?: boolean;
+  /** The layer has a Track Matte (its feather and strength can be keyed). */
+  trackMatte?: boolean;
 }
 
-export const laneContextOf = (part: { masks?: readonly { id: string; name: string }[]; trimPathEnabled?: boolean } | undefined): LaneContext => ({
+export const laneContextOf = (part: { masks?: readonly { id: string; name: string }[]; trimPathEnabled?: boolean; trackMatte?: unknown } | undefined): LaneContext => ({
   masks: part?.masks?.map((mask) => ({ id: mask.id, name: mask.name })) ?? [],
   trimPath: part?.trimPathEnabled === true,
+  trackMatte: Boolean(part?.trackMatte),
 });
 
 const MASK_PROPERTIES = ['path', 'feather', 'opacity', 'expansion'] as const;
 const TRIM_CHANNELS: TrackChannel[] = ['trimPathStart', 'trimPathEnd', 'trimPathOffset'];
+const MATTE_CHANNELS: TrackChannel[] = ['matteFeather', 'matteStrength', 'matteGradientAngle'];
 
 /** The mask ids a track animates, even for a mask the layer no longer lists. */
 const animatedMaskIds = (track: Track): string[] => {
@@ -71,6 +75,8 @@ const animatedMaskIds = (track: Track): string[] => {
  *   Position › X, Y · Scale › X, Y · Rotation · Opacity
  *   Trim Paths › Start, End, Offset   — only when the layer uses Trim Paths
  *                                       (or still holds Trim keys)
+ *   Track Matte › Feather, Strength, Angle — only when the layer has a Track Matte
+ *                                       (or still holds its keys)
  *   <mask name> › Path, Feather, Opacity, Expansion   — one group per mask
  */
 export const resolveLaneRows = (track: Track, isGroupExpanded: GroupExpanded, context: LaneContext = {}): LaneRow[] => {
@@ -87,6 +93,8 @@ export const resolveLaneRows = (track: Track, isGroupExpanded: GroupExpanded, co
   rows.push(channel('opacity', 1));
   const trimKeyed = TRIM_CHANNELS.some((value) => (track.channels?.[value]?.length ?? 0) > 0);
   if (context.trimPath || trimKeyed) group('trim', 'Trim Paths', true, TRIM_CHANNELS);
+  const matteKeyed = MATTE_CHANNELS.some((value) => (track.channels?.[value]?.length ?? 0) > 0);
+  if (context.trackMatte || matteKeyed) group('matte', 'Track Matte', true, MATTE_CHANNELS);
   const masks = [...(context.masks ?? [])];
   for (const id of animatedMaskIds(track)) if (!masks.some((mask) => mask.id === id)) masks.push({ id, name: id });
   for (const mask of masks) {

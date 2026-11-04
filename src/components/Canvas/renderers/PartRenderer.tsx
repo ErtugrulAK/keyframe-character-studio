@@ -50,7 +50,92 @@ interface PartRendererProps {
   colorCorrection?: ColorCorrectionRender;
 }
 
-export const PartRenderer: React.FC<PartRendererProps> = ({
+interface PartContentProps {
+  part: CharacterPart;
+  content: EvaluatedLayer['content'];
+  booleanContours?: CharacterPart['booleanContours'];
+  isSelected: boolean;
+  isGhost: boolean;
+  ghostColor?: string;
+  /** The playhead, for content drawn from it (a staggered text, a cloner); 0 otherwise. */
+  frame: number;
+}
+
+/** Content drawn from the playhead itself, not only from the layer's evaluated values. */
+const contentFollowsFrame = (part: CharacterPart): boolean => (
+  part.type === 'mograph_cloner' || (part.type === 'custom_text' && Boolean(part.textAnimMode) && part.textAnimMode !== 'none')
+);
+
+/**
+ * The layer's own drawing (path, text, media) in its local space. It depends
+ * on the layer and its evaluated content, never on the transform, so a frame
+ * that only moves, turns, scales or fades the layer re-renders the wrapper
+ * around it and leaves this subtree alone: playback of a large scene updates
+ * one transform per layer instead of rebuilding every shape.
+ */
+const PartContentView: React.FC<PartContentProps> = ({ part, content, booleanContours, isSelected, isGhost, ghostColor, frame }) => {
+  const fill = (isGhost && ghostColor ? ghostColor : content.fillColor) || '#ffffff';
+  const stroke = (isGhost && ghostColor ? ghostColor : isSelected ? '#4a8fe7' : content.strokeColor) || '#101218';
+
+  // Build synthetic part for sub-renderers
+  const rp: CharacterPart = {
+    ...part,
+    fillColor: fill,
+    // Keep authored stroke color on the synthetic part. Modern eligible
+    // shapes must not receive the legacy selection-color override.
+    strokeColor: isGhost && ghostColor ? ghostColor : (content.strokeColor ?? part.strokeColor),
+    fillEnabled: content.fillEnabled ?? part.fillEnabled,
+    fillOpacity: content.fillOpacity ?? part.fillOpacity,
+    strokeEnabled: content.strokeEnabled ?? part.strokeEnabled,
+    strokeWidth: content.strokeWidth ?? part.strokeWidth,
+    strokeOpacity: content.strokeOpacity ?? part.strokeOpacity,
+    strokeAlignment: content.strokeAlignment ?? part.strokeAlignment,
+    imageUrl: content.imageUrl ?? part.imageUrl,
+    videoUrl: content.videoUrl ?? part.videoUrl,
+    textValue: content.textValue ?? part.textValue,
+    fontSize: content.fontSize ?? part.fontSize,
+    points: content.points ?? part.points,
+    path: content.path ?? part.path,
+    width: content.width ?? part.width,
+    height: content.height ?? part.height,
+    shadowColor: content.shadowColor ?? part.shadowColor,
+    shadowBlur: content.shadowBlur ?? part.shadowBlur,
+    shadowOffsetX: content.shadowOffsetX ?? part.shadowOffsetX,
+    shadowOffsetY: content.shadowOffsetY ?? part.shadowOffsetY,
+    borderRadius: content.borderRadius ?? part.borderRadius,
+    trimPathEnabled: content.trimPathEnabled ?? part.trimPathEnabled,
+    trimPathStart: content.trimPathStart ?? part.trimPathStart,
+    trimPathEnd: content.trimPathEnd ?? part.trimPathEnd,
+    trimPathOffset: content.trimPathOffset ?? part.trimPathOffset,
+    clonerConfig: content.clonerConfig ?? part.clonerConfig,
+    particleConfig: content.particleConfig ?? part.particleConfig,
+    booleanContours: booleanContours ?? part.booleanContours,
+  };
+
+  if (rp.type === 'custom_video' || rp.type === 'custom_image') return <>{renderMediaPart({ part: rp, fill, stroke, isSelected })}</>;
+  if (rp.type === 'custom_text' || rp.type === 'mograph_cloner') return <>{renderTextOrClonerPart({ part: rp, fill, stroke, isSelected, currentFrame: frame })}</>;
+  return <>{renderShapePart({ part: rp, fill, stroke, isSelected, isGhost })}</>;
+};
+
+/** Evaluated content is rebuilt every frame: equal when every field is the same value. */
+const sameContentFields = (a: EvaluatedLayer['content'], b: EvaluatedLayer['content']): boolean => {
+  if (a === b) return true;
+  const keys = Object.keys(a) as (keyof EvaluatedLayer['content'])[];
+  if (keys.length !== Object.keys(b).length) return false;
+  return keys.every((key) => Object.is(a[key], b[key]));
+};
+
+const PartContent = React.memo(PartContentView, (prev, next) => (
+  prev.part === next.part
+  && prev.isSelected === next.isSelected
+  && prev.isGhost === next.isGhost
+  && prev.ghostColor === next.ghostColor
+  && prev.booleanContours === next.booleanContours
+  && prev.frame === next.frame
+  && sameContentFields(prev.content, next.content)
+));
+
+const PartRendererView: React.FC<PartRendererProps> = ({
   part,
   isGhost = false,
   ghostColor,
@@ -72,53 +157,18 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   if (!el.visible) return null;
 
   const finalOpacity = isGhost ? 0.35 : el.opacity;
-  const fill = (isGhost && ghostColor ? ghostColor : el.content.fillColor) || '#ffffff';
-  const stroke = (isGhost && ghostColor ? ghostColor : isSelected ? '#4a8fe7' : el.content.strokeColor) || '#101218';
   const filterId = !isGhost && el.content.shadowColor ? `drop-shadow-${part.id}` : undefined;
-
-  // Build synthetic part for sub-renderers
-  const rp: CharacterPart = {
-    ...part,
-    fillColor: fill,
-    // Keep authored stroke color on the synthetic part. Modern eligible
-    // shapes must not receive the legacy selection-color override.
-    strokeColor: isGhost && ghostColor ? ghostColor : (el.content.strokeColor ?? part.strokeColor),
-    fillEnabled: el.content.fillEnabled ?? part.fillEnabled,
-    fillOpacity: el.content.fillOpacity ?? part.fillOpacity,
-    strokeEnabled: el.content.strokeEnabled ?? part.strokeEnabled,
-    strokeWidth: el.content.strokeWidth ?? part.strokeWidth,
-    strokeOpacity: el.content.strokeOpacity ?? part.strokeOpacity,
-    strokeAlignment: el.content.strokeAlignment ?? part.strokeAlignment,
-    imageUrl: el.content.imageUrl ?? part.imageUrl,
-    videoUrl: el.content.videoUrl ?? part.videoUrl,
-    textValue: el.content.textValue ?? part.textValue,
-    fontSize: el.content.fontSize ?? part.fontSize,
-    points: el.content.points ?? part.points,
-    path: el.content.path ?? part.path,
-    width: el.content.width ?? part.width,
-    height: el.content.height ?? part.height,
-    shadowColor: el.content.shadowColor ?? part.shadowColor,
-    shadowBlur: el.content.shadowBlur ?? part.shadowBlur,
-    shadowOffsetX: el.content.shadowOffsetX ?? part.shadowOffsetX,
-    shadowOffsetY: el.content.shadowOffsetY ?? part.shadowOffsetY,
-    borderRadius: el.content.borderRadius ?? part.borderRadius,
-    trimPathEnabled: el.content.trimPathEnabled ?? part.trimPathEnabled,
-    trimPathStart: el.content.trimPathStart ?? part.trimPathStart,
-    trimPathEnd: el.content.trimPathEnd ?? part.trimPathEnd,
-    trimPathOffset: el.content.trimPathOffset ?? part.trimPathOffset,
-    clonerConfig: el.content.clonerConfig ?? part.clonerConfig,
-    particleConfig: el.content.particleConfig ?? part.particleConfig,
-    booleanContours: booleanContours ?? part.booleanContours,
-  };
-
-  let pathContent: React.ReactNode = null;
-  if (rp.type === 'custom_video' || rp.type === 'custom_image') {
-    pathContent = renderMediaPart({ part: rp, fill, stroke, isSelected });
-  } else if (rp.type === 'custom_text' || rp.type === 'mograph_cloner') {
-    pathContent = renderTextOrClonerPart({ part: rp, fill, stroke, isSelected, currentFrame });
-  } else {
-    pathContent = renderShapePart({ part: rp, fill, stroke, isSelected, isGhost });
-  }
+  const pathContent = (
+    <PartContent
+      part={part}
+      content={el.content}
+      booleanContours={booleanContours}
+      isSelected={isSelected}
+      isGhost={isGhost}
+      ghostColor={ghostColor}
+      frame={contentFollowsFrame(part) ? currentFrame : 0}
+    />
+  );
 
   /**
    * The canvas pointer contract of one layer.
@@ -210,3 +260,50 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
     </g>
   );
 };
+
+/** Equal values, one level deep: an evaluated transform or content is rebuilt every frame. */
+const sameShallow = (a: unknown, b: unknown): boolean => {
+  if (Object.is(a, b)) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  const aKeys = Object.keys(a);
+  if (aKeys.length !== Object.keys(b).length) return false;
+  return aKeys.every((key) => {
+    const left = (a as Record<string, unknown>)[key];
+    const right = (b as Record<string, unknown>)[key];
+    if (Object.is(left, right)) return true;
+    // The world affine is a fresh object of numbers on every evaluation.
+    if (!left || !right || typeof left !== 'object' || typeof right !== 'object' || Array.isArray(left) !== Array.isArray(right)) return false;
+    const leftKeys = Object.keys(left);
+    return leftKeys.length === Object.keys(right).length
+      && leftKeys.every((inner) => Object.is((left as Record<string, unknown>)[inner], (right as Record<string, unknown>)[inner]));
+  });
+};
+
+/**
+ * A layer whose part, evaluated pose and content are the same values as on
+ * the last frame is not rendered again: a frame of a large scene re-renders
+ * only the layers that change in it.
+ */
+const samePartRendererProps = (prev: PartRendererProps, next: PartRendererProps): boolean => (
+  prev.part === next.part
+  && prev.isGhost === next.isGhost
+  && prev.ghostColor === next.ghostColor
+  && prev.isSelected === next.isSelected
+  && prev.onSelect === next.onSelect
+  && prev.onStartTranslateDrag === next.onStartTranslateDrag
+  && prev.onDrillIn === next.onDrillIn
+  && prev.booleanContours === next.booleanContours
+  && prev.matteClipPathId === next.matteClipPathId
+  && prev.matteMaskId === next.matteMaskId
+  && prev.isLocked === next.isLocked
+  && (!contentFollowsFrame(next.part) || prev.currentFrame === next.currentFrame)
+  && sameShallow(prev.layerMaskIds, next.layerMaskIds)
+  && sameShallow(prev.outputOrigin, next.outputOrigin)
+  && sameShallow(prev.colorCorrection, next.colorCorrection)
+  && prev.evaluatedLayer.visible === next.evaluatedLayer.visible
+  && prev.evaluatedLayer.opacity === next.evaluatedLayer.opacity
+  && sameShallow(prev.evaluatedLayer.transform, next.evaluatedLayer.transform)
+  && sameContentFields(prev.evaluatedLayer.content, next.evaluatedLayer.content)
+);
+
+export const PartRenderer = React.memo(PartRendererView, samePartRendererProps);

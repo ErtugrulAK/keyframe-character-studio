@@ -847,3 +847,18 @@
   background: var(--kcs-bg-input);
   border-color: var(--kcs-border-focus);
 }
+
+/* The autosave delay, a browser preference kept with the project settings. */
+.project-autosave-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.project-autosave-row .project-autosave-input {
+  width: 64px;
+  flex: none;
+  text-align: right;
+}

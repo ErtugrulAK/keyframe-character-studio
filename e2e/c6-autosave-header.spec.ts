@@ -65,10 +65,16 @@ const headerControlBoxes = (page: Page) => page.evaluate(() => {
   return out;
 });
 
-test('the autosave delay is set in the header, applies at once and is remembered', async ({ page }) => {
+/** The autosave delay lives in the Project panel of the left toolbar. */
+const openProjectPanel = (page: Page) => page.getByRole('button', { name: 'Project Workspace' }).click();
+
+test('the autosave delay is set in the Project panel, applies at once and is remembered', async ({ page }) => {
   test.setTimeout(60000);
   await seed(page);
   const badge = page.locator('.autosave-status-badge');
+  // It is not a header control any more.
+  await expect(page.locator('.header-bar').getByLabel('Autosave interval in seconds')).toHaveCount(0);
+  await openProjectPanel(page);
   const field = page.getByLabel('Autosave interval in seconds');
   await expect(field).toHaveValue('10');
   await field.fill('3');
@@ -93,6 +99,7 @@ test('the autosave delay is set in the header, applies at once and is remembered
   await expect(field).toHaveValue('600');
   await page.reload();
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  await openProjectPanel(page);
   await expect(page.getByLabel('Autosave interval in seconds')).toHaveValue('600');
 });
 

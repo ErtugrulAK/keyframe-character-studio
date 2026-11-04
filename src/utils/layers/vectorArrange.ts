@@ -86,7 +86,7 @@ export type ArrangePatch = Partial<Pick<Transform, 'x' | 'y' | 'rotation' | 'sca
 /** The world-space patches of one command, keyed by layer id, in write order. */
 export type ArrangePlan = Record<string, ArrangePatch>;
 
-interface ArrangeTarget {
+export interface ArrangeTarget {
   id: string;
   /** The layer's evaluated world transform, captured before any write. */
   transform: Transform;
@@ -104,8 +104,9 @@ const POSITION_EPSILON = 1e-6;
 const resolveArrangeTargets = (parts: CharacterPart[], ids: string[]): string[] => {
   const present: string[] = [];
   const seen = new Set<string>();
+  const known = new Set(parts.map((part) => part.id));
   ids.forEach((id) => {
-    if (seen.has(id) || !parts.some((part) => part.id === id)) return;
+    if (seen.has(id) || !known.has(id)) return;
     seen.add(id);
     present.push(id);
   });
@@ -124,14 +125,32 @@ export const collectArrangeTargets = (
   worldOf: (partId: string) => Transform,
 ): ArrangeTarget[] => {
   const targets: ArrangeTarget[] = [];
-  resolveArrangeTargets(parts, ids).forEach((id) => {
-    const bounds = getLayerWorldBounds(parts, id, worldOf);
-    if (!bounds) return;
-    const transform = worldOf(id);
-    if (!Number.isFinite(transform.x) || !Number.isFinite(transform.y)) return;
-    targets.push({ id, transform, bounds });
+  someArrangeTarget(parts, ids, worldOf, (target) => {
+    targets.push(target);
+    return false;
   });
   return targets;
+};
+
+/**
+ * Whether one measurable target passes `accept`, measuring them in order and
+ * stopping at the first that does: an availability check stays cheap on a
+ * large selection.
+ */
+export const someArrangeTarget = (
+  parts: CharacterPart[],
+  ids: string[],
+  worldOf: (partId: string) => Transform,
+  accept: (target: ArrangeTarget) => boolean,
+): boolean => {
+  for (const id of resolveArrangeTargets(parts, ids)) {
+    const bounds = getLayerWorldBounds(parts, id, worldOf);
+    if (!bounds) continue;
+    const transform = worldOf(id);
+    if (!Number.isFinite(transform.x) || !Number.isFinite(transform.y)) continue;
+    if (accept({ id, transform, bounds })) return true;
+  }
+  return false;
 };
 
 /**

@@ -563,6 +563,8 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 }
 .fit-pill-btn:hover { background: #2e2e2e; color: #e8e8e8; border-color: #444444; }
 .crop-btn:hover { border-color: var(--accent-teal) !important; color: var(--accent-teal) !important; }
+.step-marker-btn[aria-pressed='true'] { border-color: #f59e0b; color: #f59e0b; }
+.timeline-header .step-marker-btn { padding: 0 7px; }
 
 .zoom-btn { width: 26px; height: 26px; }
 
@@ -885,6 +887,27 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 }
 .ruler-mark.major { border-left: 1px solid var(--border-color); }
 .ruler-mark.ten { border-left: 1px solid rgba(29, 114, 226, 0.4); }
+/* A step marker: a flag on the ruler where an exported step ends. */
+.ruler-step-marker {
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 100%;
+  margin-left: -1px;
+  padding: 0;
+  border: 0;
+  border-left: 2px solid #f59e0b;
+  background: linear-gradient(#f59e0b, #f59e0b) no-repeat 0 2px / 8px 8px;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.ruler-step-marker:hover,
+.ruler-step-marker:focus-visible {
+  background-size: 10px 10px;
+  outline: none;
+}
+
 .ruler-label {
   position: absolute; top: 4px; left: 4px;
   font-family: var(--font-main);
@@ -1419,7 +1442,8 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   color: var(--kcs-text-primary);
 }
 
-.timeline-header .crop-btn {
+.timeline-header .crop-btn,
+.timeline-header .step-marker-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;

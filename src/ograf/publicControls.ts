@@ -1,5 +1,5 @@
 import type { SceneData, SceneLayer } from '../types/composition';
-import { limitLength } from '../utils/layers/textFit';
+import { limitLength } from '../utils/layers/layoutModifiers';
 import type {
   OGrafAssetPlan,
   OGrafExportOptions,

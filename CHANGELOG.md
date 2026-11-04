@@ -8,6 +8,31 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+- Layout modifiers (Inspector → Properties → MODIFIERS), live in the editor and in the exported OGraf graphic, each one a checkbox:
+  - Text Box: a text keeps a width (it shrinks, then squeezes), aligns left, centre or right, and caps its characters (also the OGraf field's limit).
+  - Hide When Empty: an empty text hides, with every shape sized to it.
+  - Auto Size: a box sizes to one or more texts (a title and a subtitle) with padding, between a minimum and a maximum width, growing from either edge or the centre; it can fit the height too.
+  - Auto Follow: a layer sits next to another layer's edge and moves as it grows, sideways and (optionally) up and down.
+  - Look At: a layer turns to face another layer.
+  - Justify: a group keeps its layers left, centred or right on its origin as they resize.
+  - Repeater: copies in a line, a grid or a ring, each one offset, turned, scaled, faded and delayed a step further.
+- Track Matte feather, strength and gradient angle can be keyed: a keyframe button beside each field, and Track Matte rows on the timeline.
+- Step markers (the flag button on the timeline, at the playhead) split a sequence into OGraf steps: each Next in a playout plays to the next marker and holds.
+- Crop ends the sequence at the playhead, and DURATION shows the new length (two decimals: 60 frames at 120 fps read 0.5 s).
+- The autosave delay is set in the Project panel.
+
+### Changed
+- A dragged layer also snaps by its own position, so a text lands on X/Y = 0.
+- New shapes drawn one after another differ in colour; a new text is 72 px.
+- Inspector cards (Text, Modifiers, Track Matte) start closed on each layer.
+- Large scenes: layers re-render only when they change, a selection of more than 200 layers is framed by one box, and a large selection no longer mounts every timeline row (Select All on 3000 layers: playback 6 → 18 fps).
+
+### Fixed
+- A scene of more than 2,500 layers was refused on reload (the limit counted layers and their tracks), so the editor opened empty and the next autosave overwrote the work. The limit now counts layers (5,000), and a saved scene the editor cannot open is kept in its own storage key, with a message.
+- Ctrl+Z / Ctrl+Y work while a slider, checkbox or list still has focus.
+- Select All on a large scene took seconds.
+
 ## [1.1.0-rc.6] - 2026-10-30
 
 The sixth release candidate of 1.1.0: rc.5 with the fixes from its manual QA,

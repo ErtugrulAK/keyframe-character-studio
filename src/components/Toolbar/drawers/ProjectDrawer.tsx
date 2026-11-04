@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useState } from 'react';
 import { Library } from 'lucide-react';
 import { NumberField } from '../../Inspector/inputs/NumberField';
 import { useAnimatorSlice } from '../../../context/useAnimator';
+import { MAX_AUTOSAVE_SECONDS, MIN_AUTOSAVE_SECONDS } from '../../../utils/persistence/autosaveInterval';
 import { validateImportedDocument } from '../../../utils/persistence/importValidation';
 import { createIndexedDbBackend, createProjectLibrary, type ProjectLibrary } from '../../../utils/persistence/projectLibrary';
 
@@ -9,7 +10,7 @@ import { createIndexedDbBackend, createProjectLibrary, type ProjectLibrary } fro
 const GraphicLibraryDialog = lazy(() => import('../../Header/GraphicLibraryDialog').then((module) => ({ default: module.GraphicLibraryDialog })));
 
 export const ProjectDrawer: React.FC = () => {
-  const { projectResolution, setProjectResolution, sceneTitle, exportProject, importProject, addProjectTemplate, showToast } = useAnimatorSlice('projectResolution', 'setProjectResolution', 'sceneTitle', 'exportProject', 'importProject', 'addProjectTemplate', 'showToast');
+  const { projectResolution, setProjectResolution, sceneTitle, exportProject, importProject, addProjectTemplate, showToast, autosaveIntervalSeconds, setAutosaveIntervalSeconds } = useAnimatorSlice('projectResolution', 'setProjectResolution', 'sceneTitle', 'exportProject', 'importProject', 'addProjectTemplate', 'showToast', 'autosaveIntervalSeconds', 'setAutosaveIntervalSeconds');
   /** The graphic library, created on first use (IndexedDB is opened only then). */
   const [library, setLibrary] = useState<ProjectLibrary | null>(null);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
@@ -105,6 +106,26 @@ export const ProjectDrawer: React.FC = () => {
             value={projectResolution.height}
             onValue={(height) => { if (height >= 1) setProjectResolution((p) => ({ ...p, height: Math.round(height) })); }}
           />
+        </div>
+      </div>
+
+      {/* The autosave delay: this browser's preference, written when the edit ends. */}
+      <div className="project-section">
+        <label className="form-label project-field-label" htmlFor="project-autosave-interval">Autosave</label>
+        <div className="project-autosave-row" title={`Autosave writes changes within this many seconds of the first change (${MIN_AUTOSAVE_SECONDS}–${MAX_AUTOSAVE_SECONDS}).`}>
+          <span className="project-autosave-text">Save changes within</span>
+          <NumberField
+            id="project-autosave-interval"
+            className="input-control project-num-input project-autosave-input"
+            aria-label="Autosave interval in seconds"
+            commit="blur"
+            min={MIN_AUTOSAVE_SECONDS}
+            max={MAX_AUTOSAVE_SECONDS}
+            step={1}
+            value={autosaveIntervalSeconds}
+            onValue={setAutosaveIntervalSeconds}
+          />
+          <span className="project-autosave-text">seconds</span>
         </div>
       </div>
     </div>

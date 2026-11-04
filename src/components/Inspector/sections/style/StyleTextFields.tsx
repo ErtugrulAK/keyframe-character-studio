@@ -29,7 +29,7 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({
   if (!applies) return null;
 
   return (
-    <StyleCard title="TEXT" collapsible retainKey="text">
+    <StyleCard key={`text:${selectedPart.id}`} title="TEXT" collapsible retainKey={`text:${selectedPart.id}`}>
       {/* UI CARD CUSTOMIZATION FIELDS */}
       {selectedPart.type === 'custom_card' && (
         <>

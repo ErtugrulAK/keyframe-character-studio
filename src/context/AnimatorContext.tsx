@@ -1044,6 +1044,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setCurrentFrame,
     setIsPlaying,
     requestHistoryBaseline: requestBaselineReset,
+    onRestoreRefused: (message) => showToast(message, 'error'),
   });
 
 

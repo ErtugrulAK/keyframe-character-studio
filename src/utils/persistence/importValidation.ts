@@ -754,10 +754,11 @@ const isLegacyProject = (value: unknown): value is LegacyProjectDocument => {
   return Array.isArray(record.tracks) && Array.isArray(record.characterParts);
 };
 
+/** The larger of the layer and track counts (each layer has one track). */
 const declaredLayerCount = (document: ImportedDocument): number =>
   document.kind === 'scene'
-    ? document.scene.layers.length + document.scene.tracks.length
-    : document.project.characterParts.length + document.project.tracks.length;
+    ? Math.max(document.scene.layers.length, document.scene.tracks.length)
+    : Math.max(document.project.characterParts.length, document.project.tracks.length);
 
 /**
  * Validates raw imported text.

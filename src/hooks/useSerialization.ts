@@ -436,7 +436,16 @@ interface UseSerializationOptions {
    * the new S0: the restore is initialization, never a user-undoable change.
    */
   requestHistoryBaseline?: () => void;
+  /**
+   * The saved scene could not be restored (its reason). The editor starts
+   * empty, and the refused copy is kept under `AUTOSAVE_REFUSED_STORAGE_KEY`
+   * so the next autosave cannot destroy it.
+   */
+  onRestoreRefused?: (message: string) => void;
 }
+
+/** Where a saved scene the restore refused is kept, so a later autosave cannot overwrite the only copy. */
+export const AUTOSAVE_REFUSED_STORAGE_KEY = `${AUTOSAVE_STORAGE_KEY}_REFUSED`;
 
 /**
  * Bounded wait a manual save gives the shared autosave lock before
@@ -571,6 +580,7 @@ export const useSerialization = ({
   setCurrentFrame,
   setIsPlaying,
   requestHistoryBaseline = noopRequestHistoryBaseline,
+  onRestoreRefused,
 }: UseSerializationOptions): UseSerializationApi => {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
@@ -606,6 +616,11 @@ export const useSerialization = ({
   const autosavePausedRef = useRef<boolean>(false);
   const restoreDecidedRef = useRef<boolean>(false);
   const restoreAppliedRef = useRef<boolean>(false);
+  // The latest callback, read by the one-shot restore without re-running it.
+  const onRestoreRefusedRef = useRef(onRestoreRefused);
+  useEffect(() => {
+    onRestoreRefusedRef.current = onRestoreRefused;
+  }, [onRestoreRefused]);
 
   // The SAFE-01 read-compare-write runs as one critical section
   // inside the Web Lock named after the guarded key. manualPendingRef keeps a
@@ -649,7 +664,16 @@ export const useSerialization = ({
         // instead of being applied, and the defaults stay in place.
         const validation = validateImportedDocument(saved);
         if (!validation.ok) {
-          console.warn('[Storage] Autosave restore refused:', validation.diagnostics[0]?.code, validation.diagnostics[0]?.message);
+          const reason = validation.diagnostics[0];
+          console.warn('[Storage] Autosave restore refused:', reason?.code, reason?.message);
+          let kept = false;
+          try {
+            localStorage.setItem(AUTOSAVE_REFUSED_STORAGE_KEY, saved);
+            kept = true;
+          } catch {
+            kept = false;
+          }
+          onRestoreRefusedRef.current?.(`The saved scene could not be opened: ${reason?.message ?? 'it is not a valid scene'}${kept ? ' A copy was kept in this browser.' : ''}`);
           return;
         }
 

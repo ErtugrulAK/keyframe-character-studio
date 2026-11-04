@@ -1,3 +1,4 @@
+import { resetTransforms } from '../utils/layers/resetTransform';
 import { stagePointer } from '../utils/editor/stagePointer';
 import { AnimatorContext, AnimatorStoreContext, createAnimatorStore } from './useAnimator';
 import React, { useState, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
@@ -187,6 +188,8 @@ export interface AnimatorContextType {
   setLayersLocked: (partIds: readonly string[], locked: boolean) => void;
   /** Turns a basic shape into an editable path layer in place (one undo step); false when refused (toast says why). */
   convertToEditablePath: (partId: string) => boolean;
+  /** Reset Transform: the selected layers return to the pose they were made with (one undo step). */
+  resetSelectedTransforms: () => void;
   /** Writes a path layer's path (one undo step, or part of an open batch). */
   setPartPath: (partId: string, path: BezierPath) => void;
   /** The selected point of the selected path layer, shared by the canvas and the Inspector. */
@@ -810,6 +813,19 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     showToast,
   });
 
+  const resetSelectedTransforms = useCallback(() => {
+    const ids = selectedPartIds.length > 0 ? selectedPartIds : selectedPartId ? [selectedPartId] : [];
+    const locked = ids.filter((id) => tracks.find((track) => track.partId === id)?.locked);
+    if (locked.length > 0) {
+      showToast('A selected layer is locked. Unlock it to reset its transform.', 'error');
+      return;
+    }
+    const result = resetTransforms(characterParts, tracks, ids, activeTemplateId);
+    if (!result) return;
+    editSetCharacterParts(result.parts);
+    editSetTracks(result.tracks);
+  }, [selectedPartIds, selectedPartId, tracks, characterParts, activeTemplateId, editSetCharacterParts, editSetTracks, showToast]);
+
   const { matteReturnTargetId, selectMatteSource, backToMatteTarget } = useMatteNavigation({
     characterParts,
     selectedPartId,
@@ -1207,6 +1223,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     toggleTrackLock,
     setLayersLocked,
     convertToEditablePath,
+    resetSelectedTransforms,
     setPartPath,
     pathVertex,
     selectPathVertex,

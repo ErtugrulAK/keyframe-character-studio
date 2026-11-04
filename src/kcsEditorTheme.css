@@ -94,6 +94,11 @@ body { font-family: Inter, 'Segoe UI', sans-serif; }
 button, input, select, textarea { border-radius: var(--kcs-radius-control); }
 button { transition: background-color var(--kcs-motion-fast) ease, border-color var(--kcs-motion-fast) ease, color var(--kcs-motion-fast) ease, opacity var(--kcs-motion-fast) ease; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--kcs-border-focus); outline-offset: 2px; }
+/* A text field shows its focus by its own border (or underline) and caret; the
+   extra ring around a search, rename or number field read as a stray blue box.
+   Chromium treats every text field as keyboard-focused, so this is the one rule. */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='button']):focus-visible,
+textarea:focus-visible { outline: none; }
 
 .app-container { background: var(--kcs-bg-app); }
 .main-layout { background: var(--kcs-bg-canvas); }

@@ -45,11 +45,12 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     setLayersLocked,
     toggleTrackEditVisibility,
     convertToEditablePath,
+    resetSelectedTransforms,
   } = useAnimatorSlice(
     'appMode', 'characterParts', 'tracks', 'selectedPartId', 'selectedPartIds', 'setSelectedPartId',
     'setSelectedPartIds', 'handleSelectPart', 'deletePart', 'copySelectedPart', 'pasteCopiedPart',
     'duplicateSelectedPart', 'clipboardData', 'reorderParts', 'booleanOperandEditingGroupId',
-    'setBooleanOperandEditingGroupId', 'setLayersLocked', 'toggleTrackEditVisibility', 'convertToEditablePath',
+    'setBooleanOperandEditingGroupId', 'setLayersLocked', 'toggleTrackEditVisibility', 'convertToEditablePath', 'resetSelectedTransforms',
   );
   const { selectedBooleanGroup, dissolveBooleanGroup } = useBooleanAuthoring();
   const { selectedGroup, canGroup, groupSelection, ungroupSelection } = useLayerGrouping();
@@ -163,8 +164,11 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     // listed, disabled, so the reason is one hover away.
     if (single && primaryPart && isConvertibleShapeType(primaryPart.type)) {
       const blocked = shapeToPathBlockReason(primaryPart, tracks) ?? (primaryTrack?.locked ? 'This layer is locked.' : null);
-      layerActions.push({ id: 'convert-to-path', label: 'Convert to Editable Path', disabled: Boolean(blocked), ...(blocked ? { title: blocked } : {}), run: () => { convertToEditablePath(primaryPart.id); } });
+      layerActions.push({ id: 'convert-to-path', label: 'Shape to Path', disabled: Boolean(blocked), ...(blocked ? { title: blocked } : {}), run: () => { convertToEditablePath(primaryPart.id); } });
     }
+
+    // Back to the pose the layer was made with (every selected layer).
+    if (hasPrimary) layerActions.push({ id: 'reset-transform', label: 'Reset Transform', run: resetSelectedTransforms });
 
     const groupActions: ContextMenuGroup = [];
     if (selectedGroup) groupActions.push({ id: 'ungroup', label: 'Ungroup', run: ungroupSelection });
@@ -183,6 +187,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     copySelectedPart,
     canGroup,
     convertToEditablePath,
+    resetSelectedTransforms,
     deleteSelection,
     duplicateSelectedPart,
     groupSelection,

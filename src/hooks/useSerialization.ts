@@ -1,3 +1,4 @@
+import { isHomeTransform } from '../utils/layers/resetTransform';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AnimationTrackData, CharacterPart, Track, MotionTemplate, PropertyKeyframe } from '../types/animator';
 import type { PersistedTrackState, SceneCoordinateSystem, SceneData, SceneLayer } from '../types/composition';
@@ -119,6 +120,7 @@ function toSceneData(
     ...(p.fitToText ? { fitToText: cloneFitToText(p.fitToText) } : {}),
     ...(p.follow ? { follow: { ...p.follow } } : {}),
     ...(p.lookAt ? { lookAt: { ...p.lookAt } } : {}),
+    ...(p.homeTransform ? { homeTransform: { ...p.homeTransform } } : {}),
     ...(p.justify ? { justify: { ...p.justify } } : {}),
     ...(p.repeater ? { repeater: { ...p.repeater } } : {}),
     ...(p.effects?.length ? { effects: p.effects } : {}),
@@ -259,6 +261,7 @@ function fromSceneData(
     ...(l.fitToText && typeof l.fitToText === 'object' && typeof l.fitToText.textLayerId === 'string' ? { fitToText: cloneFitToText(l.fitToText) } : {}),
     ...(l.follow && typeof l.follow === 'object' && typeof l.follow.targetLayerId === 'string' ? { follow: { ...l.follow } } : {}),
     ...(l.lookAt && typeof l.lookAt === 'object' && typeof l.lookAt.targetLayerId === 'string' ? { lookAt: { ...l.lookAt } } : {}),
+    ...(isHomeTransform(l.homeTransform) ? { homeTransform: { ...l.homeTransform } } : {}),
     ...(l.justify && typeof l.justify === 'object' ? { justify: { ...l.justify } } : {}),
     ...(l.repeater && typeof l.repeater === 'object' ? { repeater: { ...l.repeater } } : {}),
     ...(l.effects?.length ? { effects: l.effects.map((effect) => ({ ...effect })) } : {}),

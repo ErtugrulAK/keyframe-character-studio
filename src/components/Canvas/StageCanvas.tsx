@@ -26,6 +26,7 @@ import {
 } from '../../utils/geometry/containerMath';
 import { stackingOrder } from '../../utils/layers/stackingOrder';
 import { resolveMarqueeSelection, resolveStageSelectionTarget } from '../../utils/layers/layerGrouping';
+import { getPartWorldBounds } from '../../utils/geometry/bounds';
 import { collectArrangeTargets } from '../../utils/layers/vectorArrange';
 import {
   collectLayerSnapCandidates,
@@ -906,6 +907,46 @@ export const StageCanvas: React.FC = () => {
     [isDragging, dragMode, dragStart, clientToSVG, clientToStage, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, updateCurrentTransform, shapeCreationStart, pendingShapeType, isScaleLocked, snapEnabled, setCropRegion, projectResolution]
   );
 
+  /**
+   * What a marquee box selects: its hits as the CANONICAL selection — a
+   * container when the children it enclosed belong to one (and no child border
+   * is drawn for a normalized group), the layers themselves only when the user
+   * is already working inside the group. The release commits it; while the box
+   * is dragged the same answer is previewed.
+   */
+  const marqueeSelectionOf = useCallback((rect: { x: number; y: number; w: number; h: number }): string[] => {
+    const trackOf = new Map(tracks.map((track) => [track.partId, track]));
+    const hits = getPartsInMarquee(
+      characterParts,
+      (id) => getComputedTransform(id, currentFrame),
+      rect,
+      EDITOR_CAMERA_CENTER.x,
+      EDITOR_CAMERA_CENTER.y,
+      (part) => (
+        trackOf.get(part.id)?.editVisible !== false
+        // A locked layer is not picked by the box (nor by a click).
+        && !trackOf.get(part.id)?.locked
+        && (!part.booleanGroupId || part.booleanGroupId === booleanOperandEditingGroupId)
+        && (!booleanOperandEditingGroupId || !part.booleanOperandIds?.length)
+      ),
+    );
+    return resolveMarqueeSelection(characterParts, hits, marqueeSelectionOriginRef.current);
+  }, [characterParts, tracks, currentFrame, getComputedTransform, booleanOperandEditingGroupId]);
+
+  /** The boxes of the layers the marquee would select now (live preview). */
+  const marqueePreviewBoxes = useMemo(() => {
+    if (!marqueeRect) return [];
+    const partById = new Map(characterParts.map((part) => [part.id, part]));
+    // The marquee origin ref is set when the box starts; the preview reads it during the drag.
+    // oxlint-disable-next-line react/refs
+    return marqueeSelectionOf(marqueeRect).flatMap((id) => {
+      const part = partById.get(id);
+      if (!part) return [];
+      const bounds = getPartWorldBounds(part, getComputedTransform(id, currentFrame), EDITOR_CAMERA_CENTER.x, EDITOR_CAMERA_CENTER.y);
+      return Number.isFinite(bounds.minX) ? [{ id, ...bounds }] : [];
+    });
+  }, [marqueeRect, marqueeSelectionOf, characterParts, getComputedTransform, currentFrame]);
+
   const handleMouseUp = useCallback((commitShape: boolean = true) => {
     if (dragMode === 'shape_create') {
       if (commitShape && shapeCreationPreview && pendingShapeType && pendingShapeName) {
@@ -921,25 +962,7 @@ export const StageCanvas: React.FC = () => {
     }
 
     if (dragMode === 'marquee' && marqueeRect) {
-      const hits = getPartsInMarquee(
-        characterParts,
-        (id) => getComputedTransform(id, currentFrame),
-        marqueeRect,
-        EDITOR_CAMERA_CENTER.x,
-        EDITOR_CAMERA_CENTER.y,
-        (part) => (
-          tracks.find((track) => track.partId === part.id)?.editVisible !== false
-          // A locked layer is not picked by the box (nor by a click).
-          && !tracks.find((track) => track.partId === part.id)?.locked
-          && (!part.booleanGroupId || part.booleanGroupId === booleanOperandEditingGroupId)
-          && (!booleanOperandEditingGroupId || !part.booleanOperandIds?.length)
-        ),
-      );
-      // The box's hits become the CANONICAL selection — a container when
-      // the children it enclosed belong to one (and no child border is drawn for
-      // a normalized group), the layers themselves only when the user is already
-      // working inside the group.
-      const selected = resolveMarqueeSelection(characterParts, hits, marqueeSelectionOriginRef.current);
+      const selected = marqueeSelectionOf(marqueeRect);
       if (selected.length > 0) {
         setSelectedPartIds(selected);
         setSelectedPartId(selected[selected.length - 1]);
@@ -963,7 +986,7 @@ export const StageCanvas: React.FC = () => {
     lastDragPointerRef.current = null;
     setDragMode(null);
     setMarqueeRect(null);
-  }, [dragMode, shapeCreationPreview, pendingShapeType, pendingShapeName, addCustomPart, startBatchInteraction, marqueeRect, characterParts, currentFrame, getComputedTransform, tracks, isDragging, endBatchInteraction, setSelectedPartIds, setSelectedPartId, booleanOperandEditingGroupId]);
+  }, [dragMode, shapeCreationPreview, pendingShapeType, pendingShapeName, addCustomPart, startBatchInteraction, marqueeRect, marqueeSelectionOf, isDragging, endBatchInteraction, setSelectedPartIds, setSelectedPartId]);
   useEffect(() => {
     handleMouseUpRef.current = handleMouseUp;
   }, [handleMouseUp]);
@@ -1647,6 +1670,35 @@ export const StageCanvas: React.FC = () => {
                   bounds={shapeCreationPreview.bounds}
                   outputOrigin={EDITOR_CAMERA_CENTER}
                 />
+              )}
+
+              {/* Marquee live preview: the layers the release will select. */}
+              {marqueePreviewBoxes.length > 0 && (
+                <g className="marquee-preview" data-testid="marquee-preview" pointerEvents="none">
+                  {(marqueePreviewBoxes.length > 200
+                    ? [{
+                        id: 'union',
+                        minX: Math.min(...marqueePreviewBoxes.map((box) => box.minX)),
+                        minY: Math.min(...marqueePreviewBoxes.map((box) => box.minY)),
+                        maxX: Math.max(...marqueePreviewBoxes.map((box) => box.maxX)),
+                        maxY: Math.max(...marqueePreviewBoxes.map((box) => box.maxY)),
+                      }]
+                    : marqueePreviewBoxes
+                  ).map((box) => (
+                    <rect
+                      key={box.id}
+                      data-preview-part-id={box.id}
+                      x={box.minX}
+                      y={box.minY}
+                      width={box.maxX - box.minX}
+                      height={box.maxY - box.minY}
+                      fill="none"
+                      stroke="var(--accent-cyan)"
+                      strokeWidth={1.5}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  ))}
+                </g>
               )}
 
               {/* Marquee Tool */}

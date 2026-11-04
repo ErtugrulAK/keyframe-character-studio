@@ -48,6 +48,12 @@ const recordSnapshot = (
   return import.meta.env.DEV ? deepFreeze(snapshot) : snapshot;
 };
 
+/** Which layers were selected; restored with a snapshot, never part of the scene. */
+export interface HistorySelection {
+  primary: string | null;
+  ids: string[];
+}
+
 interface UseHistoryOptions {
   tracks: Track[];
   setTracks: React.Dispatch<React.SetStateAction<Track[]>>;
@@ -61,6 +67,10 @@ interface UseHistoryOptions {
   documentState: HistoryDocumentState;
   /** Applies a document snapshot verbatim; must be stable (`useCallback`). */
   restoreDocumentState: (state: HistoryDocumentState) => void;
+  /** The selection on screen; undo puts back the selection an edit started from. */
+  selection?: HistorySelection;
+  /** Applies a remembered selection (must be stable). */
+  restoreSelection?: (selection: HistorySelection) => void;
 }
 
 /**
@@ -83,7 +93,24 @@ export const useHistory = ({
   setMotionTemplates,
   documentState,
   restoreDocumentState,
+  selection,
+  restoreSelection,
 }: UseHistoryOptions) => {
+  /**
+   * The selection around each edit, kept beside the snapshots (not inside them,
+   * so a selection change never makes two scenes differ): `before` is what was
+   * selected when the edit started, `after` what was selected when it ended.
+   * Undo restores `before` (the layers a Boolean was made from stay selected),
+   * redo restores `after`.
+   */
+  const selectionAroundRef = useRef(new WeakMap<HistoryState, { before?: HistorySelection; after?: HistorySelection }>());
+  const selectionRef = useRef<HistorySelection | undefined>(selection);
+  // oxlint-disable-next-line react/refs
+  selectionRef.current = selection;
+  /** The selection of the previous render: the one an edit in this render started from. */
+  const committedSelectionRef = useRef<HistorySelection | undefined>(selection);
+  const batchSelectionRef = useRef<HistorySelection | undefined>(undefined);
+  const selectionKey = selection ? `${selection.primary}|${selection.ids.join(',')}` : '';
   // Undo / Redo Stack State
   const [history, setHistory] = useState<HistoryState[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
@@ -143,6 +170,7 @@ export const useHistory = ({
     if (!isBatchInteractingRef.current) {
       isBatchInteractingRef.current = true;
       batchStartSnapshotRef.current = recordSnapshot(tracksRef.current, characterPartsRef.current, motionTemplates, documentStateRef.current);
+      batchSelectionRef.current = selectionRef.current;
     }
   }, [characterPartsRef, motionTemplates, tracksRef]);
 
@@ -159,6 +187,7 @@ export const useHistory = ({
         // Defensive bootstrap: if the stack is somehow empty, seed it with the
         // pre-interaction state so undo can always restore it.
         const base = trimmed.length === 0 ? [initialSnap] : trimmed;
+        selectionAroundRef.current.set(finalSnap, { before: batchSelectionRef.current, after: selectionRef.current });
         commitHistory([...base, finalSnap].slice(-50));
       }
     }
@@ -213,8 +242,16 @@ export const useHistory = ({
     }
 
     const trimmed = current.slice(0, historyIndexRef.current + 1);
+    selectionAroundRef.current.set(snap, { before: committedSelectionRef.current, after: selectionRef.current });
     commitHistory([...trimmed, snap].slice(-50));
   }, [tracks, characterParts, motionTemplates, documentStateKey, baselineResetToken, commitHistory]);
+
+  // Declared after the recording effect, so that effect still sees the
+  // selection of the previous render when an edit and a selection change land
+  // in the same render.
+  useEffect(() => {
+    committedSelectionRef.current = selectionRef.current;
+  }, [selectionKey]);
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
@@ -236,11 +273,13 @@ export const useHistory = ({
         // The document-level state goes back with the layers: restoring only the
         // layers would leave an imported frame rate or canvas on the old scene.
         if (targetState.document) restoreDocumentState(targetState.document);
+        const before = selectionAroundRef.current.get(historyRef.current[idx])?.before;
+        if (before && restoreSelection) restoreSelection(before);
         setHistoryIndex(idx - 1);
         historyIndexRef.current = idx - 1;
       }
     }
-  }, [endBatchInteraction, setTracks, setCharacterParts, setMotionTemplates, restoreDocumentState]);
+  }, [endBatchInteraction, setTracks, setCharacterParts, setMotionTemplates, restoreDocumentState, restoreSelection]);
 
   const redo = useCallback(() => {
     if (isBatchInteractingRef.current) {
@@ -257,11 +296,13 @@ export const useHistory = ({
           setMotionTemplates(targetState.motionTemplates);
         }
         if (targetState.document) restoreDocumentState(targetState.document);
+        const after = selectionAroundRef.current.get(targetState)?.after;
+        if (after && restoreSelection) restoreSelection(after);
         setHistoryIndex(idx + 1);
         historyIndexRef.current = idx + 1;
       }
     }
-  }, [endBatchInteraction, setTracks, setCharacterParts, setMotionTemplates, restoreDocumentState]);
+  }, [endBatchInteraction, setTracks, setCharacterParts, setMotionTemplates, restoreDocumentState, restoreSelection]);
 
   return {
     undo,

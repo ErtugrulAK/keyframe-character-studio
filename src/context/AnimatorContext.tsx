@@ -617,6 +617,13 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setActiveTemplateIdState(state.activeTemplateId);
   }, [setFps, setTotalFrames, setSceneTitleState, setActiveTemplateIdState]);
 
+  const historySelection = useMemo(() => ({ primary: selectedPartId, ids: selectedPartIds }), [selectedPartId, selectedPartIds]);
+  /** Undo/redo put back the selection an edit started from (only layers that exist then). */
+  const restoreHistorySelection = useCallback((selection: { primary: string | null; ids: string[] }) => {
+    setSelectedPartIds(selection.ids);
+    setSelectedPartId(selection.primary);
+  }, [setSelectedPartIds, setSelectedPartId]);
+
   // Recomputed every render so a snapshot always carries the values on screen;
   // `useHistory` compares its content, not its identity.
   const historyDocumentState: HistoryDocumentState = {
@@ -647,6 +654,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setMotionTemplates,
     documentState: historyDocumentState,
     restoreDocumentState,
+    selection: historySelection,
+    restoreSelection: restoreHistorySelection,
   });
 
 

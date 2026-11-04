@@ -856,6 +856,7 @@ export const StageCanvas: React.FC = () => {
             candidates: snapContext.candidates,
             thresholdWorld: SNAP_THRESHOLD_SCREEN_PX / snapContext.pxPerWorld,
             enabled: snapEnabled,
+            movingAnchor: { x: dragStart.initialTransform.x, y: dragStart.initialTransform.y },
           });
           snappedDx = resolution.delta.x;
           snappedDy = resolution.delta.y;

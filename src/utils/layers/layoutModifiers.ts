@@ -48,6 +48,8 @@ export interface TextFitSettings {
 export interface FitToTextSettings {
   /** The text layer this shape follows. */
   textLayerId: string;
+  /** More texts (a title and a subtitle): the shape takes the widest. */
+  extraTextLayerIds?: string[];
   /** Space on each side of the text, in scene pixels (default 24). */
   padding?: number;
   /** The narrowest the shape gets, in scene pixels. */
@@ -174,6 +176,14 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
     const extent = SIZABLE.indexOf(type) >= 0 ? shapeExtents[type] : undefined;
     return extent ? extent.maxX - extent.minX : undefined;
   };
+  /** Every text an Auto Size shape sizes to, the first one first. */
+  const fitTextIds = (settings: FitToTextSettings): string[] => {
+    const ids = [settings.textLayerId];
+    if (Array.isArray(settings.extraTextLayerIds)) {
+      for (const id of settings.extraTextLayerIds) if (typeof id === 'string' && ids.indexOf(id) < 0) ids.push(id);
+    }
+    return ids;
+  };
 
   /** The text cut to `maxLength` characters (whole code points). */
   function limitLength(text: string, maxLength: unknown): string {
@@ -259,7 +269,7 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
     for (const layer of layers) {
       if (layer.type !== 'custom_text') continue;
       const own = layer.textFit;
-      const shapes = sizers.filter((shape) => shape.fitToText!.textLayerId === layer.id);
+      const shapes = sizers.filter((shape) => fitTextIds(shape.fitToText!).indexOf(layer.id) >= 0);
       if (!own && shapes.length === 0) continue;
       if (own && own.hideWhenEmpty && !String(layer.textValue || '').trim()) {
         adjust(layer.id).hidden = true;
@@ -302,11 +312,19 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
     // 2. Shapes sized to a text.
     for (const shape of sizers) {
       const settings = shape.fitToText!;
-      const textWidth = textWidths[settings.textLayerId];
-      if (textWidth === undefined) continue;
-      const text = adjustments[settings.textLayerId];
-      if (text && text.hidden) {
-        adjust(shape.id).hidden = true;
+      // The widest of its texts; hidden only when every one of them is.
+      let textWidth: number | undefined;
+      let anyShown = false;
+      for (const id of fitTextIds(settings)) {
+        const width = textWidths[id];
+        if (width === undefined) continue;
+        const text = adjustments[id];
+        if (text && text.hidden) continue;
+        anyShown = true;
+        textWidth = textWidth === undefined ? width : Math.max(textWidth, width);
+      }
+      if (textWidth === undefined) {
+        if (!anyShown && fitTextIds(settings).some((id) => textWidths[id] !== undefined)) adjust(shape.id).hidden = true;
         continue;
       }
       const padding = Math.max(0, finite(settings.padding) ?? DEFAULT_PADDING);
@@ -648,7 +666,7 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
     return { ...scene, layers, tracks: scene.tracks ? tracks : scene.tracks };
   }
 
-  return { resolveLayout, applyLayout, applyLayoutToScene, mapTrack, measureTextWidth, limitLength, copyIdOf };
+  return { resolveLayout, applyLayout, applyLayoutToScene, mapTrack, measureTextWidth, limitLength, copyIdOf, fitTextIds };
 }
 
 /** The horizontal extent of every shape type with static geometry. */
@@ -666,7 +684,7 @@ export const SHAPE_EXTENTS: ShapeExtents = (() => {
 })();
 
 const layoutModifiers = createLayoutModifiers(SHAPE_EXTENTS);
-export const { resolveLayout, applyLayoutToScene, mapTrack, measureTextWidth, limitLength, copyIdOf } = layoutModifiers;
+export const { resolveLayout, applyLayoutToScene, mapTrack, measureTextWidth, limitLength, copyIdOf, fitTextIds } = layoutModifiers;
 
 type EditorPart = LayoutLayer & {
   name?: string;

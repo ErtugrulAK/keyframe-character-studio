@@ -3035,3 +3035,128 @@
 .details-tab-list[data-pointer="true"] .details-tab:focus-visible {
   outline: none;
 }
+
+/* MODIFIERS: one row per modifier the layer can take, switched on by its
+   checkbox; an active one opens its settings in the two-column field grid. */
+.modifier-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.modifier-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-xs) 0;
+  min-width: 0;
+}
+
+.modifier-group + .modifier-group {
+  border-top: 1px solid var(--border-color);
+}
+
+.modifier-group-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.modifier-group-header input[type='checkbox'] {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin: 1px 0 0;
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+}
+
+.modifier-group-header input[type='checkbox']:disabled {
+  cursor: not-allowed;
+}
+
+.modifier-group-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.modifier-group-name {
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.modifier-group.is-on .modifier-group-name {
+  color: var(--text-primary);
+}
+
+.modifier-group-hint,
+.modifier-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.modifier-group-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-xs);
+  padding-left: 23px;
+  min-width: 0;
+}
+
+.modifier-group-fields .input-control,
+.modifier-group-fields .select-control {
+  width: 100%;
+  min-width: 0;
+}
+
+.modifier-text-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 132px;
+  overflow-y: auto;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.modifier-text-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+  cursor: pointer;
+}
+
+.modifier-text-option > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modifier-text-option input[type='checkbox'] {
+  flex: none;
+  margin: 0;
+  accent-color: var(--accent-cyan);
+}
+
+.modifier-text-option.is-missing {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+@container (max-width: 300px) {
+  .modifier-group-fields {
+    grid-template-columns: minmax(0, 1fr);
+    padding-left: 0;
+  }
+}

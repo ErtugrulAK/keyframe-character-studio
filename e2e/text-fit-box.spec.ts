@@ -48,9 +48,11 @@ const expandCard = async (page: Page, title: string) => {
   if (await expand.count()) await expand.click();
 };
 
+const MODIFIER_LABELS: Record<string, string> = { textBox: 'Text Box', hideWhenEmpty: 'Hide When Empty', autoSize: 'Auto Size', follow: 'Auto Follow', justify: 'Justify', repeater: 'Repeater' };
+
 const addModifier = async (page: Page, kind: string) => {
   await expandCard(page, 'MODIFIERS');
-  await page.getByLabel('Add modifier').selectOption(kind);
+  await page.getByLabel(`${MODIFIER_LABELS[kind]} modifier`, { exact: true }).check();
 };
 
 test('a bar bound to a text hugs it, stops at its max width, and the text shrinks', async ({ page }) => {
@@ -63,7 +65,7 @@ test('a bar bound to a text hugs it, stops at its max width, and the text shrink
   await openDetailsTab(page, 'Properties');
   // Auto Size binds the nearest text above the shape.
   await addModifier(page, 'autoSize');
-  await expect(page.getByLabel('Fit to text layer')).toHaveValue('title');
+  await expect(page.getByRole('checkbox', { name: 'Size to Title' })).toBeChecked();
   await expect.poll(async () => (await widths(page)).bar).toBeLessThan(before.bar / 2);
   // Short text: the bar is the text plus 24 px on each side.
   const short = await widths(page);

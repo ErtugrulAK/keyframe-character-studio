@@ -14,13 +14,14 @@ const layer = (id: string, name: string, extra: Record<string, unknown>) => ({
   strokeColor: '#101218', ...extra,
 });
 
-async function seed(page: Page, tagX = 400) {
+async function seed(page: Page, tagX = 400, extraLayers: Array<Record<string, unknown>> = []) {
   const scene = {
     version: 1, coordinateSystem: 'project-unit-center-v1', width: 1920, height: 1080, fps: 30, totalFrames: 30,
     layers: [
       layer('bar', 'Bar', { type: 'custom_rect', fillColor: '#2563eb', scaleX: 6, scaleY: 1.6, y: 200, zIndex: 1 }),
       layer('tag', 'Tag', { type: 'custom_box', fillColor: '#f97316', x: tagX, zIndex: 2 }),
       layer('title', 'Title', { type: 'custom_text', textValue: 'Hi', fontSize: 72, fillColor: '#ffffff', textOrigin: 'center', y: 200, zIndex: 3 }),
+      ...extraLayers,
     ],
     tracks: [],
   };
@@ -46,11 +47,13 @@ const boxOf = (page: Page, id: string) => page.evaluate((partId) => {
 
 const select = (page: Page, name: string) => page.locator('.actor-node', { has: page.locator('.actor-name', { hasText: name }) }).first().click();
 
+const MODIFIER_LABELS: Record<string, string> = { textBox: 'Text Box', hideWhenEmpty: 'Hide When Empty', autoSize: 'Auto Size', follow: 'Auto Follow', justify: 'Justify', repeater: 'Repeater' };
+
 const addModifier = async (page: Page, kind: string) => {
   await openDetailsTab(page, 'Properties');
   const expand = page.getByRole('button', { name: 'Expand MODIFIERS', exact: true });
   if (await expand.count()) await expand.click();
-  await page.getByLabel('Add modifier').selectOption(kind);
+  await page.getByLabel(`${MODIFIER_LABELS[kind]} modifier`, { exact: true }).check();
 };
 
 const setTitle = async (page: Page, value: string) => {
@@ -129,4 +132,30 @@ test('a repeater paints its copies, and a copy picks the layer it repeats', asyn
   await expect(page.locator('.actor-node.selected .actor-name')).toHaveText('Tag');
   // The copies are not layers of the scene.
   await expect(page.locator('.actor-node .actor-name', { hasText: /^Tag \d/ })).toHaveCount(0);
+});
+
+test('Auto Size binds every text on the bar and takes the widest; the modifier is a checkbox', async ({ page }) => {
+  // A subtitle under the title, both on the bar.
+  await seed(page, 400, [layer('sub', 'Subtitle', { type: 'custom_text', textValue: 'A much longer subtitle line', fontSize: 36, fillColor: '#ffffff', textOrigin: 'center', y: 230, zIndex: 4 })]);
+  await select(page, 'Bar');
+  await addModifier(page, 'autoSize');
+  await expect(page.getByRole('checkbox', { name: 'Size to Title' })).toBeChecked();
+  await expect(page.getByRole('checkbox', { name: 'Size to Subtitle' })).toBeChecked();
+  // The subtitle is the wider text: the bar hugs it (24 px padding each side, at the stage's zoom).
+  const fitted = async () => {
+    const bar = (await boxOf(page, 'bar'))!;
+    const subtitle = (await boxOf(page, 'sub'))!;
+    return bar.width - subtitle.width;
+  };
+  await expect.poll(async () => (await fitted()) > 0).toBe(true);
+  const padding = await fitted();
+  // Unchecking the subtitle leaves the short title: the bar narrows.
+  const wide = (await boxOf(page, 'bar'))!.width;
+  await page.getByRole('checkbox', { name: 'Size to Subtitle' }).uncheck();
+  await expect.poll(async () => (await boxOf(page, 'bar'))!.width).toBeLessThan(wide - 50);
+  // The last text cannot be unchecked; the modifier itself turns off from its own checkbox.
+  await expect(page.getByRole('checkbox', { name: 'Size to Title' })).toBeDisabled();
+  await page.getByLabel('Auto Size modifier', { exact: true }).uncheck();
+  await expect(page.getByRole('checkbox', { name: 'Size to Title' })).toHaveCount(0);
+  expect(padding).toBeGreaterThan(0);
 });

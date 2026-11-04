@@ -71,6 +71,20 @@ describe('text box and auto size', () => {
     expect(right.bar.dx).toBeCloseTo(100);
   });
 
+  it('a shape sized to two texts takes the widest, and hides only when both are hidden', () => {
+    const subtitle = (textValue: string, extra: Record<string, unknown> = {}) => ({ id: 'sub', type: 'custom_text', textValue, fontSize: 20, ...extra });
+    const twoTexts = bar({ fitToText: { textLayerId: 'title', extraTextLayerIds: ['sub'], padding: 10, maxWidth: 220 } });
+    // Title 20 px, subtitle 80 px: 80 + 2 x 10.
+    expect(layout([text('Hi'), subtitle('x'.repeat(8)), twoTexts]).adjustments.bar.scaleXFactor).toBeCloseTo(100 / 120);
+    // Both fit the same room: a long subtitle shrinks like the title would.
+    expect(layout([text('Hi'), subtitle('x'.repeat(30)), twoTexts]).adjustments.sub.fontSize).toBeCloseTo(20 * (200 / 300));
+    const hide = { textFit: { hideWhenEmpty: true } };
+    const oneEmpty = layout([text('', hide), subtitle('x'.repeat(8)), twoTexts]).adjustments;
+    expect(oneEmpty.bar.hidden).toBeUndefined();
+    expect(oneEmpty.bar.scaleXFactor).toBeCloseTo(100 / 120);
+    expect(layout([text('', hide), subtitle('', hide), twoTexts]).adjustments.bar.hidden).toBe(true);
+  });
+
   it('an empty text with Hide When Empty hides itself and the shapes sized to it', () => {
     const { adjustments } = layout([text('  ', { textFit: { hideWhenEmpty: true } }), bar()]);
     expect(adjustments.title.hidden).toBe(true);
@@ -234,5 +248,20 @@ describe('deleting a layer a modifier reads', () => {
     expect(bar.fitToText).toBeUndefined();
     // It keeps the width it had: 22.4 px of text + 2 x 24 padding on its 120 px primitive.
     expect(bar.baseTransform.scaleX).toBeCloseTo((22.4 + 48) / 120);
+  });
+
+  it('a shape sized to two texts keeps the other one when one is deleted', () => {
+    const base = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+    const common = { pivot: { x: 0, y: 0 }, fillColor: '#fff', strokeColor: '#000', baseTransform: base };
+    const parts = [
+      { id: 'title', type: 'custom_text', name: 'Title', zIndex: 3, textValue: 'Hi', fontSize: 20, ...common },
+      { id: 'sub', type: 'custom_text', name: 'Sub', zIndex: 2, textValue: 'Subtitle', fontSize: 20, ...common },
+      { id: 'bar', type: 'custom_rect', name: 'Bar', zIndex: 1, ...common, fitToText: { textLayerId: 'title', extraTextLayerIds: ['sub'], padding: 10 } },
+    ];
+    const tracks = parts.map((part) => ({ id: `t-${part.id}`, partId: part.id, name: part.name, keyframes: [], channels: {}, color: '#fff', visible: true, locked: false }));
+    const plan = planPartDeletion(parts as never, tracks as never, ['title']);
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    expect(plan.parts.find((part) => part.id === 'bar')!.fitToText).toEqual({ textLayerId: 'sub', padding: 10 });
   });
 });

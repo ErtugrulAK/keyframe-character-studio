@@ -1,7 +1,7 @@
 import type { CharacterPart, Track } from '../../types/animator';
 import { releaseChildrenOfDeletedParents } from './layerGrouping';
 import { resolveMatteSource } from './matte';
-import { compensateLayoutChange, mapTrack, measureTextWidth, resolveLayout } from './layoutModifiers';
+import { compensateLayoutChange, fitTextIds, mapTrack, measureTextWidth, resolveLayout } from './layoutModifiers';
 
 interface DeletePartsResult {
   parts: CharacterPart[];
@@ -116,16 +116,26 @@ export const planPartDeletion = (
   // A layer that followed or sized to a deleted layer lets go of it and stays
   // as it is on the stage: where it was (its x was the gap to that layer's
   // edge), and as wide as it was (the fitted width becomes its own).
-  const widths = removed.parts.some((part) => part.fitToText && closure.has(part.fitToText.textLayerId))
+  // An Auto Size shape keeps its other texts; it lets go only when all of them go.
+  const keptTexts = (part: CharacterPart) => (part.fitToText ? fitTextIds(part.fitToText).filter((id) => !closure.has(id)) : []);
+  const losesFit = (part: CharacterPart) => Boolean(part.fitToText) && keptTexts(part).length === 0;
+  const losesText = (part: CharacterPart) => Boolean(part.fitToText) && fitTextIds(part.fitToText!).some((id) => closure.has(id));
+  const widths = removed.parts.some(losesFit)
     ? resolveLayout(release.parts, (layer) => (layer as CharacterPart).baseTransform, measureTextWidth).adjustments
     : {};
   const bakedWidths: Record<string, number> = {};
   const unlinked = removed.parts.map((part) => {
     const dropFollow = part.follow && closure.has(part.follow.targetLayerId);
-    const dropFit = part.fitToText && closure.has(part.fitToText.textLayerId);
-    if (!dropFollow && !dropFit) return part;
+    const dropFit = losesFit(part);
+    const dropText = !dropFit && losesText(part);
+    if (!dropFollow && !dropFit && !dropText) return part;
     const next = { ...part };
     if (dropFollow) delete next.follow;
+    if (dropText) {
+      const [textLayerId, ...extra] = keptTexts(part);
+      next.fitToText = { ...part.fitToText!, textLayerId, extraTextLayerIds: extra.length > 0 ? extra : undefined };
+      if (!next.fitToText.extraTextLayerIds) delete next.fitToText.extraTextLayerIds;
+    }
     if (dropFit) {
       delete next.fitToText;
       const factor = widths[part.id]?.scaleXFactor;

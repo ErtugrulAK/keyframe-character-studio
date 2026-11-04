@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AnimationTrackData, CharacterPart, Track, MotionTemplate, PropertyKeyframe } from '../types/animator';
 import type { PersistedTrackState, SceneCoordinateSystem, SceneData, SceneLayer } from '../types/composition';
+import type { FitToTextSettings } from '../utils/layers/layoutModifiers';
 import { initializeIdCounter } from '../utils/layers/idGenerator';
 import { makeEmptyChannels, DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../utils/animation/defaults';
 import { convertLegacyKeyframesToChannels, fillChannelsFromLegacyKeyframes } from '../utils/animation/legacyKeyframeConversion';
@@ -19,6 +20,13 @@ import { ASSET_REF_PREFIX, createAssetStore, createIndexedDbAssetBackend, startA
  */
 const readOptionalNumber = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
 const readOptionalString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
+
+/** An Auto Size setting with its own copy of the extra text list (only the ids that are strings). */
+const cloneFitToText = (settings: FitToTextSettings): FitToTextSettings => {
+  const { extraTextLayerIds, ...rest } = settings;
+  const extra = Array.isArray(extraTextLayerIds) ? extraTextLayerIds.filter((id): id is string => typeof id === 'string') : [];
+  return extra.length > 0 ? { ...rest, extraTextLayerIds: extra } : rest;
+};
 /** A saved ISO timestamp, only when it actually parses to a valid date. */
 const readOptionalDate = (value: unknown): Date | undefined => {
   const text = readOptionalString(value);
@@ -108,7 +116,7 @@ function toSceneData(
     masks: p.masks,
     trackMatte: p.trackMatte,
     ...(p.textFit ? { textFit: { ...p.textFit } } : {}),
-    ...(p.fitToText ? { fitToText: { ...p.fitToText } } : {}),
+    ...(p.fitToText ? { fitToText: cloneFitToText(p.fitToText) } : {}),
     ...(p.follow ? { follow: { ...p.follow } } : {}),
     ...(p.justify ? { justify: { ...p.justify } } : {}),
     ...(p.repeater ? { repeater: { ...p.repeater } } : {}),
@@ -247,7 +255,7 @@ function fromSceneData(
     masks: l.masks,
     trackMatte: l.trackMatte,
     ...(l.textFit && typeof l.textFit === 'object' ? { textFit: { ...l.textFit } } : {}),
-    ...(l.fitToText && typeof l.fitToText === 'object' && typeof l.fitToText.textLayerId === 'string' ? { fitToText: { ...l.fitToText } } : {}),
+    ...(l.fitToText && typeof l.fitToText === 'object' && typeof l.fitToText.textLayerId === 'string' ? { fitToText: cloneFitToText(l.fitToText) } : {}),
     ...(l.follow && typeof l.follow === 'object' && typeof l.follow.targetLayerId === 'string' ? { follow: { ...l.follow } } : {}),
     ...(l.justify && typeof l.justify === 'object' ? { justify: { ...l.justify } } : {}),
     ...(l.repeater && typeof l.repeater === 'object' ? { repeater: { ...l.repeater } } : {}),

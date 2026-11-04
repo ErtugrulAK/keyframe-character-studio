@@ -1,3 +1,4 @@
+import { stagePointer } from '../utils/editor/stagePointer';
 import { AnimatorContext, AnimatorStoreContext, createAnimatorStore } from './useAnimator';
 import React, { useState, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import { ToastPortal } from '../components/Toast/ToastPortal';
@@ -662,6 +663,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setCharacterParts: editSetCharacterParts,
     setSelectedPartId,
     setSelectedPartIds,
+    pastePoint: stagePointer,
+    activeTemplateId,
+    currentFrame,
   });
 
 

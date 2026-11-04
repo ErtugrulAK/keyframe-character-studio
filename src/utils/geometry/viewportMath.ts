@@ -8,7 +8,10 @@ import type { CoordinatePoint } from './projectCoordinates';
 const CANVAS_CENTER_X = 300;
 const CANVAS_CENTER_Y = 240;
 
-export const clampZoom = (zoom: number): number => Math.min(3, Math.max(0.3, zoom));
+/** 10 % to 4000 %: close enough for pixel work, far enough for a whole big stage. */
+export const MIN_ZOOM = 0.1;
+export const MAX_ZOOM = 40;
+export const clampZoom = (zoom: number): number => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
 
 export interface StageBox {
   left: number;

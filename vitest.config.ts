@@ -25,6 +25,7 @@ const DOM_TESTS = [
   'src/tests/ografRuntimeAffine.test.ts',
   'src/tests/ografRuntimeParity.test.ts',
   'src/tests/ografV6Parity.test.ts',
+  'src/tests/pasteAtPointer.test.ts',
   'src/tests/perfMonitor.test.ts',
   'src/tests/presetExportImport.test.ts',
   'src/tests/projectTimebase.test.ts',

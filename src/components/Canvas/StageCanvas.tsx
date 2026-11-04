@@ -56,6 +56,7 @@ import { lockedLayerIds, lockedLayersRefusal } from '../../utils/layers/layerLoc
 import { useFreeformDraw, type FreeformFinishReason } from '../../hooks/useFreeformDraw';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
 import { CanvasCoordinateOverlay } from './overlays/CanvasCoordinateOverlay';
+import { rememberStagePointer } from '../../utils/editor/stagePointer';
 import { CanvasCoordinateReadout } from './overlays/CanvasCoordinateReadout';
 import { FreeformTangentOverlay } from './overlays/FreeformTangentOverlay';
 import { isFreeformTangentOverlayEligible } from '../../utils/geometry/freeformTangentEligibility';
@@ -768,9 +769,19 @@ export const StageCanvas: React.FC = () => {
   // the latest handler through a ref instead of closing over it (no dependency cycle).
   const handleMouseUpRef = useRef<(commitShape?: boolean) => void>(() => {});
 
+  /** Remembers the pointer over the stage (world units): Paste lands there. */
+  const handleStagePointerMove = useCallback((event: React.MouseEvent) => {
+    const { svgX, svgY } = clientToSVG(event.clientX, event.clientY);
+    rememberStagePointer(svgPointToWorld({ x: svgX, y: svgY }));
+  }, [clientToSVG]);
+
+  /** The last pointer of the drag, so a modifier key can re-solve it without a move. */
+  const lastDragPointerRef = useRef<{ clientX: number; clientY: number; buttons: number } | null>(null);
+
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!isDragging || !dragMode) return;
+      lastDragPointerRef.current = { clientX: e.clientX, clientY: e.clientY, buttons: e.buttons };
 
       if (e.buttons === 0) {
         handleMouseUpRef.current();
@@ -817,15 +828,19 @@ export const StageCanvas: React.FC = () => {
       if (dragMode === 'shape_create' && shapeCreationStart && pendingShapeType) {
         const distance = Math.hypot(e.clientX - shapeCreationStart.clientX, e.clientY - shapeCreationStart.clientY);
         if (distance >= 4) {
-          setShapeCreationPreview({
-            type: pendingShapeType,
-            bounds: getShapeCreationBounds(
-              { x: shapeCreationStart.svgX, y: shapeCreationStart.svgY },
-              { x: svgX, y: svgY },
-              // Shift draws an equal-sided shape (a square, a circle), as in other editors.
-              pendingShapeType === 'custom_box' || e.shiftKey,
-            ),
-          });
+          const start = { x: shapeCreationStart.svgX, y: shapeCreationStart.svgY };
+          // Shift draws an equal-sided shape (a square, a circle), as in other editors.
+          const drawn = getShapeCreationBounds(start, { x: svgX, y: svgY }, pendingShapeType === 'custom_box' || e.shiftKey);
+          // Alt draws from the centre: the press point is the middle of the shape.
+          const bounds = e.altKey
+            ? {
+                minX: start.x - drawn.width, maxX: start.x + drawn.width,
+                minY: start.y - drawn.height, maxY: start.y + drawn.height,
+                width: drawn.width * 2, height: drawn.height * 2,
+                centerX: start.x, centerY: start.y,
+              }
+            : drawn;
+          setShapeCreationPreview({ type: pendingShapeType, bounds });
         }
         return;
       }
@@ -883,6 +898,7 @@ export const StageCanvas: React.FC = () => {
         initialLocalY: dragInitialLocalY,
         scaleLocked: isScaleLocked,
         shiftKey: e.shiftKey,
+        altKey: e.altKey,
       });
       if (solved) updateCurrentTransform(solved.patch, solved.targetId);
     },
@@ -944,6 +960,7 @@ export const StageCanvas: React.FC = () => {
 
     if (isDragging) endBatchInteraction();
     setIsDragging(false);
+    lastDragPointerRef.current = null;
     setDragMode(null);
     setMarqueeRect(null);
   }, [dragMode, shapeCreationPreview, pendingShapeType, pendingShapeName, addCustomPart, startBatchInteraction, marqueeRect, characterParts, currentFrame, getComputedTransform, tracks, isDragging, endBatchInteraction, setSelectedPartIds, setSelectedPartId, booleanOperandEditingGroupId]);
@@ -954,6 +971,27 @@ export const StageCanvas: React.FC = () => {
   const handlePointerUp = useCallback(() => handleMouseUp(), [handleMouseUp]);
 
   const handlePointerCancel = useCallback(() => handleMouseUp(false), [handleMouseUp]);
+
+  // Shift (equal sides, aspect lock) and Alt (from the centre) apply the moment
+  // they are pressed or released, not on the next pointer move: the drag is
+  // re-solved at the pointer where it rests.
+  useEffect(() => {
+    if (!isDragging) return undefined;
+    const onModifier = (event: KeyboardEvent) => {
+      if (event.key !== 'Shift' && event.key !== 'Alt') return;
+      // Alt alone would focus the browser menu on release.
+      if (event.key === 'Alt') event.preventDefault();
+      const pointer = lastDragPointerRef.current;
+      if (!pointer) return;
+      handleMouseMove({ ...pointer, shiftKey: event.shiftKey, altKey: event.altKey } as MouseEvent);
+    };
+    window.addEventListener('keydown', onModifier);
+    window.addEventListener('keyup', onModifier);
+    return () => {
+      window.removeEventListener('keydown', onModifier);
+      window.removeEventListener('keyup', onModifier);
+    };
+  }, [isDragging, handleMouseMove]);
 
   useEffect(() => {
     if (isDragging) {
@@ -1417,6 +1455,7 @@ export const StageCanvas: React.FC = () => {
       onClickCapture={handleToolOwnedClickCapture}
       onDoubleClickCapture={handleToolOwnedDoubleClickCapture}
       onMouseDown={handleMouseDown}
+      onMouseMove={handleStagePointerMove}
       onContextMenu={handleContextMenu}
       onDragOver={handleDragOverStage}
       onDragLeave={handleDragLeaveStage}
@@ -1491,7 +1530,7 @@ export const StageCanvas: React.FC = () => {
         </defs>
 
         {(() => {
-          const zScale = 1 / Math.max(0.15, zoomLevel);
+          const zScale = 1 / Math.max(0.05, zoomLevel);
           const artX = outputOrigin.x - projectResolution.width / 2;
           const artY = outputOrigin.y - projectResolution.height / 2;
 

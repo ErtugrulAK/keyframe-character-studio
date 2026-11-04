@@ -95,6 +95,7 @@ npm run dev               # the editor → http://localhost:5173
 | `npm run check` | Lint, type check, unit tests and build |
 | `npx vitest run` | Unit and component tests |
 | `npm run test:e2e` | Playwright end-to-end tests in Chromium |
+| `npm run test:e2e:fast` | The same suite in about half the time: a production build and more workers |
 | `npm run validate:ograf` | Validate the OGraf fixture offline |
 
 Requires Node.js `^22.22.2 || ^24.15.0 || >=26.0.0`. The editor runs entirely in the browser: projects autosave in its storage and the Library keeps graphics in IndexedDB.

@@ -1,7 +1,7 @@
 /**
- * Manual QA round 4: Crop on a 120 fps, 1 s sequence whose last key is on
- * frame 60 left DURATION at 1 s. Crop now sets the sequence's own duration,
- * so the field reads 0.5 s.
+ * Manual QA round 4: Crop on a 120 fps, 1 s sequence with the playhead on
+ * frame 60 left DURATION at 1 s. Crop ends the sequence at the playhead and
+ * sets the sequence's own duration, so the field reads 0.5 s.
  */
 
 import React, { useEffect } from 'react';
@@ -43,7 +43,7 @@ describe('timeline Crop sets the sequence duration', () => {
   });
   afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
-  it('60 frames at 120 fps crop to 0.5 s', () => {
+  it('the playhead on frame 60 at 120 fps crops to 0.5 s; keys after it are kept', () => {
     const { ctx } = renderTimeline();
     act(() => {
       ctx().setFps(120);
@@ -57,13 +57,23 @@ describe('timeline Crop sets the sequence duration', () => {
       id: 'crop-track',
       partId: 'crop-part',
       keyframes: [],
-      channels: { x: [{ id: 'k0', frame: 0, value: 0 }, { id: 'k60', frame: 60, value: 100 }] },
+      channels: { x: [{ id: 'k0', frame: 0, value: 0 }, { id: 'k100', frame: 100, value: 100 }] },
     } as unknown as Track;
     act(() => { ctx().setTracks((previous) => [...previous, track]); });
-    act(() => { fireEvent.click(screen.getByTitle('Crop the sequence to the last keyframe')); });
+    act(() => { ctx().setCurrentFrame(60); });
+    act(() => { fireEvent.click(screen.getByTitle('Crop the sequence at the playhead')); });
 
     expect(ctx().totalFrames).toBe(60);
     expect(ctx().motionTemplates.find((template) => template.id === ctx().activeTemplateId)?.durationFrames).toBe(60);
     expect(duration()).toBe('0.5');
+    expect(ctx().tracks.find((candidate) => candidate.id === 'crop-track')?.channels.x.map((key) => key.frame)).toEqual([0, 100]);
+  });
+
+  it('on frame 0 there is nothing to keep: the sequence stays as it was', () => {
+    const { ctx } = renderTimeline();
+    act(() => { ctx().setTotalFrames(90); });
+    act(() => { ctx().setCurrentFrame(0); });
+    act(() => { fireEvent.click(screen.getByTitle('Crop the sequence at the playhead')); });
+    expect(ctx().totalFrames).toBe(90);
   });
 });

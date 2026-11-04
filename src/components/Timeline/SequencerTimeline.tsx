@@ -5,7 +5,7 @@ import { NumberField } from '../Inspector/inputs/NumberField';
 import { useAnimator } from '../../context/useAnimator';
 import { commitWorkspaceLayout, createFrameEase, prefersReducedMotion, REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, type FrameEase } from '../../utils/editor/workspaceLayout';
 import { type TrackChannel, type AnimationChannel } from '../../types/animator';
-import { computeMaxFrame, resolveChannelAnimationState, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/editor/timelineMetrics';
+import { resolveChannelAnimationState, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/editor/timelineMetrics';
 import { channelArmValue, resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../../utils/animation/channelKeyframeGroups';
 import { evaluateTrackMatte } from '../../utils/layers/matte';
 import { partIndexOf } from '../../utils/layers/partBinding';
@@ -480,13 +480,15 @@ export const SequencerTimeline: React.FC = () => {
   }, [isMarqueeActive, updateMarquee, endMarquee]);
 
   const handleCropToContent = () => {
-    // Timeline length accounts for BOTH legacy keyframes and canonical
-    // channel keyframes (max across all templates — same behavior as before,
-    // now via the pure, tested computeMaxFrame helper).
-    // The sequence's own duration changes with it, so DURATION shows the
-    // cropped length (60 frames at 120 fps is 0.5 s).
-    const maxFrame = computeMaxFrame(tracks);
-    const durationFrames = maxFrame > 0 ? maxFrame : 30;
+    // The sequence ends at the playhead (After Effects' trim to the current
+    // time): keys after it are kept, only outside the sequence. Its own
+    // duration changes with it, so DURATION shows the cropped length (60
+    // frames at 120 fps is 0.5 s). A playhead on frame 0 has nothing to keep.
+    const durationFrames = Math.round(currentFrame);
+    if (durationFrames < 1) {
+      showToast('Move the playhead to where the sequence should end, then Crop.', 'info');
+      return;
+    }
     updateMotionTemplateDuration(activeTemplateId, durationFrames);
     setTotalFrames(durationFrames);
   };
@@ -1409,7 +1411,7 @@ export const SequencerTimeline: React.FC = () => {
                 }} title={`Set the sequence to ${sec} seconds`} aria-pressed={activeSequenceDurationFrames === secondsToFrame(sec, fps)}>{sec}s</button>
               ))}
             </div>
-            <button className="fit-pill-btn crop-btn" onClick={handleCropToContent} title="Crop the sequence to the last keyframe">
+            <button className="fit-pill-btn crop-btn" onClick={handleCropToContent} title="Crop the sequence at the playhead">
               <Scissors size={12} aria-hidden="true" /><span>Crop</span>
             </button>
           </div>

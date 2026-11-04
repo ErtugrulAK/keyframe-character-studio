@@ -1672,6 +1672,36 @@ export const StageCanvas: React.FC = () => {
                 />
               )}
 
+              {/* Rotation ring: while the rotate handle is dragged, a circle
+                  around the pivot with the start and current angle, so the turn
+                  reads like a dial. Chrome only, never hit-tested. */}
+              {isDragging && dragMode === 'rotate' && dragStart && selectedTransform && (() => {
+                const pivot = { x: dragStart.initialTransform.x + EDITOR_CAMERA_CENTER.x, y: dragStart.initialTransform.y + EDITOR_CAMERA_CENTER.y };
+                const radius = Math.hypot(dragStart.x - pivot.x, dragStart.y - pivot.y);
+                if (!(radius > 0)) return null;
+                const startAngle = Math.atan2(dragStart.y - pivot.y, dragStart.x - pivot.x);
+                const turned = ((selectedTransform.rotation - dragStart.initialTransform.rotation) * Math.PI) / 180;
+                const end = startAngle + turned;
+                const at = (angle: number) => ({ x: pivot.x + radius * Math.cos(angle), y: pivot.y + radius * Math.sin(angle) });
+                const from = at(startAngle);
+                const to = at(end);
+                const sweep = Math.abs(turned) % (2 * Math.PI);
+                return (
+                  <g className="rotation-ring" data-testid="rotation-ring" pointerEvents="none">
+                    <circle cx={pivot.x} cy={pivot.y} r={radius} fill="none" stroke="rgba(255, 177, 59, 0.55)" strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+                    {sweep > 0.001 && (
+                      <path
+                        d={`M ${pivot.x} ${pivot.y} L ${from.x} ${from.y} A ${radius} ${radius} 0 ${sweep > Math.PI ? 1 : 0} ${turned > 0 ? 1 : 0} ${to.x} ${to.y} Z`}
+                        fill="rgba(255, 177, 59, 0.14)"
+                        stroke="none"
+                      />
+                    )}
+                    <line x1={pivot.x} y1={pivot.y} x2={from.x} y2={from.y} stroke="rgba(255, 255, 255, 0.35)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                    <line x1={pivot.x} y1={pivot.y} x2={to.x} y2={to.y} stroke="#ffb13b" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+                  </g>
+                );
+              })()}
+
               {/* Marquee live preview: the layers the release will select. */}
               {marqueePreviewBoxes.length > 0 && (
                 <g className="marquee-preview" data-testid="marquee-preview" pointerEvents="none">

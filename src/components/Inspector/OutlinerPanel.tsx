@@ -9,7 +9,7 @@ import { reparentBlockReason, type LayerDropPosition } from '../../utils/layers/
 import { relationshipParentId } from '../../utils/layers/partBinding';
 import { createLayerParentingActions } from '../../hooks/useLayerParenting';
 import { OUTLINER_COMMAND_EVENT, type OutlinerCommand } from '../../utils/layers/outlinerCommands';
-import { OutlinerRow, type OutlinerRowActions } from './OutlinerRow';
+import { OutlinerRow, type OutlinerDropKind, type OutlinerRowActions } from './OutlinerRow';
 import { useRetainedScrollTop, useRetainedUiState } from '../../hooks/useRetainedUiState';
 import { useRowWindow, type RowViewport } from '../../hooks/useRowWindow';
 import { searchLayers } from '../../utils/layers/layerSearch';
@@ -375,6 +375,15 @@ export const OutlinerPanel: React.FC = () => {
    * is a transform relationship ("Parent to"); a line between rows is a reorder,
    * and the hint also says when that reorder changes the parent.
    */
+  /** What the current drop would do (its colour); see `OutlinerDropKind`. */
+  const dropKind = ((): OutlinerDropKind | undefined => {
+    if (!draggingId || !dropTarget || dropTarget.blockedReason) return undefined;
+    const target = partById.get(dropTarget.id);
+    if (dropTarget.position === 'nest') return target?.isGroup ? 'group' : 'parent';
+    const dragged = partById.get(draggingId);
+    return (relationshipParentId(dragged) ?? null) === (relationshipParentId(target) ?? null) ? 'reorder' : 'reparent';
+  })();
+
   const dropHint = (() => {
     if (!draggingId || !dropTarget) return '';
     if (dropTarget.blockedReason) return `Cannot drop here: ${dropTarget.blockedReason}`;
@@ -525,6 +534,7 @@ export const OutlinerPanel: React.FC = () => {
                     dragging={draggingId === row.part.id}
                     dropPosition={dropTarget?.id === row.part.id ? dropTarget.position : null}
                     dropBlocked={dropTarget?.id === row.part.id && dropTarget.blockedReason !== null}
+                    dropKind={dropTarget?.id === row.part.id ? dropKind : undefined}
                     // The dragged row itself carries no label ("cannot be dropped onto
                     // itself" is noise under the pointer); the footer still says it.
                     dropLabel={dropTarget?.id === row.part.id && row.part.id !== draggingId && (dropTarget.position === 'nest' || dropTarget.blockedReason) ? dropHint : undefined}
@@ -542,7 +552,7 @@ export const OutlinerPanel: React.FC = () => {
       </div>
 
       <div className={`outliner-footer${dropHint || status ? '' : ' is-empty'}`}>
-        <span className={`outliner-drop-hint${dropTarget?.blockedReason ? ' is-blocked' : ''}`} data-testid="outliner-drop-hint" role="status" aria-live="polite">
+        <span className={`outliner-drop-hint${dropTarget?.blockedReason ? ' is-blocked' : dropKind ? ` drop-kind-${dropKind}` : ''}`} data-testid="outliner-drop-hint" role="status" aria-live="polite">
           {dropHint || status}
         </span>
       </div>

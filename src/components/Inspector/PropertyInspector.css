@@ -1629,7 +1629,8 @@
 
 .rgba-picker-alpha-fill {
   position: absolute;
-  inset: 0 auto 0 0;
+  inset: 0;
+  border-radius: inherit;
   pointer-events: none;
 }
 
@@ -2447,6 +2448,32 @@
 .outliner-drop-label.is-blocked {
   background: rgba(239, 68, 68, 0.24);
 }
+
+/*
+ * Each drop intent has its own colour, so a parent link never reads like a
+ * reorder: orange = becomes a child (Parent to), green = moves into a group,
+ * violet = reorders and changes the parent, blue = order only. Red (above)
+ * stays the refusal.
+ */
+.tree-node.drop-kind-parent { --drop-colour: #ff9f43; }
+.tree-node.drop-kind-group { --drop-colour: #34d399; }
+.tree-node.drop-kind-reparent { --drop-colour: #a78bfa; }
+.tree-node.drop-kind-reorder { --drop-colour: #4a8fe7; }
+
+.tree-node.drop-before[class*='drop-kind-'] { box-shadow: inset 0 2px 0 0 var(--drop-colour); }
+.tree-node.drop-after[class*='drop-kind-'] { box-shadow: inset 0 -2px 0 0 var(--drop-colour); }
+.tree-node.drop-nest[class*='drop-kind-'] {
+  outline-color: var(--drop-colour);
+  background: color-mix(in srgb, var(--drop-colour) 14%, transparent);
+}
+.tree-node[class*='drop-kind-'] .outliner-drop-label {
+  background: color-mix(in srgb, var(--drop-colour) 28%, transparent);
+}
+
+.outliner-drop-hint.drop-kind-parent { color: #ff9f43; }
+.outliner-drop-hint.drop-kind-group { color: #34d399; }
+.outliner-drop-hint.drop-kind-reparent { color: #a78bfa; }
+.outliner-drop-hint.drop-kind-reorder { color: #4a8fe7; }
 
 .tree-node .outliner-rename-input {
   flex: 1;

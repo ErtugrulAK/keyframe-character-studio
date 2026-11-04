@@ -481,8 +481,12 @@ export const SequencerTimeline: React.FC = () => {
     // Timeline length accounts for BOTH legacy keyframes and canonical
     // channel keyframes (max across all templates — same behavior as before,
     // now via the pure, tested computeMaxFrame helper).
+    // The sequence's own duration changes with it, so DURATION shows the
+    // cropped length (60 frames at 120 fps is 0.5 s).
     const maxFrame = computeMaxFrame(tracks);
-    setTotalFrames(maxFrame > 0 ? maxFrame : 30);
+    const durationFrames = maxFrame > 0 ? maxFrame : 30;
+    updateMotionTemplateDuration(activeTemplateId, durationFrames);
+    setTotalFrames(durationFrames);
   };
 
   // Wheel zoom handler
@@ -1377,9 +1381,9 @@ export const SequencerTimeline: React.FC = () => {
                 className="duration-input"
                 commit="blur"
                 step={0.5}
-                min={0.5}
+                min={0.01}
                 max={40}
-                value={Number(frameToSeconds(activeSequenceDurationFrames, fps).toFixed(1))}
+                value={Number(frameToSeconds(activeSequenceDurationFrames, fps).toFixed(2))}
                 onFocus={(e) => e.target.select()}
                 onValue={(sec) => {
                   if (sec > 0) {

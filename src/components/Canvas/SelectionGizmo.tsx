@@ -2,7 +2,11 @@ import React from 'react';
 import type { CharacterPart, Track, Transform } from '../../types/animator';
 import { affineSvgTransform, worldAffineOf, type WorldAffine } from '../../utils/geometry/containerMath';
 import type { CornerBounds } from '../../utils/geometry/cornerResize';
-import { getGroupChildren } from '../../utils/layers/layerGrouping';
+import { getGroupChildren, getLayerWorldBounds } from '../../utils/layers/layerGrouping';
+import { unionWorldBounds } from '../../utils/geometry/layoutGeometry';
+
+/** Above this many selected layers the selection is framed by one box, not one per layer. */
+export const LARGE_SELECTION = 200;
 import { suppressedMatteSourceIds } from '../../utils/layers/matte';
 import { getSelectionFrameBounds, selectionFrameGizmoBounds } from '../../utils/geometry/selectionFrame';
 import { TransformGizmo, type ScaleMode } from './overlays/TransformGizmo';
@@ -58,20 +62,57 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
    * the box it would draw IS the union of the boxes already drawn for those
    * children, so drawing it again would be a duplicate envelope around them.
    */
-  const containerIsCoveredBySelection = (part: CharacterPart): boolean => {
+  const containerIsCoveredBySelection = (part: CharacterPart, selected: Set<string>): boolean => {
     const children = getGroupChildren(characterParts, part.id);
-    return children.length > 0 && children.every((child) => selectedPartIds.includes(child.id));
+    return children.length > 0 && children.every((child) => selected.has(child.id));
   };
 
   if (selectedPartIds.length > 1) {
+    // One lookup per id: a list scan per selected layer made Select All quadratic.
+    const selected = new Set(selectedPartIds);
+    const partById = new Map(characterParts.map((part) => [part.id, part]));
+    const trackByPart = new Map<string, Track>();
+    for (const track of tracks) if (!trackByPart.has(track.partId)) trackByPart.set(track.partId, track);
+    const framed = (id: string): CharacterPart | null => {
+      const part = partById.get(id);
+      if (!part || trackByPart.get(id)?.editVisible === false || (part.booleanGroupId && part.booleanGroupId !== booleanOperandEditingGroupId)) return null;
+      return part.isGroup && containerIsCoveredBySelection(part, selected) ? null : part;
+    };
+    // A very large selection is framed by ONE box around all of it: a frame per
+    // layer is thousands of gizmos redrawn on every frame of a drag or playback.
+    if (selectedPartIds.length > LARGE_SELECTION) {
+      const boxes = selectedPartIds
+        .map((id) => (framed(id) ? getLayerWorldBounds(characterParts, id, (partId) => getComputedTransform(partId, currentFrame)) : null))
+        .filter((box): box is NonNullable<typeof box> => box !== null);
+      const first = selectedPartIds.map(framed).find((part): part is CharacterPart => part !== null);
+      if (boxes.length === 0 || !first) return null;
+      const union = unionWorldBounds(boxes);
+      const halfW = (union.maxX - union.minX) / 2;
+      const halfH = (union.maxY - union.minY) / 2;
+      return (
+        <TransformGizmo
+          key="multi-selection-union"
+          selectedPart={first}
+          selectedTransform={{ x: (union.minX + union.maxX) / 2, y: (union.minY + union.maxY) / 2, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }}
+          zScale={zScale}
+          onRotateMouseDown={() => {}}
+          onScaleMouseDown={() => {}}
+          isGroup={true}
+          outputOrigin={outputOrigin}
+          overrideHalfW={halfW}
+          overrideHalfH={halfH}
+          overrideCenterX={0}
+          overrideCenterY={0}
+          overrideBounds={{ minX: -halfW, minY: -halfH, maxX: halfW, maxY: halfH }}
+        />
+      );
+    }
     return (
       <>
         {selectedPartIds.map((id) => {
-          const part = characterParts.find((candidate) => candidate.id === id);
+          const part = framed(id);
           const transform = part ? getComputedTransform(id, currentFrame) : null;
-          const track = tracks.find((candidate) => candidate.partId === id);
-          if (!part || !transform || track?.editVisible === false || (part.booleanGroupId && part.booleanGroupId !== booleanOperandEditingGroupId)) return null;
-          if (part.isGroup && containerIsCoveredBySelection(part)) return null;
+          if (!part || !transform) return null;
           const frameBounds = getSelectionFrameBounds(part, { characterParts, getComputedTransform, currentFrame, transform });
           if (!frameBounds) return null;
           // Decorative frames only: the spread carries the frame's own box AND —

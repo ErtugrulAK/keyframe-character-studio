@@ -8,6 +8,7 @@ import { type TrackChannel, type AnimationChannel } from '../../types/animator';
 import { computeMaxFrame, resolveChannelAnimationState, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/editor/timelineMetrics';
 import { channelArmValue, resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../../utils/animation/channelKeyframeGroups';
 import { evaluateTrackMatte } from '../../utils/layers/matte';
+import { partIndexOf } from '../../utils/layers/partBinding';
 import { locateKeyframe } from '../../utils/animation/trackMutations';
 import { duplicateKeyframeGroup as previewKeyframeDuplicate } from '../../utils/animation/keyframeDuplicate';
 import {
@@ -1490,7 +1491,7 @@ export const SequencerTimeline: React.FC = () => {
 
           <div className="ue-outliner-list" ref={outlinerRef} onScroll={handleOutlinerScroll} onFocus={handleTrackFocus}>
             {renderTrackWindow((track) => {
-              const partItem = characterParts.find((p) => p.id === track.partId);
+              const partItem = partIndexOf(characterParts).get(track.partId);
               const isChildLayer = Boolean(partItem?.parentId);
 
               return (

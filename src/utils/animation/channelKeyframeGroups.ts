@@ -11,7 +11,7 @@ import type { AnimationChannel, CharacterPart, PropertyKeyframe, Track, TrackCha
 import { worldToContainerLocal } from '../geometry/containerMath';
 import { authoredBasePose } from './evaluateTransform';
 import { fillChannelsFromLegacyKeyframes } from './legacyKeyframeConversion';
-import { relationshipParentId } from '../layers/partBinding';
+import { partIndexOf, relationshipParentId } from '../layers/partBinding';
 import { normalizeFeather, normalizeStrength } from '../layers/matte';
 
 const MASK_SCALAR_PROPERTIES = ['opacity', 'feather', 'expansion'] as const;
@@ -56,7 +56,7 @@ export const resolveAuthoredBasePose = (
   parts: readonly CharacterPart[] | undefined,
   partId: string,
 ): Transform | undefined => {
-  const part = parts?.find((candidate) => candidate.id === partId);
+  const part = parts ? partIndexOf(parts).get(partId) : undefined;
   return part ? authoredBasePose(part) : undefined;
 };
 
@@ -165,7 +165,7 @@ export const resolveAuthoredLocalTransform = (
   source: EvaluatedPoseSource,
 ): Transform => {
   const world = source.worldOf(partId, frame);
-  const parentId = relationshipParentId(source.parts.find((part) => part.id === partId));
+  const parentId = relationshipParentId(partIndexOf(source.parts).get(partId));
   if (!parentId) return world;
   return worldToContainerLocal(world, source.worldOf(parentId, frame));
 };

@@ -22,7 +22,7 @@ import {
 import { applyEasing, deriveAutoBezierControlPoints, interpolateChannel, lerp, makeEmptyChannels } from '../animation/defaults';
 import { evaluateTransform } from '../animation/evaluateTransform';
 import { generateId } from './idGenerator';
-import { relationshipAncestorIds, relationshipParentId, selectionHasChainRelation } from './partBinding';
+import { partIndexOf, relationshipAncestorIds, relationshipParentId, selectionHasChainRelation } from './partBinding';
 
 /**
  * Layer groups — an authoring surface over the parent-child transform KCS
@@ -470,7 +470,7 @@ export const getLayerWorldBounds = (
   partId: string,
   worldOf: WorldOf,
 ): PartWorldBounds | null => {
-  const part = parts.find((candidate) => candidate.id === partId);
+  const part = partIndexOf(parts).get(partId);
   return part ? layerWorldBounds(parts, part, worldOf, 0) : null;
 };
 
@@ -481,7 +481,7 @@ const resolveSelection = (parts: CharacterPart[], ids: string[]): CharacterPart[
   const selected: CharacterPart[] = [];
   ids.forEach((id) => {
     if (seen.has(id)) return;
-    const part = parts.find((candidate) => candidate.id === id);
+    const part = partIndexOf(parts).get(id);
     if (!part) return;
     seen.add(id);
     selected.push(part);

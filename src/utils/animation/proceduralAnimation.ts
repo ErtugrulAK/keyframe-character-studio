@@ -38,6 +38,19 @@ interface ProceduralDelta {
  *   finalSY = world.scaleY * delta.scaleY
  *   finalOpacity = baseOpacity * delta.opacityMul
  */
+type RuntimeTrack = AnimationTrackData & RuntimeTrackState;
+/** partId -> track (the first one, as a linear find), built once per list. */
+const trackIndexes = new WeakMap<RuntimeTrack[], Map<string, RuntimeTrack>>();
+const trackOf = (tracks: RuntimeTrack[], partId: string): RuntimeTrack | undefined => {
+  let index = trackIndexes.get(tracks);
+  if (!index) {
+    index = new Map();
+    for (const track of tracks) if (!index.has(track.partId)) index.set(track.partId, track);
+    trackIndexes.set(tracks, index);
+  }
+  return index.get(partId);
+};
+
 export function computeProceduralDelta(
   layer: CharacterPart,
   tracks: (AnimationTrackData & RuntimeTrackState)[],
@@ -54,7 +67,7 @@ export function computeProceduralDelta(
   const outPreset = layer.outAnimPreset || 'none';
   const allowMotion = layer.enableMotionAnim !== false;
 
-  const targetTrack = tracks.find(t => t.partId === layer.id);
+  const targetTrack = trackOf(tracks, layer.id);
 
   if (runtime.appMode === 'broadcast') {
     // ── Broadcast mode ──────────────────────────────────────────────

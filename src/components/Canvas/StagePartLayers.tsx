@@ -194,19 +194,23 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
     appMode === 'edit' ? activeTemplateId : activeNamedSequence?.sequenceId ?? 'Sequence',
   );
   perfCount('partEvaluations', evaluatedFrame.layers.length);
+  // One lookup per id: a list scan per layer made a large scene quadratic.
+  const partById = new Map(sortedParts.map((part) => [part.id, part]));
+  const evaluatedById = new Map(evaluatedFrame.layers.map((layer) => [layer.id, layer]));
+  const selectedIdSet = new Set(selectedPartIds);
   const booleanContoursByGroup = new Map<string, CharacterPart['booleanContours']>();
   for (const group of sortedParts) {
     if (!group.booleanOperandIds || !group.booleanOperation) continue;
     const operands = group.booleanOperandIds
-      .map((id) => sortedParts.find((part) => part.id === id))
+      .map((id) => partById.get(id))
       .filter((part): part is CharacterPart => Boolean(part));
     const transforms = Object.fromEntries(
       operands.map((operand) => [
         operand.id,
-        evaluatedFrame.layers.find((layer) => layer.id === operand.id)?.transform ?? operand.baseTransform,
+        evaluatedById.get(operand.id)?.transform ?? operand.baseTransform,
       ]),
     );
-    const groupTransform = evaluatedFrame.layers.find((layer) => layer.id === group.id)?.transform ?? group.baseTransform;
+    const groupTransform = evaluatedById.get(group.id)?.transform ?? group.baseTransform;
     const derived = deriveBooleanGeometry(
       group.booleanOperation,
       operands,
@@ -219,7 +223,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
   const layerMaskIdsByPart = new Map<string, string[]>();
   const layerMaskRenderKeyById = new Map<string, string>();
   for (const part of sortedParts) {
-    const evaluated = evaluatedFrame.layers.find((layer) => layer.id === part.id);
+    const evaluated = evaluatedById.get(part.id);
     const evaluatedMasks = evaluated?.content.masks ?? part.masks;
     if (!evaluated || !evaluatedMasks?.length) continue;
     const ids: string[] = [];
@@ -259,7 +263,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
   }>();
   for (const part of sortedParts) {
     if (!part.effects?.length) continue;
-    const evaluated = evaluatedFrame.layers.find((layer) => layer.id === part.id);
+    const evaluated = evaluatedById.get(part.id);
     if (!evaluated) continue;
     const status = resolveColorCorrection(part, evaluated.content.masks ?? part.masks);
     if (status.kind !== 'applied') continue;
@@ -304,14 +308,13 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
   const imageContentMasks = new Map<string, { id: string; content: MatteImageContent; transform: WorldTransform; opacity?: number }>();
   // The matte at this frame: a keyed feather/strength is the evaluated one,
   // and the mask id the target refers to is built from the same values.
-  const evaluatedTrackMattes = new Map(evaluatedFrame.layers.map((el) => [el.id, el.content.trackMatte]));
-  const effectiveMatteOf = (part: CharacterPart) => getEffectiveMatte(part, evaluatedTrackMattes.get(part.id) ?? part.trackMatte);
+  const effectiveMatteOf = (part: CharacterPart) => getEffectiveMatte(part, evaluatedById.get(part.id)?.content.trackMatte ?? part.trackMatte);
   for (const layer of sortedParts) {
     const matte = effectiveMatteOf(layer);
     if (!matte || !isMatteActive(matte)) continue;
-    const source = sortedParts.find((p) => p.id === matte.sourcePartId);
+    const source = partById.get(matte.sourcePartId);
     if (!source) continue; // missing source → no clip/mask (recoverable validation warns)
-    const sourceEl = evaluatedFrame.layers.find((el) => el.id === source.id);
+    const sourceEl = evaluatedById.get(source.id);
     if (!sourceEl) continue;
     const mode = resolveMatteMode(matte);
 
@@ -493,7 +496,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
   const matteAttrFor = (part: CharacterPart): { clipId?: string; maskId?: string } => {
     const matte = effectiveMatteOf(part);
     if (!matte || !isMatteActive(matte)) return {};
-    if (!sortedParts.some((p) => p.id === matte.sourcePartId)) return {};
+    if (!partById.has(matte.sourcePartId)) return {};
     const mode = resolveMatteMode(matte);
     if (mode === 'clip') {
       if (matte.inverted === true) {
@@ -855,18 +858,18 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
             .map((part) => part.trackMatte!.sourceLayerId),
         );
         const layers = evaluatedFrame.layers.filter((el) => {
-          const part = sortedParts.find((candidate) => candidate.id === el.id);
+          const part = partById.get(el.id);
           return !hiddenMatteSources.has(el.id) && (!part?.booleanGroupId || !operandEditingActive);
         });
           layers.push(...evaluatedFrame.layers.filter((el) => {
-            const part = sortedParts.find((candidate) => candidate.id === el.id);
+            const part = partById.get(el.id);
             return !hiddenMatteSources.has(el.id) && part?.booleanGroupId === booleanOperandEditingGroupId;
           }));
         // A locked layer is drawn exactly as before but is not picked on
         // the canvas: clicks fall through to the layer beneath (edit mode only).
         const lockedIds = appMode === 'edit' ? new Set(tracks.filter((track) => track.locked).map((track) => track.partId)) : null;
         return layers.map((el) => {
-          const part = sortedParts.find(p => p.id === el.id);
+          const part = partById.get(el.id);
           if (!part) return null;
           if (part.booleanGroupId && part.booleanGroupId !== booleanOperandEditingGroupId) return null;
           const matteAttrs = matteAttrFor(part);
@@ -881,7 +884,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
               onSelect={onSelect}
               onStartTranslateDrag={onStartTranslateDrag}
               onDrillIn={onDrillIn}
-              isSelected={selectedPartIds.includes(el.id) || selectedPartId === el.id}
+              isSelected={selectedIdSet.has(el.id) || selectedPartId === el.id}
               evaluatedLayer={el}
               booleanContours={booleanContours}
               layerMaskIds={layerMaskIds}

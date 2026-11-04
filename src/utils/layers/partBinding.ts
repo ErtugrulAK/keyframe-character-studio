@@ -38,8 +38,9 @@ export const relationshipParentId = (part: CharacterPart | undefined): string | 
  * state snapshots): a chain walk is then one lookup per step, not a scan of
  * every part, which made a 1500-layer Select All take seconds.
  */
-const partIndexes = new WeakMap<CharacterPart[], Map<string, CharacterPart>>();
-const partIndexOf = (parts: CharacterPart[]): Map<string, CharacterPart> => {
+const partIndexes = new WeakMap<readonly CharacterPart[], Map<string, CharacterPart>>();
+/** The parts by id (the first of a duplicated id), built once per list. */
+export const partIndexOf = (parts: readonly CharacterPart[]): Map<string, CharacterPart> => {
   let index = partIndexes.get(parts);
   if (!index) {
     index = new Map();

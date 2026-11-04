@@ -10,8 +10,8 @@ Draw, mask and animate vector scenes, then export them as broadcast graphics (OG
 [![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Rendering](https://img.shields.io/badge/rendering-SVG-FFB13B?logo=svg&logoColor=black)](#-how-it-works)
-[![Unit tests](https://img.shields.io/badge/unit%20tests-3%2C220-2ea44f?logo=vitest&logoColor=white)](#-quality)
-[![E2E tests](https://img.shields.io/badge/E2E-636%20in%20Chromium-2ea44f?logo=playwright&logoColor=white)](#-quality)
+[![Unit tests](https://img.shields.io/badge/unit%20tests-3%2C339-2ea44f?logo=vitest&logoColor=white)](#-quality)
+[![E2E tests](https://img.shields.io/badge/E2E-689%20in%20Chromium-2ea44f?logo=playwright&logoColor=white)](#-quality)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
 <img src="docs/assets/readme/demo.gif" alt="An animated lower third, a masked landscape and a spinning star, exported by KCS as a GIF" width="720">
@@ -28,7 +28,8 @@ Draw, mask and animate vector scenes, then export them as broadcast graphics (OG
 |:---:|:---:|:---:|
 | 🎞️ **Keyframe animation**<br><sub>Position, rotation, scale, opacity, Trim Path; bezier easing per segment</sub> | 🎭 **Masks & Track Matte**<br><sub>Draw masks on the canvas, cut holes, use any layer as a matte</sub> | ✏️ **Vector paths**<br><sub>Pen tool, editable paths, corner ↔ smooth points with handles</sub> |
 | 📈 **Motion curves**<br><sub>Curve editor, value and speed graphs, presets, paste CSS easing</sub> | 🧩 **Layers & groups**<br><sub>Parenting, locks, Boolean operations, bonds between layers</sub> | 📡 **Broadcast mode**<br><sub>A live director panel that plays sequences with IN/OUT motion</sub> |
-| 📦 **OGraf export**<br><sub>Web-standard broadcast graphics packages, checked per layer first</sub> | 🖼️ **Animated GIF**<br><sub>Frame-exact export with a built-in encoder</sub> | 📱 **Any screen**<br><sub>Desktop, half-screen windows, tablets and phones</sub> |
+| 📦 **OGraf export**<br><sub>Web-standard broadcast graphics packages, checked per layer first; multi-step graphics from timeline step markers</sub> | 🖼️ **Animated GIF**<br><sub>Frame-exact export with a built-in encoder</sub> | 📱 **Any screen**<br><sub>Desktop, half-screen windows, tablets and phones</sub> |
+| 🧲 **Layout modifiers**<br><sub>Auto Size, Text Box, Auto Follow, Look At, Justify, Repeater: lower thirds that fit their text, live in OGraf too</sub> | 🎚️ **Keyed mattes**<br><sub>Track Matte feather, strength and gradient angle keyframed like any property</sub> | 🗂️ **Big scenes**<br><sub>Thousands of layers; only what changes re-renders</sub> |
 
 ## 📸 A look inside
 
@@ -105,8 +106,8 @@ Requires Node.js `^22.22.2 || ^24.15.0 || >=26.0.0`. The editor runs entirely in
 %%{init: {'theme': 'base', 'themeVariables': {'pie1': '#35c8b0', 'pie2': '#38bdf8', 'pieStrokeColor': '#0d141b', 'pieSectionTextColor': '#0d141b', 'pieTitleTextSize': '18px', 'pieTitleTextColor': '#8b9baa', 'pieLegendTextColor': '#8b9baa'}}}%%
 pie showData
     title Automated tests
-    "Unit & component (Vitest)" : 3220
-    "End-to-end in Chromium (Playwright)" : 636
+    "Unit & component (Vitest)" : 3339
+    "End-to-end in Chromium (Playwright)" : 689
 ```
 
 - 🔍 Visual fixes are **measured** (pixel samples, element boxes), and new regression tests are checked against the old code.

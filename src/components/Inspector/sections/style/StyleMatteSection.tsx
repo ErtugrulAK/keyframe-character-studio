@@ -409,7 +409,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
         onSelectTarget={onSelectMatteTarget}
       />
     )}
-    <StyleCard title="TRACK MATTE" collapsible retainKey="track-matte" badge={trackMatte && !trackMatteSourceMissing ? (trackMatte.enabled !== false ? 'On' : 'Off') : undefined}>
+    <StyleCard key={`track-matte:${selectedPart.id}`} title="TRACK MATTE" collapsible retainKey={`track-matte:${selectedPart.id}`} badge={trackMatte && !trackMatteSourceMissing ? (trackMatte.enabled !== false ? 'On' : 'Off') : undefined}>
       <p className="matte-section-intro" data-testid="track-matte-intro">
         Shows this layer only where another layer is (its alpha) or as bright as it is (its luminance),
         with an optional soft edge, strength and gradient.

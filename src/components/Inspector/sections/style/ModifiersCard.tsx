@@ -24,7 +24,7 @@ const MODIFIER_HINTS: Record<ModifierKind, string> = {
   textBox: 'Keeps the text inside a width: it shrinks, then stops.',
   hideWhenEmpty: 'Hides the text, and every shape sized to it, when it is empty.',
   autoSize: 'The width follows the texts on it, plus padding.',
-  follow: "Sits next to another layer's edge and moves as it grows.",
+  follow: "Sits next to another layer's edge and moves as it grows or moves.",
   justify: "Keeps the group's layers aligned on its origin as they resize.",
   repeater: 'Copies of this layer, each a step further.',
 };
@@ -132,7 +132,7 @@ export const ModifiersCard: React.FC<ModifiersCardProps> = ({ selectedPart, char
       }
       case 'follow': {
         const target = followTargets.find((candidate) => candidate.type === 'custom_text') ?? followTargets[0];
-        write({ follow: { targetLayerId: target.id, side: 'right' } });
+        write({ follow: { targetLayerId: target.id, side: 'right', vertical: true } });
         break;
       }
       case 'justify':
@@ -268,7 +268,21 @@ export const ModifiersCard: React.FC<ModifiersCardProps> = ({ selectedPart, char
                 <option value="left">Left of the target</option>
               </select>
             ), { wide: true })}
-            <p className="modifier-note matte-span-full">X is now the gap to the target&apos;s edge.</p>
+            <label className="modifier-text-option matte-span-full">
+              <input
+                type="checkbox"
+                aria-label="Follow up and down"
+                checked={follow.vertical === true}
+                disabled={readOnly}
+                onChange={(event) => writeFollow({ vertical: event.target.checked || undefined })}
+              />
+              <span>Also follow up and down</span>
+            </label>
+            <p className="modifier-note matte-span-full">
+              {follow.vertical === true
+                ? 'X is now the gap to the target’s edge, Y the offset from the target.'
+                : 'X is now the gap to the target’s edge.'}
+            </p>
           </>
         );
       case 'justify':

@@ -12,7 +12,8 @@
  *   fills such a shape fits within its `maxWidth` less the padding. `anchor`
  *   keeps the left or right edge in place instead of the centre.
  * - Auto follow (`follow`, any layer): the layer sits next to another layer's
- *   edge and moves when that layer grows. Its x becomes the gap to that edge.
+ *   edge and moves when that layer grows. Its x becomes the gap to that edge;
+ *   with `vertical` its y becomes the offset from the target's y.
  * - Justify (`justify`, groups): the group's children keep their combined
  *   bounds left, centred or right on the group's origin as their sizes change.
  * - Repeater (`repeater`, any layer but a group): copies of the layer in a line,
@@ -65,6 +66,8 @@ export interface FollowSettings {
   targetLayerId: string;
   /** Which side of the target: 'right' (default) or 'left'. */
   side?: 'left' | 'right';
+  /** The layer also moves up and down with the target; its y is then the offset from the target's y. */
+  vertical?: boolean;
 }
 
 export interface JustifySettings {
@@ -414,6 +417,9 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
           const edge = right ? edges.maxX : edges.minX;
           const adjustment = adjust(layer.id);
           adjustment.dx = edge - near;
+        }
+        if (layer.follow.vertical === true) {
+          adjust(layer.id).dy = pose(target).y + ((adjustments[target.id] && adjustments[target.id].dy) || 0);
         }
       }
       following[layer.id] = false;

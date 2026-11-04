@@ -128,6 +128,13 @@ describe('auto follow', () => {
   it('a hidden target collapses to its x, so the follower takes its place', () => {
     expect(layout([text('', { textFit: { hideWhenEmpty: true } }), tag()]).adjustments.tag.dx).toBeCloseTo(30);
   });
+
+  it('with vertical on, the y is the offset from the target and moves with it; off, the y stays', () => {
+    const vertical = { follow: { targetLayerId: 'title', vertical: true } };
+    expect(layout([text('Hi', { y: 120 }), tag({ y: -5, ...vertical })]).adjustments.tag.dy).toBeCloseTo(120);
+    expect(layout([text('Hi', { y: -40 }), tag({ y: -5, ...vertical })]).adjustments.tag.dy).toBeCloseTo(-40);
+    expect(layout([text('Hi', { y: 120 }), tag({ y: -5 })]).adjustments.tag.dy).toBeUndefined();
+  });
 });
 
 describe('justify', () => {
@@ -200,6 +207,23 @@ describe('settings edits keep the picture still', () => {
     // Laid out, it is where it was.
     const shown = resolveLayout(settled.parts as never, ((layer: { baseTransform: unknown }) => layer.baseTransform) as never, measure);
     expect(tag.baseTransform.x + (shown.adjustments.tag.dx ?? 0)).toBeCloseTo(60);
+  });
+
+  it('turning on vertical follow turns the y into the offset and keeps the box where it is', () => {
+    const before = [
+      part('title', 'custom_text', 0, { textValue: 'Hi', baseTransform: { x: 0, y: 100, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } }),
+      part('tag', 'custom_box', 60, { baseTransform: { x: 60, y: 130, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } }),
+    ];
+    const after = before.map((item) => (item.id === 'tag' ? { ...item, follow: { targetLayerId: 'title', vertical: true } } : item));
+    const tracks = [{ id: 't', partId: 'tag', channels: { y: [{ frame: 0, value: 130 }, { frame: 10, value: 150 }] } }];
+    const settled = compensateLayoutChange(before as never, after as never, tracks, measure);
+    const tag = (settled.parts as typeof after).find((item) => item.id === 'tag')!;
+    expect(tag.baseTransform.y).toBeCloseTo(30);
+    expect((settled.tracks[0].channels.y as Array<{ value: number }>).map((key) => key.value)).toEqual([30, 50]);
+    // Moving the text down 50 moves the box down 50.
+    const moved = (settled.parts as typeof after).map((item) => (item.id === 'title' ? { ...item, baseTransform: { ...item.baseTransform, y: 150 } } : item));
+    const shown = resolveLayout(moved as never, ((layer: { baseTransform: unknown }) => layer.baseTransform) as never, measure);
+    expect(tag.baseTransform.y + (shown.adjustments.tag.dy ?? 0)).toBeCloseTo(180);
   });
 
   it("changing a followed text's alignment moves neither the text nor its follower", () => {

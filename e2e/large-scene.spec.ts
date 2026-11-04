@@ -43,6 +43,9 @@ test('a selection of 250 layers is framed by one box; a small one by a frame per
   await page.keyboard.press('Control+a');
   await expect(page.getByText('250 selected')).toBeVisible();
   await expect(page.locator('[data-testid="transform-gizmo"]')).toHaveCount(1);
+  // The timeline keeps mounting only the rows near its viewport: a large
+  // selection is not pinned row by row (it put every row in the page).
+  expect(await page.locator('.ue-outliner-list > *').count()).toBeLessThan(60);
 
   // Two layers from the layer list: a frame each.
   await page.mouse.click(stage!.x + 8, stage!.y + stage!.height - 8);

@@ -102,6 +102,9 @@ interface KeyframeDrag {
 }
 
 
+/** Up to this many selected tracks stay mounted while scrolled away; a larger selection keeps only its primary. */
+const PINNED_SELECTION_LIMIT = 32;
+
 export const SequencerTimeline: React.FC = () => {
   const {
     currentFrame,
@@ -1177,8 +1180,10 @@ export const SequencerTimeline: React.FC = () => {
    * they stay aligned). A track's height is measured from its mounted layer row
    * (it grows when the track or a channel group expands); an unmeasured one is
    * the lane layout's own height (C5: `laneGroupHeight`, the rows the lanes
-   * render), so the spacers stand for expanded tracks exactly. The selected,
-   * renamed and focused tracks stay mounted.
+   * render), so the spacers stand for expanded tracks exactly. The primary,
+   * renamed and focused tracks stay mounted, and the rest of a small selection;
+   * a large one (Select All on thousands of layers) would otherwise mount every
+   * row and keep the whole list in the page.
    */
   const trackHeightsRef = useRef(new Map<string, number>());
   const [trackHeightsVersion, setTrackHeightsVersion] = useState(0);
@@ -1193,7 +1198,8 @@ export const SequencerTimeline: React.FC = () => {
   );
   const [focusedTrackPartId, setFocusedTrackPartId] = useState<string | null>(null);
   const pinnedTracks = useMemo(() => {
-    const keep = new Set<string>([...(selectedPartIds ?? []), ...(editingPartId ? [editingPartId] : []), ...(focusedTrackPartId ? [focusedTrackPartId] : [])]);
+    const selection = (selectedPartIds ?? []).length <= PINNED_SELECTION_LIMIT ? (selectedPartIds ?? []) : [];
+    const keep = new Set<string>([...selection, ...(editingPartId ? [editingPartId] : []), ...(focusedTrackPartId ? [focusedTrackPartId] : [])]);
     if (selectedPartId) keep.add(selectedPartId);
     const pinned: number[] = [];
     tracks.forEach((track, index) => {

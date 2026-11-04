@@ -41,6 +41,8 @@ interface TrackOutlinerRowProps {
   onJumpToFrame: (frame: number) => void;
   isGroupExpanded: (key: string, defaultVal?: boolean) => boolean;
   onToggleSubGroup: (key: string, defaultVal?: boolean) => void;
+  /** Show only keyed properties (After Effects' U). */
+  animatedOnly?: boolean;
 }
 
 /**
@@ -119,6 +121,7 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
   onJumpToFrame,
   isGroupExpanded,
   onToggleSubGroup,
+  animatedOnly = false,
 }) => {
   // BUGFIX: the timeline label must reflect the REAL element name. The track
   // only carries partId (track.name is not serialized — after import it is a
@@ -454,13 +457,13 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
               tools: Position, Scale, Rotation, Opacity; Trim Paths only when
               the layer uses it; then one group per mask (Path, Feather,
               Opacity, Expansion). */}
-          {resolveLaneRows(track, isGroupExpanded, laneContextOf(owningPart)).map((row) => {
+          {resolveLaneRows(track, isGroupExpanded, laneContextOf(owningPart, animatedOnly)).map((row) => {
             if (row.kind === 'track') return null;
             if (row.kind === 'header') {
               const key = `${track.id}_${row.group}`;
-              return <React.Fragment key={key}>{renderGroupHeader(key, row.label, isGroupExpanded(key, row.defaultExpanded), row.defaultExpanded)}</React.Fragment>;
+              return <React.Fragment key={key}>{renderGroupHeader(key, row.label, isGroupExpanded(key, row.defaultExpanded), row.defaultExpanded, row.depth === 2 ? 'ue-header-indent' : 'ue-header-indent-top')}</React.Fragment>;
             }
-            return renderChannelRow(row.channel, row.depth === 2 ? 'ue-channel-indent-deep' : 'ue-channel-indent', true);
+            return renderChannelRow(row.channel, row.depth === 3 ? 'ue-channel-indent-deeper' : row.depth === 2 ? 'ue-channel-indent-deep' : 'ue-channel-indent', true);
           })}
         </div>
       )}

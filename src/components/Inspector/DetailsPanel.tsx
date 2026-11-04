@@ -45,6 +45,7 @@ export const DetailsPanel: React.FC = () => {
     getComputedTransform,
     updateCurrentTransform,
     updateCurrentPropertyChannel,
+    authorMaskPath,
     customPresets,
     savePreset,
     updatePreset,
@@ -70,7 +71,10 @@ export const DetailsPanel: React.FC = () => {
     selectMatteSource,
     backToMatteTarget,
     handleSelectPart,
+    maskVertexIndex,
+    setMaskVertexIndex,
     setLayersLocked,
+    applyMaskPathOrder,
     convertToEditablePath,
     setPartPath,
     pathVertex,
@@ -349,6 +353,9 @@ export const DetailsPanel: React.FC = () => {
               handlePartColorChange={handlePartColorChange}
               evaluatedTrim={evaluatedTrim}
               onUpdateTrimChannel={updateCurrentPropertyChannel}
+              onChangeMaskPath={(maskId, path) => {
+                if (selectedPartId) authorMaskPath(selectedPartId, maskId, path);
+              }}
               maskEditTargetId={maskEditTarget?.ownerPartId === selectedPart.id ? maskEditTarget.maskId : null}
               onEditMaskOnCanvas={(maskId) => {
                 const refusal = enterMaskEditing(selectedPart.id, maskId);
@@ -360,10 +367,19 @@ export const DetailsPanel: React.FC = () => {
                 const refusal = startMaskDraw(selectedPart.id, shape);
                 if (refusal) showToast(refusal, 'error');
               }}
+              maskPathChannels={selectedTrack?.maskPathChannels}
+              maskVertexIndex={maskVertexIndex}
+              onSelectMaskVertex={setMaskVertexIndex}
               matteReturnTargetId={matteReturnTargetId}
               onSelectMatteSource={selectMatteSource}
               onBackToMatteTarget={backToMatteTarget}
               onPickRefused={(reason) => showToast(reason, 'info')}
+              onMaskPathOrder={(maskId, command, index) => {
+                const outcome = applyMaskPathOrder(selectedPart.id, maskId, command, index);
+                if (!outcome.applied) return undefined;
+                if (maskEditTarget?.maskId === maskId) setMaskVertexIndex(outcome.selectedIndex);
+                return outcome.selectedIndex;
+              }}
               onSelectMatteTarget={(targetId) => handleSelectPart(targetId)}
               onColorInteractionStart={startBatchInteraction}
               onColorInteractionEnd={endBatchInteraction}
@@ -408,6 +424,9 @@ export const DetailsPanel: React.FC = () => {
               handlePartColorChange={handlePartColorChange}
               evaluatedTrim={evaluatedTrim}
               onUpdateTrimChannel={updateCurrentPropertyChannel}
+              onChangeMaskPath={(maskId, path) => {
+                if (selectedPartId) authorMaskPath(selectedPartId, maskId, path);
+              }}
               maskEditTargetId={maskEditTarget?.ownerPartId === selectedPart.id ? maskEditTarget.maskId : null}
               onEditMaskOnCanvas={(maskId) => {
                 const refusal = enterMaskEditing(selectedPart.id, maskId);
@@ -419,10 +438,19 @@ export const DetailsPanel: React.FC = () => {
                 const refusal = startMaskDraw(selectedPart.id, shape);
                 if (refusal) showToast(refusal, 'error');
               }}
+              maskPathChannels={selectedTrack?.maskPathChannels}
+              maskVertexIndex={maskVertexIndex}
+              onSelectMaskVertex={setMaskVertexIndex}
               matteReturnTargetId={matteReturnTargetId}
               onSelectMatteSource={selectMatteSource}
               onBackToMatteTarget={backToMatteTarget}
               onPickRefused={(reason) => showToast(reason, 'info')}
+              onMaskPathOrder={(maskId, command, index) => {
+                const outcome = applyMaskPathOrder(selectedPart.id, maskId, command, index);
+                if (!outcome.applied) return undefined;
+                if (maskEditTarget?.maskId === maskId) setMaskVertexIndex(outcome.selectedIndex);
+                return outcome.selectedIndex;
+              }}
               onSelectMatteTarget={(targetId) => handleSelectPart(targetId)}
               onColorInteractionStart={startBatchInteraction}
               onColorInteractionEnd={endBatchInteraction}

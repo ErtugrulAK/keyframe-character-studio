@@ -767,8 +767,14 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   user-select: none;
 }
 .ue-subgroup-header:hover { background: #242424; }
+/* A top group (Transform, Masks, Track Matte) starts at the rail; a group
+   inside one (Position, Scale, a mask) is one step in. */
+.ue-header-indent-top {
+  width: 0;
+  flex-shrink: 0;
+}
 .ue-header-indent {
-  width: 12px;
+  width: 22px;
   flex-shrink: 0;
 }
 .ue-subgroup-label {
@@ -802,11 +808,15 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 .ue-channel-row:hover { background: var(--kcs-bg-rail); }
 
 .ue-channel-indent {
-  width: 34px;
+  width: 22px;
   flex-shrink: 0;
 }
 .ue-channel-indent-deep {
-  width: 56px;
+  width: 44px;
+  flex-shrink: 0;
+}
+.ue-channel-indent-deeper {
+  width: 66px;
   flex-shrink: 0;
 }
 
@@ -1510,4 +1520,18 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   background: var(--kcs-text-muted, #939393);
   opacity: 0.75;
   pointer-events: none;
+}
+
+/* After Effects' U: the property tree shows only keyed properties. */
+.ue-outliner-ruler-spacer {
+  justify-content: space-between;
+}
+.timeline-animated-only-btn {
+  width: 22px;
+  height: 22px;
+  color: var(--kcs-text-muted);
+}
+.timeline-animated-only-btn.active {
+  color: var(--kcs-accent);
+  background: rgba(73, 141, 231, 0.18);
 }

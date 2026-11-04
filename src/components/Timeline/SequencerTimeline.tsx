@@ -29,7 +29,10 @@ import {
   TrendingUp,
   ChevronDown,
   ChevronUp,
+  Diamond,
 } from 'lucide-react';
+import { isEditableElement } from '../../utils/editor/keyboardFocus';
+import { isBlockingModalOpen } from '../../utils/editor/modalBoundary';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { addStepMarker, normalizeStepMarkers, removeStepMarker } from '../../utils/animation/stepMarkers';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
@@ -174,6 +177,18 @@ export const SequencerTimeline: React.FC = () => {
   const layerOrdinals = useMemo(() => projectLayerOrdinals(characterParts), [characterParts]);
   // Sequencer Tree Modal Toggle State & Inline Sequence Rename
   const [isSeqTreeOpen, setIsSeqTreeOpen] = useState<boolean>(false);
+  /** Show only keyed properties in the property tree (After Effects' U). */
+  const [animatedOnly, setAnimatedOnly] = useState<boolean>(false);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'u' && event.key !== 'U') return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (isEditableElement(document.activeElement) || isBlockingModalOpen()) return;
+      setAnimatedOnly((on) => !on);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const [isAddSeqModalOpen, setIsAddSeqModalOpen] = useState<boolean>(false);
   const [editingSeqId, setEditingSeqId] = useState<string | null>(null);
   const [editingSeqName, setEditingSeqName] = useState<string>('');
@@ -1195,8 +1210,8 @@ export const SequencerTimeline: React.FC = () => {
   );
   /** Which property groups each layer has (masks, Trim Paths): one source for tree, lanes and marquee. */
   const laneContextByPart = useMemo(
-    () => new Map<string, LaneContext>(characterParts.map((part) => [part.id, laneContextOf(part)])),
-    [characterParts],
+    () => new Map<string, LaneContext>(characterParts.map((part) => [part.id, laneContextOf(part, animatedOnly)])),
+    [characterParts, animatedOnly],
   );
 
   /*
@@ -1532,6 +1547,17 @@ export const SequencerTimeline: React.FC = () => {
           {/* Sticky ruler-height spacer to align with grid ruler */}
           <div className="ue-outliner-ruler-spacer">
             <span>LAYERS ({tracks.length})</span>
+            {/* After Effects' U: the property tree shows only keyed properties. */}
+            <button
+              type="button"
+              className={`btn-icon timeline-animated-only-btn${animatedOnly ? ' active' : ''}`}
+              aria-pressed={animatedOnly}
+              aria-label="Show only animated properties"
+              title={animatedOnly ? 'Showing only animated properties (U): show all' : 'Show only animated properties (U)'}
+              onClick={() => setAnimatedOnly((on) => !on)}
+            >
+              <Diamond size={12} />
+            </button>
           </div>
 
           <div className="ue-outliner-list" ref={outlinerRef} onScroll={handleOutlinerScroll} onFocus={handleTrackFocus}>
@@ -1571,6 +1597,7 @@ export const SequencerTimeline: React.FC = () => {
                   onToggleChannelAnimation={rowActions.onToggleChannelAnimation}
                   isGroupExpanded={isGroupExpanded}
                   onToggleSubGroup={rowActions.onToggleSubGroup}
+                  animatedOnly={animatedOnly}
                   // The layer row's keyframe navigation moves the playhead
                   // and nothing else: the callback writes the frame cursor only.
                   onJumpToFrame={rowActions.onJumpToFrame}

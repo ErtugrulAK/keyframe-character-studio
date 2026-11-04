@@ -38,6 +38,13 @@ describe('evaluateTrackMatte', () => {
     expect(evaluateTrackMatte(undefined, other, 10, 'Named')).toBeUndefined();
   });
 
+  it('turns a linear gradient with its angle keys; without a gradient the keys do nothing', () => {
+    const track = { channels: { ...makeEmptyChannels(), matteGradientAngle: keys([[0, 0], [20, 90]]) } };
+    const graded: TrackMatteV2 = { ...matte, gradient: { angle: 30 } };
+    expect(evaluateTrackMatte(graded, track, 10, 'Sequence')?.gradient?.angle).toBe(45);
+    expect(evaluateTrackMatte(matte, track, 10, 'Sequence')).toBe(matte);
+  });
+
   it('clamps an overshoot instead of falling back to full strength', () => {
     const track = { channels: { ...makeEmptyChannels(), matteFeather: keys([[0, -5]]), matteStrength: keys([[0, 1.4]]) } };
     expect(evaluateTrackMatte(matte, track, 0, 'Sequence')).toEqual({ ...matte, feather: 0, strength: 1 });
@@ -70,6 +77,10 @@ describe('the keyed matte through the pipeline', () => {
     expect(applyChannelStaticValue(part(matte), 'matteStrength', 3).trackMatte?.strength).toBe(1);
     const plain = part();
     expect(applyChannelStaticValue(plain, 'matteFeather', 12)).toBe(plain);
+    const graded = part({ ...matte, gradient: { angle: 30 } });
+    expect(channelArmValue('matteGradientAngle', transform, graded)).toBe(30);
+    expect(applyChannelStaticValue(graded, 'matteGradientAngle', 400).trackMatte?.gradient?.angle).toBe(40);
+    expect(applyChannelStaticValue(part(matte), 'matteGradientAngle', 40).trackMatte?.gradient).toBeUndefined();
   });
 });
 
@@ -78,7 +89,7 @@ describe('the Track Matte rows on the timeline', () => {
   const labels = (rows: ReturnType<typeof resolveLaneRows>) => rows.map((row) => (row.kind === 'header' ? `[${row.label}]` : row.kind === 'channel' ? row.channel : 'layer'));
 
   it('show Feather and Strength under Track Matte when the layer has one, or still holds its keys', () => {
-    expect(labels(resolveLaneRows(track(), () => true, laneContextOf(part(matte))))).toEqual(expect.arrayContaining(['[Track Matte]', 'matteFeather', 'matteStrength']));
+    expect(labels(resolveLaneRows(track(), () => true, laneContextOf(part(matte))))).toEqual(expect.arrayContaining(['[Track Matte]', 'matteFeather', 'matteStrength', 'matteGradientAngle']));
     expect(labels(resolveLaneRows(track(), () => true, laneContextOf(part())))).not.toContain('[Track Matte]');
     expect(labels(resolveLaneRows(track({ matteStrength: keys([[0, 1]]) }), () => true, laneContextOf(part())))).toContain('[Track Matte]');
   });

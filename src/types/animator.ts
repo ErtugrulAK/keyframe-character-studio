@@ -232,13 +232,13 @@ export interface PathKeyframe {
 }
 
 // Channel keys match Transform property names
-export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity' | 'maskOffsetX' | 'maskOffsetY' | 'maskScale' | 'maskRotation' | 'trimPathStart' | 'trimPathEnd' | 'trimPathOffset' | 'matteFeather' | 'matteStrength';
+export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity' | 'maskOffsetX' | 'maskOffsetY' | 'maskScale' | 'maskRotation' | 'trimPathStart' | 'trimPathEnd' | 'trimPathOffset' | 'matteFeather' | 'matteStrength' | 'matteGradientAngle';
 
 export type LayerMaskChannelProperty = 'opacity' | 'feather' | 'expansion';
 export type LayerMaskChannel = `${string}:${LayerMaskChannelProperty}`;
 export type LayerMaskPathChannel = `${string}:path`;
 export type AnimationChannel = TrackChannel | LayerMaskChannel | LayerMaskPathChannel;
-export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation', 'trimPathStart', 'trimPathEnd', 'trimPathOffset', 'matteFeather', 'matteStrength'];
+export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation', 'trimPathStart', 'trimPathEnd', 'trimPathOffset', 'matteFeather', 'matteStrength', 'matteGradientAngle'];
 
 export const layerMaskChannel = (maskId: string, property: LayerMaskChannelProperty): LayerMaskChannel =>
   `${maskId}:${property}`;

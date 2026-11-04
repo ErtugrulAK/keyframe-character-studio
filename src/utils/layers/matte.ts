@@ -300,7 +300,7 @@ export function normalizeStrength(value: number | undefined): number {
 
 /**
  * The Track Matte at a frame: its feather and strength follow the
- * `matteFeather` / `matteStrength` channels once they are keyed (the record's
+ * `matteFeather` / `matteStrength` / `matteGradientAngle` channels once they are keyed (the record's
  * own values are the static ones). A curve that overshoots is clamped, so a
  * strength above 1 never snaps to the legacy "full strength" fallback. The
  * same record object comes back when neither channel is keyed.
@@ -312,14 +312,19 @@ export function evaluateTrackMatte(
   templateId: string,
 ): TrackMatteV2 | undefined {
   if (!trackMatte || !track?.channels) return trackMatte;
-  const keys = (channel: 'matteFeather' | 'matteStrength') =>
+  const keys = (channel: 'matteFeather' | 'matteStrength' | 'matteGradientAngle') =>
     (track.channels[channel] || []).filter((key) => (key.templateId || 'Sequence') === templateId);
   const feather = keys('matteFeather');
   const strength = keys('matteStrength');
-  if (feather.length === 0 && strength.length === 0) return trackMatte;
+  const angle = trackMatte.gradient ? keys('matteGradientAngle') : [];
+  if (feather.length === 0 && strength.length === 0 && angle.length === 0) return trackMatte;
   const next: TrackMatteV2 = { ...trackMatte };
   if (feather.length > 0) next.feather = Math.max(0, interpolateChannel(feather, frame, normalizeFeather(trackMatte.feather)));
   if (strength.length > 0) next.strength = Math.min(1, Math.max(0, interpolateChannel(strength, frame, normalizeStrength(trackMatte.strength))));
+  // A gradient's angle turns with its keys (it is drawn modulo 360).
+  if (angle.length > 0 && trackMatte.gradient) {
+    next.gradient = { ...trackMatte.gradient, angle: interpolateChannel(angle, frame, normalizeGradientAngle(trackMatte.gradient.angle) ?? 0) };
+  }
   return next;
 }
 

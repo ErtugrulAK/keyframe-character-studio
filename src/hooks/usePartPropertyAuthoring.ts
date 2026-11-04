@@ -118,6 +118,12 @@ export const usePartPropertyAuthoring = (): PartPropertyAuthoring => {
           if (property in base) next[property] = base[property];
           else delete next[property];
         }
+        // The gradient angle the same way, when the gradient stays on.
+        const angleKeyed = selectedTrack?.channels?.matteGradientAngle?.some((keyframe) => (keyframe.templateId || 'Sequence') === scope);
+        if (angleKeyed && next.gradient && base.gradient) {
+          if (next.gradient.angle !== displayed.gradient?.angle) keyedWrites.push({ channel: 'matteGradientAngle', value: Number(next.gradient.angle) });
+          next.gradient = { ...next.gradient, angle: base.gradient.angle };
+        }
         if (selectedTrack && keyedWrites.length > 0) {
           setTracks((prev) => keyedWrites.reduce(
             (tracksSoFar, write) => authorPropertyValueAtFrameMutator(tracksSoFar, selectedTrack.id, write.channel, currentFrame, write.value, scope),

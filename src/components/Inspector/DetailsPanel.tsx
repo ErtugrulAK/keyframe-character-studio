@@ -13,7 +13,7 @@ import { StyleTab } from './sections/StyleTab';
 import { ModifiersCard } from './sections/style/ModifiersCard';
 import { useModifierEditing } from '../../hooks/useModifierEditing';
 import { evaluateTrimPath } from '../../utils/geometry/trimPath';
-import { evaluateTrackMatte, normalizeFeather, normalizeStrength } from '../../utils/layers/matte';
+import { evaluateTrackMatte, normalizeFeather, normalizeGradientAngle, normalizeStrength } from '../../utils/layers/matte';
 import { applyChannelStaticValue } from '../../utils/animation/channelKeyframeGroups';
 import type { MatteChannelKeys } from './sections/style/MatteRenderControls';
 import { AnimationDataCard } from './sections/AnimationDataCard';
@@ -144,7 +144,7 @@ export const DetailsPanel: React.FC = () => {
   const matteChannelKeys: MatteChannelKeys | undefined = selectedPart?.trackMatte && selectedTrack && evaluatedTrackMatte
     ? (() => {
       const scope = activeTemplateId || 'Sequence';
-      const control = (channel: 'matteFeather' | 'matteStrength', shown: number) => {
+      const control = (channel: 'matteFeather' | 'matteStrength' | 'matteGradientAngle', shown: number) => {
         const keys = (selectedTrack.channels?.[channel] ?? []).filter((key) => (key.templateId || 'Sequence') === scope);
         const atFrame = keys.find((key) => key.frame === currentFrame);
         return {
@@ -168,6 +168,7 @@ export const DetailsPanel: React.FC = () => {
       return {
         feather: control('matteFeather', normalizeFeather(evaluatedTrackMatte.feather)),
         strength: control('matteStrength', normalizeStrength(evaluatedTrackMatte.strength)),
+        ...(evaluatedTrackMatte.gradient ? { angle: control('matteGradientAngle', normalizeGradientAngle(evaluatedTrackMatte.gradient.angle) ?? 0) } : {}),
       };
     })()
     : undefined;

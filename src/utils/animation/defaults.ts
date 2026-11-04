@@ -11,7 +11,7 @@ export function makeEmptyChannels(): Record<TrackChannel, PropertyKeyframe[]> {
     x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [],
     maskOffsetX: [], maskOffsetY: [], maskScale: [], maskRotation: [],
     trimPathStart: [], trimPathEnd: [], trimPathOffset: [],
-    matteFeather: [], matteStrength: [],
+    matteFeather: [], matteStrength: [], matteGradientAngle: [],
   };
 }
 

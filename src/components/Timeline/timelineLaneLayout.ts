@@ -56,7 +56,7 @@ export const laneContextOf = (part: { masks?: readonly { id: string; name: strin
 
 const MASK_PROPERTIES = ['path', 'feather', 'opacity', 'expansion'] as const;
 const TRIM_CHANNELS: TrackChannel[] = ['trimPathStart', 'trimPathEnd', 'trimPathOffset'];
-const MATTE_CHANNELS: TrackChannel[] = ['matteFeather', 'matteStrength'];
+const MATTE_CHANNELS: TrackChannel[] = ['matteFeather', 'matteStrength', 'matteGradientAngle'];
 
 /** The mask ids a track animates, even for a mask the layer no longer lists. */
 const animatedMaskIds = (track: Track): string[] => {
@@ -75,7 +75,7 @@ const animatedMaskIds = (track: Track): string[] => {
  *   Position › X, Y · Scale › X, Y · Rotation · Opacity
  *   Trim Paths › Start, End, Offset   — only when the layer uses Trim Paths
  *                                       (or still holds Trim keys)
- *   Track Matte › Feather, Strength   — only when the layer has a Track Matte
+ *   Track Matte › Feather, Strength, Angle — only when the layer has a Track Matte
  *                                       (or still holds its keys)
  *   <mask name> › Path, Feather, Opacity, Expansion   — one group per mask
  */

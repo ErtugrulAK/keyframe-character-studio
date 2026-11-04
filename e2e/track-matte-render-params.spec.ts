@@ -143,3 +143,37 @@ test('Feather keys from its keyframe button, animate on the stage and are saved 
   await expect(key).toHaveAttribute('aria-pressed', 'false');
   expect((await targetMask(page)).id).not.toContain('-f');
 });
+
+test('the gradient angle keys from its keyframe button and is saved (QA rc6 round 4)', async ({ page }) => {
+  await seed(page, { gradient: { angle: 0 } });
+  await page.locator('[role="tree"] [data-layer-id="tgt"]').click();
+  await openDetailsTab(page, 'Masks');
+  const expand = page.getByRole('button', { name: 'Expand TRACK MATTE', exact: true });
+  if (await expand.count()) await expand.click();
+  const angle = page.getByRole('slider', { name: 'Gradient angle' });
+  const key = page.getByRole('button', { name: 'Gradient angle keyframe' });
+
+  await key.click();
+  await expect(key).toHaveAttribute('aria-pressed', 'true');
+  await setFrame(page, 20);
+  await angle.focus();
+  for (let step = 0; step < 15; step += 1) await angle.press('ArrowRight');
+  await expect(angle).toHaveValue('15');
+  await expect(key).toHaveAttribute('aria-pressed', 'true');
+  await setFrame(page, 0);
+  await expect(angle).toHaveValue('0');
+
+  const badge = page.locator('.autosave-status-badge');
+  const before = await badge.getAttribute('data-last-saved-at');
+  await badge.click();
+  await expect.poll(async () => Number((await badge.getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 }).toBeGreaterThan(Number(before || '0'));
+  const saved = await page.evaluate((storageKey) => {
+    const scene = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    const track = (scene.tracks || []).find((candidate: { partId: string }) => candidate.partId === 'tgt');
+    return {
+      keys: (track?.channels?.matteGradientAngle || []).map((keyframe: { frame: number; value: number }) => [keyframe.frame, keyframe.value]),
+      base: (scene.layers || []).find((layer: { id: string }) => layer.id === 'tgt')?.trackMatte?.gradient?.angle,
+    };
+  }, STORAGE_KEY);
+  expect(saved).toEqual({ keys: [[0, 0], [20, 15]], base: 0 });
+});

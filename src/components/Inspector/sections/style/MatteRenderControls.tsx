@@ -16,6 +16,8 @@ export interface MatteChannelKey {
 export interface MatteChannelKeys {
   feather: MatteChannelKey;
   strength: MatteChannelKey;
+  /** The linear gradient's angle; absent while there is no gradient. */
+  angle?: MatteChannelKey;
 }
 
 const KEY_TITLES: Record<MatteChannelKey['state'], string> = {
@@ -234,7 +236,7 @@ export const MatteRenderControls: React.FC<MatteRenderControlsProps> = ({ partId
       {gradientEnabled && gradientTypeValue === 'linear' && (
         <div className="matte-field">
           <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>ANGLE</span>
+            <span className="matte-key-label">ANGLE{channelKeys?.angle && <KeyButton name="Gradient angle" control={channelKeys.angle} disabled={disabled} />}</span>
             <span style={{ color: '#4a8fe8', fontWeight: 600, opacity: dim(disabled) }}>{angleValue}°</span>
           </label>
           <input

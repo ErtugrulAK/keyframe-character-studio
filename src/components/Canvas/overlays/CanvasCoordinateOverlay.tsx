@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
+import { stageHoverPointer, subscribeStageHover } from '../../../utils/editor/stagePointer';
 import type { CoordinatePoint } from '../../../utils/geometry/projectCoordinates';
 
 interface CanvasCoordinateOverlayProps {
@@ -27,10 +28,10 @@ type Side = 'left' | 'right' | 'top' | 'bottom';
  * The axes are drawn in the same editor-camera space as the artboard and every
  * layer, so zoom, pan and resize move them through the existing camera
  * transform, and they run across the whole visible stage. Like ruler markers,
- * a small triangle sits on each edge of the visible stage where an axis
- * crosses it, pointing in towards the origin; the markers slide along the
- * edges as the view pans. Where the axes cross is the origin, so it carries no
- * marker of its own.
+ * a small triangle sits on each edge of the visible stage, pointing inwards:
+ * at the pointer while it is over the stage, otherwise where the axes cross
+ * the edges (so the markers slide as the view pans). Where the axes cross is
+ * the origin, so it carries no marker of its own.
  */
 export const CanvasCoordinateOverlay: React.FC<CanvasCoordinateOverlayProps> = ({
   artX,
@@ -47,16 +48,20 @@ export const CanvasCoordinateOverlay: React.FC<CanvasCoordinateOverlayProps> = (
   const bottom = visibleRect?.bottom ?? artY + height;
   const length = MARKER_LENGTH * zScale;
   const half = MARKER_HALF_WIDTH * zScale;
-  const xAxisShown = origin.y >= top && origin.y <= bottom;
-  const yAxisShown = origin.x >= left && origin.x <= right;
+  // Like ruler markers, the triangles follow the pointer while it is over the
+  // stage, and mark where the axes cross the edges when it is not.
+  const hover = useSyncExternalStore(subscribeStageHover, stageHoverPointer, () => null);
+  const mark = hover ? { x: origin.x + hover.x, y: origin.y + hover.y } : origin;
+  const xAxisShown = mark.y >= top && mark.y <= bottom;
+  const yAxisShown = mark.x >= left && mark.x <= right;
 
   /** The triangle on one edge: its base on the edge, its tip pointing inwards. */
   const marker = (side: Side): string => {
     switch (side) {
-      case 'left': return `${left},${origin.y - half} ${left + length},${origin.y} ${left},${origin.y + half}`;
-      case 'right': return `${right},${origin.y - half} ${right - length},${origin.y} ${right},${origin.y + half}`;
-      case 'top': return `${origin.x - half},${top} ${origin.x},${top + length} ${origin.x + half},${top}`;
-      case 'bottom': return `${origin.x - half},${bottom} ${origin.x},${bottom - length} ${origin.x + half},${bottom}`;
+      case 'left': return `${left},${mark.y - half} ${left + length},${mark.y} ${left},${mark.y + half}`;
+      case 'right': return `${right},${mark.y - half} ${right - length},${mark.y} ${right},${mark.y + half}`;
+      case 'top': return `${mark.x - half},${top} ${mark.x},${top + length} ${mark.x + half},${top}`;
+      case 'bottom': return `${mark.x - half},${bottom} ${mark.x},${bottom - length} ${mark.x + half},${bottom}`;
     }
   };
   const markers: Array<{ side: Side; axis: 'x' | 'y' }> = [

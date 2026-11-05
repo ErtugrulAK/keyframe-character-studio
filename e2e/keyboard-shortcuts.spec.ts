@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { openShortcutsFromMenu } from './fixtures/toolbarTools';
 
 /**
  * The shortcut system, driven in a real browser.
@@ -53,7 +54,7 @@ test('the reference lists the bindings for this platform and closes on Escape', 
 
   // The header control is one way in.
   // (Rows are counted from the table itself: the reference is the keymap.)
-  await page.getByRole('button', { name: 'Keyboard shortcuts' }).click();
+  await openShortcutsFromMenu(page);
   const dialog = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
   await expect(dialog).toBeVisible();
 

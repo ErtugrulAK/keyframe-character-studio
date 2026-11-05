@@ -8,8 +8,10 @@ import type { Page } from '@playwright/test';
  */
 export async function armTool(page: Page, name: string): Promise<void> {
   const toolbar = page.getByRole('toolbar', { name: 'Authoring tools' });
-  if (name === 'Circle') {
-    await toolbar.getByRole('button', { name: 'Add circle', exact: true }).click();
+  if (name === 'Circle' || name === 'Ellipse') {
+    // The round tool's flyout: Ellipse (free) or Circle (equal sides).
+    await toolbar.locator('.tool-flyout-button').nth(1).click({ button: 'right' });
+    await page.getByRole('menuitemradio', { name: new RegExp(`^${name}`) }).click();
     return;
   }
   if (name === 'Free Draw' || name === 'Pen') {
@@ -25,4 +27,10 @@ export async function armTool(page: Page, name: string): Promise<void> {
 export async function openProjectSettings(page: Page): Promise<void> {
   await page.getByRole('menubar', { name: 'Editor menu' }).getByRole('menuitem', { name: 'File', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Project Settings…' }).click();
+}
+
+/** Opens the keyboard shortcut reference from Help > Keyboard Shortcuts. */
+export async function openShortcutsFromMenu(page: Page): Promise<void> {
+  await page.getByRole('menubar', { name: 'Editor menu' }).getByRole('menuitem', { name: 'Help', exact: true }).click();
+  await page.getByRole('menuitem', { name: /^Keyboard Shortcuts/ }).click();
 }

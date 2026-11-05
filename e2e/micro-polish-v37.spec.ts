@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { openShortcutsFromMenu } from './fixtures/toolbarTools';
 
 /**
  * V3.7 FINAL MICRO-POLISH CONTRACTS — measured in the real browser DOM, never
@@ -173,7 +174,7 @@ test('rapid Edit ↔ Broadcast switching restores the edit camera exactly', asyn
 
 test('the shortcut reference is a single-column sheet of hairline category bands', async ({ page }) => {
   await seed(page, []);
-  await page.getByRole('button', { name: 'Keyboard shortcuts' }).click();
+  await openShortcutsFromMenu(page);
   const sheet = page.locator('.shortcut-reference');
   await expect(sheet).toBeVisible();
 

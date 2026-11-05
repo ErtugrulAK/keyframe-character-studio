@@ -57,7 +57,7 @@ import { lockedLayerIds, lockedLayersRefusal } from '../../utils/layers/layerLoc
 import { useFreeformDraw, type FreeformFinishReason } from '../../hooks/useFreeformDraw';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
 import { CanvasCoordinateOverlay } from './overlays/CanvasCoordinateOverlay';
-import { rememberStagePointer } from '../../utils/editor/stagePointer';
+import { leaveStage, rememberStagePointer } from '../../utils/editor/stagePointer';
 import { TEXT_PRESETS } from '../../utils/editor/textPresets';
 import { CanvasCoordinateReadout } from './overlays/CanvasCoordinateReadout';
 import { FreeformTangentOverlay } from './overlays/FreeformTangentOverlay';
@@ -832,7 +832,8 @@ export const StageCanvas: React.FC = () => {
         if (distance >= 4) {
           const start = { x: shapeCreationStart.svgX, y: shapeCreationStart.svgY };
           // Shift draws an equal-sided shape (a square, a circle), as in other editors.
-          const drawn = getShapeCreationBounds(start, { x: svgX, y: svgY }, pendingShapeType === 'custom_box' || e.shiftKey);
+          // The Square and the Circle tools always keep equal sides.
+          const drawn = getShapeCreationBounds(start, { x: svgX, y: svgY }, pendingShapeType === 'custom_box' || (pendingShapeType === 'custom_circle' && pendingShapeName === 'Circle') || e.shiftKey);
           // Alt draws from the centre: the press point is the middle of the shape.
           const bounds = e.altKey
             ? {
@@ -905,7 +906,7 @@ export const StageCanvas: React.FC = () => {
       if (solved) updateCurrentTransform(solved.patch, solved.targetId);
     },
     // The pointer-up effect owns the current mouse-up callback; adding the later-declared callback here would create a declaration cycle.
-    [isDragging, dragMode, dragStart, clientToSVG, clientToStage, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, updateCurrentTransform, shapeCreationStart, pendingShapeType, isScaleLocked, snapEnabled, setCropRegion, projectResolution]
+    [isDragging, dragMode, dragStart, clientToSVG, clientToStage, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, updateCurrentTransform, shapeCreationStart, pendingShapeType, pendingShapeName, isScaleLocked, snapEnabled, setCropRegion, projectResolution]
   );
 
   /**
@@ -1046,24 +1047,50 @@ export const StageCanvas: React.FC = () => {
     };
   }, [isDragging, handleMouseMove, handlePointerUp, handlePointerCancel]);
 
+  /**
+   * Wheel zoom, smooth: the step follows the wheel's own distance (a trackpad
+   * pinch sends many small ones, a mouse notch one larger), and every wheel
+   * event of one animation frame is applied together, so the stage renders
+   * once per frame however fast the events come.
+   */
+  const pendingWheelRef = useRef<{ deltaY: number; clientX: number; clientY: number; frame: number | null }>({ deltaY: 0, clientX: 0, clientY: 0, frame: null });
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
-    const view = cameraViewRef.current;
-    if (!containerRef.current || !view || appMode === 'broadcast') return;
-    const currentZoom = zoomRef.current;
-    const nextZoom = clampZoom(currentZoom * (e.deltaY < 0 ? 1.1 : 0.9));
-    setZoomLevel(nextZoom);
-    setCameraView({
-      baseScale: view.baseScale,
-      center: getCursorAnchoredCameraCenter({
-        view,
-        clientX: e.clientX,
-        clientY: e.clientY,
-        zoom: currentZoom,
-        nextZoom,
-      }),
+    if (!containerRef.current || !cameraViewRef.current || appMode === 'broadcast') return;
+    const pending = pendingWheelRef.current;
+    // Lines and pages count as about 40 and 800 pixels.
+    pending.deltaY += e.deltaY * (e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? 800 : 1);
+    pending.clientX = e.clientX;
+    pending.clientY = e.clientY;
+    if (pending.frame !== null) return;
+    pending.frame = requestAnimationFrame(() => {
+      pending.frame = null;
+      const view = cameraViewRef.current;
+      const deltaY = Math.max(-600, Math.min(600, pending.deltaY));
+      pending.deltaY = 0;
+      if (!view || deltaY === 0) return;
+      const currentZoom = zoomRef.current;
+      // 100 px of wheel (one mouse notch) is a 1.16x step.
+      const nextZoom = clampZoom(currentZoom * Math.exp(-deltaY * 0.0015));
+      if (nextZoom === currentZoom) return;
+      zoomRef.current = nextZoom;
+      setZoomLevel(nextZoom);
+      setCameraView({
+        baseScale: view.baseScale,
+        center: getCursorAnchoredCameraCenter({
+          view,
+          clientX: pending.clientX,
+          clientY: pending.clientY,
+          zoom: currentZoom,
+          nextZoom,
+        }),
+      });
     });
   }, [appMode]);
+  useEffect(() => () => {
+    const frame = pendingWheelRef.current.frame;
+    if (frame !== null) cancelAnimationFrame(frame);
+  }, []);
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -1494,6 +1521,7 @@ export const StageCanvas: React.FC = () => {
       onDoubleClickCapture={handleToolOwnedDoubleClickCapture}
       onMouseDown={handleMouseDown}
       onMouseMove={handleStagePointerMove}
+      onMouseLeave={leaveStage}
       onContextMenu={handleContextMenu}
       onDragOver={handleDragOverStage}
       onDragLeave={handleDragLeaveStage}
@@ -1541,7 +1569,10 @@ export const StageCanvas: React.FC = () => {
             x={EDITOR_CAMERA_CENTER.x}
             y={EDITOR_CAMERA_CENTER.y}
           >
-            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
+            {/* Both edges of the tile, so a line is centred on its grid position
+                (one edge alone left half the line clipped, off the axis), and
+                one screen pixel wide at any zoom. */}
+            <path d="M 0 0 V 50 M 50 0 V 50 M 0 0 H 50 M 0 50 H 50" fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth={1 / Math.max(0.05, zoomLevel)} />
           </pattern>
           {/* Major grid: 100px lines anchored at the origin (1 cell = 100px = 1 unit) */}
           <pattern
@@ -1552,7 +1583,7 @@ export const StageCanvas: React.FC = () => {
             x={EDITOR_CAMERA_CENTER.x}
             y={EDITOR_CAMERA_CENTER.y}
           >
-            <path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(255, 255, 255, 0.10)" strokeWidth="1" />
+            <path d="M 0 0 V 100 M 100 0 V 100 M 0 0 H 100 M 0 100 H 100" fill="none" stroke="rgba(255, 255, 255, 0.10)" strokeWidth={1 / Math.max(0.05, zoomLevel)} />
           </pattern>
           <clipPath id="artboard-clip">
             <rect

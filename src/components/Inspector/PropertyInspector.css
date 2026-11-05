@@ -2335,56 +2335,6 @@
 }
 
 
-/* C2 — the mask path editor: full Inspector width, the owner's proportions,
-   an expandable view, and control rows that wrap instead of squeezing. */
-.bezier-path-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-}
-
-.bezier-path-editor__header,
-.bezier-path-editor__row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.bezier-path-editor__header {
-  justify-content: space-between;
-}
-
-.bezier-path-editor__status {
-  color: var(--text-secondary, #d6d6d6);
-  font-size: 11px;
-}
-
-.bezier-path-editor__canvas {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: 220px;
-  border-radius: 4px;
-  touch-action: none;
-}
-
-/* C5 — the focused vertex is also the selected one (white fill), so its ring
-   uses the focus token, not white. */
-.bezier-path-editor__canvas circle[role="button"]:focus-visible {
-  outline: none;
-  stroke: var(--kcs-border-focus);
-  stroke-width: 3;
-}
-
-.bezier-path-editor__note {
-  margin: 0;
-  color: var(--accent-gold);
-  font-size: 11px;
-  line-height: 1.4;
-}
-
 /* C2-E — layer tree drop affordance: a line for Before/After, a box for Nest. */
 .tree-node:focus-visible {
   outline: 2px solid var(--accent-teal);
@@ -2856,25 +2806,6 @@
 }
 .tree-node .outliner-relation-badge.is-matte {
   min-width: 56px;
-}
-
-/* C6 — shape geometry: parametric shape vs editable path. */
-.path-geometry-note {
-  margin: 0 0 8px;
-  color: var(--kcs-text-secondary, var(--text-secondary));
-  font-size: var(--font-size-caption);
-  line-height: 1.4;
-}
-
-.path-geometry-convert {
-  width: 100%;
-}
-
-.path-geometry-reason {
-  margin: 6px 0 0;
-  color: var(--kcs-text-muted, var(--text-muted));
-  font-size: var(--font-size-caption);
-  line-height: 1.35;
 }
 
 /* C6 — a card's status next to its title, and the quiet look of a

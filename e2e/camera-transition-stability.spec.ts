@@ -415,7 +415,7 @@ test('mid-edge reversals of the inspector never drift the world', async ({ page 
   reportFrames('inspector reversals show->hide->show', showThenHideThenShow);
   expectStable('inspector reversals show->hide->show', showThenHideThenShow);
   await settle(page);
-  expect((await inspectorBox(page)).width, 'the reversals did not land on the docked width').toBeCloseTo(372, 1);
+  expect((await inspectorBox(page)).width, 'the reversals did not land on the docked width').toBeCloseTo(484, 1);
 });
 
 /**
@@ -439,7 +439,7 @@ test('chrome transitions never drift the world on short, narrow or wide viewport
     const before = await inspectorBox(page);
     expect(before.inlineWidth, `${label}: the stylesheet must own the resting width`).toBe('');
     expect(before.inlineBasis, `${label}: the stylesheet must own the resting flex basis`).toBe('');
-    if (viewport.width === 1280) expect(before.width, `${label}: docked width`).toBeCloseTo(372, 1);
+    if (viewport.width === 1280) expect(before.width, `${label}: docked width`).toBeCloseTo(484, 1);
 
     const hide = await sampleTransition(page, 'Hide Inspector');
     reportFrames(`inspector hide @${label}`, hide);

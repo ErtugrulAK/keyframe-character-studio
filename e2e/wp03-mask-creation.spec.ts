@@ -181,7 +181,7 @@ test.describe('WP-03 — mask creation and path edits', () => {
     await expect(ruler).toHaveAttribute('aria-valuenow', '20');
     await expect(page.getByTestId('mask-path-overlay')).toBeVisible();
 
-    const handle = await page.getByTestId('mask-path-move-handle').boundingBox();
+    const handle = await page.getByTestId('mask-path-hit-area').boundingBox();
     if (!handle) throw new Error('no move handle');
     await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
     await page.mouse.down();

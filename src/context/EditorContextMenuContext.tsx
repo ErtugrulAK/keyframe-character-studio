@@ -99,7 +99,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     if (targetId === null) {
       const groups: ContextMenuGroup[] = [];
       const emptyStage: ContextMenuGroup = [];
-      if (clipboardData) emptyStage.push({ id: 'paste', label: 'Paste', shortcut: hint('paste'), run: pasteCopiedPart });
+      if (clipboardData) emptyStage.push({ id: 'paste', label: 'Paste', shortcut: hint('paste'), run: () => pasteCopiedPart() });
       if (characterParts.length > 0) emptyStage.push({ id: 'select-all', label: 'Select All', shortcut: hint('select-all'), run: selectAll });
       if (emptyStage.length > 0) groups.push(emptyStage);
       return groups;
@@ -125,7 +125,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
       label: 'Paste',
       shortcut: hint('paste'),
       disabled: !clipboardData,
-      run: pasteCopiedPart,
+      run: () => pasteCopiedPart(),
     });
     if (hasPrimary) clipboardGroup.push({ id: 'duplicate', label: 'Duplicate', shortcut: hint('duplicate'), run: duplicateSelectedPart });
     // The label names the delete's scope: a group takes its layers, a plain

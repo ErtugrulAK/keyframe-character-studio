@@ -13,6 +13,7 @@ import {
   ArrowUp,
   Check,
   Circle,
+  CircleDot,
   Compass,
   Crop,
   Crosshair,
@@ -48,7 +49,6 @@ import { ToolbarMenu, type ToolbarMenuItem } from './ToolbarMenu';
 import { ToolFlyout, type ToolFlyoutItem } from './ToolFlyout';
 import { useMediaImport } from '../../hooks/useMediaImport';
 import { SHAPE_ICON_MAP } from '../../utils/editor/shapeIconMap';
-import { TEXT_PRESETS } from '../../utils/editor/textPresets';
 import type { BodyPartType } from '../../types/animator';
 import type { BooleanOperation } from '../../utils/geometry/booleanGeometry';
 import type { AlignEdge } from '../../utils/layers/vectorArrange';
@@ -278,10 +278,11 @@ export const AuthoringToolbar: React.FC = () => {
     const Icon = SHAPE_ICON_MAP[tool.type] ?? Square;
     return { id: tool.type, label: tool.label, icon: <Icon />, ...(tool.type === 'custom_rect' ? { shortcut: hint('create-rectangle') } : {}) };
   });
-  const [textToolName, setTextToolName] = useRememberedTool<string>('kcs.toolbar.text', 'Text', (value) => value === 'Text' || TEXT_PRESETS.some((preset) => preset.label === value));
-  const textItems: ToolFlyoutItem[] = [
-    { id: 'Text', label: 'Text', icon: <Type />, shortcut: hint('create-text') },
-    ...TEXT_PRESETS.map((preset) => ({ id: preset.label, label: `${preset.label} · ${preset.description}`, icon: <Type /> })),
+  // The round tool: an ellipse, or a circle that always keeps equal sides.
+  const [ellipseTool, setEllipseTool] = useRememberedTool<string>('kcs.toolbar.ellipse', 'Ellipse', (value) => value === 'Ellipse' || value === 'Circle');
+  const ellipseItems: ToolFlyoutItem[] = [
+    { id: 'Ellipse', label: 'Ellipse', icon: <Circle />, shortcut: hint('create-circle') },
+    { id: 'Circle', label: 'Circle', icon: <CircleDot /> },
   ];
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const importMedia = useMediaImport();
@@ -384,30 +385,30 @@ export const AuthoringToolbar: React.FC = () => {
             armShapeCreation(picked.type, picked.label);
           }}
         />
-        <button
-          type="button"
-          className={`authoring-toolbar-button${circleArmed ? ' active' : ''}`}
-          aria-label="Add circle"
-          aria-keyshortcuts={ariaKeyshortcuts('create-circle', platform)}
-          aria-pressed={circleArmed}
-          title={`Circle (${hint('create-circle')}): drag on the stage to draw it; Shift for a perfect circle`}
-          onClick={() => armShapeCreation('custom_circle', 'Circle')}
-        >
-          <Circle />
-        </button>
         <ToolFlyout
-          label="Add text"
-          title={`Text (${hint('create-text')}): click on the stage to place it, or drag to draw its box (hold the button for text styles)`}
-          current={textItems.find((item) => item.id === textToolName) ?? textItems[0]}
-          items={textItems}
-          active={textArmed}
-          keyshortcuts={ariaKeyshortcuts('create-text', platform)}
-          onRun={() => armShapeCreation('custom_text', textToolName)}
+          label={`Add ${ellipseTool.toLowerCase()}`}
+          title={`${ellipseTool} (${hint('create-circle')}): drag on the stage to draw it; Shift for a perfect circle (hold the button for Ellipse / Circle)`}
+          current={ellipseItems.find((item) => item.id === ellipseTool) ?? ellipseItems[0]}
+          items={ellipseItems}
+          active={circleArmed}
+          keyshortcuts={ariaKeyshortcuts('create-circle', platform)}
+          onRun={() => armShapeCreation('custom_circle', ellipseTool)}
           onPick={(id) => {
-            setTextToolName(id);
-            armShapeCreation('custom_text', id);
+            setEllipseTool(id);
+            armShapeCreation('custom_circle', id);
           }}
         />
+        <button
+          type="button"
+          className={`authoring-toolbar-button${textArmed ? ' active' : ''}`}
+          aria-label="Add text"
+          aria-keyshortcuts={ariaKeyshortcuts('create-text', platform)}
+          aria-pressed={textArmed}
+          title={`Text (${hint('create-text')}): click on the stage to place it, or drag to draw its box`}
+          onClick={() => armShapeCreation('custom_text', 'Text')}
+        >
+          <Type />
+        </button>
         <button
           type="button"
           className={`authoring-toolbar-button${penActive ? ' active' : ''}`}

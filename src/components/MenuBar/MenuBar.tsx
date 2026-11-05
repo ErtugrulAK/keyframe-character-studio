@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAnimatorSlice } from '../../context/useAnimator';
 import { useEditorContextMenu } from '../../context/editorContextMenu';
-import { useLayerGrouping } from '../../hooks/useLayerGrouping';
-import { useVectorArrangeAuthoring } from '../../hooks/useVectorArrangeAuthoring';
 import { detectShortcutPlatform, formatShortcutHint, type ShortcutCommandId } from '../../utils/editor/shortcuts';
 import { dispatchHeaderCommand } from '../../utils/editor/headerCommands';
 import { isConvertibleShapeType, shapeToPathBlockReason } from '../../utils/geometry/shapeToPath';
@@ -26,17 +24,13 @@ interface Menu {
   groups: MenuItem[][];
 }
 
-/** The same camera channel the toolbar's zoom buttons and +/- keys use. */
-const viewportCommand = (type: 'zoom-in' | 'zoom-out' | 'reset-view') => {
-  window.dispatchEvent(new CustomEvent('canvas-viewport-command', { detail: { type } }));
-};
-
 /**
  * The editor's menu bar (File, Edit, Object, View, Help), as in Photopea and
- * Boxy SVG. Every row runs a command that already exists (history, clipboard,
- * grouping, arrange, the header's import/export, the camera channel), so the
- * menus add no second implementation. Project settings, which lived in the
- * left panel, open from File.
+ * Boxy SVG. It holds what the toolbar does not: files and export, the
+ * clipboard (Paste in Place, Paste Animation), selection, layer state
+ * (lock, hide, front/back, mirrored copies) and the panels. Every row runs a
+ * command that already exists, so the menus add no second implementation.
+ * Project settings, which lived in the left panel, open from File.
  *
  * Mouse: click a title to open its menu; while one is open, hovering another
  * title switches to it. Keyboard: ArrowLeft/Right move between menus,
@@ -44,19 +38,17 @@ const viewportCommand = (type: 'zoom-in' | 'zoom-out' | 'reset-view') => {
  */
 export const MenuBar: React.FC = () => {
   const {
-    undo, redo, canUndo, canRedo, copySelectedPart, pasteCopiedPart, duplicateSelectedPart, clipboardData,
-    selectedPartId, selectedPartIds, characterParts, tracks, convertToEditablePath, resetSelectedTransforms,
-    showGrid, setShowGrid, snapEnabled, setSnapEnabled, showCoordinateOverlay, setShowCoordinateOverlay,
-    openShortcutReference, reorderParts,
+    undo, redo, canUndo, canRedo, copySelectedPart, pasteCopiedPart, duplicateSelectedPart, duplicateMirrored, clipboardData,
+    pasteAnimationOntoSelected, selectedPartId, selectedPartIds, setSelectedPartId, setSelectedPartIds, characterParts, tracks,
+    convertToEditablePath, resetSelectedTransforms, setLayersLocked, toggleTrackEditVisibility, openShortcutReference,
+    reorderParts, setAppMode,
   } = useAnimatorSlice(
-    'undo', 'redo', 'canUndo', 'canRedo', 'copySelectedPart', 'pasteCopiedPart', 'duplicateSelectedPart', 'clipboardData',
-    'selectedPartId', 'selectedPartIds', 'characterParts', 'tracks', 'convertToEditablePath', 'resetSelectedTransforms',
-    'showGrid', 'setShowGrid', 'snapEnabled', 'setSnapEnabled', 'showCoordinateOverlay', 'setShowCoordinateOverlay',
-    'openShortcutReference', 'reorderParts',
+    'undo', 'redo', 'canUndo', 'canRedo', 'copySelectedPart', 'pasteCopiedPart', 'duplicateSelectedPart', 'duplicateMirrored', 'clipboardData',
+    'pasteAnimationOntoSelected', 'selectedPartId', 'selectedPartIds', 'setSelectedPartId', 'setSelectedPartIds', 'characterParts', 'tracks',
+    'convertToEditablePath', 'resetSelectedTransforms', 'setLayersLocked', 'toggleTrackEditVisibility', 'openShortcutReference',
+    'reorderParts', 'setAppMode',
   );
   const { selectAll, deleteSelection } = useEditorContextMenu();
-  const { selectedGroup, canGroup, groupSelection, ungroupSelection } = useLayerGrouping();
-  const arrange = useVectorArrangeAuthoring();
   const [openId, setOpenId] = useState<string | null>(null);
   const [activeRow, setActiveRow] = useState(0);
   const [projectSettingsOpen, setProjectSettingsOpen] = useState(false);
@@ -70,18 +62,27 @@ export const MenuBar: React.FC = () => {
   const primary = characterParts.find((part) => part.id === selectedPartId);
   const index = primary ? characterParts.indexOf(primary) : -1;
   const single = Boolean(primary) && selectedPartIds.length <= 1;
+  const selection = selectedPartIds.length > 0 ? selectedPartIds : primary ? [primary.id] : [];
+  const trackOf = (id: string) => tracks.find((track) => track.partId === id);
+  const allLocked = selection.length > 0 && selection.every((id) => trackOf(id)?.locked);
+  const primaryTrack = primary ? trackOf(primary.id) : undefined;
   const shapeToPathBlocked = primary && isConvertibleShapeType(primary.type) ? shapeToPathBlockReason(primary, tracks) : 'Select a basic shape';
+  /** The docked panels keep their own toggles; the menu presses them. */
+  const pressChrome = (selector: string) => document.querySelector<HTMLButtonElement>(selector)?.click();
 
+  // Only what the toolbar does not already offer: the toolbar keeps the
+  // tools, grouping, Boolean, align, rotate/flip, crop and the view controls.
   const menus: Menu[] = [
     {
       id: 'file',
       label: 'File',
       groups: [
         [
+          { id: 'new-template', label: 'New Template', run: () => dispatchHeaderCommand('new-template') },
           { id: 'import', label: 'Import…', run: () => dispatchHeaderCommand('import') },
           { id: 'add-media', label: 'Add Image or Video…', run: () => mediaInput?.click() },
-          { id: 'project-settings', label: 'Project Settings…', run: () => setProjectSettingsOpen(true) },
         ],
+        [{ id: 'project-settings', label: 'Project Settings…', run: () => setProjectSettingsOpen(true) }],
         [
           { id: 'export-json', label: 'Export Project (JSON)', run: () => dispatchHeaderCommand('export-json') },
           { id: 'export-ograf', label: 'Export OGraf Package', run: () => dispatchHeaderCommand('export-ograf') },
@@ -102,11 +103,18 @@ export const MenuBar: React.FC = () => {
         [
           { id: 'cut', label: 'Cut', disabled: !single, run: () => { copySelectedPart(); deleteSelection(); } },
           { id: 'copy', label: 'Copy', shortcut: hint('copy'), disabled: !primary, run: copySelectedPart },
-          { id: 'paste', label: 'Paste', shortcut: hint('paste'), disabled: !clipboardData, run: pasteCopiedPart },
+          { id: 'paste', label: 'Paste', shortcut: hint('paste'), disabled: !clipboardData, run: () => pasteCopiedPart() },
+          { id: 'paste-in-place', label: 'Paste in Place', disabled: !clipboardData, run: () => pasteCopiedPart({ inPlace: true }) },
           { id: 'duplicate', label: 'Duplicate', shortcut: hint('duplicate'), disabled: !primary, run: duplicateSelectedPart },
           { id: 'delete', label: 'Delete', shortcut: hint('delete-selection'), disabled: !primary, run: deleteSelection },
         ],
-        [{ id: 'select-all', label: 'Select All', shortcut: hint('select-all'), disabled: characterParts.length === 0, run: selectAll }],
+        [
+          { id: 'paste-animation', label: 'Paste Animation', disabled: !clipboardData || !primary || clipboardData.part.id === primary.id, run: () => { if (primary) pasteAnimationOntoSelected(primary.id); } },
+        ],
+        [
+          { id: 'select-all', label: 'Select All', shortcut: hint('select-all'), disabled: characterParts.length === 0, run: selectAll },
+          { id: 'deselect', label: 'Deselect', disabled: selection.length === 0, run: () => { setSelectedPartIds([]); setSelectedPartId(null); } },
+        ],
       ],
     },
     {
@@ -114,24 +122,21 @@ export const MenuBar: React.FC = () => {
       label: 'Object',
       groups: [
         [
-          { id: 'group', label: 'Group', shortcut: hint('group-layers'), disabled: !canGroup, run: groupSelection },
-          { id: 'ungroup', label: 'Ungroup', shortcut: hint('ungroup-layers'), disabled: !selectedGroup, run: ungroupSelection },
-        ],
-        [
           { id: 'shape-to-path', label: 'Shape to Path', disabled: Boolean(shapeToPathBlocked) || !single, run: () => { if (primary) convertToEditablePath(primary.id); } },
           { id: 'reset-transform', label: 'Reset Transform', disabled: !primary, run: resetSelectedTransforms },
         ],
         [
-          { id: 'rotate-cw', label: 'Rotate 90° Clockwise', shortcut: hint('rotate-cw'), disabled: !arrange.canTransform, run: () => arrange.rotate('cw') },
-          { id: 'rotate-ccw', label: 'Rotate 90° Counter-clockwise', shortcut: hint('rotate-ccw'), disabled: !arrange.canTransform, run: () => arrange.rotate('ccw') },
-          { id: 'flip-h', label: 'Flip Horizontal', shortcut: hint('flip-horizontal'), disabled: !arrange.canTransform, run: () => arrange.flip('horizontal') },
-          { id: 'flip-v', label: 'Flip Vertical', shortcut: hint('flip-vertical'), disabled: !arrange.canTransform, run: () => arrange.flip('vertical') },
+          { id: 'mirror-x', label: 'Duplicate Mirrored (Left / Right)', disabled: !single, run: () => duplicateMirrored('y') },
+          { id: 'mirror-y', label: 'Duplicate Mirrored (Up / Down)', disabled: !single, run: () => duplicateMirrored('x') },
         ],
         [
           { id: 'bring-to-front', label: 'Bring to Front', disabled: !single || index <= 0, run: () => reorderParts(index, 0) },
-          { id: 'bring-forward', label: 'Bring Forward', disabled: !single || index <= 0, run: () => reorderParts(index, index - 1) },
-          { id: 'send-backward', label: 'Send Backward', disabled: !single || index < 0 || index >= characterParts.length - 1, run: () => reorderParts(index, index + 1) },
           { id: 'send-to-back', label: 'Send to Back', disabled: !single || index < 0 || index >= characterParts.length - 1, run: () => reorderParts(index, characterParts.length - 1) },
+        ],
+        [
+          { id: 'lock', label: allLocked ? 'Unlock' : 'Lock', shortcut: hint('lock-layers'), disabled: selection.length === 0, run: () => setLayersLocked(selection, !allLocked) },
+          { id: 'unlock-all', label: 'Unlock All', shortcut: hint('unlock-all-layers'), disabled: !tracks.some((track) => track.locked), run: () => setLayersLocked(characterParts.map((part) => part.id), false) },
+          { id: 'hide', label: primaryTrack?.editVisible === false ? 'Show on Stage' : 'Hide on Stage', disabled: !single || !primaryTrack, run: () => { if (primaryTrack) toggleTrackEditVisibility(primaryTrack.id); } },
         ],
       ],
     },
@@ -140,15 +145,10 @@ export const MenuBar: React.FC = () => {
       label: 'View',
       groups: [
         [
-          { id: 'zoom-in', label: 'Zoom In', shortcut: hint('zoom-in'), run: () => viewportCommand('zoom-in') },
-          { id: 'zoom-out', label: 'Zoom Out', shortcut: hint('zoom-out'), run: () => viewportCommand('zoom-out') },
-          { id: 'reset-view', label: 'Fit to Screen', run: () => viewportCommand('reset-view') },
+          { id: 'inspector', label: 'Show / Hide Inspector', run: () => pressChrome('.inspector-dock-toggle') },
+          { id: 'timeline', label: 'Show / Hide Timeline', run: () => pressChrome('[data-testid="timeline-collapse-toggle"]') },
         ],
-        [
-          { id: 'grid', label: 'Grid', checked: showGrid, run: () => setShowGrid(!showGrid) },
-          { id: 'snap', label: 'Snapping', checked: snapEnabled, run: () => setSnapEnabled(!snapEnabled) },
-          { id: 'axes', label: 'Coordinate Axes', checked: showCoordinateOverlay, run: () => setShowCoordinateOverlay(!showCoordinateOverlay) },
-        ],
+        [{ id: 'broadcast', label: 'Broadcast Mode', run: () => setAppMode('broadcast') }],
       ],
     },
     {

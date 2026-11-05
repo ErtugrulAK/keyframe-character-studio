@@ -137,7 +137,7 @@ export const useClipboard = ({
    * single-layer paste always did. The copies keep their stacking order above
    * the scene, and the outermost ones move by the usual paste offset.
    */
-  const pasteCopiedPart = useCallback(() => {
+  const pasteCopiedPart = useCallback((options: { inPlace?: boolean } = {}) => {
     /**
      * The move each outermost copy gets, in its own parent's space. With a
      * paste point, the centre of the copies' world positions lands on it (a
@@ -180,8 +180,9 @@ export const useClipboard = ({
     const newTracks: Track[] = [];
     const outermostIds: string[] = [];
     const isOutermost = (part: CharacterPart) => !part.parentId || !idMap.has(part.parentId);
-    const target = pastePoint?.() ?? null;
-    const localOffset = pasteOffsets(entries.map((entry) => entry.part).filter(isOutermost), target);
+    // Paste in Place keeps the copies exactly over the originals.
+    const target = options.inPlace ? null : pastePoint?.() ?? null;
+    const localOffset = options.inPlace ? () => ({ x: 0, y: 0 }) : pasteOffsets(entries.map((entry) => entry.part).filter(isOutermost), target);
     entries.forEach(({ part, track }) => {
       const cloneId = idMap.get(part.id)!;
       const outermost = isOutermost(part);

@@ -83,7 +83,7 @@ test('the docked chrome resolves from the shared width tokens', async ({ page })
     document.querySelector('.stage-canvas-container')!.getBoundingClientRect().left,
     document.querySelectorAll('.left-toolbar-container, .left-toolbar-toggle').length,
   ]);
-  expect(Math.round(inspector)).toBe(372);
+  expect(Math.round(inspector)).toBe(484);
   expect(Math.round(stageLeft)).toBe(0);
   expect(leftDock).toBe(0);
 });

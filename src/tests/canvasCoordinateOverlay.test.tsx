@@ -1,5 +1,6 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
+import { leaveStage, rememberStagePointer } from '../utils/editor/stagePointer';
 import { describe, expect, it } from 'vitest';
 import type { Transform } from '../types/animator';
 import { CanvasCoordinateOverlay } from '../components/Canvas/overlays/CanvasCoordinateOverlay';
@@ -99,6 +100,18 @@ describe('CanvasCoordinateOverlay', () => {
       </svg>,
     );
     expect(points(getByTestId('coordinate-axis-marker-left'))[1]).toEqual([20, 240]);
+  });
+
+  it('the markers follow the pointer over the stage, and return to the axes when it leaves', () => {
+    const view = { left: 0, right: 800, top: 0, bottom: 600 };
+    const { getByTestId } = renderOverlay(view);
+    // World (100, -40) is stage point (400, 200).
+    act(() => rememberStagePointer({ x: 100, y: -40 }));
+    expect(points(getByTestId('coordinate-axis-marker-top'))[1]).toEqual([400, 5]);
+    expect(points(getByTestId('coordinate-axis-marker-left'))[1]).toEqual([5, 200]);
+    act(() => leaveStage());
+    expect(points(getByTestId('coordinate-axis-marker-top'))[1]).toEqual([300, 5]);
+    expect(points(getByTestId('coordinate-axis-marker-left'))[1]).toEqual([5, 240]);
   });
 
   it('stays decorative and pointer-transparent', () => {

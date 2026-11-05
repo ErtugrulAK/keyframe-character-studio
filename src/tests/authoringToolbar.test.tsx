@@ -366,11 +366,11 @@ describe('AuthoringToolbar', () => {
     };
     tap('Add rectangle');
     expect(animatorCtx.armShapeCreation).toHaveBeenCalledWith('custom_rect', 'Rectangle');
-    fireEvent.click(screen.getByRole('button', { name: 'Add circle' }));
-    expect(animatorCtx.armShapeCreation).toHaveBeenCalledWith('custom_circle', 'Circle');
+    tap('Add ellipse');
+    expect(animatorCtx.armShapeCreation).toHaveBeenCalledWith('custom_circle', 'Ellipse');
 
     // Text is a tool now: click to place a text, drag to draw its box.
-    tap('Add text');
+    fireEvent.click(screen.getByRole('button', { name: 'Add text' }));
     expect(animatorCtx.armShapeCreation).toHaveBeenCalledWith('custom_text', 'Text');
 
     const pen = screen.getByRole('button', { name: 'Pen' });

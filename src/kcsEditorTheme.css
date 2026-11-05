@@ -176,7 +176,7 @@ textarea:focus-visible { outline: none; }
    agree at every breakpoint. */
 @media (max-width: 1100px) {
   .header-bar { padding: 0 8px; gap: 6px; }
-  .app-container { --left-drawer-width: 224px; --right-inspector-width: 320px; }
+  .app-container { --left-drawer-width: 224px; --right-inspector-width: 416px; }
 }
 @media (max-width: 800px) {
   .header-brand { flex-basis: auto; }
@@ -185,7 +185,7 @@ textarea:focus-visible { outline: none; }
      and it still wraps naturally when it really does not fit. */
   .header-center-controls { flex: 0 0 auto; }
   .header-bar { height: auto; min-height: 40px; padding-block: 3px; }
-  .app-container { --left-drawer-width: 196px; --right-inspector-width: 286px; }
+  .app-container { --left-drawer-width: 196px; --right-inspector-width: 372px; }
 }
 @media (prefers-reduced-motion: reduce) {
   button, .motion-design-right-sidebar, .left-toolbar-container { transition: none !important; }
@@ -1806,4 +1806,20 @@ button:disabled {
   background: var(--kcs-danger);
   border-color: var(--kcs-danger);
   color: var(--kcs-on-accent);
+}
+
+/*
+ * Focus rings belong to keyboard navigation only (`inputModality.ts`). After a
+ * click, a double-click to rename or a right-click menu the editor shows no
+ * blue box: no outline and no focus glow, and a text field keeps its own
+ * neutral border. Tab brings the rings back.
+ */
+html:not([data-input-modality="keyboard"]) :is(*:focus, *:focus-visible) {
+  outline: none !important;
+}
+html:not([data-input-modality="keyboard"]) :is(input, select, textarea, [role="menuitem"], button):focus {
+  box-shadow: none !important;
+}
+html:not([data-input-modality="keyboard"]) .kcs-inline-rename:focus {
+  border-color: transparent;
 }

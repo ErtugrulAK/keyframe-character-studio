@@ -215,7 +215,7 @@ export const useKeyboardShortcuts = ({
           armShapeCreation?.('custom_rect', 'Rectangle');
           return;
         case 'create-circle':
-          armShapeCreation?.('custom_circle', 'Circle');
+          armShapeCreation?.('custom_circle', 'Ellipse');
           return;
         case 'create-text':
           // The Text tool: click to place a text, drag to draw its box.

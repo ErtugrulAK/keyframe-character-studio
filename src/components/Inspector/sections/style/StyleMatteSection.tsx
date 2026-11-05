@@ -1,12 +1,9 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, PenLine, X } from 'lucide-react';
-import type { BezierPath, CharacterPart, LayerMask, MatteMode, PartMatte, Track } from '../../../../types/animator';
-import { maskPathTopologyLockReason } from '../../../../utils/geometry/maskPathCreation';
-import { BezierPathEditor } from '../../BezierPathEditor';
+import type { CharacterPart, LayerMask, MatteMode, PartMatte } from '../../../../types/animator';
 import { NumberField } from '../../inputs/NumberField';
 import { pickedTrackMatte, trackMattePickVerdict } from '../../../../utils/layers/trackMattePick';
 import { requestMaskPointsFocus } from '../../../../utils/geometry/maskPointFocus';
-import type { PathOrderCommand } from '../../../../utils/geometry/maskPathOrder';
 import type { MaskDrawShape } from '../../../../hooks/useMaskEditing';
 import { resolveMatteSource, resolveMatteMode, isMatteEligible, suppressedMatteSourceIds } from '../../../../utils/layers/matte';
 import { StyleCard } from './StyleCard';
@@ -19,7 +16,6 @@ interface StyleMatteSectionProps {
   selectedPart: CharacterPart;
   characterParts: CharacterPart[];
   onPartPropChange: (key: keyof CharacterPart, value: any) => void;
-  onChangeMaskPath?: (maskId: string, path: BezierPath) => void;
   /** The mask of THIS layer edited on the canvas, if any. */
   maskEditTargetId?: string | null;
   onEditMaskOnCanvas?: (maskId: string) => void;
@@ -35,12 +31,8 @@ interface StyleMatteSectionProps {
   /** Tells why a Track Matte source choice was refused (C10: from the source list). */
   onPickRefused?: (reason: string) => void;
   /** A mask path structure command; returns the selected point's new index, undefined when refused. */
-  onMaskPathOrder?: (maskId: string, command: PathOrderCommand, selectedIndex: number | null) => number | null | undefined;
   onSelectMatteTarget?: (targetId: string) => void;
   /** The layer's mask path keys (the topology guard reads them) and the canvas-selected point. */
-  maskPathChannels?: Track['maskPathChannels'];
-  maskVertexIndex?: number | null;
-  onSelectMaskVertex?: (index: number | null) => void;
   /** The keyframe buttons of the Track Matte's FEATHER and STRENGTH. */
   matteChannelKeys?: MatteChannelKeys;
 }
@@ -98,7 +90,6 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   onPartPropChange,
   onInteractionStart,
   onInteractionEnd,
-  onChangeMaskPath,
   maskEditTargetId = null,
   onEditMaskOnCanvas,
   onExitMaskEditing,
@@ -107,12 +98,8 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   matteReturnTargetId = null,
   onSelectMatteSource,
   onBackToMatteTarget,
-  onMaskPathOrder,
   onPickRefused,
   onSelectMatteTarget,
-  maskPathChannels,
-  maskVertexIndex,
-  onSelectMaskVertex,
   matteChannelKeys,
 }) => {
   /**
@@ -375,28 +362,6 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             <div className="matte-field matte-compact-field">
               <label className="form-label">EXPANSION</label>
               <NumberField className="input-control" aria-label="Mask expansion" step={1} value={activeLayerMask.expansion ?? 0} onValue={(expansion) => updateActiveLayerMask({ expansion })} />
-            </div>
-            <div className="matte-span-full">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <label className="form-label">MASK PATH</label>
-              </div>
-              <BezierPathEditor
-                // The mask's shape is edited on the canvas: no pad here, only its commands.
-                showShape={false}
-                onInteractionStart={onInteractionStart}
-                onInteractionEnd={onInteractionEnd}
-                path={activeLayerMask.path}
-                aspectRatio={(selectedPart.width ?? 260) / Math.max(1, selectedPart.height ?? 160)}
-                topologyLockReason={maskPathTopologyLockReason({ maskPathChannels }, activeLayerMask.id)}
-                readOnlyReason={activeLayerMask.locked ? 'This mask is locked. Unlock its path to edit it.' : null}
-                {...(onMaskPathOrder ? { onOrderCommand: (command: PathOrderCommand, index: number | null) => onMaskPathOrder(activeLayerMask.id, command, index) } : {})}
-                {...(isEditingActiveMaskOnCanvas && onSelectMaskVertex
-                  ? { selectedIndex: maskVertexIndex ?? null, onSelectIndex: onSelectMaskVertex }
-                  : {})}
-                onChange={(path) => onChangeMaskPath
-                  ? onChangeMaskPath(activeLayerMask.id, path)
-                  : updateActiveLayerMask({ path })}
-              />
             </div>
           </>
         )}

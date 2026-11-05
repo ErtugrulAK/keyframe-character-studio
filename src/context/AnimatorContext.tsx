@@ -224,7 +224,8 @@ export interface AnimatorContextType {
   reorderParts: (dragIndex: number, hoverIndex: number) => void;
   deletePart: (partId: string) => void;
   copySelectedPart: () => void;
-  pasteCopiedPart: () => void;
+  /** Paste the copied layers at the mouse (or, `inPlace`, over the originals). */
+  pasteCopiedPart: (options?: { inPlace?: boolean }) => void;
   duplicateSelectedPart: () => void;
   duplicateMirrored: (axis: 'y' | 'x' | 'origin') => void;
   // Copy/paste ANIMATION onto an existing selected part (26A data layer)

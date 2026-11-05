@@ -5,7 +5,7 @@
  */
 export const HEADER_COMMAND_EVENT = 'kcs-header-command';
 
-export type HeaderCommand = 'import' | 'export-json' | 'export-ograf' | 'export-gif' | 'check-ograf' | 'reset-project';
+export type HeaderCommand = 'new-template' | 'import' | 'export-json' | 'export-ograf' | 'export-gif' | 'check-ograf' | 'reset-project';
 
 export const dispatchHeaderCommand = (command: HeaderCommand): void => {
   window.dispatchEvent(new CustomEvent(HEADER_COMMAND_EVENT, { detail: { command } }));

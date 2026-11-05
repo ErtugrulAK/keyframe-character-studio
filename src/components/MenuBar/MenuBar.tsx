@@ -66,7 +66,8 @@ export const MenuBar: React.FC = () => {
   const trackOf = (id: string) => tracks.find((track) => track.partId === id);
   const allLocked = selection.length > 0 && selection.every((id) => trackOf(id)?.locked);
   const primaryTrack = primary ? trackOf(primary.id) : undefined;
-  const shapeToPathBlocked = primary && isConvertibleShapeType(primary.type) ? shapeToPathBlockReason(primary, tracks) : 'Select a basic shape';
+  // A basic shape, or a Boolean result (flattened into its own shape).
+  const shapeToPathBlocked = primary?.booleanOperandIds?.length ? null : primary && isConvertibleShapeType(primary.type) ? shapeToPathBlockReason(primary, tracks) : 'Select a basic shape or a Boolean result';
   /** The docked panels keep their own toggles; the menu presses them. */
   const pressChrome = (selector: string) => document.querySelector<HTMLButtonElement>(selector)?.click();
 

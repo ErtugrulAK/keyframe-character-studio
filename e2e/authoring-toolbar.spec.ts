@@ -297,7 +297,8 @@ test('the Boolean group stays visible and is enabled only for a compatible selec
   await toolbarButton(page, 'Boolean Union').click();
 
   await expect(page.locator('.boolean-operation-badge')).toHaveCount(1);
-  await expect(page.locator('.nested-node.actor-node')).toHaveCount(2);
+  // The result reads as one shape: its operands are not listed until it is opened.
+  await expect(page.locator('.nested-node.actor-node')).toHaveCount(0);
   // The created group is selected, so the toolbar now switches operations.
   await expect(toolbarButton(page, 'Boolean Union')).toHaveAttribute('aria-pressed', 'true');
   await expect(toolbarButton(page, 'Dissolve Boolean')).toBeEnabled();

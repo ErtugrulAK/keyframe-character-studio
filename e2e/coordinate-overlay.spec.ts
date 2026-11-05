@@ -208,6 +208,8 @@ test('edge markers and axes stay aligned through zoom, pan and resize', async ({
   await expect(page.getByTestId('coordinate-readout-y')).toHaveText(fromInspector.y);
 
   const assertAligned = async (label: string) => {
+    // Off the stage the markers mark the axes (over it, they follow the pointer).
+    await page.mouse.move(2, 2);
     for (const offset of await markerOffsets(page)) expect(offset, `${label}: a marker left its axis`).toBeLessThanOrEqual(1);
     await expect(page.getByTestId('coordinate-readout-x')).toHaveText(fromInspector.x);
     await expect(page.getByTestId('coordinate-readout-y')).toHaveText(fromInspector.y);
@@ -215,6 +217,16 @@ test('edge markers and axes stay aligned through zoom, pan and resize', async ({
   };
 
   await assertAligned('baseline');
+
+  // Over the stage, the top and left markers follow the pointer.
+  const stageBox = (await page.locator('.stage-canvas-container').boundingBox())!;
+  const pointer = { x: Math.round(stageBox.x + stageBox.width * 0.3), y: Math.round(stageBox.y + stageBox.height * 0.6) };
+  await page.mouse.move(pointer.x, pointer.y);
+  await expect.poll(async () => {
+    const top = (await page.getByTestId('coordinate-axis-marker-top').boundingBox())!;
+    const left = (await page.getByTestId('coordinate-axis-marker-left').boundingBox())!;
+    return Math.max(Math.abs(top.x + top.width / 2 - pointer.x), Math.abs(left.y + left.height / 2 - pointer.y));
+  }).toBeLessThanOrEqual(1.5);
 
   const tools = page.getByRole('toolbar', { name: 'Authoring tools' });
   await tools.getByRole('button', { name: 'Zoom in', exact: true }).click();

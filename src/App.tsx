@@ -6,6 +6,7 @@ import { useAnimator } from './context/useAnimator';
 import { HeaderBar } from './components/Header/HeaderBar';
 import { AuthoringToolbar } from './components/Toolbar/AuthoringToolbar';
 import { MenuBar } from './components/MenuBar/MenuBar';
+import { ToolOptionsBar } from './components/Toolbar/ToolOptionsBar';
 import { StageCanvas } from './components/Canvas/StageCanvas';
 import { PropertyInspector } from './components/Inspector/PropertyInspector';
 import { SequencerTimeline } from './components/Timeline/SequencerTimeline';
@@ -137,6 +138,7 @@ const MainAppContent: React.FC = () => {
       <MemoHeaderBar />
       {appMode === 'edit' && <MenuBar />}
       {appMode === 'edit' && <MemoAuthoringToolbar />}
+      {appMode === 'edit' && <ToolOptionsBar />}
       <div className="main-layout">
         <MemoStageCanvas />
         {appMode === 'edit' && (

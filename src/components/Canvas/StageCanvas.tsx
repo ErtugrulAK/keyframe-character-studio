@@ -150,6 +150,7 @@ export const StageCanvas: React.FC = () => {
     setBooleanOperandEditingGroupId,
     isPlaying,
     maskEditTarget,
+    enterMaskEditing,
     exitMaskEditing,
     registerMaskGestureCancel,
     captureMaskGestureSnapshot,
@@ -172,6 +173,12 @@ export const StageCanvas: React.FC = () => {
   const [maskPenDraft, setMaskPenDraft] = useState<MaskPenDraftState | null>(null);
   /** WP-02/03: a mask is edited or drawn on the canvas — the layer gestures stand down. */
   const maskInteractionActive = Boolean(maskEditTarget || maskDrawSession);
+  /**
+   * The freeform path whose points are being edited. A click selects a path
+   * (its transform frame); a double-click opens its points; a double-click
+   * outside it, Escape or another selection closes them.
+   */
+  const [pathEditPartId, setPathEditPartId] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const { openContextMenu } = useEditorContextMenu();
@@ -1493,6 +1500,104 @@ export const StageCanvas: React.FC = () => {
    * rendered part node carries `data-part-id`) instead of a second hit-test
    * implementation; no layer under the pointer means the empty-stage menu.
    */
+  // The path's points close when the selection moves to another layer
+  // (adjusted while rendering, React's pattern for state that follows a prop).
+  const [pathEditSelection, setPathEditSelection] = useState(selectedPartId);
+  if (pathEditSelection !== selectedPartId) {
+    setPathEditSelection(selectedPartId);
+    if (pathEditPartId && pathEditPartId !== selectedPartId) setPathEditPartId(null);
+  }
+  useEffect(() => {
+    if (!pathEditPartId) return undefined;
+    // Escape during a point or handle drag cancels the drag (the overlay's
+    // own Escape); only with no button held does it close the points.
+    let pressed = false;
+    const onDown = () => { pressed = true; };
+    const onUp = () => { pressed = false; };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !pressed) setPathEditPartId(null);
+    };
+    window.addEventListener('pointerdown', onDown, true);
+    window.addEventListener('pointerup', onUp, true);
+    window.addEventListener('pointercancel', onUp, true);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('pointerdown', onDown, true);
+      window.removeEventListener('pointerup', onUp, true);
+      window.removeEventListener('pointercancel', onUp, true);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [pathEditPartId]);
+
+  /**
+   * Double-click edit modes, with the Select tool:
+   * - a freeform path opens its points;
+   * - a Boolean result opens its operands (they can be selected and moved);
+   * - a layer with a mask opens the mask on the canvas.
+   * A double-click outside the layer being edited, or on it again, closes the
+   * mode. (Inside an open path or mask, a double-click on its outline still
+   * adds a point: those overlays take the event first.)
+   */
+  const handleStageDoubleClick = (event: React.MouseEvent): boolean => {
+    if (appMode === 'broadcast' || activeTool !== 'select') return false;
+    // The layer under the pointer, through the selection frame and other
+    // chrome drawn over it.
+    const targetId = (typeof document.elementsFromPoint === 'function'
+      ? document.elementsFromPoint(event.clientX, event.clientY)
+      : [event.target as Element])
+      .map((element) => element.closest('[data-part-id]')?.getAttribute('data-part-id'))
+      .find((id): id is string => Boolean(id)) ?? null;
+    const part = targetId ? characterParts.find((candidate) => candidate.id === targetId) : undefined;
+    if (pathEditPartId) {
+      setPathEditPartId(null);
+      return true;
+    }
+    if (maskEditTarget) {
+      exitMaskEditing();
+      return true;
+    }
+    if (booleanOperandEditingGroupId) {
+      setBooleanOperandEditingGroupId(null);
+      if (part?.booleanGroupId === booleanOperandEditingGroupId) handleSelectPart(booleanOperandEditingGroupId);
+      return true;
+    }
+    if (!part) return false;
+    const group = part.booleanOperandIds?.length ? part : part.booleanGroupId ? characterParts.find((candidate) => candidate.id === part.booleanGroupId) : undefined;
+    if (group) {
+      setBooleanOperandEditingGroupId(group.id);
+      handleSelectPart(part.id !== group.id ? part.id : group.booleanOperandIds?.[0] ?? group.id);
+      return true;
+    }
+    if (part.type === 'custom_freeform' && !part.booleanContours) {
+      handleSelectPart(part.id);
+      setPathEditPartId(part.id);
+      return true;
+    }
+    if (part.masks?.length) {
+      handleSelectPart(part.id);
+      const refusal = enterMaskEditing(part.id, part.masks[part.masks.length - 1].id);
+      if (refusal) showToast(refusal, 'error');
+      return true;
+    }
+    return false;
+  };
+
+  /**
+   * The second press of a double-click (the browser's click count): the first
+   * press already selected and may have re-drawn the layer, so the browser's
+   * own dblclick event is not reliable here. A double-click inside an open path
+   * or mask belongs to that overlay (it adds a point or switches its type).
+   */
+  const handleStageMouseDownCapture = (event: React.MouseEvent) => {
+    const inEditOverlay = (event.target as Element).closest('[data-testid="freeform-tangent-overlay"], [data-testid="mask-path-overlay"]');
+    if (event.button === 0 && event.detail === 2 && !inEditOverlay && handleStageDoubleClick(event)) {
+      event.stopPropagation();
+      event.preventDefault();
+      return;
+    }
+    handleToolOwnedMouseDownCapture(event);
+  };
+
   const handleContextMenu = useCallback((event: React.MouseEvent) => {
     event.preventDefault();
     const press = rightPressRef.current;
@@ -1516,11 +1621,12 @@ export const StageCanvas: React.FC = () => {
       data-camera-zoom={zoomLevel}
       style={backdropStyle}
       ref={containerRef}
-      onMouseDownCapture={handleToolOwnedMouseDownCapture}
+      onMouseDownCapture={handleStageMouseDownCapture}
       onClickCapture={handleToolOwnedClickCapture}
       onDoubleClickCapture={handleToolOwnedDoubleClickCapture}
       onMouseDown={handleMouseDown}
       onMouseMove={handleStagePointerMove}
+      data-edit-mode={pathEditPartId ? 'path' : maskEditTarget ? 'mask' : booleanOperandEditingGroupId ? 'boolean' : undefined}
       onMouseLeave={leaveStage}
       onContextMenu={handleContextMenu}
       onDragOver={handleDragOverStage}
@@ -1940,7 +2046,7 @@ export const StageCanvas: React.FC = () => {
               )}
 
               {/* Direct tangent-handle authoring for the selected freeform layer */}
-              {!maskInteractionActive && selectedPart && selectedTransform && isFreeformTangentOverlayEligible({
+              {!maskInteractionActive && selectedPart && selectedTransform && pathEditPartId === selectedPart.id && isFreeformTangentOverlayEligible({
                 appMode,
                 activeTool,
                 selectedPartIds,

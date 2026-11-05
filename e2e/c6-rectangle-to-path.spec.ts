@@ -10,7 +10,7 @@
  *   the path; a shape that cannot be converted says why.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { openInspectorCard } from './fixtures/inspectorTabs';
+import { openPathEditing, runObjectCommand } from './fixtures/toolbarTools';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const emptyChannels = () => ({
@@ -101,10 +101,10 @@ test('Rectangle → path keeps the picture and every relation; add a point, make
   const pixelsBefore = await stagePixels(page);
 
   await selectPanel(page);
-  await openInspectorCard(page, 'SHAPE GEOMETRY');
-  await expect(page.getByTestId('path-geometry-kind')).toContainText('Rectangle: a parametric shape');
-  await page.getByRole('button', { name: 'Convert to editable path' }).click();
-  await expect(page.getByText('PATH POINTS (4)')).toBeVisible();
+  await runObjectCommand(page, 'Shape to Path');
+  // A click selects the path; a double-click opens its points.
+  await openPathEditing(page, 'panel');
+  await expect(page.locator('[data-testid="freeform-vertex-marker"]')).toHaveCount(4);
 
   const converted = await savedScene(page);
   const panel = layerOf(converted, 'panel');
@@ -123,6 +123,7 @@ test('Rectangle → path keeps the picture and every relation; add a point, make
 
   // A double-click on the middle of the top edge adds a point there; the outline does not change.
   await selectPanel(page);
+  await openPathEditing(page, 'panel');
   const topMiddle = await page.evaluate(() => {
     const svg = document.querySelector('svg.stage-svg') as SVGSVGElement;
     const markers = [...document.querySelectorAll('[data-testid="freeform-vertex-marker"]')].map((marker) => marker.getBoundingClientRect());
@@ -140,7 +141,7 @@ test('Rectangle → path keeps the picture and every relation; add a point, make
   // where that pixel is (the stage scale turns the rounding into world units).
   const click = { x: Math.round(topMiddle.x), y: Math.round(topMiddle.y) };
   await page.mouse.dblclick(click.x, click.y);
-  await expect(page.getByText('PATH POINTS (5)')).toBeVisible();
+  await expect(page.locator('[data-testid="freeform-vertex-marker"]')).toHaveCount(5);
   const withPoint = layerOf(await savedScene(page), 'panel');
   expect(withPoint.path.points).toHaveLength(5);
   const worldPerPixel = Math.hypot(withPoint.path.points[2].x - withPoint.path.points[0].x, withPoint.path.points[2].y - withPoint.path.points[0].y) / topMiddle.span;
@@ -191,9 +192,11 @@ test('Rectangle → path keeps the picture and every relation; add a point, make
 test('a shape that cannot be converted says why, and nothing changes', async ({ page }) => {
   await seed(page, { trimPathEnabled: true, trimPathStart: 0, trimPathEnd: 0.6, trimPathOffset: 0 });
   await selectPanel(page);
-  await openInspectorCard(page, 'SHAPE GEOMETRY');
-  const convert = page.getByRole('button', { name: 'Convert to editable path' });
+  // The context menu keeps the command listed, disabled, with the reason.
+  const shape = (await page.locator('.stage-svg g[data-part-id="panel"]').first().boundingBox())!;
+  await page.mouse.click(shape.x + shape.width / 2, shape.y + shape.height / 2, { button: 'right' });
+  const convert = page.getByRole('menuitem', { name: 'Shape to Path' });
   await expect(convert).toBeDisabled();
-  await expect(page.locator('.path-geometry-reason')).toContainText('Trim Path');
+  await expect(convert).toHaveAttribute('title', /Trim Path/);
   expect(layerOf(await savedScene(page), 'panel').type).toBe('custom_rect');
 });

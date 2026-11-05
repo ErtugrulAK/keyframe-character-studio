@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { armTool } from './fixtures/toolbarTools';
+import { armTool, openShortcutsFromMenu } from './fixtures/toolbarTools';
 
 /**
  * V3.6 UI POLISH CONTRACTS — the nine manual-QA findings, pinned in the browser.
@@ -137,21 +137,21 @@ test('the arrange bands are the documented command groups in the documented orde
   }
 });
 
-test('focus rings are KCS-styled for pointer and keyboard alike — never the white browser ring', async ({ page }) => {
+test('focus rings show for the keyboard only, in the KCS style — never the white browser ring', async ({ page }) => {
   await seed(page, []);
   const fpsSelect = page.locator('.header-actions select').first();
 
-  // Chromium settles the select's focus state over the frames it needs to
-  // open the popup; poll the computed ring, do not sleep for it. The ring is
-  // the inset authority: it rides inside the control box, never outside it.
+  // A click leaves no ring (the user asked for no blue boxes after a click).
   await fpsSelect.click();
-  const ringAfterMouse = () => fpsSelect.evaluate((el) => {
-    const cs = getComputedStyle(el);
-    return `${cs.outlineStyle} ${cs.outlineWidth} ${cs.outlineColor} ${cs.outlineOffset}`;
-  });
-  await expect.poll(ringAfterMouse, 'pointer focus must land on the inset KCS ring').toBe(`solid 2px ${KCS_RING_COLOUR} -2px`);
+  const ringAfterMouse = () => fpsSelect.evaluate((el) => getComputedStyle(el).outlineStyle);
+  await expect.poll(ringAfterMouse, 'pointer focus must not draw a ring').toBe('none');
+  await page.keyboard.press('Escape');
 
+  // Tab switches to keyboard navigation: the inset KCS ring is back.
+  await page.keyboard.press('Tab');
   await fpsSelect.focus();
+  // Chromium settles a select's focus state over a few frames: poll the ring.
+  await expect.poll(() => fpsSelect.evaluate((el) => getComputedStyle(el).outlineColor)).toBe(KCS_RING_COLOUR);
   const afterKeyboard = await fpsSelect.evaluate((el) => {
     const cs = getComputedStyle(el);
     return { style: cs.outlineStyle, color: cs.outlineColor, offset: cs.outlineOffset, fv: el.matches(':focus-visible') };
@@ -202,7 +202,7 @@ test('the mode segment is quiet chrome with an unmistakable pressed half', async
 
 test('the shortcut reference is one dense row per command with the detail one hover away', async ({ page }) => {
   await seed(page, []);
-  await page.getByRole('button', { name: 'Keyboard shortcuts' }).click();
+  await openShortcutsFromMenu(page);
   const rows = page.locator('.shortcut-reference-row');
   await expect(rows.first()).toBeVisible();
 

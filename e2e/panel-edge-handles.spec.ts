@@ -228,7 +228,7 @@ test('R5-01 — the dock handle keeps its accessible name and a visible keyboard
   // C2: the seed's mouse click now focuses the (focusable) layer-tree row, so the
   // browser's last input modality is "pointer". A keyboard user reaches these
   // handles with the keyboard: establish that modality before focusing them.
-  await page.keyboard.press('Shift');
+  await page.keyboard.press('Tab');
 
   for (const selector of ['.inspector-dock-toggle']) {
     const state = await page.evaluate((sel) => {
@@ -277,6 +277,11 @@ test('R5-02 — an open overlay paints over the dock handles, never under them',
   });
   expect(withMenu.right, 'the export dropdown covers the right handle').toBe(true);
 
+  // The GIF panel (360 px, hanging from the Export button on the right) and
+  // the handle overlap on a narrower window, where the Inspector is narrower too.
+  await page.keyboard.press('Escape');
+  await page.setViewportSize({ width: 780, height: 900 });
+  await page.locator('.export-btn').click();
   // GIF panel open: it really overlaps the right handle, and it wins the hit
   // test there — the handle is below the overlay.
   await page.locator('[role="menuitem"]', { hasText: 'Animated GIF' }).click();

@@ -67,9 +67,11 @@ test('cursor-centered zoom keeps the exact SVG point under the pointer', async (
   };
   await waitForStableMatrix();
   for (const [ratioX, ratioY] of [[0.5, 0.5], [0.1, 0.12], [0.88, 0.82]]) {
+    // Whole pixels: the browser delivers the wheel at a whole pixel, so a
+    // fractional cursor would measure the rounding, not the anchoring.
     const cursor = {
-      x: canvasBox!.x + canvasBox!.width * ratioX,
-      y: canvasBox!.y + canvasBox!.height * ratioY,
+      x: Math.round(canvasBox!.x + canvasBox!.width * ratioX),
+      y: Math.round(canvasBox!.y + canvasBox!.height * ratioY),
     };
     await waitForStableMatrix();
     const before = await page.evaluate(({ x, y }) => {

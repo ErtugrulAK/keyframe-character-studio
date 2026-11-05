@@ -2,6 +2,7 @@ import { useAnimatorAuthority } from '../context/useAnimator';
 import type { AnimatorContextType } from '../context/AnimatorContext';
 import { makeEmptyChannels } from '../utils/animation/defaults';
 import { generateId } from '../utils/layers/idGenerator';
+import { flattenBooleanGroup } from '../utils/geometry/booleanFlatten';
 import type { CharacterPart } from '../types/animator';
 import {
   isBooleanEligible,
@@ -57,42 +58,65 @@ const createBooleanAuthoring = ({
 
   const createBooleanGroup = (operation: BooleanOperation) => {
     if (booleanEligibleParts.length < 2) return;
-    const transforms = Object.fromEntries(booleanEligibleParts.map((part) => [part.id, getComputedTransform(part.id, currentFrame)]));
-    const readiness = inspectBooleanOperands(booleanEligibleParts, transforms);
+    // A selected Boolean result takes part as one shape: it is flattened first
+    // (its result becomes its own geometry, its operands go), in the same step.
+    let workingParts = characterParts;
+    let workingTracks = tracks;
+    for (const group of booleanEligibleParts.filter((part) => part.booleanOperandIds?.length && part.booleanOperation)) {
+      const operands = (group.booleanOperandIds ?? [])
+        .map((id) => characterParts.find((part) => part.id === id))
+        .filter((part): part is NonNullable<typeof part> => Boolean(part));
+      const derived = deriveBooleanGeometry(
+        group.booleanOperation!,
+        operands,
+        Object.fromEntries(operands.map((operand) => [operand.id, getComputedTransform(operand.id, currentFrame)])),
+        getComputedTransform(group.id, currentFrame),
+      );
+      const flattened = flattenBooleanGroup(workingParts, workingTracks, group.id, derived.localContours);
+      if (flattened) {
+        workingParts = flattened.parts;
+        workingTracks = flattened.tracks;
+      }
+    }
+    const operandParts = booleanEligibleParts
+      .map((part) => workingParts.find((candidate) => candidate.id === part.id))
+      .filter((part): part is NonNullable<typeof part> => Boolean(part));
+    const transforms = Object.fromEntries(operandParts.map((part) => [part.id, getComputedTransform(part.id, currentFrame)]));
+    const readiness = inspectBooleanOperands(operandParts, transforms);
     if (!readiness.ready) {
       const names = readiness.unresolved.map((part) => part.name).join(', ');
       showToast(`Could not build the Boolean: no geometry for ${names}. Nothing was created.`, 'error');
       return;
     }
-    const contours = computeBooleanContours(operation, booleanEligibleParts, transforms);
+    const contours = computeBooleanContours(operation, operandParts, transforms);
     if (contours.length === 0) {
       showToast('The selected shapes produce an empty result.', 'info');
       return;
     }
     const groupId = generateId('boolean');
     const groupPart = {
-      ...booleanEligibleParts[0],
+      ...operandParts[0],
       id: groupId,
-      name: createBooleanDisplayName(operation, characterParts, undefined, booleanEligibleParts.map((part) => part.name)),
+      name: createBooleanDisplayName(operation, characterParts, undefined, operandParts.map((part) => part.name)),
       type: 'custom_freeform' as const,
-      zIndex: Math.max(...booleanEligibleParts.map((part) => part.zIndex)) + 1,
+      zIndex: Math.max(...operandParts.map((part) => part.zIndex)) + 1,
       parentId: undefined,
       booleanGroupId: undefined,
       boundPartIds: undefined,
       matte: undefined,
       booleanOperation: operation,
-      booleanOperandIds: booleanEligibleParts.map((part) => part.id),
+      booleanOperandIds: operandParts.map((part) => part.id),
       booleanContours: contours,
       points: contours[0],
       baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
     };
     startBatchInteraction();
-    setCharacterParts((parts) => [
-      ...parts.map((part) => booleanEligibleParts.some((operand) => operand.id === part.id) ? { ...part, booleanGroupId: groupId } : part),
+    setCharacterParts(() => [
+      ...workingParts.map((part) => operandParts.some((operand) => operand.id === part.id) ? { ...part, booleanGroupId: groupId } : part),
       groupPart,
     ]);
-    setTracks((currentTracks) => [
-      ...currentTracks,
+    setTracks(() => [
+      ...workingTracks,
       {
         id: generateId('track'),
         partId: groupId,
@@ -109,9 +133,14 @@ const createBooleanAuthoring = ({
   };
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
-  const selectedBooleanGroup = selectedPart?.booleanOperandIds?.length
-    ? selectedPart
-    : characterParts.find((part) => part.id === selectedPart?.booleanGroupId);
+  // One Boolean result (or one of its operands) selected: its operation can
+  // be switched or it can be dissolved. With other layers selected too, the
+  // Boolean buttons build a new Boolean that includes it.
+  const selectedBooleanGroup = selectedPartIds.length > 1
+    ? undefined
+    : selectedPart?.booleanOperandIds?.length
+      ? selectedPart
+      : characterParts.find((part) => part.id === selectedPart?.booleanGroupId);
 
   const updateBooleanOperation = (operation: BooleanOperation) => {
     if (!selectedBooleanGroup || !selectedBooleanGroup.booleanOperandIds) return;

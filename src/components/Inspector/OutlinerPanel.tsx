@@ -49,7 +49,8 @@ export const OutlinerPanel: React.FC = () => {
     selectedPartId,
     selectedPartIds,
     sceneTitle,
-  } = useAnimatorSlice('tracks', 'characterParts', 'selectedPartId', 'selectedPartIds', 'sceneTitle');
+    booleanOperandEditingGroupId,
+  } = useAnimatorSlice('tracks', 'characterParts', 'selectedPartId', 'selectedPartIds', 'sceneTitle', 'booleanOperandEditingGroupId');
   const readAnimator = useAnimatorReader();
   const { openContextMenu } = useEditorContextMenu();
 
@@ -86,7 +87,12 @@ export const OutlinerPanel: React.FC = () => {
     const rows: VisibleRow[] = [];
     const visit = (part: CharacterPart, depth: number, parentRowId: string | null, ancestry: Set<string>) => {
       if (search && !search.shownIds.has(part.id)) return;
-      const children = (childrenOf.get(part.id) ?? []).filter((child) => !ancestry.has(child.id) && (!search || search.shownIds.has(child.id)));
+      // A Boolean result reads as one shape: its operands are listed only
+      // while it is opened for editing (double-click it on the stage).
+      const showOperands = booleanOperandEditingGroupId === part.id;
+      const children = (childrenOf.get(part.id) ?? []).filter((child) => !ancestry.has(child.id)
+        && (!search || search.shownIds.has(child.id))
+        && (showOperands || child.booleanGroupId !== part.id));
       const isExpanded = search ? true : !collapsedPartIds.has(part.id);
       rows.push({ part, depth, hasChildren: children.length > 0, isExpanded, parentRowId });
       if (!isExpanded) return;
@@ -95,7 +101,7 @@ export const OutlinerPanel: React.FC = () => {
     };
     roots.forEach((part) => visit(part, 0, null, new Set()));
     return rows;
-  }, [characterParts, collapsedPartIds, partById, search]);
+  }, [characterParts, collapsedPartIds, partById, search, booleanOperandEditingGroupId]);
   const stackIndexById = useMemo(() => new Map(characterParts.map((part, index) => [part.id, index])), [characterParts]);
   const visibilityById = useMemo(() => new Map(tracks.map((track) => [track.partId, track.editVisible !== false])), [tracks]);
   const lockedById = useMemo(() => new Set(tracks.filter((track) => track.locked).map((track) => track.partId)), [tracks]);

@@ -109,6 +109,8 @@ test('keyboard focus on a toolbar command is the quiet inset ring', async ({ pag
   // An always-available command from the Create band: availability must not
   // decide where focus is tested, and this band never disables.
   const rectTool = page.getByRole('button', { name: 'Add rectangle' });
+  // Rings belong to keyboard navigation: Tab sets that modality.
+  await page.keyboard.press('Tab');
   await rectTool.evaluate((el) => el.focus());
   const keyboard = await rectTool.evaluate((el) => {
     const cs = getComputedStyle(el);

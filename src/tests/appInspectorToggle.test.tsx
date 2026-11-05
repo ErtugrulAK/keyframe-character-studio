@@ -16,6 +16,7 @@ vi.mock('../context/EditorContextMenuContext', () => ({
 }));
 vi.mock('../components/Toolbar/AuthoringToolbar', () => ({ AuthoringToolbar: () => <div data-testid="authoring-toolbar" /> }));
 vi.mock('../components/MenuBar/MenuBar', () => ({ MenuBar: () => <nav data-testid="menu-bar" /> }));
+vi.mock('../components/Toolbar/ToolOptionsBar', () => ({ ToolOptionsBar: () => null }));
 vi.mock('../components/Canvas/StageCanvas', () => ({ StageCanvas: () => <main data-testid="stage" /> }));
 vi.mock('../components/Timeline/SequencerTimeline', () => ({ SequencerTimeline: () => <footer /> }));
 vi.mock('../components/Broadcast/LiveDirectorPanel', () => ({ LiveDirectorPanel: () => <footer /> }));

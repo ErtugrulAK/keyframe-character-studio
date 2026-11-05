@@ -162,8 +162,9 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     }
     // A basic shape can become an editable path; a refused case stays
     // listed, disabled, so the reason is one hover away.
-    if (single && primaryPart && isConvertibleShapeType(primaryPart.type)) {
-      const blocked = shapeToPathBlockReason(primaryPart, tracks) ?? (primaryTrack?.locked ? 'This layer is locked.' : null);
+    if (single && primaryPart && (isConvertibleShapeType(primaryPart.type) || primaryPart.booleanOperandIds?.length)) {
+      // A Boolean result is flattened into its own shape.
+      const blocked = (primaryPart.booleanOperandIds?.length ? null : shapeToPathBlockReason(primaryPart, tracks)) ?? (primaryTrack?.locked ? 'This layer is locked.' : null);
       layerActions.push({ id: 'convert-to-path', label: 'Shape to Path', disabled: Boolean(blocked), ...(blocked ? { title: blocked } : {}), run: () => { convertToEditablePath(primaryPart.id); } });
     }
 

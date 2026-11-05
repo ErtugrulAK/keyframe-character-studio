@@ -144,7 +144,8 @@ test('a reversal mid-slide continues from where the panel is (no jump) and settl
   const midway = await frame(page, 'right');
   // One frame of the slide in flight: the most a reversal may still travel.
   const frameStep = Math.abs(midway.left - previous.left);
-  expect(midway.left).toBeGreaterThan(1080);
+  // Past the docked edge (1440 - 484 = 956) and short of the window edge.
+  expect(midway.left).toBeGreaterThan(970);
   expect(midway.left).toBeLessThan(1430);
   // A user clicks the handle WHILE it moves: no wait for it to stop.
   await expect(page.getByRole('button', { name: 'Show Inspector' })).toBeVisible();

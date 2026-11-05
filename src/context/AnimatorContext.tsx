@@ -1,3 +1,5 @@
+import { flattenBooleanGroup } from '../utils/geometry/booleanFlatten';
+import { deriveBooleanGeometry } from '../utils/geometry/booleanGeometry';
 import { resetTransforms } from '../utils/layers/resetTransform';
 import { stagePointer } from '../utils/editor/stagePointer';
 import { AnimatorContext, AnimatorStoreContext, createAnimatorStore } from './useAnimator';
@@ -806,13 +808,41 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     redo();
   }, [draftHistory, redo]);
 
-  const { pathVertex, selectPathVertex, convertToEditablePath, setPartPath, deleteSelectedPathVertex } = usePathEditing({
+  const { pathVertex, selectPathVertex, convertToEditablePath: convertShapeToPath, setPartPath, deleteSelectedPathVertex } = usePathEditing({
     characterParts,
     tracks,
     setCharacterParts: editSetCharacterParts,
     selectedPartId,
     showToast,
   });
+
+  /**
+   * Shape to Path: a basic shape becomes an editable path; a Boolean result is
+   * flattened into its own shape (one region: an editable path), and its
+   * operands go. One undo step either way.
+   */
+  const convertToEditablePath = useCallback((partId: string): boolean => {
+    const group = characterParts.find((part) => part.id === partId);
+    if (!group?.booleanOperandIds?.length || !group.booleanOperation) return convertShapeToPath(partId);
+    const operands = group.booleanOperandIds
+      .map((id) => characterParts.find((part) => part.id === id))
+      .filter((part): part is CharacterPart => Boolean(part));
+    const derived = deriveBooleanGeometry(
+      group.booleanOperation,
+      operands,
+      Object.fromEntries(operands.map((operand) => [operand.id, getComputedTransform(operand.id, currentFrame)])),
+      getComputedTransform(group.id, currentFrame),
+    );
+    const flattened = flattenBooleanGroup(characterParts, tracks, group.id, derived.localContours);
+    if (!flattened) {
+      showToast('This Boolean result is empty; there is no shape to keep.', 'error');
+      return false;
+    }
+    editSetCharacterParts(flattened.parts);
+    editSetTracks(flattened.tracks);
+    setBooleanOperandEditingGroupId(null);
+    return true;
+  }, [characterParts, tracks, currentFrame, getComputedTransform, convertShapeToPath, editSetCharacterParts, editSetTracks, setBooleanOperandEditingGroupId, showToast]);
 
   const resetSelectedTransforms = useCallback(() => {
     const ids = selectedPartIds.length > 0 ? selectedPartIds : selectedPartId ? [selectedPartId] : [];

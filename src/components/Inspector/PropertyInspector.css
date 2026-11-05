@@ -4,9 +4,9 @@
   --inspector-control-sm: 88px;
   --inspector-control-md: 112px;
   position: relative;
-  width: min(var(--right-inspector-width), max(250px, 34vw));
-  min-width: min(var(--right-inspector-width), max(250px, 34vw));
-  flex: 0 0 min(var(--right-inspector-width), max(250px, 34vw));
+  width: min(var(--right-inspector-width), max(250px, 44vw));
+  min-width: min(var(--right-inspector-width), max(250px, 44vw));
+  flex: 0 0 min(var(--right-inspector-width), max(250px, 44vw));
   background: var(--bg-darkest);
   border-left: 1px solid var(--border-color);
   display: flex;
@@ -48,7 +48,7 @@
    without changing its workspace-row vertical anchor or overlay layer. */
 .app-container:not(.inspector-hidden) .inspector-dock-toggle {
   top: var(--kcs-panel-handle-top);
-  right: calc(min(var(--right-inspector-width), max(250px, 34vw)) - 10px);
+  right: calc(min(var(--right-inspector-width), max(250px, 44vw)) - 10px);
 }
 
 .app-container.inspector-hidden .inspector-dock-toggle {

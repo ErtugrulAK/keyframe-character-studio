@@ -19,7 +19,8 @@ interface TrackOutlinerRowProps {
    *  partId (track.name may be a generated "Track part_x" placeholder after
    *  import, since the name field is not serialized). */
   parts: CharacterPart[];
-  isChildLayer: boolean;
+  /** How deep the layer sits under parents (0 = top level), as in the Layers panel. */
+  depth: number;
   isSelected: boolean;
   editingPartId: string | null;
   editingNameValue: string;
@@ -101,7 +102,7 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
   ordinal,
   layerCount,
   parts,
-  isChildLayer,
+  depth,
   isSelected,
   editingPartId,
   editingNameValue,
@@ -314,12 +315,9 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
       {/* ── LAYER ROW ── */}
       <div
         className={`ue-track-row ${isSelected ? 'selected' : ''}`}
-        style={{ height: TRACK_ROW_HEIGHT, paddingLeft: isChildLayer ? 22 : 8 }}
+        style={{ height: TRACK_ROW_HEIGHT, paddingLeft: 8 + depth * 16 }}
         onClick={(e) => onSelect(track.partId, e.shiftKey)}
       >
-        {isChildLayer && (
-          <span style={{ fontSize: 10, color: 'var(--accent-cyan)', fontWeight: 600, marginRight: -2 }}>└─</span>
-        )}
 
         <button
           className="ue-expand-btn"

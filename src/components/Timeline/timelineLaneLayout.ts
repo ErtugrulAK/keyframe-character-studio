@@ -49,8 +49,8 @@ export interface LaneContext {
   /** The layer has a Track Matte (its feather and strength can be keyed). */
   trackMatte?: boolean;
   /**
-   * Show only the properties that have keyframes (After Effects' U): groups
-   * with no keyed member are left out, and so are unkeyed properties.
+   * Show only the properties that animate (their keys change the value), like
+   * After Effects' U: groups with no animating member are left out.
    */
   animatedOnly?: boolean;
 }
@@ -79,14 +79,28 @@ const animatedMaskIds = (track: Track): string[] => {
   return [...ids];
 };
 
-/** Whether a channel has any keyframe (any sequence), for the Animated Only view. */
-const isKeyed = (track: Track, value: AnimationChannel): boolean => {
+/**
+ * Whether a channel really animates, for the Animated Only view: its keys (in
+ * any sequence) hold at least two different values. The layer row's + keys
+ * every property at once, so a property that only got that one key, or holds
+ * the same value at every key, does not count.
+ */
+const isAnimating = (track: Track, value: AnimationChannel): boolean => {
   const source = value.endsWith(':path')
     ? track.maskPathChannels?.[value as keyof NonNullable<Track['maskPathChannels']>]
     : value.includes(':')
       ? track.maskChannels?.[value as keyof NonNullable<Track['maskChannels']>]
       : track.channels?.[value as TrackChannel];
-  return (source?.length ?? 0) > 0;
+  const keys = (source ?? []) as Array<{ value: unknown; templateId?: string }>;
+  const firstOf = new Map<string, string>();
+  for (const key of keys) {
+    const template = key.templateId || 'Sequence';
+    const valueKey = JSON.stringify(key.value);
+    const first = firstOf.get(template);
+    if (first === undefined) firstOf.set(template, valueKey);
+    else if (first !== valueKey) return true;
+  }
+  return false;
 };
 
 /**
@@ -104,7 +118,7 @@ export const resolveLaneRows = (track: Track, isGroupExpanded: GroupExpanded, co
   const rows: LaneRow[] = [{ kind: 'track' }];
   if (track.expanded !== true) return rows;
   const only = context.animatedOnly === true;
-  const keep = (value: AnimationChannel) => !only || isKeyed(track, value);
+  const keep = (value: AnimationChannel) => !only || isAnimating(track, value);
   /** One group: a header, then (when open) its members; a member may be a nested group. */
   type Member = AnimationChannel | { group: string; label: string; defaultExpanded: boolean; channels: AnimationChannel[] };
   const group = (key: string, label: string, defaultExpanded: boolean, members: Member[], depth: 1 | 2 = 1) => {

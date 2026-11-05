@@ -8,7 +8,6 @@ import { type TrackChannel, type AnimationChannel } from '../../types/animator';
 import { resolveChannelAnimationState, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/editor/timelineMetrics';
 import { channelArmValue, resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../../utils/animation/channelKeyframeGroups';
 import { evaluateTrackMatte } from '../../utils/layers/matte';
-import { partIndexOf } from '../../utils/layers/partBinding';
 import { locateKeyframe } from '../../utils/animation/trackMutations';
 import { duplicateKeyframeGroup as previewKeyframeDuplicate } from '../../utils/animation/keyframeDuplicate';
 import {
@@ -32,6 +31,7 @@ import {
   Diamond,
 } from 'lucide-react';
 import { isEditableElement } from '../../utils/editor/keyboardFocus';
+import { orderTracksByLayerTree } from '../../utils/layers/layerTreeOrder';
 import { isBlockingModalOpen } from '../../utils/editor/modalBoundary';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { addStepMarker, normalizeStepMarkers, removeStepMarker } from '../../utils/animation/stepMarkers';
@@ -119,7 +119,7 @@ export const SequencerTimeline: React.FC = () => {
     totalFrames,
     setTotalFrames,
     fps,
-    tracks,
+    tracks: sceneTracks,
     characterParts,
     selectedPartId,
     selectedPartIds,
@@ -173,6 +173,9 @@ export const SequencerTimeline: React.FC = () => {
     updateMotionTemplateDuration,
     setMotionTemplateStepMarkers,
   } = useAnimator();
+  // The rows follow the Layers panel: a parent, then its children under it.
+  const layerTree = useMemo(() => orderTracksByLayerTree(characterParts, sceneTracks), [characterParts, sceneTracks]);
+  const tracks = layerTree.ordered;
   // The derived display ordinal, the same projection the Outliner shows.
   const layerOrdinals = useMemo(() => projectLayerOrdinals(characterParts), [characterParts]);
   // Sequencer Tree Modal Toggle State & Inline Sequence Rename
@@ -1562,8 +1565,7 @@ export const SequencerTimeline: React.FC = () => {
 
           <div className="ue-outliner-list" ref={outlinerRef} onScroll={handleOutlinerScroll} onFocus={handleTrackFocus}>
             {renderTrackWindow((track) => {
-              const partItem = partIndexOf(characterParts).get(track.partId);
-              const isChildLayer = Boolean(partItem?.parentId);
+              const depth = layerTree.depth.get(track.partId) ?? 0;
 
               return (
                 <TrackOutlinerRow
@@ -1572,7 +1574,7 @@ export const SequencerTimeline: React.FC = () => {
                   ordinal={layerOrdinals.get(track.partId)}
                   layerCount={characterParts.length}
                   parts={characterParts}
-                  isChildLayer={isChildLayer}
+                  depth={depth}
                   isSelected={selectedPartIds?.includes(track.partId)}
                   editingPartId={editingPartId}
                   editingNameValue={editingNameValue}

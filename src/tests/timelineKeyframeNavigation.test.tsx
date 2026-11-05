@@ -56,7 +56,7 @@ const renderRow = (track: Track, currentFrame: number) => {
     <TrackOutlinerRow
       track={track}
       parts={[part('p1', 'Body')]}
-      isChildLayer={false}
+      depth={0}
       isSelected
       editingPartId={null}
       editingNameValue=""

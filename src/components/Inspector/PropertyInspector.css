@@ -3155,3 +3155,35 @@
     padding-left: 0;
   }
 }
+
+/* Appearance: fill and stroke side by side, each a compact swatch and its hex. */
+.appearance-paint-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-sm, 8px);
+}
+
+.appearance-color-compact {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.appearance-color-compact .color-picker-field {
+  flex: 0 0 auto;
+}
+
+.appearance-color-compact .color-swatch-button {
+  width: 36px;
+  height: 22px;
+}
+
+.appearance-color-hex {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--kcs-text-secondary, #cfcfcf);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}

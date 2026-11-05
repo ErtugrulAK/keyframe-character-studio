@@ -12,21 +12,40 @@ interface ShapeCreationPreviewProps {
 
 export const ShapeCreationPreview: React.FC<ShapeCreationPreviewProps> = ({ type, bounds, outputOrigin }) => {
   if (type === 'custom_text') {
-    // The text box being drawn (stage units already).
+    // The text box being drawn (stage units already), with the text it will
+    // hold at the size it will have: the font follows the box height (as
+    // `getTextCreationProps` sizes it), and a box too narrow for it shrinks it.
+    const NEW_TEXT = 'NEW TEXT';
+    const byHeight = Math.min(400, Math.max(8, bounds.height / 1.2));
+    // Average glyph width of a bold sans text, about 0.62 em.
+    const fontSize = Math.max(4, Math.min(byHeight, bounds.width / (NEW_TEXT.length * 0.62)));
     return (
-      <rect
-        data-testid="shape-creation-preview"
-        x={bounds.minX}
-        y={bounds.minY}
-        width={bounds.width}
-        height={bounds.height}
-        fill="none"
-        stroke="#38bdf8"
-        strokeWidth={1}
-        strokeDasharray="4 3"
-        vectorEffect="non-scaling-stroke"
-        pointerEvents="none"
-      />
+      <g data-testid="shape-creation-preview" pointerEvents="none">
+        <rect
+          x={bounds.minX}
+          y={bounds.minY}
+          width={bounds.width}
+          height={bounds.height}
+          fill="rgba(56, 189, 248, 0.06)"
+          stroke="#38bdf8"
+          strokeWidth={1}
+          strokeDasharray="4 3"
+          vectorEffect="non-scaling-stroke"
+        />
+        <text
+          data-testid="text-creation-preview"
+          x={bounds.centerX}
+          y={bounds.centerY}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={fontSize}
+          fontWeight={700}
+          fontFamily="Inter, sans-serif"
+          fill="rgba(255, 255, 255, 0.55)"
+        >
+          {NEW_TEXT}
+        </text>
+      </g>
     );
   }
   const geometry = getShapeGeometry(type);

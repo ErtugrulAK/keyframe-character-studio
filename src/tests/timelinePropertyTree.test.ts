@@ -43,13 +43,14 @@ describe('timeline property tree, grouped like After Effects', () => {
     expect(lines).not.toContain('    m1:path');
   });
 
-  it('Animated Only (U) shows just the keyed properties and their groups', () => {
-    const animated = track({ x: [key(0, 0), key(10, 50)], opacity: [key(0, 1)] } as Partial<Track['channels']>);
+  it('Animated Only (U) shows just the properties whose keys change the value, and their groups', () => {
+    // x moves; opacity has one key and y two equal keys (as the layer row's + leaves them): not animating.
+    const animated = track({ x: [key(0, 0), key(10, 50)], y: [key(0, 5), key(10, 5)], opacity: [key(0, 1)], rotation: [key(0, 0), key(20, 90)] } as Partial<Track['channels']>);
     expect(tree(resolveLaneRows(animated, open, { animatedOnly: true, trimPath: true, masks: [{ id: 'm1', name: 'Mask 1' }] }))).toEqual([
       '▸ Transform',
       '  ▸ Position',
       '    x',
-      '  opacity',
+      '  rotation',
     ]);
   });
 });

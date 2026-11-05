@@ -29,7 +29,8 @@ const ColorControl: React.FC<{
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
 }> = ({ label, value, alpha, fallback, onColorChange, onAlphaChange, onInteractionStart, onInteractionEnd }) => (
-  <div className="appearance-color-field">
+  // A compact swatch with its hex value beside it (the full picker opens on click).
+  <div className="appearance-color-field appearance-color-compact">
     <ColorPickerPopover
       label={label}
       color={value || fallback}
@@ -40,6 +41,9 @@ const ColorControl: React.FC<{
       onInteractionStart={onInteractionStart}
       onInteractionEnd={onInteractionEnd}
     />
+    <span className="appearance-color-hex" aria-hidden="true">
+      {(value || fallback).toUpperCase()}{alpha < 1 ? ` · ${Math.round(alpha * 100)}%` : ''}
+    </span>
   </div>
 );
 
@@ -91,6 +95,8 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
           />
         </div>
       )}
+      {/* Fill and stroke side by side, each a small swatch and its value. */}
+      <div className="appearance-paint-row">
       <div className={`appearance-group${selectedPart.fillEnabled === false ? ' is-muted' : ''}`}>
         <div className="appearance-group-header">
           <label htmlFor="appearance-fill-enabled">FILL</label>
@@ -123,6 +129,9 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
           onInteractionStart={onInteractionStart}
           onInteractionEnd={onInteractionEnd}
         />
+      </div>
+      </div>
+      <div className={`appearance-group appearance-group-stroke-details${selectedPart.strokeEnabled === false ? ' is-muted' : ''}`}>
         <div className="stroke-inline-fields">
           <div className="appearance-field">
             <label className="appearance-field-label" htmlFor="stroke-width-input">WIDTH</label>

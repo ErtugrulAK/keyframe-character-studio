@@ -61,7 +61,7 @@ describe('usePresets Hook', () => {
 });
 
 /**
- * Astra F-07: `localStorage` is an external boundary, and a blocked or full
+ * Review F-07: `localStorage` is an external boundary, and a blocked or full
  * store throws on the call itself. The library has to keep working for the
  * session instead of failing the mount or the edit that produced it.
  */

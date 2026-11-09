@@ -2,8 +2,8 @@ import React, { useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { X } from 'lucide-react';
 import { useDialogFocusRestoration, useDialogFocusTrap } from '../../hooks/useDialogFocusRestoration';
-import { ProjectDrawer } from '../Toolbar/drawers/ProjectDrawer';
-import '../Toolbar/LeftToolbar.css';
+import { ProjectSettingsFields } from './ProjectSettingsFields';
+import './ProjectSettingsFields.css';
 import '../Modal/ConfirmationDialog.css';
 
 interface ProjectSettingsDialogProps {
@@ -38,7 +38,7 @@ export const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({ is
             <X size={15} />
           </button>
         </div>
-        <ProjectDrawer />
+        <ProjectSettingsFields />
       </div>
     </div>,
     document.body,

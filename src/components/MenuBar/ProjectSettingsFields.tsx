@@ -1,15 +1,15 @@
 import React, { lazy, Suspense, useState } from 'react';
 import { Library } from 'lucide-react';
-import { NumberField } from '../../Inspector/inputs/NumberField';
-import { useAnimatorSlice } from '../../../context/useAnimator';
-import { MAX_AUTOSAVE_SECONDS, MIN_AUTOSAVE_SECONDS } from '../../../utils/persistence/autosaveInterval';
-import { validateImportedDocument } from '../../../utils/persistence/importValidation';
-import { createIndexedDbBackend, createProjectLibrary, type ProjectLibrary } from '../../../utils/persistence/projectLibrary';
+import { NumberField } from '../Inspector/inputs/NumberField';
+import { useAnimatorSlice } from '../../context/useAnimator';
+import { MAX_AUTOSAVE_SECONDS, MIN_AUTOSAVE_SECONDS } from '../../utils/persistence/autosaveInterval';
+import { validateImportedDocument } from '../../utils/persistence/importValidation';
+import { createIndexedDbBackend, createProjectLibrary, type ProjectLibrary } from '../../utils/persistence/projectLibrary';
 
 // The library dialog opens on demand, so it loads then.
-const GraphicLibraryDialog = lazy(() => import('../../Header/GraphicLibraryDialog').then((module) => ({ default: module.GraphicLibraryDialog })));
+const GraphicLibraryDialog = lazy(() => import('../Header/GraphicLibraryDialog').then((module) => ({ default: module.GraphicLibraryDialog })));
 
-export const ProjectDrawer: React.FC = () => {
+export const ProjectSettingsFields: React.FC = () => {
   const { projectResolution, setProjectResolution, sceneTitle, exportProject, importProject, addProjectTemplate, showToast, autosaveIntervalSeconds, setAutosaveIntervalSeconds } = useAnimatorSlice('projectResolution', 'setProjectResolution', 'sceneTitle', 'exportProject', 'importProject', 'addProjectTemplate', 'showToast', 'autosaveIntervalSeconds', 'setAutosaveIntervalSeconds');
   /** The graphic library, created on first use (IndexedDB is opened only then). */
   const [library, setLibrary] = useState<ProjectLibrary | null>(null);

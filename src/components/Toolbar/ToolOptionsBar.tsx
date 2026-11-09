@@ -10,6 +10,9 @@ import { TEXT_PRESETS } from '../../utils/editor/textPresets';
 import type { HorizontalAlign } from '../../utils/layers/layoutModifiers';
 import './ToolOptionsBar.css';
 
+/** A family without its CSS quotes: older layers stored multi-word families bare. */
+const bareFamily = (family: string | undefined) => (family ?? '').replace(/['"]/gu, '');
+
 const ALIGNS: Array<{ id: HorizontalAlign; label: string; icon: React.ReactNode }> = [
   { id: 'left', label: 'Align text left', icon: <AlignLeft /> },
   { id: 'center', label: 'Align text centre', icon: <AlignCenter /> },
@@ -32,7 +35,10 @@ export const ToolOptionsBar: React.FC = () => {
   if (!part || part.type !== 'custom_text') return null;
 
   const align = part.textFit?.align ?? 'center';
-  const preset = TEXT_PRESETS.find((candidate) => candidate.fontFamily === part.fontFamily && candidate.fontSize === part.fontSize);
+  const family = bareFamily(part.fontFamily || 'Outfit');
+  const preset = TEXT_PRESETS.find((candidate) => bareFamily(candidate.fontFamily) === family && candidate.fontSize === part.fontSize);
+  // The font list's own entry for the layer's family, quoted or not.
+  const fontOption = KCS_TEXT_FONT_FAMILIES.find((candidate) => bareFamily(candidate) === family) ?? part.fontFamily ?? 'Outfit';
 
   return (
     <div className="tool-options-bar" role="toolbar" aria-label="Text options">
@@ -68,7 +74,7 @@ export const ToolOptionsBar: React.FC = () => {
       <select
         className="select-control text-font-family-control tool-options-font"
         aria-label="Font family"
-        value={part.fontFamily || 'Outfit'}
+        value={fontOption}
         onChange={(event) => handlePartPropChange('fontFamily', event.target.value)}
       >
         {KCS_TEXT_FONT_FAMILIES.map((family) => (

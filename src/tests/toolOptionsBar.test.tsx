@@ -90,6 +90,29 @@ describe('ToolOptionsBar', () => {
     expect(screen.getByLabelText('Text style')).toHaveValue('');
   });
 
+  it('a style with a multi-word font stores the family the font list offers (with its quotes)', () => {
+    select(text());
+    render(<ToolOptionsBar />);
+    fireEvent.change(screen.getByLabelText('Text style'), { target: { value: 'Display Title' } });
+    expect(authoring.handlePartPropChange).toHaveBeenCalledWith('fontFamily', "'Bebas Neue'");
+    const fonts = Array.from((screen.getByLabelText('Font family') as HTMLSelectElement).options).map((option) => option.value);
+    for (const preset of ['Display Title', 'Cinematic Title']) {
+      vi.clearAllMocks();
+      fireEvent.change(screen.getByLabelText('Text style'), { target: { value: preset } });
+      expect(fonts).toContain(authoring.handlePartPropChange.mock.calls[0][1]);
+    }
+  });
+
+  it('names the style of a multi-word font, quoted or not (older layers stored it bare)', () => {
+    select(text({ fontFamily: "'Bebas Neue'", fontSize: 64 }));
+    const view = render(<ToolOptionsBar />);
+    expect(screen.getByLabelText('Text style')).toHaveValue('Display Title');
+    expect(screen.getByLabelText('Font family')).toHaveValue("'Bebas Neue'");
+    select(text({ fontFamily: 'Playfair Display', fontSize: 42 }));
+    view.rerender(<ToolOptionsBar />);
+    expect(screen.getByLabelText('Text style')).toHaveValue('Cinematic Title');
+  });
+
   it('turns the outline on and off', () => {
     select(text({ strokeEnabled: true }));
     render(<ToolOptionsBar />);

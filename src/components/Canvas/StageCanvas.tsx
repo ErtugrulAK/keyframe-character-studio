@@ -58,7 +58,6 @@ import { useFreeformDraw, type FreeformFinishReason } from '../../hooks/useFreef
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
 import { CanvasCoordinateOverlay } from './overlays/CanvasCoordinateOverlay';
 import { leaveStage, rememberStagePointer } from '../../utils/editor/stagePointer';
-import { TEXT_PRESETS } from '../../utils/editor/textPresets';
 import { CanvasCoordinateReadout } from './overlays/CanvasCoordinateReadout';
 import { FreeformTangentOverlay } from './overlays/FreeformTangentOverlay';
 import { isFreeformTangentOverlayEligible } from '../../utils/geometry/freeformTangentEligibility';
@@ -959,12 +958,10 @@ export const StageCanvas: React.FC = () => {
   const handleMouseUp = useCallback((commitShape: boolean = true) => {
     if (dragMode === 'shape_create') {
       if (commitShape && pendingShapeType === 'custom_text' && pendingShapeName && shapeCreationStart) {
-        // The Text tool: a click places a text, a drag draws its box.
-        // A text style from the tool's flyout gives its font; a drawn box its size.
-        const preset = TEXT_PRESETS.find((candidate) => candidate.label === pendingShapeName);
+        // The Text tool: a click places a text, a drag draws its box (and a
+        // drawn box sets its size). Its style is picked in the options bar.
         startBatchInteraction();
         addCustomPart('custom_text', pendingShapeName, {
-          ...(preset ? { fontFamily: preset.fontFamily, fontSize: preset.fontSize } : {}),
           ...getTextCreationProps(
             shapeCreationPreview?.bounds ?? null,
             { x: shapeCreationStart.svgX, y: shapeCreationStart.svgY },

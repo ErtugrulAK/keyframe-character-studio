@@ -22,7 +22,11 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 - Crop ends the sequence at the playhead, and DURATION shows the new length (two decimals: 60 frames at 120 fps read 0.5 s).
 - The autosave delay is set in the Project panel.
 - A menu bar (File, Edit, Object, View, Help) above the toolbar runs the editor's commands; File > Project Settings holds the resolution, autosave delay and Library.
-- Tool flyouts: hold (or right-click) the shape button for Rectangle, Square, Triangle, Rhombus, Parallelogram and Star; the picked shape stays on the button. The Text button lists the text styles.
+- Tool flyouts: hold (or right-click) the shape button for Rectangle, Square, Triangle, Rhombus, Parallelogram and Star, or the ellipse button for Ellipse and Circle (always round); the picked tool stays on the button.
+- An options row under the toolbar edits the selected text: style, text, font, size, colour, outline and alignment.
+- Double-click edit modes: a path's points, a layer's mask or a Boolean result's operands open on a double-click on the layer and close on a double-click on empty stage (or Escape).
+- A Boolean result is one shape in the layer tree, and it can join another Boolean or become a path with Shape to Path.
+- Edit > Paste in Place puts the copy exactly over the original.
 - The Text tool draws a text box: a drag sets its width and font size, a click places a text.
 - A Media button (and File > Add Image or Video…) opens the file picker directly.
 - Ctrl+V pastes at the mouse; animated copies carry their motion.
@@ -39,7 +43,12 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 - Zoom reaches 4000 %; transform handles keep one small size at every zoom.
 - Shift and Alt apply the moment they are pressed during a drag.
 - A tool stays on when its button is pressed again; the active tool has no underline; a draw tool keeps the crosshair over layers.
-- The mask path pad left the Inspector (masks are shaped on the canvas); its commands stay.
+- The mask path pad and its commands left the Inspector, and so did the Path Points card: masks and paths are shaped on the canvas.
+- The menu bar keeps only what the toolbar does not offer, and the header's shortcuts button moved to Help > Keyboard Shortcuts.
+- The Inspector is 30 % wider, and Appearance shows fill and stroke side by side as a swatch and a hex code.
+- The timeline lists layers in the layer tree's order, children indented under their parent.
+- The ruler markers follow the mouse over the stage; zoom is smooth on a wheel or trackpad, and the grid stays one pixel thin at any zoom.
+- Focus rings show only while moving with Tab, not after a click.
 - The colour picker's alpha bar fades from transparent to the colour; layer tree drops are coloured by what they do.
 - A dragged layer also snaps by its own position, so a text lands on X/Y = 0.
 - New shapes drawn one after another differ in colour; a new text is 72 px.
@@ -50,6 +59,8 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 - A scene of more than 2,500 layers was refused on reload (the limit counted layers and their tracks), so the editor opened empty and the next autosave overwrote the work. The limit now counts layers (5,000), and a saved scene the editor cannot open is kept in its own storage key, with a message.
 - Ctrl+Z / Ctrl+Y work while a slider, checkbox or list still has focus.
 - Select All on a large scene took seconds.
+- The Display Title and Cinematic Title text styles left the Font list blank: they stored their family without the quotes the list uses.
+- A shape or ellipse toolbar button activated without a pointer (a screen reader, a switch device) did nothing.
 
 ## [1.1.0-rc.6] - 2026-10-30
 

@@ -126,15 +126,7 @@ textarea:focus-visible { outline: none; }
 .header-actions { gap: 5px; }
 .header-actions button, .header-actions .btn-icon { min-height: 28px; height: 28px; border-radius: 3px; }
 
-.left-sidebar-nav { width: 56px; padding: 8px 5px; gap: 3px; background: var(--kcs-rail); border-right-color: var(--kcs-border-default); }
-.sidebar-nav-item { width: 46px; height: 48px; border-radius: 4px; gap: 3px; color: var(--kcs-text-muted); }
-.sidebar-nav-item:hover { background: var(--kcs-bg-hover); }
-.sidebar-nav-item.active { background: var(--kcs-bg-active); border-color: rgba(72, 141, 231, .42); box-shadow: none; color: var(--kcs-text-primary); }
-.sidebar-nav-item.active .nav-icon { color: var(--kcs-accent); }
-.nav-label { font-size: 10px; font-weight: 500; }
-.left-drawer-panel { background: #242424; border-right-color: var(--kcs-border-default); }
 .drawer-content { padding: 12px; gap: 10px; }
-.drawer-header { padding-bottom: 8px; border-bottom-color: var(--kcs-border-subtle); }
 .drawer-item-card { padding: 10px 6px; border-radius: var(--kcs-radius-panel); background: var(--kcs-bg-surface); border-color: var(--kcs-border-subtle); }
 
 .motion-design-right-sidebar { background: #232323; border-left-color: var(--kcs-border-default); box-shadow: -8px 0 24px rgba(0,0,0,.2); }
@@ -176,7 +168,7 @@ textarea:focus-visible { outline: none; }
    agree at every breakpoint. */
 @media (max-width: 1100px) {
   .header-bar { padding: 0 8px; gap: 6px; }
-  .app-container { --left-drawer-width: 224px; --right-inspector-width: 416px; }
+  .app-container { --right-inspector-width: 416px; }
 }
 @media (max-width: 800px) {
   .header-brand { flex-basis: auto; }
@@ -185,10 +177,10 @@ textarea:focus-visible { outline: none; }
      and it still wraps naturally when it really does not fit. */
   .header-center-controls { flex: 0 0 auto; }
   .header-bar { height: auto; min-height: 40px; padding-block: 3px; }
-  .app-container { --left-drawer-width: 196px; --right-inspector-width: 372px; }
+  .app-container { --right-inspector-width: 372px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  button, .motion-design-right-sidebar, .left-toolbar-container { transition: none !important; }
+  button, .motion-design-right-sidebar { transition: none !important; }
 }
 
 /* UI polish: a slim 42 px shell frame with a tight internal rhythm. */
@@ -352,15 +344,6 @@ textarea:focus-visible { outline: none; }
   border-color: transparent;
   color: var(--kcs-text-muted);
   padding-inline: 4px;
-}
-
-.sidebar-nav-item.active {
-  border-color: transparent;
-  background: var(--kcs-bg-active-muted);
-}
-
-.sidebar-nav-item.active .nav-icon {
-  color: var(--kcs-accent);
 }
 
 .outliner-header,
@@ -546,31 +529,6 @@ textarea:focus-visible { outline: none; }
 
 .header-actions .reset-btn {
   color: var(--kcs-text-muted);
-}
-
-.left-sidebar-nav {
-  width: 56px !important;
-  padding: 8px 5px !important;
-  background: #202020;
-  border-right-color: #353535;
-}
-
-.sidebar-nav-item {
-  width: 46px !important;
-  height: 42px;
-  border: 1px solid transparent;
-  background: transparent;
-}
-
-.sidebar-nav-item.active {
-  background: #202d3d;
-  border-color: #2f4056;
-}
-
-.sidebar-divider {
-  width: 34px;
-  margin: 5px auto;
-  background: #353535;
 }
 
 .motion-design-right-sidebar {
@@ -772,8 +730,6 @@ textarea:focus-visible { outline: none; }
   box-shadow: 0 1px 0 rgba(255, 255, 255, .025);
 }
 
-.left-sidebar-nav { background: var(--kcs-bg-rail); }
-.left-drawer-panel { background: var(--kcs-bg-drawer); }
 .motion-design-right-sidebar { background: var(--kcs-bg-inspector); box-shadow: none; }
 .outliner-dock { background: var(--kcs-bg-drawer); }
 .details-dock { background: var(--kcs-bg-inspector); }
@@ -808,7 +764,6 @@ textarea:focus-visible { outline: none; }
 }
 
 .kcs-mode-swap .authoring-toolbar,
-.kcs-mode-swap .left-toolbar-container,
 .kcs-mode-swap .motion-design-right-sidebar,
 .kcs-mode-swap .sequencer-timeline,
 .kcs-mode-swap .live-director-panel {
@@ -817,7 +772,6 @@ textarea:focus-visible { outline: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .kcs-mode-swap .authoring-toolbar,
-  .kcs-mode-swap .left-toolbar-container,
   .kcs-mode-swap .motion-design-right-sidebar,
   .kcs-mode-swap .sequencer-timeline,
   .kcs-mode-swap .live-director-panel {
@@ -831,13 +785,11 @@ textarea:focus-visible { outline: none; }
   box-shadow: var(--kcs-shadow-card);
 }
 .header-tab:hover,
-.sidebar-nav-item:hover,
 .track-row:hover,
 .track-lane:hover {
   background: var(--kcs-bg-hover);
 }
 .header-tab.active,
-.sidebar-nav-item.active,
 .tree-node.selected,
 .ue-track-lane.selected {
   background: var(--kcs-bg-selected);
@@ -974,14 +926,12 @@ button:disabled {
  *   scrolling; its height stays fixed (camera invariance).
  */
 @media (max-width: 600px) {
-  .main-layout > .left-toolbar-container,
   .main-layout > .motion-design-right-sidebar {
     position: absolute;
     top: 0;
     bottom: 0;
     z-index: 6;
   }
-  .main-layout > .left-toolbar-container { left: 0; }
   .main-layout > .motion-design-right-sidebar { right: 0; }
 
   .authoring-toolbar { gap: 2px; padding: 0 6px; }
@@ -1547,7 +1497,7 @@ button:disabled {
   --radius-lg: 4px;
 }
 
-.app-container :is(.inspector-section-title, .outliner-title, .details-title, .drawer-subtitle, .ue-outliner-ruler-spacer > span) {
+.app-container :is(.inspector-section-title, .outliner-title, .details-title, .ue-outliner-ruler-spacer > span) {
   color: var(--kcs-text-secondary);
   font-size: 11px;
   font-weight: 600;

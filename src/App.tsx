@@ -132,7 +132,7 @@ const MainAppContent: React.FC = () => {
      * read, and the panel geometry tokens they measure.
      */
     <div
-      className={`app-container left-toolbar-hidden ${inspector.visible ? '' : 'inspector-hidden'} ${modeSwapActive ? 'kcs-mode-swap' : ''}`}
+      className={`app-container ${inspector.visible ? '' : 'inspector-hidden'} ${modeSwapActive ? 'kcs-mode-swap' : ''}`}
       onAnimationEnd={handleModeSwapAnimationEnd}
     >
       <MemoHeaderBar />

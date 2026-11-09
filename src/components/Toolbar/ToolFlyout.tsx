@@ -125,7 +125,7 @@ export const ToolFlyout: React.FC<ToolFlyoutProps> = ({ label, title, current, i
   };
 
   const onKeyDown = (event: React.KeyboardEvent) => {
-    if (!open && (event.key === 'ArrowDown' || (event.altKey && event.key === 'ArrowDown'))) {
+    if (!open && event.key === 'ArrowDown') {
       event.preventDefault();
       placeMenu();
       setHighlight(current.id);
@@ -166,6 +166,12 @@ export const ToolFlyout: React.FC<ToolFlyoutProps> = ({ label, title, current, i
         onPointerUp={onPointerUp}
         onPointerCancel={() => { press.current = null; clearHold(); }}
         onContextMenu={(event) => { event.preventDefault(); openFlyout(); }}
+        onClick={(event) => {
+          // A click with no press behind it (detail 0: a screen reader, a
+          // switch device or element.click()) runs the tool. A pointer tap
+          // already ran it on release, and Enter/Space are handled on keydown.
+          if (event.detail === 0 && !open) onRun();
+        }}
         onKeyDown={onKeyDown}
       >
         {current.icon}

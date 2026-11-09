@@ -151,6 +151,21 @@ describe('ToolFlyout', () => {
     expect(onRun).toHaveBeenCalledOnce();
   });
 
+  it('a click with no pointer press (a screen reader, element.click()) runs the tool', () => {
+    const { onRun, button } = renderFlyout();
+    fireEvent.click(button, { detail: 0 });
+    expect(onRun).toHaveBeenCalledOnce();
+    expect(menu()).toBeNull();
+  });
+
+  it('a pointer tap runs the tool once, not again on the click that follows it', () => {
+    const { onRun, button } = renderFlyout();
+    fireEvent.pointerDown(button, { button: 0, pointerId: 1, clientY: 10 });
+    fireEvent.pointerUp(button, { button: 0, pointerId: 1, clientY: 10 });
+    fireEvent.click(button, { detail: 1 });
+    expect(onRun).toHaveBeenCalledOnce();
+  });
+
   it('shows a row\'s shortcut', () => {
     const { button } = renderFlyout();
     fireEvent.contextMenu(button);

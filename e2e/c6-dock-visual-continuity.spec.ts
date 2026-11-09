@@ -25,10 +25,11 @@ const clickHandleNow = async (page: Page, side: Side) => {
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 };
 
-type Side = 'left' | 'right';
-const PANEL: Record<Side, string> = { left: '.left-toolbar-container', right: '.motion-design-right-sidebar' };
-const HANDLE: Record<Side, string> = { left: '.left-toolbar-toggle', right: '.inspector-dock-toggle' };
-const LABEL: Record<Side, string> = { left: 'Left Toolbar', right: 'Inspector' };
+// Only the right dock is left: the menu bar and the toolbar replaced the left one.
+type Side = 'right';
+const PANEL: Record<Side, string> = { right: '.motion-design-right-sidebar' };
+const HANDLE: Record<Side, string> = { right: '.inspector-dock-toggle' };
+const LABEL: Record<Side, string> = { right: 'Inspector' };
 
 async function open(page: Page, reducedMotion = false): Promise<void> {
   await page.emulateMedia({ reducedMotion: reducedMotion ? 'reduce' : 'no-preference' });
@@ -83,8 +84,8 @@ const slide = async (page: Page, side: Side, action: 'Hide' | 'Show', count = 32
   return frames;
 };
 
-/** The panel's moving edge: the right edge of the left dock, the left edge of the right dock. */
-const edgeOf = (side: Side, f: Frame) => (side === 'left' ? f.right : f.left);
+/** The panel's moving edge: the left edge of the right dock. */
+const edgeOf = (f: Frame) => f.left;
 
 const expectOneCleanSlide = (side: Side, action: 'Hide' | 'Show', frames: Frame[], before: Frame) => {
   const sliding = frames.filter((f) => f.visible);
@@ -94,8 +95,9 @@ const expectOneCleanSlide = (side: Side, action: 'Hide' | 'Show', frames: Frame[
     expect(Math.round(f.width), 'width while sliding').toBeGreaterThan(200);
   }
   // The edge moves one way only.
-  const edges = sliding.map((f) => edgeOf(side, f));
-  const outward = (side === 'left') === (action === 'Hide') ? -1 : 1;
+  const edges = sliding.map(edgeOf);
+  // Hiding moves the right dock's edge right (outward), showing moves it left.
+  const outward = action === 'Hide' ? 1 : -1;
   for (let index = 1; index < edges.length; index += 1) {
     expect((edges[index] - edges[index - 1]) * outward, `edge step ${index}`).toBeGreaterThanOrEqual(-0.5);
   }
@@ -103,7 +105,7 @@ const expectOneCleanSlide = (side: Side, action: 'Hide' | 'Show', frames: Frame[
   // flush with the window side when closed, so between those two rests it is
   // never more than half its own width (10 px) off the moving edge, and it
   // moves the same way as the edge.
-  for (const f of sliding) expect(Math.abs(f.handleCentre - edgeOf(side, f)), 'handle off the edge').toBeLessThanOrEqual(10.5);
+  for (const f of sliding) expect(Math.abs(f.handleCentre - edgeOf(f)), 'handle off the edge').toBeLessThanOrEqual(10.5);
   const handles = frames.map((f) => f.handleCentre);
   for (let index = 1; index < handles.length; index += 1) {
     expect((handles[index] - handles[index - 1]) * outward, `handle step ${index}`).toBeGreaterThanOrEqual(-0.5);

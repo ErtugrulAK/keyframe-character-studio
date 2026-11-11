@@ -61,6 +61,8 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 - Select All on a large scene took seconds.
 - The Display Title and Cinematic Title text styles left the Font list blank: they stored their family without the quotes the list uses.
 - A shape or ellipse toolbar button activated without a pointer (a screen reader, a switch device) did nothing.
+- An SVG image stored as a percent-encoded data URL lost its non-ASCII text in the OGraf package ("Işık" became "I_1k"), and one with a bare `%` (`width="100%"`) or a `;charset=utf-8` parameter was refused by the export and the Lottie import.
+- Unlocking a layer re-enabled an Inspector control that had become disabled for its own reason while the layer was locked.
 
 ## [1.1.0-rc.6] - 2026-10-30
 

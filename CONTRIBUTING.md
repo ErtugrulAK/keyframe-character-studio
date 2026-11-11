@@ -1,6 +1,6 @@
 # 🤝 Contributing to Keyframe Character Studio
 
-Thanks for helping! This page is short on purpose. The full engineering rules live in [`AGENTS.md`](AGENTS.md).
+Thanks for helping! This page is short on purpose; the architecture is described in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## 🔄 The flow
 

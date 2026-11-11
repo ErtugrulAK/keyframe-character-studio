@@ -38,4 +38,4 @@ Every V6 field remains in `scene.kcs`. The OGraf package runtime is an adapter, 
 - OGraf evaluation: `src/ograf/evaluation.ts`
 - OGraf SVG adapter: `src/ograf/svgRenderer.ts`
 - OGraf capability diagnostics: `src/ograf/validation.ts`
-- Lottie and reference-format research: `docs/research/V6_MOTION_COMPOSITING_RESEARCH.md`
+

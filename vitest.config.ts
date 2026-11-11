@@ -12,6 +12,7 @@ const DOM_TESTS = [
   'src/tests/autosaveFailureHonesty.test.ts',
   'src/tests/autosaveInterval.test.ts',
   'src/tests/inputModality.test.ts',
+  'src/tests/keyboardFocus.test.ts',
   'src/tests/bondedMovement.test.ts',
   'src/tests/c3FreeformDrawInput.test.ts',
   'src/tests/c6PenDraw.test.ts',

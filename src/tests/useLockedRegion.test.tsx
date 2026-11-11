@@ -63,6 +63,14 @@ describe('useLockedRegion', () => {
     expect(control('Feather')).toBeEnabled();
   });
 
+  it('a control that becomes disabled for its own reason while locked stays disabled after unlock', async () => {
+    const view = render(<Panel locked />);
+    view.rerender(<Panel locked applyDisabled />);
+    await flush();
+    view.rerender(<Panel locked={false} applyDisabled />);
+    expect(control('Apply')).toBeDisabled();
+  });
+
   it('a control its owner re-enables while locked is locked again', async () => {
     const view = render(<Panel locked applyDisabled />);
     view.rerender(<Panel locked applyDisabled={false} />);

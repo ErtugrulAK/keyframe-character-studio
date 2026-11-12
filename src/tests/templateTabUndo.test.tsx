@@ -176,3 +176,27 @@ describe('adding a sequence', () => {
     expect(ctx().isPlaying).toBe(false);
   });
 });
+
+describe('selection across template tabs', () => {
+  afterEach(() => cleanup());
+
+  it('a tab switch clears the layer and keyframe selection and leaves edit modes', () => {
+    const ctx = renderProvider();
+    act(() => { ctx().addCustomPart('custom_rect', 'InA'); });
+    const id = ctx().characterParts.find((part) => part.name === 'InA')!.id;
+    act(() => {
+      ctx().setSelectedPartId(id);
+      ctx().setSelectedPartIds([id]);
+      ctx().setBooleanOperandEditingGroupId(id);
+    });
+    const aId = ctx().activeProjectTemplateId;
+    act(() => { ctx().addProjectTemplate('B'); });
+    expect(ctx().selectedPartId).toBeNull();
+    expect(ctx().selectedPartIds).toEqual([]);
+    expect(ctx().selectedKeyframeId).toBeNull();
+    expect(ctx().booleanOperandEditingGroupId).toBeNull();
+    act(() => { ctx().setSelectedPartIds([]); });
+    act(() => { ctx().setActiveProjectTemplateId(aId); });
+    expect(ctx().selectedPartIds).toEqual([]);
+  });
+});

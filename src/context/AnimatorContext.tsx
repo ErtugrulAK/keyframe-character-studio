@@ -669,9 +669,18 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     selection: historySelection,
     restoreSelection: restoreHistorySelection,
   });
-  // Hand the history baseline reset to the template tabs (created above).
+  // What a template tab switch resets (the tabs hook is created above): the
+  // undo baseline, and every selection and edit mode, which name layers of
+  // the tab being left — an imported tab can reuse those ids for other layers.
   // oxlint-disable-next-line react/refs
-  templateSwitchedRef.current = requestBaselineReset;
+  templateSwitchedRef.current = () => {
+    requestBaselineReset();
+    setSelectedPartId(null);
+    setSelectedPartIds([]);
+    setSelectedKeyframeId(null);
+    setBooleanOperandEditingGroupId(null);
+    setFocusModeNodeId(null);
+  };
 
 
 

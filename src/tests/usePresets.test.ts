@@ -53,6 +53,19 @@ describe('usePresets Hook', () => {
     expect(result.current.customPresets).toEqual(mockSaved);
   });
 
+  it('skips stored entries that cannot be presets and keeps the rest unchanged', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const kept = { id: 'mock_preset', name: 'Mock' };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([null, kept, 7, 'text', [], { name: 'no id' }, { id: '' }]));
+
+    const { result } = renderHook(() => usePresets());
+
+    expect(result.current.customPresets).toEqual([kept]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Skipped 6 unreadable entries'));
+    // Reading never writes: the stored value is left for the user to recover.
+    expect(localStorage.getItem(STORAGE_KEY)).toContain('null');
+  });
+
   it('persists nothing on boot (N3 PR-2b)', () => {
     renderHook(() => usePresets());
     // Mount is a read, not a write: booting must not rewrite the library.
@@ -346,10 +359,13 @@ describe('usePresets — M25 savePreset / deletePreset (data layer)', () => {
     expect(result.current.customPresets).toEqual(DEFAULT_INITIAL_PRESETS);
   });
 
-  it('malformed entries inside the array do not crash save/delete (existing lenient behavior)', () => {
+  it('malformed entries inside the array do not crash save/delete', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     localStorage.setItem(STORAGE_KEY, JSON.stringify([{ id: 'broken' }, null, 42]));
     const { result } = renderHook(() => usePresets());
-    expect(result.current.customPresets).toHaveLength(3); // loaded as-is (existing behavior)
+    // A preset-shaped entry is kept as-is; `null` and `42` are not presets at
+    // all and would crash every consumer that reads `preset.type`.
+    expect(result.current.customPresets).toEqual([{ id: 'broken' }]);
     let created: CustomMotionPreset | null = null;
     act(() => {
       created = result.current.savePreset(validInput());

@@ -183,12 +183,35 @@ const createBooleanAuthoring = ({
     const operandWorldTransforms = Object.fromEntries(
       selectedBooleanGroup.booleanOperandIds.map((id) => [id, getComputedTransform(id, currentFrame)]),
     );
+    // A sheared operand (a turned operand of an unevenly scaled Boolean) has a
+    // world map no position/rotation/scale can re-create, so it cannot keep
+    // its shape on its own — refused, as deleting such a parent is.
+    const sheared = selectedBooleanGroup.booleanOperandIds.find((id) => (operandWorldTransforms[id] as { affine?: unknown } | undefined)?.affine);
+    if (sheared) {
+      const name = characterParts.find((part) => part.id === sheared)?.name ?? sheared;
+      showToast(`${name} cannot keep its exact shape outside the Boolean (its pose would need a skew). Give the Boolean an even scale first.`, 'error');
+      return;
+    }
     const result = dissolveBooleanGroupState(characterParts, tracks, selectedBooleanGroup.id);
     if (result.operandIds.length === 0) return;
     const bakedParts = result.parts.map((part) => {
       const world = operandWorldTransforms[part.id];
+      // Only the authored base fields: the world value can also carry
+      // evaluator-only fields, which must never become stored scene data.
       return world
-        ? { ...part, baseTransform: { ...part.baseTransform, ...world }, booleanGroupId: undefined }
+        ? {
+          ...part,
+          baseTransform: {
+            ...part.baseTransform,
+            x: world.x,
+            y: world.y,
+            rotation: world.rotation,
+            scaleX: world.scaleX,
+            scaleY: world.scaleY,
+            opacity: world.opacity,
+          },
+          booleanGroupId: undefined,
+        }
         : part;
     });
     startBatchInteraction();

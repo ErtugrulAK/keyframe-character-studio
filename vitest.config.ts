@@ -25,6 +25,7 @@ const DOM_TESTS = [
   'src/tests/ografMaskRegion.test.ts',
   'src/tests/ografPackage.test.ts',
   'src/tests/ografRendererContract.test.ts',
+  'src/tests/ografNonRealtimeReplay.test.ts',
   'src/tests/ografRuntimeAffine.test.ts',
   'src/tests/ografRuntimeParity.test.ts',
   'src/tests/ografV6Parity.test.ts',

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { CharacterPart, Track, TrackChannel } from '../types/animator';
+import type { CharacterPart, Keyframe, Track, TrackChannel } from '../types/animator';
 import { generateId } from '../utils/layers/idGenerator';
 import { makeEmptyChannels } from '../utils/animation/defaults';
 import { mirrorChannelValues, mirrorTransform, type MirrorAxis } from '../utils/animation/mirror';
@@ -79,7 +79,7 @@ const cloneTrackOnto = (source: Track | undefined, cloneId: string, name: string
  * a still value would, then the rotations are re-set together so an origin
  * mirror keeps every step between keys (see `mirrorChannelValues`).
  */
-const mirrorLegacyKeyframes = (keyframes: Track['keyframes'], axis: MirrorAxis): Track['keyframes'] => {
+const mirrorLegacyKeyframes = (keyframes: readonly Keyframe[], axis: MirrorAxis): Keyframe[] => {
   const rotations = mirrorChannelValues('rotation', keyframes.map((k) => k.transform.rotation), axis);
   return keyframes.map((k, index) => ({
     ...k,

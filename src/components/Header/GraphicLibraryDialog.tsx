@@ -46,6 +46,15 @@ export const GraphicLibraryDialog: React.FC<GraphicLibraryDialogProps> = ({ isOp
     if (isOpen) void refresh();
   }, [isOpen, refresh]);
 
+  /** True while a read for Open is in flight: a second click must not add a second tab. */
+  const openingRef = useRef(false);
+  /** False once the dialog is gone: a read that settles later must not add a tab the user dismissed. */
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   if (!isOpen) return null;
 
   const run = async (action: () => Promise<unknown>, done: string) => {
@@ -58,18 +67,38 @@ export const GraphicLibraryDialog: React.FC<GraphicLibraryDialogProps> = ({ isOp
     }
   };
 
+  /** Duplicate reports an entry that is already gone (another tab deleted it) instead of a success. */
+  const duplicate = async (entry: LibraryEntrySummary) => {
+    let copy: Awaited<ReturnType<ProjectLibrary['duplicate']>>;
+    try {
+      copy = await library.duplicate(entry.id);
+    } catch {
+      setStatus({ tone: 'error', text: 'The library could not be written (storage full or blocked?). Nothing was changed.' });
+      return;
+    }
+    setStatus(copy
+      ? { tone: 'info', text: `Duplicated “${entry.name}”.` }
+      : { tone: 'error', text: `“${entry.name}” is no longer in the library.` });
+    await refresh();
+  };
+
   const save = () => run(() => library.save(name, exportCurrent()), `Saved “${name.trim() || 'Untitled'}” to the library.`);
 
   const open = async (entry: LibraryEntrySummary) => {
+    if (openingRef.current) return;
+    openingRef.current = true;
     let graphic: Awaited<ReturnType<ProjectLibrary['open']>>;
     try {
       graphic = await library.open(entry.id);
     } catch {
       // A blocked or failing store rejects the read: say so, as the list does,
       // instead of leaving an unhandled rejection and a dialog that did nothing.
+      openingRef.current = false;
       setStatus({ tone: 'error', text: `“${entry.name}” could not be read from the library (private window or blocked site data?).` });
       return;
     }
+    openingRef.current = false;
+    if (!mountedRef.current) return;
     if (!graphic) {
       setStatus({ tone: 'error', text: `“${entry.name}” is no longer in the library.` });
       await refresh();
@@ -131,7 +160,7 @@ export const GraphicLibraryDialog: React.FC<GraphicLibraryDialogProps> = ({ isOp
                   ) : (
                     <div className="graphic-library-actions">
                       <button type="button" className="btn-secondary" aria-label={`Open ${entry.name}`} onClick={() => { void open(entry); }}>Open</button>
-                      <button type="button" className="btn-secondary" aria-label={`Duplicate ${entry.name}`} onClick={() => { void run(() => library.duplicate(entry.id), `Duplicated “${entry.name}”.`); }}>Duplicate</button>
+                      <button type="button" className="btn-secondary" aria-label={`Duplicate ${entry.name}`} onClick={() => { void duplicate(entry); }}>Duplicate</button>
                       <button type="button" className="btn-secondary" aria-label={`Delete ${entry.name}`} onClick={() => setPendingDelete(entry.id)}>Delete</button>
                     </div>
                   )}

@@ -89,6 +89,40 @@ describe('GraphicLibraryDialog', () => {
     await waitFor(() => expect(status()).toContain('Nothing was changed'));
   });
 
+  it('duplicating an entry that is already gone says so instead of reporting a copy', async () => {
+    renderDialog(makeLibrary({ duplicate: vi.fn(async () => undefined) }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Duplicate Lower Third' }));
+    await waitFor(() => expect(status()).toBe('“Lower Third” is no longer in the library.'));
+  });
+
+  it('a duplicate that works says so', async () => {
+    renderDialog(makeLibrary({ duplicate: vi.fn(async () => ({ ...entry, id: 'g2', name: 'Lower Third copy' })) }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Duplicate Lower Third' }));
+    await waitFor(() => expect(status()).toBe('Duplicated “Lower Third”.'));
+  });
+
+  it('a second Open click while the first read is in flight adds no second tab', async () => {
+    let finish: (value: { name: string; scene: string }) => void = () => undefined;
+    const library = makeLibrary({ open: vi.fn(() => new Promise((resolve) => { finish = resolve; })) });
+    const { openGraphic } = renderDialog(library);
+    const button = await screen.findByRole('button', { name: 'Open Lower Third' });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    await act(async () => finish({ name: 'Lower Third', scene: '{}' }));
+    expect(library.open).toHaveBeenCalledTimes(1);
+    expect(openGraphic).toHaveBeenCalledTimes(1);
+  });
+
+  it('a read that settles after the dialog closed adds no tab', async () => {
+    let finish: (value: { name: string; scene: string }) => void = () => undefined;
+    const library = makeLibrary({ open: vi.fn(() => new Promise((resolve) => { finish = resolve; })) });
+    const { openGraphic } = renderDialog(library);
+    fireEvent.click(await screen.findByRole('button', { name: 'Open Lower Third' }));
+    cleanup();
+    await act(async () => finish({ name: 'Lower Third', scene: '{}' }));
+    expect(openGraphic).not.toHaveBeenCalled();
+  });
+
   it('delete asks once more in the row, and Keep cancels it', async () => {
     const library = makeLibrary();
     renderDialog(library);

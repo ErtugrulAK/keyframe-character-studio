@@ -97,6 +97,19 @@ describe('template tabs keep their own frame rate and length', () => {
     expect(ctx().fps).toBe(120);
   });
 
+  it('each tab keeps its own canvas size', () => {
+    const ctx = renderProvider();
+    const aId = ctx().activeProjectTemplateId;
+    act(() => { ctx().setProjectResolution({ width: 1280, height: 720 }); });
+    act(() => { ctx().addProjectTemplate('B'); });
+    const bId = ctx().activeProjectTemplateId;
+    act(() => { ctx().setProjectResolution({ width: 1080, height: 1920 }); });
+    act(() => { ctx().setActiveProjectTemplateId(aId); });
+    expect(ctx().projectResolution).toEqual({ width: 1280, height: 720 });
+    act(() => { ctx().setActiveProjectTemplateId(bId); });
+    expect(ctx().projectResolution).toEqual({ width: 1080, height: 1920 });
+  });
+
   it('a tab opens at its active sequence\'s length', () => {
     const ctx = renderProvider();
     const aId = ctx().activeProjectTemplateId;

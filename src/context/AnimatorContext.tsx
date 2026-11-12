@@ -474,6 +474,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
 
+  const [projectResolution, setProjectResolution] = useState<{ width: number; height: number }>({ width: 1920, height: 1080 });
   const templateSwitchedRef = useRef<() => void>(() => undefined);
   const {
     setTemplateCanvasStore,
@@ -505,6 +506,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setTracks,
     setFps,
     fps,
+    projectResolution,
+    setProjectResolution,
     setTotalFrames,
     setCurrentFrame,
     setIsPlaying,
@@ -518,7 +521,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     onProjectTemplateSwitched: () => templateSwitchedRef.current(),
   });
 
-  const [projectResolution, setProjectResolution] = useState<{ width: number; height: number }>({ width: 1920, height: 1080 });
   const {
     selectedPartId,
     setSelectedPartId,

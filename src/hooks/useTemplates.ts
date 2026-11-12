@@ -23,6 +23,8 @@ interface TemplateCanvas {
    * tab keeps it: absent on entries written before tabs kept their rate.
    */
   fps?: number;
+  /** The template's canvas size (SceneData.width/height), kept with it like its rate. */
+  projectResolution?: { width: number; height: number };
 }
 
 /** The frame count a template opens at: its active sequence's duration. */
@@ -37,6 +39,9 @@ interface UseTemplatesOptions {
   setFps: React.Dispatch<React.SetStateAction<number>>;
   /** The open template's frame rate, stored with it when another tab opens. */
   fps?: number;
+  /** The open template's canvas size, stored and restored the same way. */
+  projectResolution?: { width: number; height: number };
+  setProjectResolution?: (resolution: { width: number; height: number }) => void;
   setTotalFrames?: React.Dispatch<React.SetStateAction<number>>;
   setCurrentFrame: (frame: number | ((prev: number) => number)) => void;
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
@@ -65,6 +70,8 @@ export const useTemplates = ({
   setTracks,
   setFps,
   fps,
+  projectResolution,
+  setProjectResolution,
   setTotalFrames,
   setCurrentFrame,
   setIsPlaying,
@@ -221,6 +228,7 @@ export const useTemplates = ({
         activeTemplateId,
         coordinateSystem,
         ...(fps !== undefined ? { fps } : {}),
+        ...(projectResolution ? { projectResolution } : {}),
       },
     }));
 
@@ -243,6 +251,7 @@ export const useTemplates = ({
     // rate is the scene's time mapping, so carrying another tab's rate over
     // would change how fast this one plays.
     if (targetData.fps !== undefined) setFps(targetData.fps);
+    if (targetData.projectResolution) setProjectResolution?.(targetData.projectResolution);
     const duration = activeSequenceDuration(targetTemplates, targetData.activeTemplateId);
     if (duration !== undefined) setTotalFrames?.(duration);
     setActiveProjectTemplateIdState(targetId);
@@ -250,7 +259,7 @@ export const useTemplates = ({
 
     const tmpl = projectTemplates.find((t) => t.id === targetId);
     if (tmpl) setSceneTitleState(tmpl.name);
-  }, [onProjectTemplateSwitched, fps, setFps, setTotalFrames, activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, templateCanvasStore, projectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setCoordinateSystem]);
+  }, [onProjectTemplateSwitched, fps, setFps, projectResolution, setProjectResolution, setTotalFrames, activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, templateCanvasStore, projectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setCoordinateSystem]);
 
   const addProjectTemplate = useCallback((name: string) => {
     const cleanName = name.trim() || 'New Template';
@@ -270,6 +279,7 @@ export const useTemplates = ({
         activeTemplateId,
         coordinateSystem,
         ...(fps !== undefined ? { fps } : {}),
+        ...(projectResolution ? { projectResolution } : {}),
       },
       [newId]: {
         characterParts: [],
@@ -292,7 +302,7 @@ export const useTemplates = ({
     const freshDuration = activeSequenceDuration(normalizeMotionTemplates(DEFAULT_MOTION_TEMPLATES), 'Sequence');
     if (freshDuration !== undefined) setTotalFrames?.(freshDuration);
     onProjectTemplateSwitched?.();
-  }, [onProjectTemplateSwitched, fps, setTotalFrames, activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setTemplateCanvasStore, setProjectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setFps, setCoordinateSystem]);
+  }, [onProjectTemplateSwitched, fps, projectResolution, setTotalFrames, activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setTemplateCanvasStore, setProjectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setFps, setCoordinateSystem]);
 
   const renameProjectTemplate = useCallback((id: string, newName: string) => {
     const cleanName = newName.trim();
@@ -329,6 +339,7 @@ export const useTemplates = ({
         setActiveTemplateIdState(targetData.activeTemplateId);
         setCoordinateSystem(targetData.coordinateSystem ?? DEFAULT_SCENE_COORDINATE_SYSTEM);
         if (targetData.fps !== undefined) setFps(targetData.fps);
+        if (targetData.projectResolution) setProjectResolution?.(targetData.projectResolution);
         const duration = activeSequenceDuration(nextTemplates, targetData.activeTemplateId);
         if (duration !== undefined) setTotalFrames?.(duration);
         setSceneTitleState(filtered[0].name);
@@ -341,7 +352,7 @@ export const useTemplates = ({
       delete nextStore[idToDelete];
       return nextStore;
     });
-  }, [onProjectTemplateSwitched, setFps, setTotalFrames, projectTemplates, activeProjectTemplateId, templateCanvasStore, setProjectTemplates, setActiveProjectTemplateIdState, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setSceneTitleState, setTemplateCanvasStore, setCoordinateSystem]);
+  }, [onProjectTemplateSwitched, setFps, setProjectResolution, setTotalFrames, projectTemplates, activeProjectTemplateId, templateCanvasStore, setProjectTemplates, setActiveProjectTemplateIdState, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setSceneTitleState, setTemplateCanvasStore, setCoordinateSystem]);
 
   return {
     templateCanvasStore,

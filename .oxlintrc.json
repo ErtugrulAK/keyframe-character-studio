@@ -4,5 +4,30 @@
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/utils/animation/**",
+        "src/utils/geometry/**",
+        "src/utils/layers/**",
+        "src/utils/persistence/**",
+        "src/ograf/**",
+        "src/interop/**",
+        "src/export/**"
+      ],
+      "rules": {
+        "no-restricted-imports": ["error", {
+          "paths": [
+            { "name": "react", "message": "The domain core (utils/animation|geometry|layers|persistence, ograf, interop, export) stays free of React: put UI wiring in a hook or component." },
+            { "name": "react-dom", "message": "The domain core stays free of React DOM." },
+            { "name": "lucide-react", "message": "Icons belong to the UI layer (utils/editor or components)." }
+          ],
+          "patterns": [
+            { "group": ["**/components/**", "**/hooks/**", "**/context/AnimatorContext*", "**/context/useAnimator*", "**/context/EditorContextMenu*"], "message": "The domain core must not import the UI layer: pass the data in instead." }
+          ]
+        }]
+      }
+    }
+  ]
 }

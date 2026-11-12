@@ -75,6 +75,29 @@ const cloneTrackOnto = (source: Track | undefined, cloneId: string, name: string
 };
 
 /**
+ * Points every layer reference of a clone (parent, matte sources, Boolean
+ * links, Fit to Text, Follow, Look At) at the copy of its target when that
+ * target was copied too; a reference to a layer outside the copied set is
+ * kept. One rule for Paste and Duplicate, so the two never disagree.
+ */
+const remapClonedReferences = (clone: CharacterPart, source: CharacterPart, remap: (id: string) => string): void => {
+  if (source.parentId) clone.parentId = remap(source.parentId);
+  if (clone.matte?.sourcePartId) clone.matte = { ...clone.matte, sourcePartId: remap(clone.matte.sourcePartId) };
+  if (clone.trackMatte?.sourceLayerId) clone.trackMatte = { ...clone.trackMatte, sourceLayerId: remap(clone.trackMatte.sourceLayerId) };
+  if (source.booleanGroupId) clone.booleanGroupId = remap(source.booleanGroupId);
+  if (source.booleanOperandIds) clone.booleanOperandIds = source.booleanOperandIds.map(remap);
+  if (clone.fitToText) {
+    clone.fitToText = {
+      ...clone.fitToText,
+      textLayerId: remap(clone.fitToText.textLayerId),
+      ...(clone.fitToText.extraTextLayerIds ? { extraTextLayerIds: clone.fitToText.extraTextLayerIds.map(remap) } : {}),
+    };
+  }
+  if (clone.follow) clone.follow = { ...clone.follow, targetLayerId: remap(clone.follow.targetLayerId) };
+  if (clone.lookAt) clone.lookAt = { ...clone.lookAt, targetLayerId: remap(clone.lookAt.targetLayerId) };
+};
+
+/**
  * Legacy composite keyframes mirrored with fresh ids. Each transform mirrors as
  * a still value would, then the rotations are re-set together so an origin
  * mirror keeps every step between keys (see `mirrorChannelValues`).
@@ -212,20 +235,7 @@ export const useClipboard = ({
           ? { ...part.baseTransform, x: part.baseTransform.x + offset.x, y: part.baseTransform.y + offset.y }
           : { ...part.baseTransform },
       };
-      if (part.parentId) clone.parentId = remap(part.parentId);
-      if (clone.matte?.sourcePartId) clone.matte = { ...clone.matte, sourcePartId: remap(clone.matte.sourcePartId) };
-      if (clone.trackMatte?.sourceLayerId) clone.trackMatte = { ...clone.trackMatte, sourceLayerId: remap(clone.trackMatte.sourceLayerId) };
-      if (part.booleanGroupId) clone.booleanGroupId = remap(part.booleanGroupId);
-      if (part.booleanOperandIds) clone.booleanOperandIds = part.booleanOperandIds.map(remap);
-      if (clone.fitToText) {
-        clone.fitToText = {
-          ...clone.fitToText,
-          textLayerId: remap(clone.fitToText.textLayerId),
-          ...(clone.fitToText.extraTextLayerIds ? { extraTextLayerIds: clone.fitToText.extraTextLayerIds.map(remap) } : {}),
-        };
-      }
-      if (clone.follow) clone.follow = { ...clone.follow, targetLayerId: remap(clone.follow.targetLayerId) };
-      if (clone.lookAt) clone.lookAt = { ...clone.lookAt, targetLayerId: remap(clone.lookAt.targetLayerId) };
+      remapClonedReferences(clone, part, remap);
       if (outermost) outermostIds.push(cloneId);
       newParts.push(clone);
       newTracks.push(offset && target ? shiftTrackPosition(cloneTrackOnto(track, cloneId, clone.name), offset) : cloneTrackOnto(track, cloneId, clone.name));
@@ -269,8 +279,10 @@ export const useClipboard = ({
           ? { ...source.baseTransform, x: source.baseTransform.x + 20, y: source.baseTransform.y + 20 }
           : { ...source.baseTransform },
       };
-      const cloneParentId = source.parentId ? idMap.get(source.parentId) : undefined;
-      if (cloneParentId) clone.parentId = cloneParentId;
+      // Every reference into the duplicated set points at its copy, exactly as
+      // Paste does: a duplicated group's bar fits the duplicated text, its
+      // matte uses the duplicated source. References outside it are kept.
+      remapClonedReferences(clone, source, (id) => idMap.get(id) ?? id);
       newParts.push(clone);
       newTracks.push(cloneTrackFor(source.id, cloneId, name));
     });

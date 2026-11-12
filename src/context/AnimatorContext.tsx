@@ -474,6 +474,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
 
+  const templateSwitchedRef = useRef<() => void>(() => undefined);
   const {
     setTemplateCanvasStore,
     projectTemplates,
@@ -512,6 +513,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     showToast,
     onSequenceDeleted: stopNamedSequence,
     onSequenceDurationChanged: updateNamedSequenceDuration,
+    // The history hook is created below; the ref hands its baseline reset over.
+    onProjectTemplateSwitched: () => templateSwitchedRef.current(),
   });
 
   const [projectResolution, setProjectResolution] = useState<{ width: number; height: number }>({ width: 1920, height: 1080 });
@@ -663,6 +666,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     selection: historySelection,
     restoreSelection: restoreHistorySelection,
   });
+  // Hand the history baseline reset to the template tabs (created above).
+  // oxlint-disable-next-line react/refs
+  templateSwitchedRef.current = requestBaselineReset;
 
 
 

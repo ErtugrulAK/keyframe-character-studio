@@ -38,6 +38,13 @@ interface UseTemplatesOptions {
   showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
   onSequenceDeleted?: (sequenceId: string) => void;
   onSequenceDurationChanged?: (sequenceId: string, durationFrames: number) => void;
+  /**
+   * Called whenever another template tab becomes the one on screen (switch,
+   * new tab, deleting the open tab). The editor resets the undo baseline
+   * there: one undo stack spans the scene arrays only, so without it Ctrl+Z
+   * right after a switch wrote the previous tab's layers into this one.
+   */
+  onProjectTemplateSwitched?: () => void;
 }
 
 export const useTemplates = ({
@@ -55,6 +62,7 @@ export const useTemplates = ({
   showToast,
   onSequenceDeleted,
   onSequenceDurationChanged,
+  onProjectTemplateSwitched,
 }: UseTemplatesOptions) => {
   const [templateCanvasStore, setTemplateCanvasStore] = useState<Record<string, TemplateCanvas>>({
     tmpl_1: {
@@ -201,10 +209,11 @@ export const useTemplates = ({
     setActiveTemplateIdState(targetData.activeTemplateId);
     setCoordinateSystem(targetData.coordinateSystem ?? DEFAULT_SCENE_COORDINATE_SYSTEM);
     setActiveProjectTemplateIdState(targetId);
+    onProjectTemplateSwitched?.();
 
     const tmpl = projectTemplates.find((t) => t.id === targetId);
     if (tmpl) setSceneTitleState(tmpl.name);
-  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, templateCanvasStore, projectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setCoordinateSystem]);
+  }, [onProjectTemplateSwitched, activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, templateCanvasStore, projectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setCoordinateSystem]);
 
   const addProjectTemplate = useCallback((name: string) => {
     const cleanName = name.trim() || 'New Template';
@@ -242,7 +251,8 @@ export const useTemplates = ({
     setActiveProjectTemplateIdState(newId);
     setSceneTitleState(cleanName);
     setFps(60); // Strictly default to 60 FPS for new templates
-  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setTemplateCanvasStore, setProjectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setFps, setCoordinateSystem]);
+    onProjectTemplateSwitched?.();
+  }, [onProjectTemplateSwitched, activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setTemplateCanvasStore, setProjectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setFps, setCoordinateSystem]);
 
   const renameProjectTemplate = useCallback((id: string, newName: string) => {
     const cleanName = newName.trim();
@@ -258,6 +268,7 @@ export const useTemplates = ({
   }, [activeProjectTemplateId]);
 
   const deleteProjectTemplate = useCallback((idToDelete: string) => {
+    if (activeProjectTemplateId === idToDelete && projectTemplates.length > 1) onProjectTemplateSwitched?.();
     setProjectTemplates((prev) => {
       if (prev.length <= 1) return prev;
       const filtered = prev.filter((t) => t.id !== idToDelete);
@@ -286,7 +297,7 @@ export const useTemplates = ({
       delete nextStore[idToDelete];
       return nextStore;
     });
-  }, [activeProjectTemplateId, templateCanvasStore, setProjectTemplates, setActiveProjectTemplateIdState, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setSceneTitleState, setTemplateCanvasStore, setCoordinateSystem]);
+  }, [onProjectTemplateSwitched, projectTemplates, activeProjectTemplateId, templateCanvasStore, setProjectTemplates, setActiveProjectTemplateIdState, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setSceneTitleState, setTemplateCanvasStore, setCoordinateSystem]);
 
   return {
     templateCanvasStore,

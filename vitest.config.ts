@@ -45,6 +45,7 @@ const DOM_TESTS = [
   'src/tests/useKeyboardShortcuts.test.ts',
   'src/tests/useMath.test.ts',
   'src/tests/useMediaImport.test.ts',
+  'src/tests/usePathEditing.test.ts',
   'src/tests/usePlayback.test.ts',
   'src/tests/usePresets.test.ts',
   'src/tests/usePresetsBootWrite.test.ts',

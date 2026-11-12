@@ -9,12 +9,16 @@ import { contentBoundsInLocalUnits, visibleContentRectOfImage } from '../utils/g
  * toolbar's Media button uses it.
  */
 export const useMediaImport = () => {
-  const { addCustomPart } = useAnimatorSlice('addCustomPart');
+  const { addCustomPart, showToast } = useAnimatorSlice('addCustomPart', 'showToast');
   return useCallback((files: FileList | File[]) => {
     Array.from(files).forEach((file) => {
       const cleanName = file.name.replace(/\.[^/.]+$/, '');
+      // The same words the stage's own drop uses, so a file that cannot be
+      // added says so whichever way it came in instead of doing nothing.
+      const refuse = () => showToast(`"${file.name}" could not be read.`, 'error');
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
+        reader.onerror = refuse;
         reader.onload = (e) => {
           const dataUrl = e.target?.result as string;
           const img = new Image();
@@ -46,11 +50,13 @@ export const useMediaImport = () => {
               ...(imageContentBounds ? { imageContentBounds } : {}),
             });
           };
+          img.onerror = refuse;
           img.src = dataUrl;
         };
         reader.readAsDataURL(file);
       } else if (file.type.startsWith('video/') || /\.(mp4|webm|mov|ogg)$/i.test(file.name)) {
         const reader = new FileReader();
+        reader.onerror = refuse;
         reader.onload = (e) => {
           const dataUrl = e.target?.result as string;
           addCustomPart('custom_video', cleanName, { videoUrl: dataUrl });
@@ -58,5 +64,5 @@ export const useMediaImport = () => {
         reader.readAsDataURL(file);
       }
     });
-  }, [addCustomPart]);
+  }, [addCustomPart, showToast]);
 };

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnimatorProvider } from './context/AnimatorContext';
 import { EditorContextMenuProvider } from './context/EditorContextMenuContext';
+import { EditorCrashBoundary } from './components/Shared/EditorCrashBoundary';
 import { useAnimator } from './context/useAnimator';
 import { HeaderBar } from './components/Header/HeaderBar';
 import { AuthoringToolbar } from './components/Toolbar/AuthoringToolbar';
@@ -170,9 +171,12 @@ const MainAppContent: React.FC = () => {
 export function App() {
   return (
     <AnimatorProvider>
-      <EditorContextMenuProvider>
-        <MainAppContent />
-      </EditorContextMenuProvider>
+      {/* Inside the provider: a crash keeps the document in memory to save. */}
+      <EditorCrashBoundary>
+        <EditorContextMenuProvider>
+          <MainAppContent />
+        </EditorContextMenuProvider>
+      </EditorCrashBoundary>
     </AnimatorProvider>
   );
 }

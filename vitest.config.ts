@@ -51,6 +51,7 @@ const DOM_TESTS = [
   'src/tests/useSelection.test.ts',
   'src/tests/useSerialization.test.ts',
   'src/tests/useTemplates.test.ts',
+  'src/tests/useTemplatesProjectTemplates.test.ts',
   'src/tests/useTimeline.test.ts',
   'src/tests/useToast.test.ts',
   'src/tests/useToolbar.test.ts',

@@ -70,3 +70,43 @@ describe('undo across template tabs', () => {
     expect(names(ctx)).toEqual(aNames);
   });
 });
+
+describe('template tabs keep their own frame rate and length', () => {
+  afterEach(() => cleanup());
+
+  it('a new tab does not change the rate of the tab it leaves', () => {
+    const ctx = renderProvider();
+    const aId = ctx().activeProjectTemplateId;
+    act(() => { ctx().setFps(30); });
+    act(() => { ctx().addProjectTemplate('B'); });
+    expect(ctx().fps).toBe(60);
+    act(() => { ctx().setActiveProjectTemplateId(aId); });
+    expect(ctx().fps).toBe(30);
+  });
+
+  it('each tab opens at its own rate', () => {
+    const ctx = renderProvider();
+    const aId = ctx().activeProjectTemplateId;
+    act(() => { ctx().setFps(24); });
+    act(() => { ctx().addProjectTemplate('B'); });
+    const bId = ctx().activeProjectTemplateId;
+    act(() => { ctx().setFps(120); });
+    act(() => { ctx().setActiveProjectTemplateId(aId); });
+    expect(ctx().fps).toBe(24);
+    act(() => { ctx().setActiveProjectTemplateId(bId); });
+    expect(ctx().fps).toBe(120);
+  });
+
+  it('a tab opens at its active sequence\'s length', () => {
+    const ctx = renderProvider();
+    const aId = ctx().activeProjectTemplateId;
+    const sequenceId = ctx().activeTemplateId;
+    act(() => { ctx().updateMotionTemplateDuration(sequenceId, 200); });
+    act(() => { ctx().setActiveTemplateId(sequenceId); });
+    expect(ctx().totalFrames).toBe(200);
+    act(() => { ctx().addProjectTemplate('B'); });
+    expect(ctx().totalFrames).toBe(60);
+    act(() => { ctx().setActiveProjectTemplateId(aId); });
+    expect(ctx().totalFrames).toBe(200);
+  });
+});

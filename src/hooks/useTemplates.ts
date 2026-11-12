@@ -18,7 +18,16 @@ interface TemplateCanvas {
   motionTemplates: MotionTemplate[];
   activeTemplateId: string;
   coordinateSystem: SceneCoordinateSystem;
+  /**
+   * The template's frame rate. A scene's fps is its own (SceneData.fps), so a
+   * tab keeps it: absent on entries written before tabs kept their rate.
+   */
+  fps?: number;
 }
+
+/** The frame count a template opens at: its active sequence's duration. */
+const activeSequenceDuration = (templates: MotionTemplate[], activeId: string): number | undefined =>
+  (templates.find((template) => template.id === activeId) ?? templates[0])?.durationFrames;
 
 interface UseTemplatesOptions {
   characterParts: CharacterPart[];
@@ -26,6 +35,8 @@ interface UseTemplatesOptions {
   tracks: Track[];
   setTracks: React.Dispatch<React.SetStateAction<Track[]>>;
   setFps: React.Dispatch<React.SetStateAction<number>>;
+  /** The open template's frame rate, stored with it when another tab opens. */
+  fps?: number;
   setTotalFrames?: React.Dispatch<React.SetStateAction<number>>;
   setCurrentFrame: (frame: number | ((prev: number) => number)) => void;
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
@@ -53,6 +64,7 @@ export const useTemplates = ({
   tracks,
   setTracks,
   setFps,
+  fps,
   setTotalFrames,
   setCurrentFrame,
   setIsPlaying,
@@ -191,6 +203,7 @@ export const useTemplates = ({
         motionTemplates,
         activeTemplateId,
         coordinateSystem,
+        ...(fps !== undefined ? { fps } : {}),
       },
     }));
 
@@ -203,17 +216,24 @@ export const useTemplates = ({
       coordinateSystem: DEFAULT_SCENE_COORDINATE_SYSTEM,
     };
 
+    const targetTemplates = normalizeMotionTemplates(targetData.motionTemplates);
     setCharacterParts(targetData.characterParts);
     setTracks(targetData.tracks);
-    setMotionTemplates(normalizeMotionTemplates(targetData.motionTemplates));
+    setMotionTemplates(targetTemplates);
     setActiveTemplateIdState(targetData.activeTemplateId);
     setCoordinateSystem(targetData.coordinateSystem ?? DEFAULT_SCENE_COORDINATE_SYSTEM);
+    // The tab opens at its own rate and its active sequence's length: the
+    // rate is the scene's time mapping, so carrying another tab's rate over
+    // would change how fast this one plays.
+    if (targetData.fps !== undefined) setFps(targetData.fps);
+    const duration = activeSequenceDuration(targetTemplates, targetData.activeTemplateId);
+    if (duration !== undefined) setTotalFrames?.(duration);
     setActiveProjectTemplateIdState(targetId);
     onProjectTemplateSwitched?.();
 
     const tmpl = projectTemplates.find((t) => t.id === targetId);
     if (tmpl) setSceneTitleState(tmpl.name);
-  }, [onProjectTemplateSwitched, activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, templateCanvasStore, projectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setCoordinateSystem]);
+  }, [onProjectTemplateSwitched, fps, setFps, setTotalFrames, activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, templateCanvasStore, projectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setCoordinateSystem]);
 
   const addProjectTemplate = useCallback((name: string) => {
     const cleanName = name.trim() || 'New Template';
@@ -232,6 +252,7 @@ export const useTemplates = ({
         motionTemplates,
         activeTemplateId,
         coordinateSystem,
+        ...(fps !== undefined ? { fps } : {}),
       },
       [newId]: {
         characterParts: [],
@@ -251,8 +272,10 @@ export const useTemplates = ({
     setActiveProjectTemplateIdState(newId);
     setSceneTitleState(cleanName);
     setFps(60); // Strictly default to 60 FPS for new templates
+    const freshDuration = activeSequenceDuration(normalizeMotionTemplates(DEFAULT_MOTION_TEMPLATES), 'Sequence');
+    if (freshDuration !== undefined) setTotalFrames?.(freshDuration);
     onProjectTemplateSwitched?.();
-  }, [onProjectTemplateSwitched, activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setTemplateCanvasStore, setProjectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setFps, setCoordinateSystem]);
+  }, [onProjectTemplateSwitched, fps, setTotalFrames, activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setTemplateCanvasStore, setProjectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setFps, setCoordinateSystem]);
 
   const renameProjectTemplate = useCallback((id: string, newName: string) => {
     const cleanName = newName.trim();
@@ -282,11 +305,15 @@ export const useTemplates = ({
           activeTemplateId: 'Sequence',
           coordinateSystem: DEFAULT_SCENE_COORDINATE_SYSTEM,
         };
+        const nextTemplates = normalizeMotionTemplates(targetData.motionTemplates);
         setCharacterParts(targetData.characterParts);
         setTracks(targetData.tracks);
-        setMotionTemplates(normalizeMotionTemplates(targetData.motionTemplates));
+        setMotionTemplates(nextTemplates);
         setActiveTemplateIdState(targetData.activeTemplateId);
         setCoordinateSystem(targetData.coordinateSystem ?? DEFAULT_SCENE_COORDINATE_SYSTEM);
+        if (targetData.fps !== undefined) setFps(targetData.fps);
+        const duration = activeSequenceDuration(nextTemplates, targetData.activeTemplateId);
+        if (duration !== undefined) setTotalFrames?.(duration);
         setSceneTitleState(filtered[0].name);
       }
       return filtered;
@@ -297,7 +324,7 @@ export const useTemplates = ({
       delete nextStore[idToDelete];
       return nextStore;
     });
-  }, [onProjectTemplateSwitched, projectTemplates, activeProjectTemplateId, templateCanvasStore, setProjectTemplates, setActiveProjectTemplateIdState, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setSceneTitleState, setTemplateCanvasStore, setCoordinateSystem]);
+  }, [onProjectTemplateSwitched, setFps, setTotalFrames, projectTemplates, activeProjectTemplateId, templateCanvasStore, setProjectTemplates, setActiveProjectTemplateIdState, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setSceneTitleState, setTemplateCanvasStore, setCoordinateSystem]);
 
   return {
     templateCanvasStore,

@@ -61,7 +61,15 @@ export const GraphicLibraryDialog: React.FC<GraphicLibraryDialogProps> = ({ isOp
   const save = () => run(() => library.save(name, exportCurrent()), `Saved “${name.trim() || 'Untitled'}” to the library.`);
 
   const open = async (entry: LibraryEntrySummary) => {
-    const graphic = await library.open(entry.id);
+    let graphic: Awaited<ReturnType<ProjectLibrary['open']>>;
+    try {
+      graphic = await library.open(entry.id);
+    } catch {
+      // A blocked or failing store rejects the read: say so, as the list does,
+      // instead of leaving an unhandled rejection and a dialog that did nothing.
+      setStatus({ tone: 'error', text: `“${entry.name}” could not be read from the library (private window or blocked site data?).` });
+      return;
+    }
     if (!graphic) {
       setStatus({ tone: 'error', text: `“${entry.name}” is no longer in the library.` });
       await refresh();

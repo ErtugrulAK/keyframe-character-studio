@@ -110,3 +110,37 @@ describe('template tabs keep their own frame rate and length', () => {
     expect(ctx().totalFrames).toBe(200);
   });
 });
+
+describe('deleting the active sequence', () => {
+  afterEach(() => cleanup());
+
+  it('opens the remaining sequence at its own length, at frame 0, stopped', () => {
+    const ctx = renderProvider();
+    const first = ctx().motionTemplates[0].id;
+    act(() => { ctx().updateMotionTemplateDuration(first, 40); });
+    act(() => { ctx().addMotionTemplate('Long', 'out'); });
+    const long = ctx().activeTemplateId;
+    act(() => { ctx().updateMotionTemplateDuration(long, 300); });
+    act(() => { ctx().setActiveTemplateId(long); });
+    act(() => { ctx().setCurrentFrame(250); });
+    act(() => { ctx().setIsPlaying(true); });
+    act(() => { ctx().deleteMotionTemplate(long); });
+    expect(ctx().activeTemplateId).toBe(first);
+    expect(ctx().totalFrames).toBe(40);
+    expect(ctx().currentFrame).toBe(0);
+    expect(ctx().isPlaying).toBe(false);
+  });
+
+  it('deleting another sequence leaves the timeline alone', () => {
+    const ctx = renderProvider();
+    act(() => { ctx().addMotionTemplate('Other', 'out'); });
+    const other = ctx().activeTemplateId;
+    const first = ctx().motionTemplates[0].id;
+    act(() => { ctx().setActiveTemplateId(first); });
+    act(() => { ctx().setCurrentFrame(20); });
+    const total = ctx().totalFrames;
+    act(() => { ctx().deleteMotionTemplate(other); });
+    expect(ctx().totalFrames).toBe(total);
+    expect(ctx().currentFrame).toBe(20);
+  });
+});

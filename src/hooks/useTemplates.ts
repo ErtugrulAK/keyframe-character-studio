@@ -168,9 +168,19 @@ export const useTemplates = ({
       }),
     );
     if (activeTemplateId === idToDelete) {
+      // The sequence that takes over sets the edit timeline, as selecting it
+      // does: its length, frame 0, stopped. Without this the timeline kept the
+      // deleted sequence's length and the playhead could sit past the end.
+      // Broadcast selection stays isolated from edit playback.
+      const next = motionTemplates.find((candidate) => candidate.id !== idToDelete);
+      if (next && appMode !== 'broadcast') {
+        setTotalFrames?.(next.durationFrames);
+        setCurrentFrame(0);
+        setIsPlaying(false);
+      }
       onSequenceDeleted?.(idToDelete);
     }
-  }, [activeTemplateId, motionTemplates, onSequenceDeleted, setTracks]);
+  }, [activeTemplateId, appMode, motionTemplates, onSequenceDeleted, setTracks, setTotalFrames, setCurrentFrame, setIsPlaying]);
 
 
   /** The sequence's OGraf step markers (frames inside it), stored normalized. */

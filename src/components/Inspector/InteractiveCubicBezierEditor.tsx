@@ -66,7 +66,12 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
   onBatchStart,
   onBatchEnd,
 }) => {
-  const [copied, setCopied] = useState(false);
+  // 'failed' when the page cannot reach the clipboard: the async Clipboard API
+  // exists only in a secure context (https or localhost), so a page opened
+  // over plain http on the LAN has none, and a permission refusal rejects.
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const copyResetRef = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(copyResetRef.current), []);
   const [isModalOpen, setIsModalOpen] = useState(initialModalOpen);
   const [draggingPoint, setDraggingPoint] = useState<1 | 2 | null>(null);
   const [graphMode, setGraphMode] = useState<'value' | 'speed'>('value');
@@ -188,10 +193,19 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
     updatePoints({ x: points[0], y: points[1] }, { x: points[2], y: points[3] });
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(cssString);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copyToClipboard = async () => {
+    let copiedText = false;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(cssString);
+        copiedText = true;
+      }
+    } catch {
+      copiedText = false;
+    }
+    setCopyState(copiedText ? 'copied' : 'failed');
+    window.clearTimeout(copyResetRef.current);
+    copyResetRef.current = window.setTimeout(() => setCopyState('idle'), 2000);
   };
 
   const getMotionAnalysis = () => {
@@ -544,8 +558,14 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
               <h3 className="ce-section-title">CSS easing</h3>
               <div className="ce-code">
                 <code title={cssString}>{cssString}</code>
-                <button type="button" className="ce-icon-button" onClick={copyToClipboard} title="Copy CSS code" aria-label="Copy CSS code">
-                  {copied ? <Check size={13} /> : <Copy size={13} />}
+                <button
+                  type="button"
+                  className="ce-icon-button"
+                  onClick={() => { void copyToClipboard(); }}
+                  title={copyState === 'failed' ? 'Copy failed: this page cannot reach the clipboard. Select the code and copy it by hand.' : 'Copy CSS code'}
+                  aria-label={copyState === 'failed' ? 'Copy failed: this page cannot reach the clipboard' : copyState === 'copied' ? 'CSS code copied' : 'Copy CSS code'}
+                >
+                  {copyState === 'copied' ? <Check size={13} /> : copyState === 'failed' ? <X size={13} /> : <Copy size={13} />}
                 </button>
               </div>
               <div className="ce-paste">

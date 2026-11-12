@@ -118,7 +118,14 @@ export const useTemplates = ({
     const newTmpl = createMotionTemplate(name, motionTemplates, type);
     setMotionTemplates((prev) => [...prev, newTmpl]);
     setActiveTemplateIdState(newTmpl.id);
-  }, [motionTemplates]);
+    // The new sequence opens as a selected one does: its length, frame 0,
+    // stopped (edit mode only — broadcast selection stays isolated).
+    if (appMode !== 'broadcast') {
+      setTotalFrames?.(newTmpl.durationFrames);
+      setCurrentFrame(0);
+      setIsPlaying(false);
+    }
+  }, [appMode, motionTemplates, setTotalFrames, setCurrentFrame, setIsPlaying]);
 
   const renameMotionTemplate = useCallback((oldId: string, newName: string) => {
     const cleanName = newName.trim();

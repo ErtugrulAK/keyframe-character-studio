@@ -144,3 +144,22 @@ describe('deleting the active sequence', () => {
     expect(ctx().currentFrame).toBe(20);
   });
 });
+
+describe('adding a sequence', () => {
+  afterEach(() => cleanup());
+
+  it('opens the new sequence at its own length, at frame 0, stopped', () => {
+    const ctx = renderProvider();
+    const first = ctx().motionTemplates[0].id;
+    act(() => { ctx().updateMotionTemplateDuration(first, 120); });
+    act(() => { ctx().setActiveTemplateId(first); });
+    act(() => { ctx().setCurrentFrame(100); });
+    act(() => { ctx().setIsPlaying(true); });
+    act(() => { ctx().addMotionTemplate('Next', 'in'); });
+    const added = ctx().motionTemplates.find((template) => template.id === ctx().activeTemplateId)!;
+    expect(added.name).toBe('Next');
+    expect(ctx().totalFrames).toBe(added.durationFrames);
+    expect(ctx().currentFrame).toBe(0);
+    expect(ctx().isPlaying).toBe(false);
+  });
+});

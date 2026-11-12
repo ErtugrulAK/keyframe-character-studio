@@ -39,6 +39,7 @@ const DOM_TESTS = [
   'src/tests/transitionLegacyTrack.test.ts',
   'src/tests/useBroadcast.test.ts',
   'src/tests/useClipboard.test.ts',
+  'src/tests/useClipboardMirror.test.ts',
   'src/tests/useHistory.test.ts',
   'src/tests/useInspector.test.ts',
   'src/tests/useKeyboardShortcuts.test.ts',

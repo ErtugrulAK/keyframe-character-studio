@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import type { CharacterPart, Track, TrackChannel } from '../types/animator';
 import { generateId } from '../utils/layers/idGenerator';
 import { makeEmptyChannels } from '../utils/animation/defaults';
-import { mirrorChannelValue, mirrorTransform, type MirrorAxis } from '../utils/animation/mirror';
+import { mirrorChannelValues, mirrorTransform, type MirrorAxis } from '../utils/animation/mirror';
 import { cloneAnimationOntoTarget } from '../utils/animation/animationTransfer';
 import { getGroupDescendants } from '../utils/layers/layerGrouping';
 import { evaluateTransform } from '../utils/animation/evaluateTransform';
@@ -72,6 +72,20 @@ const cloneTrackOnto = (source: Track | undefined, cloneId: string, name: string
     keyframes: (clonedTrack.keyframes || []).map((k) => ({ ...k, id: generateId('kf') })),
     channels: newChannels,
   };
+};
+
+/**
+ * Legacy composite keyframes mirrored with fresh ids. Each transform mirrors as
+ * a still value would, then the rotations are re-set together so an origin
+ * mirror keeps every step between keys (see `mirrorChannelValues`).
+ */
+const mirrorLegacyKeyframes = (keyframes: Track['keyframes'], axis: MirrorAxis): Track['keyframes'] => {
+  const rotations = mirrorChannelValues('rotation', keyframes.map((k) => k.transform.rotation), axis);
+  return keyframes.map((k, index) => ({
+    ...k,
+    id: generateId('kf'),
+    transform: { ...mirrorTransform(k.transform, axis), rotation: rotations[index] },
+  }));
 };
 
 /**
@@ -308,21 +322,17 @@ export const useClipboard = ({
         if (clonedTrack.channels) {
           (Object.keys(clonedTrack.channels) as TrackChannel[]).forEach((ch) => {
             if (clonedTrack.channels[ch]) {
-              newChannels[ch] = clonedTrack.channels[ch].map((pk) => {
-                const value = mirrorChannelValue(ch, pk.value, axis);
-                let bezierControlPoints = pk.bezierControlPoints ? ([...pk.bezierControlPoints] as [number, number, number, number]) : undefined;
-                // Mirror the curve handles (y1/y2) too so the easing shape is preserved
-                if (bezierControlPoints && value !== pk.value) {
-                  bezierControlPoints[1] = -bezierControlPoints[1];
-                  bezierControlPoints[3] = -bezierControlPoints[3];
-                }
-                return {
-                  ...pk,
-                  id: generateId(`pkf_${ch}`),
-                  value,
-                  ...(bezierControlPoints ? { bezierControlPoints } : {}),
-                };
-              });
+              const keys = clonedTrack.channels[ch];
+              const values = mirrorChannelValues(ch, keys.map((pk) => pk.value), axis);
+              // The easing curve stays as it is: its control points live in
+              // normalised progress space (value = a + (b - a)·E(t)), so
+              // negating both ends of a segment already mirrors the motion.
+              newChannels[ch] = keys.map((pk, index) => ({
+                ...pk,
+                id: generateId(`pkf_${ch}`),
+                value: values[index],
+                ...(pk.bezierControlPoints ? { bezierControlPoints: [...pk.bezierControlPoints] as [number, number, number, number] } : {}),
+              }));
             }
           });
         }
@@ -331,11 +341,7 @@ export const useClipboard = ({
           id: generateId('track'),
           partId: newPartId,
           name: newPart.name,
-          keyframes: (clonedTrack.keyframes || []).map((k) => ({
-            ...k,
-            id: generateId('kf'),
-            transform: mirrorTransform(k.transform, axis),
-          })),
+          keyframes: mirrorLegacyKeyframes(clonedTrack.keyframes || [], axis),
           channels: newChannels,
         };
       }

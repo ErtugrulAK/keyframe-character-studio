@@ -57,3 +57,23 @@ export const mirrorChannelValue = (ch: string, value: number, axis: MirrorAxis):
   }
   return value;
 };
+
+/**
+ * Mirrors the keyframe values of ONE animated channel together.
+ *
+ * Mirroring each key on its own is right for a still value but wrong for an
+ * animation through the origin: wrapping every angle into [-180, 180] changes
+ * the distance between neighbouring keys, so 0° → 200° would play as
+ * 180° → 20° (the other way round) and a full 0° → 360° turn would not turn
+ * at all. Here every angle turns by 180° and the whole channel then moves by
+ * one multiple of 360° so its FIRST key lands in [-180, 180] — the same tidy
+ * range a still value gets, with every step between keys kept.
+ */
+export const mirrorChannelValues = (ch: string, values: readonly number[], axis: MirrorAxis): number[] => {
+  if (axis !== 'origin' || !isAngleChannel(ch) || values.length === 0) {
+    return values.map((value) => mirrorChannelValue(ch, value, axis));
+  }
+  const turned = values.map((value) => value + 180);
+  const shift = mirrorChannelValue(ch, values[0], axis) - turned[0];
+  return turned.map((value) => value + shift);
+};

@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useState } from 'react';
+import { ChunkLoadBoundary } from '../Shared/ChunkLoadBoundary';
 import { Library } from 'lucide-react';
 import { NumberField } from '../Inspector/inputs/NumberField';
 import { useAnimatorSlice } from '../../context/useAnimator';
@@ -42,6 +43,12 @@ export const ProjectSettingsFields: React.FC = () => {
           <span>Open Library…</span>
         </button>
         {library && isLibraryOpen && (
+          <ChunkLoadBoundary
+            onError={() => {
+              setIsLibraryOpen(false);
+              showToast('The library could not be opened. Check your connection; if it keeps failing, reload the editor.', 'error');
+            }}
+          >
           <Suspense fallback={null}>
             <GraphicLibraryDialog
               isOpen={isLibraryOpen}
@@ -52,6 +59,7 @@ export const ProjectSettingsFields: React.FC = () => {
               onClose={() => setIsLibraryOpen(false)}
             />
           </Suspense>
+          </ChunkLoadBoundary>
         )}
       </div>
       <div className="project-section">

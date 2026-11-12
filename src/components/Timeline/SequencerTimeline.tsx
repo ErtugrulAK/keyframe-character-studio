@@ -44,6 +44,7 @@ import { TrackOutlinerRow } from './TrackOutlinerRow';
 import { projectLayerOrdinals } from '../../utils/layers/layerOrdinal';
 import { frameToSeconds, secondsToFrame } from '../../utils/animation/timebase';
 import { InlineRename } from '../Shared/InlineRename';
+import { ChunkLoadBoundary } from '../Shared/ChunkLoadBoundary';
 import { useRowWindow, type RowViewport } from '../../hooks/useRowWindow';
 import { useRetainedScrollTop, useRetainedUiState } from '../../hooks/useRetainedUiState';
 import { rowOffsets, type RowWindowSegment } from '../../utils/editor/rowWindow';
@@ -1708,6 +1709,12 @@ export const SequencerTimeline: React.FC = () => {
 
       {/* Expanded Pro Cubic Bezier Curve Studio Modal */}
       {isCurveModalOpen && (
+        <ChunkLoadBoundary
+          onError={() => {
+            setIsCurveModalOpen(false);
+            showToast('The curve editor could not be opened. Check your connection; if it keeps failing, reload the editor.', 'error');
+          }}
+        >
         <Suspense fallback={null}>
           <InteractiveCubicBezierEditor
             controlPoints={curveSegment?.from.bezierControlPoints ?? [0.42, 0, 0.58, 1]}
@@ -1737,6 +1744,7 @@ export const SequencerTimeline: React.FC = () => {
             onCloseModal={() => setIsCurveModalOpen(false)}
           />
         </Suspense>
+        </ChunkLoadBoundary>
       )}
 
       {/* New Sequence Modal */}

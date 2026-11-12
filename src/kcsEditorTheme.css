@@ -1444,6 +1444,15 @@ button:disabled {
 
 .ce-icon-button:hover { background: var(--kcs-bg-hover); color: var(--kcs-text-primary); }
 
+.ce-copy-status {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--kcs-text-secondary);
+}
+
+.ce-copy-status.is-failed { color: var(--kcs-danger, var(--kcs-text-secondary)); }
+
 .ce-paste { display: flex; gap: 6px; }
 
 .ce-paste .input-control {

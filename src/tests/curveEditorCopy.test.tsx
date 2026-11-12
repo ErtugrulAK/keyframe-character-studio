@@ -19,6 +19,8 @@ afterEach(() => {
   setClipboard(undefined);
 });
 
+const copyStatus = () => screen.getAllByRole('status').find((node) => /CSS code copied|Copy failed/.test(node.textContent ?? ''))?.textContent;
+
 const click = async () => {
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy CSS code' }));
@@ -32,21 +34,22 @@ describe('curve editor CSS copy', () => {
     renderEditor();
     await click();
     expect(writeText).toHaveBeenCalledWith('cubic-bezier(0.42, 0, 0.58, 1)');
-    expect(screen.getByRole('button', { name: 'CSS code copied' })).toBeTruthy();
+    expect(copyStatus()).toBe('CSS code copied.');
+    // The focused button keeps its name; the result is announced separately.
+    expect(screen.getByRole('button', { name: 'Copy CSS code' })).toBeTruthy();
   });
 
   it('says the copy failed when the page has no clipboard (plain http)', async () => {
     setClipboard(undefined);
     renderEditor();
     await click();
-    const button = screen.getByRole('button', { name: 'Copy failed: this page cannot reach the clipboard' });
-    expect(button.getAttribute('title')).toContain('copy it by hand');
+    expect(copyStatus()).toBe('Copy failed: this page cannot reach the clipboard. Select the code and copy it by hand.');
   });
 
   it('says the copy failed when the browser refuses it', async () => {
     setClipboard({ writeText: vi.fn(async () => { throw new DOMException('denied', 'NotAllowedError'); }) });
     renderEditor();
     await click();
-    expect(screen.getByRole('button', { name: 'Copy failed: this page cannot reach the clipboard' })).toBeTruthy();
+    expect(copyStatus()).toContain('Copy failed');
   });
 });

@@ -14,6 +14,11 @@ interface ChunkLoadBoundaryProps {
  * renders nothing and its owner is told, so it can close it and say why;
  * the document and the rest of the editor stay as they are.
  *
+ * Owners say "reload the editor", not "check your connection": React keeps
+ * a rejected lazy() load for the life of the page (and the browser keeps a
+ * failed module fetch), so reopening the same panel cannot recover. The
+ * boundary never resets itself; its owner unmounts it to reset it.
+ *
  * The GIF panel keeps its own boundary (`GifPanelGate`), which also offers a
  * retry and a guarded reload inside the panel's footprint.
  */

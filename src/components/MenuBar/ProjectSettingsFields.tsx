@@ -46,7 +46,7 @@ export const ProjectSettingsFields: React.FC = () => {
           <ChunkLoadBoundary
             onError={() => {
               setIsLibraryOpen(false);
-              showToast('The library could not be opened. Check your connection; if it keeps failing, reload the editor.', 'error');
+              showToast('The library could not be opened. Reload the editor to try again; your project is unchanged.', 'error');
             }}
           >
           <Suspense fallback={null}>

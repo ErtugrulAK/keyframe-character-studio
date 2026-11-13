@@ -1,5 +1,6 @@
 import type { CharacterPart, Track } from '../../types/animator';
 import { CLOCK_FORMATS } from '../animation/textEffects';
+import { LAYER_BLEND_MODES } from '../layers/layerEffects';
 import type { SceneData } from '../../types/composition';
 import { isPrototypeSensitiveKey } from './pathSafety';
 import { isSceneCoordinateSystem } from './coordinateMigration';
@@ -231,7 +232,7 @@ const NUMERIC_LAYER_FIELDS = [
   'x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'zIndex',
   'fillOpacity', 'strokeOpacity', 'strokeWidth', 'fontSize',
   'trimPathStart', 'trimPathEnd', 'trimPathOffset',
-  'shadowBlur', 'shadowOffsetX', 'shadowOffsetY', 'borderRadius',
+  'shadowBlur', 'shadowOffsetX', 'shadowOffsetY', 'borderRadius', 'layerBlur', 'glowSize', 'glowStrength',
   'width', 'height', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation',
   'inAnimDuration', 'outAnimDuration',
 ] as const;
@@ -243,7 +244,7 @@ const NUMERIC_LAYER_FIELDS = [
  */
 const STRING_LAYER_FIELDS = [
   'name', 'type', 'fillColor', 'strokeColor', 'fontFamily', 'imageUrl', 'videoUrl',
-  'inAnimPreset', 'outAnimPreset', 'strokeAlignment', 'strokeLinejoin', 'textValue', 'textOrigin',
+  'inAnimPreset', 'outAnimPreset', 'strokeAlignment', 'strokeLinejoin', 'textValue', 'textOrigin', 'glowColor', 'blendMode',
 ] as const;
 
 /** `{ x, y }` lists the geometry helpers read as coordinates. */
@@ -340,6 +341,9 @@ const sharedLayerValueProblem = (record: Record<string, unknown>, path: string, 
       : [];
     const effectError = effectsValidationError(record.effects, owner, maskIds);
     if (effectError) return sceneProblem('KCS_IMPORT_INVALID_EFFECT', `${path}.effects`, effectError, REIMPORT_ACTION);
+  }
+  if (record.blendMode !== undefined && !(LAYER_BLEND_MODES as readonly unknown[]).includes(record.blendMode)) {
+    return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.blendMode`, `${owner} declares a blend mode KCS does not know.`);
   }
   if (record.textEffect !== undefined) {
     const effect = asRecord(record.textEffect);

@@ -11,6 +11,7 @@ import { stackingOrder } from '../utils/layers/stackingOrder';
 import { getShapeGeometry, polygonPointsToString } from '../utils/geometry/shapeGeometry';
 import { resolveShapeAppearance } from '../utils/layers/shapeAppearance';
 import { describePaint, describeText } from '../utils/layers/drawDescriptor';
+import { layerBlendMode, layerFilterMarkup } from '../utils/layers/layerEffects';
 import { getTrimPathDashProps, resolveTrimPath } from '../utils/geometry/trimPath';
 import { affineTrsReading, worldAffineOf } from '../utils/geometry/containerMath';
 import type { OGrafEvaluatedScene } from './evaluation';
@@ -424,12 +425,16 @@ function renderLayer(scene: OGrafEvaluatedScene, layer: EvaluatedLayer, options:
   const clip = clipSourceId && (relationship?.mode === undefined && (legacyMatte?.mode === 'clip' || (!relationship && Boolean(legacyMatte))))
     ? ` clip-path="url(#kcs-clip-${safeSvgId(clipSourceId)})"` : '';
   const allMaskIds = [...maskIds, ...(matteId ? [matteId] : [])];
-  const transformedBody = mixColorCorrection(`<g transform="${layerTransform(scene, layer)}">${body}</g>`, correction);
+  // Drop shadow, glow and blur on the transformed content, as the stage draws them (`utils/layers/layerEffects`).
+  const effectsId = `kcs-fx-${safeSvgId(layer.id)}`;
+  const effects = layerFilterMarkup(layer.content, effectsId);
+  const transformedBody = mixColorCorrection(`<g transform="${layerTransform(scene, layer)}"${effects ? ` filter="url(#${effectsId})"` : ''}>${effects ? `<defs>${effects}</defs>` : ''}${body}</g>`, correction);
+  const blend = layerBlendMode(layer.content);
   const maskedBody = allMaskIds.reduceRight(
     (content, id) => `<g mask="url(#${escapeXml(id)})">${content}</g>`,
     transformedBody,
   );
-  return `<g data-layer-id="${escapeXml(layer.id)}" data-z-index="${layer.zIndex}" opacity="${layer.opacity}"${clip}>${maskedBody}</g>`;
+  return `<g data-layer-id="${escapeXml(layer.id)}" data-z-index="${layer.zIndex}" opacity="${layer.opacity}"${clip}${blend ? ` style="mix-blend-mode:${blend}"` : ''}>${maskedBody}</g>`;
 }
 
 export function renderOGrafSvg(scene: OGrafEvaluatedScene, options: OGrafSvgRenderOptions = {}): string {

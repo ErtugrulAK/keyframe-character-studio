@@ -13,6 +13,8 @@ import { TEXT_BOX_CENTRE_EM } from '../utils/geometry/textOrigin';
 import { resolveShapeAppearance } from '../utils/layers/shapeAppearance';
 import { describePaint, describeText } from '../utils/layers/drawDescriptor';
 import { createLayoutModifiers, SHAPE_EXTENTS } from '../utils/layers/layoutModifiers';
+import { createTextEffects } from '../utils/animation/textEffects';
+import { createLayerEffects } from '../utils/layers/layerEffects';
 import { onAir } from './helpers/ografOnAir';
 
 class HostElement { innerHTML = ''; }
@@ -38,6 +40,8 @@ const environmentFor = (scene: RuntimeScene): GraphicRuntimeEnvironment => ({
   describePaint,
   describeText,
   layout: createLayoutModifiers(SHAPE_EXTENTS),
+  textEffects: createTextEffects(),
+  layerEffects: createLayerEffects(),
 });
 
 const runtimeFor = (scene: RuntimeScene) => createGraphicRuntime(environmentFor(scene));

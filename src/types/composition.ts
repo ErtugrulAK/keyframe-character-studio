@@ -128,6 +128,12 @@ export interface SceneLayer {
   shadowBlur?: number;
   shadowOffsetX?: number;
   shadowOffsetY?: number;
+  /** Layer effects (`utils/layers/layerEffects`): a blur of the whole layer, an outer glow and a blend mode. */
+  layerBlur?: number;
+  glowColor?: string;
+  glowSize?: number;
+  glowStrength?: number;
+  blendMode?: import('../utils/layers/layerEffects').LayerBlendMode;
   borderRadius?: number;
   /** Stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
   strokeLinejoin?: 'miter' | 'round';
@@ -311,6 +317,12 @@ export interface LayerContent {
   shadowBlur?: number;
   shadowOffsetX?: number;
   shadowOffsetY?: number;
+  /** Layer effects (`utils/layers/layerEffects`): a blur of the whole layer, an outer glow and a blend mode. */
+  layerBlur?: number;
+  glowColor?: string;
+  glowSize?: number;
+  glowStrength?: number;
+  blendMode?: import('../utils/layers/layerEffects').LayerBlendMode;
   borderRadius?: number;
   /** Stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
   strokeLinejoin?: 'miter' | 'round';

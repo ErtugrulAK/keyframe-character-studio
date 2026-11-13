@@ -1796,3 +1796,6 @@ html:not([data-input-modality="keyboard"]) .kcs-inline-rename:focus {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
 }
+.layer-effects-row {
+  margin-top: 8px;
+}

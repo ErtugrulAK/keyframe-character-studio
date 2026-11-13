@@ -223,7 +223,7 @@ function validateLayerInput(layer: SceneLayer, diagnostics: OGrafExportDiagnosti
   validateFiniteFields(
     record,
     ['fillOpacity', 'strokeWidth', 'strokeOpacity', 'trimPathStart', 'trimPathEnd', 'trimPathOffset',
-      'shadowBlur', 'shadowOffsetX', 'shadowOffsetY', 'borderRadius', 'fontSize', 'width', 'height',
+      'shadowBlur', 'shadowOffsetX', 'shadowOffsetY', 'layerBlur', 'glowSize', 'glowStrength', 'borderRadius', 'fontSize', 'width', 'height',
       'inAnimDuration', 'outAnimDuration'],
     diagnostics,
     layer,

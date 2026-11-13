@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { StyleAppearanceSection } from '../components/Inspector/sections/style/StyleAppearanceSection';
 import { StyleColorSection } from '../components/Inspector/sections/style/StyleColorSection';
@@ -44,8 +44,8 @@ describe('StyleAppearanceSection', () => {
     const { container } = openAppearance(part, onChange);
 
     expect(screen.getByText('APPEARANCE')).toBeTruthy();
-    // Fill, Stroke and the embedded Effects paint: one swatch each, no popover.
-    expect(container.querySelectorAll('.color-swatch-button')).toHaveLength(3);
+    // Fill, Stroke and the embedded Effects paints (shadow, glow): one swatch each, no popover.
+    expect(container.querySelectorAll('.color-swatch-button')).toHaveLength(4);
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(container.querySelectorAll('input[type="color"]')).toHaveLength(0);
 
@@ -133,7 +133,7 @@ describe('StyleAppearanceSection', () => {
 
     const alignment = screen.getByLabelText('Stroke Alignment');
     expect(alignment).toHaveValue('center');
-    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['INSIDE', 'CENTER', 'OUTSIDE']);
+    expect(within(alignment).getAllByRole('option').map((option) => option.textContent)).toEqual(['INSIDE', 'CENTER', 'OUTSIDE']);
 
     fireEvent.change(alignment, { target: { value: 'inside' } });
     expect(onChange).toHaveBeenLastCalledWith('strokeAlignment', 'inside');
@@ -234,7 +234,7 @@ describe('Inspector disclosure sections', () => {
 
     const disclosure = screen.getByRole('button', { name: 'Expand EFFECTS' });
     expect(disclosure).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByText('SHADOW / GLOW COLOR')).toBeNull();
+    expect(screen.queryByText('SHADOW COLOR')).toBeNull();
     fireEvent.click(disclosure);
     expect(screen.getByRole('button', { name: 'Collapse EFFECTS' })).toHaveAttribute('aria-expanded', 'true');
     expect(onChange).not.toHaveBeenCalled();

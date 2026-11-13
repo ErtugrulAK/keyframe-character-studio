@@ -1,4 +1,5 @@
 import React from 'react';
+import { hasLayerFilter, layerBlendMode, layerFilterMarkup } from '../../../utils/layers/layerEffects';
 import type { CharacterPart } from '../../../types/animator';
 import type { EvaluatedLayer } from '../../../types/composition';
 import { renderShapePart } from './parts/ShapePartRenderers';
@@ -159,7 +160,9 @@ const PartRendererView: React.FC<PartRendererProps> = ({
   if (!el.visible) return null;
 
   const finalOpacity = isGhost ? 0.35 : el.opacity;
-  const filterId = !isGhost && el.content.shadowColor ? `drop-shadow-${part.id}` : undefined;
+  // Drop shadow, glow and blur: the one filter every renderer draws (`utils/layers/layerEffects`).
+  const filterId = !isGhost && hasLayerFilter(el.content) ? `drop-shadow-${part.id}` : undefined;
+  const blendMode = isGhost ? null : layerBlendMode(el.content);
   const pathContent = (
     <PartContent
       part={part}
@@ -199,19 +202,7 @@ const PartRendererView: React.FC<PartRendererProps> = ({
       style={{ opacity: finalOpacity, cursor: isGhost ? 'default' : 'pointer', filter: filterId ? `url(#${filterId})` : undefined, pointerEvents: isLocked || copy ? 'none' : undefined }}
       {...(copy ? {} : layerPointerHandlers)}
     >
-      <defs>
-        {!copy && !isGhost && el.content.shadowColor && (
-          <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow
-              dx={el.content.shadowOffsetX || 0}
-              dy={el.content.shadowOffsetY || 4}
-              stdDeviation={el.content.shadowBlur || 8}
-              floodColor={el.content.shadowColor || 'rgba(0,0,0,0.5)'}
-              floodOpacity="0.85"
-            />
-          </filter>
-        )}
-      </defs>
+      {!copy && filterId ? <defs dangerouslySetInnerHTML={{ __html: layerFilterMarkup(el.content, filterId) }} /> : <defs />}
       {pathContent}
     </g>
   );
@@ -257,6 +248,7 @@ const PartRendererView: React.FC<PartRendererProps> = ({
       // transformed content group.
       clipPath={matteClipPathId ? `url(#${matteClipPathId})` : undefined}
       mask={matteMaskId ? `url(#${matteMaskId})` : undefined}
+      style={blendMode ? { mixBlendMode: blendMode as React.CSSProperties['mixBlendMode'] } : undefined}
     >
       {maskedContent}
     </g>

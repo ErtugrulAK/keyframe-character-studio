@@ -27,6 +27,7 @@ import { createShapeAppearance } from '../utils/layers/shapeAppearance';
 import { describePaint, describeText } from '../utils/layers/drawDescriptor';
 import { createLayoutModifiers, SHAPE_EXTENTS } from '../utils/layers/layoutModifiers';
 import { createTextEffects } from '../utils/animation/textEffects';
+import { createLayerEffects } from '../utils/layers/layerEffects';
 import { createTrackMatteMarkup, SHAPE_BOUNDS } from './trackMatteMarkup';
 import { matteContentBlurBox } from '../utils/layers/matte';
 
@@ -72,6 +73,9 @@ export const runtimeLayoutModifiers = (): string => `(${sourceOf(createLayoutMod
 
 /** Text over time (typewriter, count): the editor's own rules, as an expression that evaluates to them. */
 export const runtimeTextEffects = (): string => `(${sourceOf(createTextEffects as (...args: never[]) => unknown)})()`;
+
+/** Drop shadow, glow, blur and blend mode: the editor's own filter, as an expression that evaluates to it. */
+export const runtimeLayerEffects = (): string => `(${sourceOf(createLayerEffects as (...args: never[]) => unknown)})()`;
 
 /**
  * The graphic runtime factory itself. Like the affine algebra it is one

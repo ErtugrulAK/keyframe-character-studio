@@ -21,6 +21,7 @@ import type { createShapeAppearance } from '../../utils/layers/shapeAppearance';
 import type { describePaint, describeText } from '../../utils/layers/drawDescriptor';
 import type { createTrackMatteMarkup, TrackMatteGradientInput } from '../trackMatteMarkup';
 import type { createTextEffects, DisplayedText, TextEffect } from '../../utils/animation/textEffects';
+import type { createLayerEffects, LayerBlendMode } from '../../utils/layers/layerEffects';
 import type { createLayoutModifiers, FitToTextSettings, FollowSettings, JustifySettings, LookAtSettings, RepeaterSettings, TextFitSettings } from '../../utils/layers/layoutModifiers';
 
 export interface RuntimePoint {
@@ -98,6 +99,15 @@ export interface RuntimeLayer {
   strokeOpacity?: number;
   strokeWidth?: number;
   strokeAlignment?: string;
+  shadowColor?: string;
+  shadowBlur?: number;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  layerBlur?: number;
+  glowColor?: string;
+  glowSize?: number;
+  glowStrength?: number;
+  blendMode?: LayerBlendMode;
   textValue?: string;
   /** A typewriter or a count over time (`utils/animation/textEffects`). */
   textEffect?: TextEffect;
@@ -200,6 +210,8 @@ export interface GraphicRuntimeEnvironment {
   layout: ReturnType<typeof createLayoutModifiers>;
   /** Text over time: typewriter and count (`utils/animation/textEffects`), the editor's own rules. */
   textEffects: ReturnType<typeof createTextEffects>;
+  /** Drop shadow, glow, blur and blend mode (`utils/layers/layerEffects`), the editor's own filter. */
+  layerEffects: ReturnType<typeof createLayerEffects>;
   /** The Track Matte mask, as the editor draws it (`ograf/trackMatteMarkup`). */
   trackMatteMarkup: ReturnType<typeof createTrackMatteMarkup>;
   /**
@@ -225,6 +237,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     describeText,
     layout,
     textEffects,
+    layerEffects,
     trackMatteMarkup,
   } = environment;
   const STEP_ENDS = environment.stepEnds && environment.stepEnds.length > 0 ? environment.stepEnds : [SCENE.totalFrames];
@@ -1007,13 +1020,17 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
   function renderLayer(scene: RuntimeScene, layer: EvaluatedRuntimeLayer, maskMap: Record<string, string[]>, matteId: string | undefined, hidden: boolean): string {
     if (hidden || !layer.visible || layer.opacity <= 0) return '';
     const body = layer.type === 'custom_text' ? text(layer) : layer.type === 'custom_image' ? image(layer, IMAGE_REFERENCES, {}) : renderShape(layer);
-    let inner = '<g transform="' + transform(scene, layer) + '">' + body + '</g>';
+    // Drop shadow, glow and blur, as the editor draws them (`utils/layers/layerEffects`).
+    const effectsId = runtimeId('kcs-fx', layer.id);
+    const effects = layerEffects.layerFilterMarkup(layer, effectsId);
+    let inner = '<g transform="' + transform(scene, layer) + '"' + (effects ? ' filter="url(#' + effectsId + ')"' : '') + '>' + (effects ? '<defs>' + effects + '</defs>' : '') + body + '</g>';
+    const blend = layerEffects.layerBlendMode(layer);
     const ids = (maskMap[layer.id] || []).concat(matteId ? [matteId] : []);
     ids.slice().reverse().forEach((id) => {
       inner = '<g mask="url(#' + id + ')">' + inner + '</g>';
     });
     const clip = layer.matte && (layer.matte.mode || 'clip') === 'clip' ? ' clip-path="url(#' + runtimeId('kcs-clip', layer.matte.sourcePartId) + ')"' : '';
-    return '<g data-layer-id="' + escapeXml(layer.id) + '" data-z-index="' + layer.zIndex + '" opacity="' + layer.opacity + '"' + clip + '>' + inner + '</g>';
+    return '<g data-layer-id="' + escapeXml(layer.id) + '" data-z-index="' + layer.zIndex + '" opacity="' + layer.opacity + '"' + clip + (blend ? ' style="mix-blend-mode:' + blend + '"' : '') + '>' + inner + '</g>';
   }
 
   /**

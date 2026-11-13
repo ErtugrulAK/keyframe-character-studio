@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { importLottieDocument } from '../interop/lottie/mapDocument';
 import { LOTTIE_IMPORT_LIMITS } from '../interop/lottie/diagnostics';
-import { validateImportedDocument } from '../utils/importValidation';
+import { validateImportedDocument } from '../utils/persistence/importValidation';
 import { validateSceneForOGraf } from '../ograf/validation';
-import { buildBezierPathD } from '../utils/bezierPath';
-import { interpolateChannel, interpolatePathChannel, solveCubicBezier } from '../utils/defaults';
+import { buildBezierPathD } from '../utils/geometry/bezierPath';
+import { interpolateChannel, interpolatePathChannel, solveCubicBezier } from '../utils/animation/defaults';
 
 /**
  * Contract tests for the Lottie import core (Milestone F, item 10, first slice).

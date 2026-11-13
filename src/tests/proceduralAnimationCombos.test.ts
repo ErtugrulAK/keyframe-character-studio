@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeProceduralDelta } from '../utils/proceduralAnimation';
+import { computeProceduralDelta } from '../utils/animation/proceduralAnimation';
 import type { CharacterPart } from '../types/animator';
 
 /**

@@ -27,10 +27,10 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { AnimatorProvider, type AnimatorContextType } from '../context/AnimatorContext';
 import { useAnimator } from '../context/useAnimator';
 import { SequencerTimeline } from '../components/Timeline/SequencerTimeline';
-import { makeEmptyChannels } from '../utils/defaults';
-import { DISPLAY_CHANNELS, TRIM_PATH_CHANNELS } from '../utils/channelKeyframeGroups';
-import { createLayerGroup } from '../utils/layerGrouping';
-import { generateId } from '../utils/idGenerator';
+import { makeEmptyChannels } from '../utils/animation/defaults';
+import { DISPLAY_CHANNELS, TRIM_PATH_CHANNELS } from '../utils/animation/channelKeyframeGroups';
+import { createLayerGroup } from '../utils/layers/layerGrouping';
+import { generateId } from '../utils/layers/idGenerator';
 import type { Keyframe, Track, Transform, TrackChannel } from '../types/animator';
 
 const Consumer = ({ onCtx }: { onCtx: (ctx: AnimatorContextType) => void }) => {

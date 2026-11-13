@@ -1,5 +1,14 @@
 import { test, expect, type Page } from '@playwright/test';
 
+/*
+ * The stage size is pinned: these checks compare positions and pixels measured
+ * at the stage's fit scale, where font hinting, anti-aliasing and pixel
+ * rounding move a box or an edge sample by up to a pixel between window
+ * layouts. A 1028×889 window gives the 708×461 px stage the checks were
+ * calibrated on (before the left panel was removed and the header slimmed).
+ */
+test.use({ viewport: { width: 1028, height: 889 } });
+
 /**
  * A text layer's glyphs land in the same place on the stage, in its text matte
  * and in the OGraf/GIF renderer.

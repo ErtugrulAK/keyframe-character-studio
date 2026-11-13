@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, Track } from '../types/animator';
-import { isFreeformTangentOverlayEligible } from '../utils/freeformTangentEligibility';
-import type { FreeformTangentEligibilityInput } from '../utils/freeformTangentEligibility';
+import { isFreeformTangentOverlayEligible } from '../utils/geometry/freeformTangentEligibility';
+import type { FreeformTangentEligibilityInput } from '../utils/geometry/freeformTangentEligibility';
 
 const identityTransform = { scaleX: 1, scaleY: 1 };
 

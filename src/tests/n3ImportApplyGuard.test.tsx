@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useSerialization } from '../hooks/useSerialization';
-import { AUTOSAVE_STORAGE_KEY } from '../utils/constants';
+import { AUTOSAVE_STORAGE_KEY } from '../utils/editor/constants';
 import type { CharacterPart, MotionTemplate, Track } from '../types/animator';
 import type { SceneCoordinateSystem } from '../types/composition';
 

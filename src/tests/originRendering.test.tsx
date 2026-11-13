@@ -3,7 +3,7 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { StagePartLayers } from '../components/Canvas/StagePartLayers';
 import type { CharacterPart, Track } from '../types/animator';
-import { makeEmptyChannels } from '../utils/defaults';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 
 const part = (id: string, overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id,

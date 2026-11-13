@@ -5,8 +5,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart } from '../types/animator';
-import { projectLayerOrdinals } from '../utils/layerOrdinal';
-import { deleteParts } from '../utils/partDeletion';
+import { projectLayerOrdinals } from '../utils/layers/layerOrdinal';
+import { deleteParts } from '../utils/layers/partDeletion';
 
 const part = (id: string, overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id,

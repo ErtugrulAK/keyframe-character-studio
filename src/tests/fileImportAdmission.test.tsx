@@ -21,12 +21,12 @@ import {
   PROJECT_IMPORT_MAX_FILE_BYTES,
   projectFileAdmissionProblem,
   packageFileAdmissionProblem,
-} from '../utils/fileAdmission';
-import { MAX_IMPORT_CHARACTERS } from '../utils/importValidation';
+} from '../utils/persistence/fileAdmission';
+import { MAX_IMPORT_CHARACTERS } from '../utils/persistence/importValidation';
 import { OGRAF_PACKAGE_LIMITS } from '../ograf/packageImport';
 
 const animatorCtx = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
-vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx.value }));
+vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx.value, useAnimatorSlice: () => animatorCtx.value, useAnimatorReader: () => () => animatorCtx.value }));
 vi.mock('../components/Canvas/GifExportPanel', () => ({ GifExportPanel: () => null }));
 
 function mountHeaderBar() {

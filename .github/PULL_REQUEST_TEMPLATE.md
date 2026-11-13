@@ -9,7 +9,6 @@
 - [ ] 🎨 Rendering (stage, SVG, masks, matte, gizmos)
 - [ ] ⏱️ Animation and playback (easing, presets, broadcast)
 - [ ] 📦 Import and export (JSON, OGraf, Lottie, GIF)
-- [ ] 🌐 Optional API (`server/`)
 - [ ] 🧰 Tooling, tests or docs
 
 ## ✅ Checks

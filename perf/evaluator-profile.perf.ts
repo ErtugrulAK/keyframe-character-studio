@@ -3,9 +3,9 @@ import { test, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import process from 'node:process';
-import { evaluateFrame } from '../src/utils/evaluateFrame';
-import { evaluateTransform } from '../src/utils/evaluateTransform';
-import { applyEasing, interpolateChannel } from '../src/utils/defaults';
+import { evaluateFrame } from '../src/utils/animation/evaluateFrame';
+import { evaluateTransform } from '../src/utils/animation/evaluateTransform';
+import { applyEasing, interpolateChannel } from '../src/utils/animation/defaults';
 import { buildProfileScene, DEFAULT_PROFILE_SCENES, type ProfileScene } from './sceneBuilder';
 
 /**

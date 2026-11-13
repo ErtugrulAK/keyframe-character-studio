@@ -19,8 +19,8 @@ import { DetailsPanel } from '../components/Inspector/DetailsPanel';
 import { useTimeline } from '../hooks/useTimeline';
 import type { BezierPath, CharacterPart, LayerMask, PathKeyframe, PropertyKeyframe, Track } from '../types/animator';
 import { layerMaskChannel, layerMaskPathChannel } from '../types/animator';
-import { authorPropertyValueAtFrameMutator } from '../utils/trackMutations';
-import { layerMaskIdsReferencedByTrack, nextLayerMaskId } from '../utils/layerMasks';
+import { authorPropertyValueAtFrameMutator } from '../utils/animation/trackMutations';
+import { layerMaskIdsReferencedByTrack, nextLayerMaskId } from '../utils/layers/layerMasks';
 
 const path = (x: number): BezierPath => ({
   version: 1,

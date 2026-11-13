@@ -7,16 +7,16 @@
  *   evaluateFrame → evaluateTransform → computeProceduralDelta → EvaluatedLayer
  *
  * This file intentionally imports ONLY pure utilities + types:
- *   - src/utils/evaluateFrame.ts
- *   - src/utils/evaluateTransform.ts
- *   - src/utils/proceduralAnimation.ts
+ *   - src/utils/animation/evaluateFrame.ts
+ *   - src/utils/animation/evaluateTransform.ts
+ *   - src/utils/animation/proceduralAnimation.ts
  * It does NOT import StageCanvas, StagePartLayers, PartRenderer, or any
  * React component / hook.
  */
 
 import { describe, test, expect } from 'vitest';
-import { evaluateFrame } from '../utils/evaluateFrame';
-import { evaluateTransform } from '../utils/evaluateTransform';
+import { evaluateFrame } from '../utils/animation/evaluateFrame';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
 import type { CharacterPart, Track, Keyframe, CustomMotionPreset } from '../types/animator';
 import type { RuntimeData } from '../types/composition';
 

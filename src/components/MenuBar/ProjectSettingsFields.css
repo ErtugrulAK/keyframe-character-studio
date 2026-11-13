@@ -1,0 +1,136 @@
+/*
+ * The Project Settings fields (File > Project Settings). They came from the
+ * left panel's Project drawer, which the menu bar replaced; these are the
+ * rules of that panel's stylesheet the fields still use, in their old order.
+ */
+
+.drawer-content {
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.drawer-item-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  padding: var(--space-sm) var(--space-xs);
+  background: var(--kcs-bg-surface);
+  border: 1px solid var(--kcs-border-subtle);
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, color 150ms ease;
+}
+
+.drawer-item-card.active {
+  background: var(--kcs-surface-feature);
+  border-color: var(--kcs-accent);
+  color: var(--kcs-text-primary);
+  box-shadow: none;
+}
+
+.drawer-item-card:hover {
+  background: var(--kcs-bg-hover);
+  border-color: var(--kcs-border-default);
+  box-shadow: var(--kcs-shadow-card);
+}
+
+.drawer-item-card.active:hover {
+  border-color: var(--kcs-accent-hover);
+}
+
+.drawer-content {
+  padding: 12px;
+  gap: 12px;
+}
+
+.drawer-item-card {
+  min-height: 72px;
+  padding: 8px 6px;
+  border-radius: var(--kcs-radius-panel);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-item-card {
+    transition: none !important;
+  }
+}
+
+/* Resolution presets and dimension fields reuse the card/input grammar. */
+.project-drawer-content {
+  padding: 12px 14px;
+}
+
+.project-section {
+  margin-bottom: 15px;
+}
+
+.project-field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--kcs-text-secondary);
+}
+
+.project-preset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.project-preset-card {
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.project-field-row {
+  display: flex;
+  gap: 10px;
+}
+
+.project-field {
+  flex: 1;
+}
+
+.project-field .project-field-label {
+  margin-bottom: 4px;
+}
+
+.project-num-input {
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--kcs-bg-input);
+  border: 1px solid var(--kcs-border-subtle);
+  border-radius: var(--kcs-radius-control);
+  color: var(--kcs-text-primary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.project-num-input:hover {
+  background: var(--kcs-bg-input);
+  border-color: var(--kcs-border-default);
+}
+
+.project-num-input:focus {
+  background: var(--kcs-bg-input);
+  border-color: var(--kcs-border-focus);
+}
+
+/* The autosave delay, a browser preference kept with the project settings. */
+.project-autosave-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.project-autosave-row .project-autosave-input {
+  width: 64px;
+  flex: none;
+  text-align: right;
+}

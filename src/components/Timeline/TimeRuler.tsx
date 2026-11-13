@@ -7,6 +7,9 @@ interface TimeRulerProps {
   currentFrame: number;
   onPointerDown: (e: React.PointerEvent) => void;
   onSeekFrame: (frame: number) => void;
+  /** The sequence's step markers (frames), drawn as flags: a click seeks, a right-click removes. */
+  stepMarkers?: number[];
+  onRemoveStepMarker?: (frame: number) => void;
 }
 
 /**
@@ -16,7 +19,7 @@ interface TimeRulerProps {
  * Shift+arrows step ten, Home/End jump to the ends. It mirrors the pointer
  * scrub semantics; the two are the same seek authority in the parent.
  */
-export const TimeRuler: React.FC<TimeRulerProps> = ({ frameNumbers, frameWidth, totalFrames, currentFrame, onPointerDown, onSeekFrame }) => {
+export const TimeRuler: React.FC<TimeRulerProps> = ({ frameNumbers, frameWidth, totalFrames, currentFrame, onPointerDown, onSeekFrame, stepMarkers = [], onRemoveStepMarker }) => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const step = e.shiftKey ? 10 : 1;
     if (e.key === 'ArrowLeft') onSeekFrame(currentFrame - step);
@@ -58,6 +61,20 @@ export const TimeRuler: React.FC<TimeRulerProps> = ({ frameNumbers, frameWidth, 
           </div>
         );
       })}
+      {stepMarkers.map((frame, index) => (
+        <button
+          key={`step-${frame}`}
+          type="button"
+          className="ruler-step-marker"
+          data-step-marker={frame}
+          style={{ left: `${frame * frameWidth}px` }}
+          aria-label={`Step ${index + 1} ends at frame ${frame}`}
+          title={`Step ${index + 1} ends here (frame ${frame}). Right-click to remove.`}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => { event.stopPropagation(); onSeekFrame(frame); }}
+          onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); onRemoveStepMarker?.(frame); }}
+        />
+      ))}
     </div>
   );
 };

@@ -1,5 +1,9 @@
-import { AnimatorContext } from './useAnimator';
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import { flattenBooleanGroup } from '../utils/geometry/booleanFlatten';
+import { deriveBooleanGeometry } from '../utils/geometry/booleanGeometry';
+import { resetTransforms } from '../utils/layers/resetTransform';
+import { stagePointer } from '../utils/editor/stagePointer';
+import { AnimatorContext, AnimatorStoreContext, createAnimatorStore } from './useAnimator';
+import React, { useState, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import { ToastPortal } from '../components/Toast/ToastPortal';
 import type {
   CharacterPart,
@@ -23,12 +27,12 @@ import type { SceneCoordinateSystem } from '../types/composition';
 import { useClipboard } from '../hooks/useClipboard';
 import { useSelection } from '../hooks/useSelection';
 import { usePlayback } from '../hooks/usePlayback';
-import { duplicateKeyframeGroup as duplicateKeyframeGroupTrack } from '../utils/keyframeDuplicate';
-import { setKeyframeGroupEasing as setKeyframeGroupEasingTrack } from '../utils/keyframeEasing';
-import { pasteKeyframeGroupData, type KeyframeCopyPayload } from '../utils/keyframeCopyPaste';
+import { duplicateKeyframeGroup as duplicateKeyframeGroupTrack } from '../utils/animation/keyframeDuplicate';
+import { setKeyframeGroupEasing as setKeyframeGroupEasingTrack } from '../utils/animation/keyframeEasing';
+import { pasteKeyframeGroupData, type KeyframeCopyPayload } from '../utils/animation/keyframeCopyPaste';
 import { useHistory, type HistoryDocumentState } from '../hooks/useHistory';
 import { useBroadcast } from '../hooks/useBroadcast';
-import type { NamedSequenceRuntimeState } from '../utils/broadcastEngine';
+import type { NamedSequenceRuntimeState } from '../utils/animation/broadcastEngine';
 import { useToolbar } from '../hooks/useToolbar';
 import { useInspector } from '../hooks/useInspector';
 import { useTimeline, type KeyframeStretchSession } from '../hooks/useTimeline';
@@ -42,7 +46,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useMatteNavigation } from '../hooks/useMatteNavigation';
 import { usePathEditing, type PathVertexSelection } from '../hooks/usePathEditing';
 
-/** C2 — the transient history of an unfinished drawing that owns Undo/Redo. */
+/** The transient history of an unfinished drawing that owns Undo/Redo. */
 export interface DraftHistoryOwner {
   undo: () => void;
   redo: () => void;
@@ -53,18 +57,18 @@ import { useMaskEditing, type MaskDrawSession, type MaskDrawShape, type MaskEdit
 import { createLayerGroupingActions } from '../hooks/useLayerGrouping';
 import { createVectorArrangeActions } from '../hooks/useVectorArrangeAuthoring';
 import { createStageCropActions } from '../hooks/useStageCropAuthoring';
-import type { StageCropRect } from '../utils/stageCrop';
-import { resolveOutermostGroupAncestor } from '../utils/layerGrouping';
-import { selectAllLayers } from '../utils/layerSelection';
+import type { StageCropRect } from '../utils/geometry/stageCrop';
+import { resolveOutermostGroupAncestor } from '../utils/layers/layerGrouping';
+import { selectAllLayers } from '../utils/layers/layerSelection';
 import { ShortcutReferenceDialog } from '../components/Shortcuts/ShortcutReferenceDialog';
 import { DeleteDependentsDialog } from '../components/Modal/DeleteDependentsDialog';
 import { ConfirmationDialog } from '../components/Modal/ConfirmationDialog';
-import { collectOwnedDeletionIds, describeDeletionScope, matteDependentsOfDeletion, planPartDeletion, type BakedChild, type DeletionDependent } from '../utils/partDeletion';
-import type { ImportResult } from '../utils/importValidation';
-import type { PathOrderCommand } from '../utils/maskPathOrder';
-import { lockedLayerIds, lockedLayerNames, lockedLayersMessage, lockedMaskChanges, lockedMasksMessage, lockedPartChanges, lockedTrackChanges, type LockedMaskHit } from '../utils/layerLocks';
+import { collectOwnedDeletionIds, describeDeletionScope, matteDependentsOfDeletion, planPartDeletion, type BakedChild, type DeletionDependent } from '../utils/layers/partDeletion';
+import type { ImportResult } from '../utils/persistence/importValidation';
+import type { PathOrderCommand } from '../utils/geometry/maskPathOrder';
+import { lockedLayerIds, lockedLayerNames, lockedLayersMessage, lockedMaskChanges, lockedMasksMessage, lockedPartChanges, lockedTrackChanges, type LockedMaskHit } from '../utils/layers/layerLocks';
 
-/** C4 — one confirmation the editor asks before a non-obvious edit. */
+/** One confirmation the editor asks before a non-obvious edit. */
 export interface ConfirmationRequest {
   title: string;
   description: string;
@@ -128,17 +132,20 @@ export interface AnimatorContextType {
   autosaveConflict: boolean;
   /** Timestamp of the last manual save deferred by a busy autosave lock; not a conflict pause. */
   manualSaveRejectedAt: number | null;
-  /** D2: last persistence failure behind the badge; null while saves land. */
+  /** Last persistence failure behind the badge; null while saves land. */
   autosaveError: AutosavePersistenceError | null;
   /** Unsaved changes exist (cleared only by a successful save). */
   hasUnsavedChanges: boolean;
   /** A save is in flight. */
   isSaving: boolean;
   triggerManualSave: () => void;
-  /** A1: point-in-time reload-safety verdict for destructive navigation guards. */
+  /** Point-in-time reload-safety verdict for destructive navigation guards. */
   getPersistenceSafety: () => PersistenceSafety;
-  /** A1: forced durable write resolving true only when the key advanced. */
+  /** Forced durable write resolving true only when the key advanced. */
   forceSaveNow: () => Promise<boolean>;
+  /** Autosave delay in seconds (this browser's editor preference). */
+  autosaveIntervalSeconds: number;
+  setAutosaveIntervalSeconds: (seconds: number) => void;
 
   // Undo / Redo History
   /**
@@ -150,7 +157,7 @@ export interface AnimatorContextType {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
-  /** C2: an unfinished drawing claims Undo/Redo while it is open (null releases it). */
+  /** An unfinished drawing claims Undo/Redo while it is open (null releases it). */
   registerDraftHistory: (owner: DraftHistoryOwner | null) => void;
   startBatchInteraction: () => void;
   endBatchInteraction: () => void;
@@ -165,7 +172,7 @@ export interface AnimatorContextType {
   deleteKeyframeFrameGroup: (trackId: string, frame: number) => void;
   /** Move the whole selected keyframe set by a frame delta (one gesture = one entry). */
   moveSelectedKeyframes: (selectedIds: string[], delta: number, expandFrameGroups: boolean) => number;
-  /** C10 — Alt-drag of the selection's first/last key: a proportional time-stretch session, or null. */
+  /** Alt-drag of the selection's first/last key: a proportional time-stretch session, or null. */
   beginKeyframeStretch: (selectedIds: string[], expandFrameGroups: boolean, pressedFrame: number) => KeyframeStretchSession | null;
   updateKeyframeFrame: (trackId: string, keyframeId: string, newFrame: number) => void;
   updateKeyframeBezierPoints: (trackId: string, keyframeId: string, points: [number, number, number, number]) => void;
@@ -175,17 +182,19 @@ export interface AnimatorContextType {
   toggleTrackEditVisibility: (trackId: string) => void;
   toggleTrackLock: (trackId: string) => void;
   /**
-   * C4 — asks before an edit that adds data the user did not author (a re-based
+   * Asks before an edit that adds data the user did not author (a re-based
    * animation): Confirm runs `onConfirm`, Cancel changes nothing.
    */
   requestConfirmation: (request: ConfirmationRequest) => void;
-  /** C4 — the lock switch of several layers at once (one undo step). */
+  /** The lock switch of several layers at once (one undo step). */
   setLayersLocked: (partIds: readonly string[], locked: boolean) => void;
-  /** C6 — turns a basic shape into an editable path layer in place (one undo step); false when refused (toast says why). */
+  /** Turns a basic shape into an editable path layer in place (one undo step); false when refused (toast says why). */
   convertToEditablePath: (partId: string) => boolean;
-  /** C6 — writes a path layer's path (one undo step, or part of an open batch). */
+  /** Reset Transform: the selected layers return to the pose they were made with (one undo step). */
+  resetSelectedTransforms: () => void;
+  /** Writes a path layer's path (one undo step, or part of an open batch). */
   setPartPath: (partId: string, path: BezierPath) => void;
-  /** C6 — the selected point of the selected path layer, shared by the canvas and the Inspector. */
+  /** The selected point of the selected path layer, shared by the canvas and the Inspector. */
   pathVertex: PathVertexSelection | null;
   selectPathVertex: (partId: string, index: number | null) => void;
   toggleTrackExpanded: (trackId: string) => void;
@@ -211,22 +220,25 @@ export interface AnimatorContextType {
   renameMotionTemplate: (oldId: string, newName: string) => void;
   deleteMotionTemplate: (id: string) => void;
   updateMotionTemplateDuration: (id: string, durationFrames: number) => void;
+  /** Sets a sequence's OGraf step markers (`utils/animation/stepMarkers`). */
+  setMotionTemplateStepMarkers: (id: string, markers: number[]) => void;
   renamePartAndTrack: (partId: string, newName: string) => void;
   reorderParts: (dragIndex: number, hoverIndex: number) => void;
   deletePart: (partId: string) => void;
   copySelectedPart: () => void;
-  pasteCopiedPart: () => void;
+  /** Paste the copied layers at the mouse (or, `inPlace`, over the originals). */
+  pasteCopiedPart: (options?: { inPlace?: boolean }) => void;
   duplicateSelectedPart: () => void;
   duplicateMirrored: (axis: 'y' | 'x' | 'origin') => void;
-  // M26 — copy/paste ANIMATION onto an existing selected part (26A data layer)
+  // Copy/paste ANIMATION onto an existing selected part (26A data layer)
   clipboardData: { part: CharacterPart; track?: Track } | null;
   pasteAnimationOntoSelected: (targetPartId: string) => void;
-  // M27 — duplicate the keyframe frame-group at `frame` of `trackId` (27A pure helper)
+  // Duplicate the keyframe frame-group at `frame` of `trackId` (27A pure helper)
   duplicateKeyframeGroup: (trackId: string, frame: number) => void;
   duplicateKeyframeGroupAt: (trackId: string, sourceFrame: number, targetFrame: number) => boolean;
   /** Quick easing: the keyframe group at `frame` of `trackId` in the active sequence. One undo entry. */
   setKeyframeGroupEasing: (trackId: string, frame: number, easing: EasingType) => void;
-  // M28 — paste a copied keyframe frame-group onto `trackId` at `frame` (28A pure helper)
+  // Paste a copied keyframe frame-group onto `trackId` at `frame` (28A pure helper)
   pasteKeyframeClipboard: (trackId: string, frame: number, payload: KeyframeCopyPayload) => void;
   applyMotionTransition: (partId: string, transitionType: string) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
@@ -276,7 +288,7 @@ export interface AnimatorContextType {
   updateMaskPathKeyframeFrame: (trackId: string, channel: LayerMaskPathChannel, keyframeId: string, frame: number) => void;
   deleteMaskPathKeyframe: (trackId: string, channel: LayerMaskPathChannel, keyframeId: string) => void;
   authorMaskPath: (partId: string, maskId: string, path: BezierPath) => void;
-  /** WP-02 — the transient canvas mask-editing target (never scene data). */
+  /** The transient canvas mask-editing target (never scene data). */
   maskEditTarget: MaskEditTarget | null;
   /** Enters canvas editing of one mask; returns why it was refused, or null. */
   enterMaskEditing: (ownerPartId: string, maskId: string) => string | null;
@@ -288,18 +300,18 @@ export interface AnimatorContextType {
   /** The canvas-selected vertex of the edited mask (transient). */
   maskVertexIndex: number | null;
   setMaskVertexIndex: (index: number | null) => void;
-  /** WP-03 — writes a vertex add/remove to a static mask path, or refuses with a reason. */
+  /** Writes a vertex add/remove to a static mask path, or refuses with a reason. */
   applyMaskTopologyEdit: (ownerPartId: string, maskId: string, edit: (path: BezierPath) => BezierPath | null, refusal: string) => boolean;
-  /** C4 — close/open, reverse, first point, move earlier/later: static path and every keyframe, one undo step. */
+  /** Close/open, reverse, first point, move earlier/later: static path and every keyframe, one undo step. */
   applyMaskPathOrder: (ownerPartId: string, maskId: string, command: PathOrderCommand, selectedIndex: number | null) => { applied: boolean; selectedIndex: number | null };
-  /** WP-03 — the transient mask-drawing session, if any. */
+  /** The transient mask-drawing session, if any. */
   maskDrawSession: MaskDrawSession | null;
   /** `purpose: 'effect'` draws an effect-only mask that scopes the layer's colour correction (WP-08). */
   startMaskDraw: (ownerPartId: string, shape: MaskDrawShape, purpose?: 'alpha' | 'effect') => string | null;
   cancelMaskDraw: () => void;
   /** Commits a drawn path as one new mask and edits it; returns its id. */
   commitMaskDraw: (path: BezierPath) => string | null;
-  /** WP-04 — the Track Matte target the user came from (transient selection trail). */
+  /** The Track Matte target the user came from (transient selection trail). */
   matteReturnTargetId: string | null;
   selectMatteSource: (targetId: string, sourceId: string) => void;
   backToMatteTarget: () => void;
@@ -321,7 +333,7 @@ export interface AnimatorContextType {
 
   // Custom Motion Preset Engine
   customPresets: CustomMotionPreset[];
-  // M25 — user-saved custom preset library management (25A data layer)
+  // User-saved custom preset library management (25A data layer)
   savePreset: (input: SavePresetInput) => CustomMotionPreset | null;
   updatePreset: (id: string, input: UpdatePresetInput) => CustomMotionPreset | null;
   deletePreset: (id: string) => void;
@@ -342,6 +354,7 @@ export interface AnimatorContextType {
 }
 
 export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [animatorStore] = useState(createAnimatorStore);
   const { toasts, showToast, removeToast } = useToast();
 
   // Shared scale-lock state: used by the inspector scale card AND the canvas
@@ -381,7 +394,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const { tracks, setTracks, tracksRef, characterParts, setCharacterParts, characterPartsRef } = useProjectState();
 
   /*
-   * C4 — the layer lock is enforced on the WRITE path, not only by disabled
+   * The layer lock is enforced on the WRITE path, not only by disabled
    * controls: every editing authority (timeline, Inspector, toolbar, clipboard,
    * grouping, mask editing, the components' own writes) gets these guarded
    * setters. An update that would change or remove a locked layer's part or
@@ -461,6 +474,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
 
+  const [projectResolution, setProjectResolution] = useState<{ width: number; height: number }>({ width: 1920, height: 1080 });
+  const templateSwitchedRef = useRef<() => void>(() => undefined);
   const {
     setTemplateCanvasStore,
     projectTemplates,
@@ -479,6 +494,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     renameMotionTemplate,
     deleteMotionTemplate,
     updateMotionTemplateDuration,
+    setMotionTemplateStepMarkers,
     setActiveProjectTemplateId,
     addProjectTemplate,
     renameProjectTemplate,
@@ -489,6 +505,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     tracks,
     setTracks,
     setFps,
+    fps,
+    projectResolution,
+    setProjectResolution,
     setTotalFrames,
     setCurrentFrame,
     setIsPlaying,
@@ -498,9 +517,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     showToast,
     onSequenceDeleted: stopNamedSequence,
     onSequenceDurationChanged: updateNamedSequenceDuration,
+    // The history hook is created below; the ref hands its baseline reset over.
+    onProjectTemplateSwitched: () => templateSwitchedRef.current(),
   });
 
-  const [projectResolution, setProjectResolution] = useState<{ width: number; height: number }>({ width: 1920, height: 1080 });
   const {
     selectedPartId,
     setSelectedPartId,
@@ -609,6 +629,13 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setActiveTemplateIdState(state.activeTemplateId);
   }, [setFps, setTotalFrames, setSceneTitleState, setActiveTemplateIdState]);
 
+  const historySelection = useMemo(() => ({ primary: selectedPartId, ids: selectedPartIds }), [selectedPartId, selectedPartIds]);
+  /** Undo/redo put back the selection an edit started from (only layers that exist then). */
+  const restoreHistorySelection = useCallback((selection: { primary: string | null; ids: string[] }) => {
+    setSelectedPartIds(selection.ids);
+    setSelectedPartId(selection.primary);
+  }, [setSelectedPartIds, setSelectedPartId]);
+
   // Recomputed every render so a snapshot always carries the values on screen;
   // `useHistory` compares its content, not its identity.
   const historyDocumentState: HistoryDocumentState = {
@@ -639,7 +666,21 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setMotionTemplates,
     documentState: historyDocumentState,
     restoreDocumentState,
+    selection: historySelection,
+    restoreSelection: restoreHistorySelection,
   });
+  // What a template tab switch resets (the tabs hook is created above): the
+  // undo baseline, and every selection and edit mode, which name layers of
+  // the tab being left — an imported tab can reuse those ids for other layers.
+  // oxlint-disable-next-line react/refs
+  templateSwitchedRef.current = () => {
+    requestBaselineReset();
+    setSelectedPartId(null);
+    setSelectedPartIds([]);
+    setSelectedKeyframeId(null);
+    setBooleanOperandEditingGroupId(null);
+    setFocusModeNodeId(null);
+  };
 
 
 
@@ -649,10 +690,15 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     characterParts,
     tracks,
     selectedPartId,
+    selectedPartIds,
     showToast,
     setTracks: editSetTracks,
     setCharacterParts: editSetCharacterParts,
     setSelectedPartId,
+    setSelectedPartIds,
+    pastePoint: stagePointer,
+    activeTemplateId,
+    currentFrame,
   });
 
 
@@ -706,14 +752,14 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isShortcutReferenceOpen, setIsShortcutReferenceOpen] = useState<boolean>(false);
 
   /**
-   * C2 — interaction ownership of Undo/Redo. An open drawing draft (pen /
+   * Interaction ownership of Undo/Redo. An open drawing draft (pen /
    * freeform / mask pen) registers its own transient history; while it is
    * registered the commands act on the draft ONLY — even when the draft has
    * nothing left to undo — so a mis-click never reverts a finished shape.
    * Scene history stays the single authority for committed edits.
    */
   /**
-   * C2 — a delete that removes a layer another surviving layer uses as its
+   * A delete that removes a layer another surviving layer uses as its
    * matte source is held until the user has seen those layers. Every other
    * delete runs at once, exactly as before; the confirmed delete is the same
    * `deletePart` (one undo step), and the dependents are never rewritten.
@@ -723,19 +769,19 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     deletedNames: string[];
     dependents: DeletionDependent[];
     bakedChildren: BakedChild[];
-    /** C5 — layers a deleted group takes with it, and children of a plain parent that stay. */
+    /** Layers a deleted group takes with it, and children of a plain parent that stay. */
     ownedNames: string[];
     keptChildNames: string[];
   } | null>(null);
   const requestDeletePart = useCallback((partId: string) => {
     const requestedIds = selectedPartIds.includes(partId) ? selectedPartIds : [partId];
     const dependents = matteDependentsOfDeletion(characterParts, requestedIds);
-    // C3 — a parent whose motion must be baked into its children ADDS keyframes
+    // A parent whose motion must be baked into its children ADDS keyframes
     // to them: the user sees that before anything changes and can cancel. A
     // refused plan goes straight to `deletePart`, which reports the reason.
     const plan = planPartDeletion(characterParts, tracks, requestedIds);
     const bakedChildren = plan.ok ? plan.bakedChildren.filter((child) => child.keyframesAfter > child.keyframesBefore) : [];
-    // C5 — a GROUP is a container: deleting it deletes its layers, so they are
+    // A GROUP is a container: deleting it deletes its layers, so they are
     // named first. A plain parent's children are kept (the delete only moves
     // them up), which the same dialog states whenever it opens; on its own
     // that is no reason to ask, so the delete then runs at once (with a toast).
@@ -780,13 +826,54 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     redo();
   }, [draftHistory, redo]);
 
-  const { pathVertex, selectPathVertex, convertToEditablePath, setPartPath, deleteSelectedPathVertex } = usePathEditing({
+  const { pathVertex, selectPathVertex, convertToEditablePath: convertShapeToPath, setPartPath, deleteSelectedPathVertex } = usePathEditing({
     characterParts,
     tracks,
     setCharacterParts: editSetCharacterParts,
     selectedPartId,
     showToast,
   });
+
+  /**
+   * Shape to Path: a basic shape becomes an editable path; a Boolean result is
+   * flattened into its own shape (one region: an editable path), and its
+   * operands go. One undo step either way.
+   */
+  const convertToEditablePath = useCallback((partId: string): boolean => {
+    const group = characterParts.find((part) => part.id === partId);
+    if (!group?.booleanOperandIds?.length || !group.booleanOperation) return convertShapeToPath(partId);
+    const operands = group.booleanOperandIds
+      .map((id) => characterParts.find((part) => part.id === id))
+      .filter((part): part is CharacterPart => Boolean(part));
+    const derived = deriveBooleanGeometry(
+      group.booleanOperation,
+      operands,
+      Object.fromEntries(operands.map((operand) => [operand.id, getComputedTransform(operand.id, currentFrame)])),
+      getComputedTransform(group.id, currentFrame),
+    );
+    const flattened = flattenBooleanGroup(characterParts, tracks, group.id, derived.localContours);
+    if (!flattened) {
+      showToast('This Boolean result is empty; there is no shape to keep.', 'error');
+      return false;
+    }
+    editSetCharacterParts(flattened.parts);
+    editSetTracks(flattened.tracks);
+    setBooleanOperandEditingGroupId(null);
+    return true;
+  }, [characterParts, tracks, currentFrame, getComputedTransform, convertShapeToPath, editSetCharacterParts, editSetTracks, setBooleanOperandEditingGroupId, showToast]);
+
+  const resetSelectedTransforms = useCallback(() => {
+    const ids = selectedPartIds.length > 0 ? selectedPartIds : selectedPartId ? [selectedPartId] : [];
+    const locked = ids.filter((id) => tracks.find((track) => track.partId === id)?.locked);
+    if (locked.length > 0) {
+      showToast('A selected layer is locked. Unlock it to reset its transform.', 'error');
+      return;
+    }
+    const result = resetTransforms(characterParts, tracks, ids, activeTemplateId);
+    if (!result) return;
+    editSetCharacterParts(result.parts);
+    editSetTracks(result.tracks);
+  }, [selectedPartIds, selectedPartId, tracks, characterParts, activeTemplateId, editSetCharacterParts, editSetTracks, showToast]);
 
   const { matteReturnTargetId, selectMatteSource, backToMatteTarget } = useMatteNavigation({
     characterParts,
@@ -1010,6 +1097,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     importProject,
     resetProject,
     migrateLegacyCoordinates,
+    autosaveIntervalSeconds,
+    setAutosaveIntervalSeconds,
   } = useSerialization({
     fps,
     setFps,
@@ -1036,13 +1125,14 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setCurrentFrame,
     setIsPlaying,
     requestHistoryBaseline: requestBaselineReset,
+    onRestoreRefused: (message) => showToast(message, 'error'),
   });
 
 
 
 
 
-  // M27 — duplicate keyframe frame-group (27A pure helper) as ONE logical
+  // Duplicate keyframe frame-group (27A pure helper) as ONE logical
   // undo entry (existing batch pattern — no new history system).
   const duplicateKeyframeGroup = useCallback(
     (trackId: string, frame: number) => {
@@ -1055,7 +1145,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [editSetTracks, startBatchInteraction, endBatchInteraction, totalFrames]
   );
 
-  // K2 — the alt-drag duplicate: the same pure helper with a dynamic target
+  // The alt-drag duplicate: the same pure helper with a dynamic target
   // frame. Returns whether the copy landed (false = refused, zero mutation;
   // the caller owns the single D1 warning). No batch of its own: the gesture
   // already owns one, and a nested pair would record a spurious undo entry.
@@ -1073,7 +1163,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [tracks, totalFrames, editSetTracks]
   );
 
-  // M28 — paste copied keyframe frame-group (28A pure helper) as ONE logical
+  // Paste copied keyframe frame-group (28A pure helper) as ONE logical
   // undo entry (existing batch pattern). Collision/invalid frames → helper
   // no-op → setTracks returns identical state → no history entry.
   const pasteKeyframeClipboard = useCallback(
@@ -1087,196 +1177,211 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [editSetTracks, startBatchInteraction, endBatchInteraction, totalFrames]
   );
 
+  const contextValue: AnimatorContextType = {
+    currentFrame,
+    setCurrentFrame,
+    isPlaying,
+    setIsPlaying,
+    fps,
+    setFps,
+    totalFrames,
+    setTotalFrames,
+    isLooping,
+    setIsLooping,
+    projectResolution,
+    setProjectResolution,
+    selectedPartId,
+    setSelectedPartId,
+    selectedPartIds,
+    setSelectedPartIds,
+    handleSelectPart,
+    booleanOperandEditingGroupId,
+    setBooleanOperandEditingGroupId,
+    focusModeNodeId,
+    setFocusModeNodeId,
+    selectedKeyframeId,
+    setSelectedKeyframeId,
+    selectedKeyframeIds,
+    selectKeyframes,
+    activeTool,
+    setActiveTool,
+    pendingShapeType,
+    pendingShapeName,
+    armShapeCreation,
+    addCustomPart,
+    clearShapeCreation,
+    setIsScaleLocked,
+    isScaleLocked,
+    snapEnabled,
+    setSnapEnabled,
+    cropMode,
+    setCropMode,
+    cropRegion,
+    setCropRegion,
+    clearStageCropRegion: () => setCropRegion(null),
+    applyStageCrop: () => stageCrop.applyCropRegion(cropRegion),
+    cropStageToSelection: stageCrop.cropToSelection,
+    cropStageToVisibleContent: stageCrop.cropToVisibleContent,
+    stageCropBlockReason: stageCrop.blockReason,
+    canCropStageToSelection: stageCrop.canCropToSelection,
+    canCropStageToVisibleContent: stageCrop.canCropToVisibleContent,
+    tracks,
+    // Components edit through the lock guard (see editSetTracks).
+    setTracks: editSetTracks,
+    characterParts,
+    setCharacterParts: editSetCharacterParts,
+    timelineZoom,
+    setTimelineZoom,
+    showGrid,
+    setShowGrid,
+    showCoordinateOverlay,
+    setShowCoordinateOverlay,
+    lastSavedAt,
+    restoredFromLocalStorage,
+    autosaveConflict,
+    manualSaveRejectedAt,
+    autosaveError,
+    hasUnsavedChanges,
+    isSaving,
+    triggerManualSave,
+    getPersistenceSafety,
+    forceSaveNow,
+    autosaveIntervalSeconds,
+    setAutosaveIntervalSeconds,
+    undo: draftAwareUndo,
+    redo: draftAwareRedo,
+    canUndo: draftHistory ? draftHistory.canUndo : canUndo,
+    canRedo: draftHistory ? draftHistory.canRedo : canRedo,
+    registerDraftHistory,
+    startBatchInteraction,
+    endBatchInteraction,
+    getComputedTransform,
+    addKeyframeToTrack,
+    deleteKeyframe,
+    deleteKeyframeFrameGroup,
+    moveSelectedKeyframes,
+    beginKeyframeStretch,
+    deletePart: requestDeletePart,
+    updateKeyframeFrame,
+    updateKeyframeBezierPoints,
+    updatePartMedia,
+    updateCurrentTransform,
+    updateCurrentPropertyChannel,
+    toggleTrackVisibility,
+    toggleTrackEditVisibility,
+    toggleTrackLock,
+    setLayersLocked,
+    convertToEditablePath,
+    resetSelectedTransforms,
+    setPartPath,
+    pathVertex,
+    selectPathVertex,
+    requestConfirmation,
+    toggleTrackExpanded,
+    resetProject,
+    migrateLegacyCoordinates,
+    exportProject,
+    importProject,
+    applyMotionTransition,
+    showToast,
+    updatePropertyKeyframeFrame,
+    addPropertyKeyframe,
+    armChannel,
+    disableChannelAnimation,
+    updatePropertyKeyframeValue,
+    updatePropertyKeyframeTemporalHandles,
+    applyTemporalHandlesToSegment,
+    deletePropertyKeyframe,
+    addMaskPathKeyframe,
+    updateMaskPathKeyframeValue,
+    updateMaskPathKeyframeFrame,
+    deleteMaskPathKeyframe,
+    copySelectedPart,
+    pasteCopiedPart,
+    duplicateSelectedPart,
+    authorMaskPath,
+    maskEditTarget,
+    enterMaskEditing,
+    exitMaskEditing,
+    registerMaskGestureCancel,
+    captureMaskGestureSnapshot,
+    cancelMaskGesture,
+    maskVertexIndex,
+    setMaskVertexIndex,
+    applyMaskTopologyEdit,
+    applyMaskPathOrder,
+    maskDrawSession,
+    startMaskDraw,
+    cancelMaskDraw,
+    commitMaskDraw,
+    matteReturnTargetId,
+    selectMatteSource,
+    backToMatteTarget,
+    duplicateMirrored,
+    pasteAnimationOntoSelected,
+    clipboardData,
+    duplicateKeyframeGroup,
+    duplicateKeyframeGroupAt,
+    setKeyframeGroupEasing,
+    pasteKeyframeClipboard,
+    appMode,
+    setAppMode,
+    modeSwapActive,
+    finishModeSwap,
+    broadcastState,
+    broadcastSessionActivated,
+    namedSequenceRuntime,
+    playNamedSequence,
+    triggerBroadcastIn,
+    triggerBroadcastOut,
+    triggerAllBroadcastIn,
+    triggerAllBroadcastOut,
+    resetBroadcastState,
+    customPresets,
+    savePreset,
+    updatePreset,
+    deletePreset,
+    importPresets,
+    liveStuntsState,
+    triggerLiveStunt,
+    stopLiveStunt,
+    setStuntLoopState,
+    stopAllLiveStunts,
+    renamePartAndTrack,
+    reorderParts,
+    openShortcutReference: () => setIsShortcutReferenceOpen(true),
+    sceneTitle,
+    setSceneTitle,
+    projectTemplates,
+    coordinateSystem,
+    activeProjectTemplateId,
+    setActiveProjectTemplateId,
+    addProjectTemplate,
+    renameProjectTemplate,
+    deleteProjectTemplate,
+    motionTemplates,
+    activeTemplateId,
+    setActiveTemplateId,
+    addMotionTemplate,
+    renameMotionTemplate,
+    deleteMotionTemplate,
+    updateMotionTemplateDuration,
+    setMotionTemplateStepMarkers,
+  };
+  // The same value as a subscription source: `useAnimatorSlice` readers
+  // render only when the fields they read change, not on every frame. It is
+  // written while rendering on purpose: a reader rendering in this same pass
+  // (its first mount included) must read this value, which an effect would
+  // only provide after the pass.
+  // eslint-disable-next-line react/immutability
+  animatorStore.current = contextValue;
+  useLayoutEffect(() => {
+    for (const listener of [...animatorStore.listeners]) listener();
+  });
+
   return (
-    <AnimatorContext.Provider
-      value={{
-        currentFrame,
-        setCurrentFrame,
-        isPlaying,
-        setIsPlaying,
-        fps,
-        setFps,
-        totalFrames,
-        setTotalFrames,
-        isLooping,
-        setIsLooping,
-        projectResolution,
-        setProjectResolution,
-        selectedPartId,
-        setSelectedPartId,
-        selectedPartIds,
-        setSelectedPartIds,
-        handleSelectPart,
-        booleanOperandEditingGroupId,
-        setBooleanOperandEditingGroupId,
-        focusModeNodeId,
-        setFocusModeNodeId,
-        selectedKeyframeId,
-        setSelectedKeyframeId,
-        selectedKeyframeIds,
-        selectKeyframes,
-        activeTool,
-        setActiveTool,
-        pendingShapeType,
-        pendingShapeName,
-        armShapeCreation,
-        addCustomPart,
-        clearShapeCreation,
-        setIsScaleLocked,
-        isScaleLocked,
-        snapEnabled,
-        setSnapEnabled,
-        cropMode,
-        setCropMode,
-        cropRegion,
-        setCropRegion,
-        clearStageCropRegion: () => setCropRegion(null),
-        applyStageCrop: () => stageCrop.applyCropRegion(cropRegion),
-        cropStageToSelection: stageCrop.cropToSelection,
-        cropStageToVisibleContent: stageCrop.cropToVisibleContent,
-        stageCropBlockReason: stageCrop.blockReason,
-        canCropStageToSelection: stageCrop.canCropToSelection,
-        canCropStageToVisibleContent: stageCrop.canCropToVisibleContent,
-        tracks,
-        // C4 — components edit through the lock guard (see editSetTracks).
-        setTracks: editSetTracks,
-        characterParts,
-        setCharacterParts: editSetCharacterParts,
-        timelineZoom,
-        setTimelineZoom,
-        showGrid,
-        setShowGrid,
-        showCoordinateOverlay,
-        setShowCoordinateOverlay,
-        lastSavedAt,
-        restoredFromLocalStorage,
-        autosaveConflict,
-        manualSaveRejectedAt,
-        autosaveError,
-        hasUnsavedChanges,
-        isSaving,
-        triggerManualSave,
-        getPersistenceSafety,
-        forceSaveNow,
-        undo: draftAwareUndo,
-        redo: draftAwareRedo,
-        canUndo: draftHistory ? draftHistory.canUndo : canUndo,
-        canRedo: draftHistory ? draftHistory.canRedo : canRedo,
-        registerDraftHistory,
-        startBatchInteraction,
-        endBatchInteraction,
-        getComputedTransform,
-        addKeyframeToTrack,
-        deleteKeyframe,
-        deleteKeyframeFrameGroup,
-        moveSelectedKeyframes,
-        beginKeyframeStretch,
-        deletePart: requestDeletePart,
-        updateKeyframeFrame,
-        updateKeyframeBezierPoints,
-        updatePartMedia,
-        updateCurrentTransform,
-        updateCurrentPropertyChannel,
-        toggleTrackVisibility,
-        toggleTrackEditVisibility,
-        toggleTrackLock,
-        setLayersLocked,
-        convertToEditablePath,
-        setPartPath,
-        pathVertex,
-        selectPathVertex,
-        requestConfirmation,
-        toggleTrackExpanded,
-        resetProject,
-        migrateLegacyCoordinates,
-        exportProject,
-        importProject,
-        applyMotionTransition,
-        showToast,
-        updatePropertyKeyframeFrame,
-        addPropertyKeyframe,
-        armChannel,
-        disableChannelAnimation,
-        updatePropertyKeyframeValue,
-        updatePropertyKeyframeTemporalHandles,
-        applyTemporalHandlesToSegment,
-        deletePropertyKeyframe,
-        addMaskPathKeyframe,
-        updateMaskPathKeyframeValue,
-        updateMaskPathKeyframeFrame,
-        deleteMaskPathKeyframe,
-        copySelectedPart,
-        pasteCopiedPart,
-        duplicateSelectedPart,
-        authorMaskPath,
-        maskEditTarget,
-        enterMaskEditing,
-        exitMaskEditing,
-        registerMaskGestureCancel,
-        captureMaskGestureSnapshot,
-        cancelMaskGesture,
-        maskVertexIndex,
-        setMaskVertexIndex,
-        applyMaskTopologyEdit,
-        applyMaskPathOrder,
-        maskDrawSession,
-        startMaskDraw,
-        cancelMaskDraw,
-        commitMaskDraw,
-        matteReturnTargetId,
-        selectMatteSource,
-        backToMatteTarget,
-        duplicateMirrored,
-        pasteAnimationOntoSelected,
-        clipboardData,
-        duplicateKeyframeGroup,
-        duplicateKeyframeGroupAt,
-        setKeyframeGroupEasing,
-        pasteKeyframeClipboard,
-        appMode,
-        setAppMode,
-        modeSwapActive,
-        finishModeSwap,
-        broadcastState,
-        broadcastSessionActivated,
-        namedSequenceRuntime,
-        playNamedSequence,
-        triggerBroadcastIn,
-        triggerBroadcastOut,
-        triggerAllBroadcastIn,
-        triggerAllBroadcastOut,
-        resetBroadcastState,
-        customPresets,
-        savePreset,
-        updatePreset,
-        deletePreset,
-        importPresets,
-        liveStuntsState,
-        triggerLiveStunt,
-        stopLiveStunt,
-        setStuntLoopState,
-        stopAllLiveStunts,
-        renamePartAndTrack,
-        reorderParts,
-        openShortcutReference: () => setIsShortcutReferenceOpen(true),
-        sceneTitle,
-        setSceneTitle,
-        projectTemplates,
-        coordinateSystem,
-        activeProjectTemplateId,
-        setActiveProjectTemplateId,
-        addProjectTemplate,
-        renameProjectTemplate,
-        deleteProjectTemplate,
-        motionTemplates,
-        activeTemplateId,
-        setActiveTemplateId,
-        addMotionTemplate,
-        renameMotionTemplate,
-        deleteMotionTemplate,
-        updateMotionTemplateDuration,
-      }}
-    >
+    <AnimatorStoreContext.Provider value={animatorStore}>
+    <AnimatorContext.Provider value={contextValue}>
       {children}
 
       <ShortcutReferenceDialog
@@ -1310,5 +1415,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       {/* Floating Glassmorphism Toast Notification Portal */}
       <ToastPortal toasts={toasts} removeToast={removeToast} />
     </AnimatorContext.Provider>
+    </AnimatorStoreContext.Provider>
   );
 };

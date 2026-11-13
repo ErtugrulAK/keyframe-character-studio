@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useSerialization } from '../hooks/useSerialization';
-import { createCustomPart } from '../utils/partFactory';
-import { textBaselineOffset } from '../utils/textOrigin';
+import { createCustomPart } from '../utils/layers/partFactory';
+import { textBaselineOffset } from '../utils/geometry/textOrigin';
 import type { CharacterPart } from '../types/animator';
 import type { SceneLayer } from '../types/composition';
 

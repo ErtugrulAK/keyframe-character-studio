@@ -4,7 +4,7 @@ import {
   DEFAULT_SCENE_COORDINATE_SYSTEM,
   detectSceneCoordinateSystem,
   migrateSceneCoordinates,
-} from '../utils/coordinateMigration';
+} from '../utils/persistence/coordinateMigration';
 
 const makeScene = (coordinateSystem?: SceneData['coordinateSystem']): SceneData => ({
   version: 1,

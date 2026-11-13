@@ -1,18 +1,18 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, Layers, Search, X } from 'lucide-react';
-import { useAnimator } from '../../context/useAnimator';
+import { useAnimatorSlice, useAnimatorReader } from '../../context/useAnimator';
 import { useEditorContextMenu } from '../../context/editorContextMenu';
 import type { CharacterPart } from '../../types/animator';
-import { resolveMatteSource } from '../../utils/matte';
-import { projectLayerOrdinals } from '../../utils/layerOrdinal';
-import { reparentBlockReason, type LayerDropPosition } from '../../utils/layerParenting';
-import { relationshipParentId } from '../../utils/partBinding';
+import { resolveMatteSource } from '../../utils/layers/matte';
+import { projectLayerOrdinals } from '../../utils/layers/layerOrdinal';
+import { reparentBlockReason, type LayerDropPosition } from '../../utils/layers/layerParenting';
+import { relationshipParentId } from '../../utils/layers/partBinding';
 import { createLayerParentingActions } from '../../hooks/useLayerParenting';
-import { OUTLINER_COMMAND_EVENT, type OutlinerCommand } from '../../utils/outlinerCommands';
-import { OutlinerRow, type OutlinerRowActions } from './OutlinerRow';
+import { OUTLINER_COMMAND_EVENT, type OutlinerCommand } from '../../utils/layers/outlinerCommands';
+import { OutlinerRow, type OutlinerDropKind, type OutlinerRowActions } from './OutlinerRow';
 import { useRetainedScrollTop, useRetainedUiState } from '../../hooks/useRetainedUiState';
 import { useRowWindow, type RowViewport } from '../../hooks/useRowWindow';
-import { searchLayers } from '../../utils/layerSearch';
+import { searchLayers } from '../../utils/layers/layerSearch';
 
 /** The row pitch assumed until a mounted row has been measured. */
 const OUTLINER_ROW_PITCH_ESTIMATE = 28;
@@ -42,14 +42,16 @@ const dropPositionAt = (event: React.DragEvent<HTMLElement>): LayerDropPosition 
 };
 
 export const OutlinerPanel: React.FC = () => {
-  const animator = useAnimator();
+  // The rows read these; actions read the whole store at call time.
   const {
     tracks,
     characterParts,
     selectedPartId,
     selectedPartIds,
     sceneTitle,
-  } = animator;
+    booleanOperandEditingGroupId,
+  } = useAnimatorSlice('tracks', 'characterParts', 'selectedPartId', 'selectedPartIds', 'sceneTitle', 'booleanOperandEditingGroupId');
+  const readAnimator = useAnimatorReader();
   const { openContextMenu } = useEditorContextMenu();
 
   // Kept across an Edit ⇄ Broadcast round trip (the panel unmounts in Broadcast).
@@ -65,7 +67,7 @@ export const OutlinerPanel: React.FC = () => {
   const pendingFocusRef = useRef<string | null>(null);
 
   const partById = useMemo(() => new Map(characterParts.map((part) => [part.id, part])), [characterParts]);
-  // C5 — layer search on the scene data (the windowed list cannot be searched
+  // Layer search on the scene data (the windowed list cannot be searched
   // by the browser's find): matches and their ancestors, expanded.
   const [layerQuery, setLayerQuery] = useRetainedUiState('outliner.query', '');
   const search = useMemo(() => searchLayers(characterParts, layerQuery), [characterParts, layerQuery]);
@@ -85,7 +87,12 @@ export const OutlinerPanel: React.FC = () => {
     const rows: VisibleRow[] = [];
     const visit = (part: CharacterPart, depth: number, parentRowId: string | null, ancestry: Set<string>) => {
       if (search && !search.shownIds.has(part.id)) return;
-      const children = (childrenOf.get(part.id) ?? []).filter((child) => !ancestry.has(child.id) && (!search || search.shownIds.has(child.id)));
+      // A Boolean result reads as one shape: its operands are listed only
+      // while it is opened for editing (double-click it on the stage).
+      const showOperands = booleanOperandEditingGroupId === part.id;
+      const children = (childrenOf.get(part.id) ?? []).filter((child) => !ancestry.has(child.id)
+        && (!search || search.shownIds.has(child.id))
+        && (showOperands || child.booleanGroupId !== part.id));
       const isExpanded = search ? true : !collapsedPartIds.has(part.id);
       rows.push({ part, depth, hasChildren: children.length > 0, isExpanded, parentRowId });
       if (!isExpanded) return;
@@ -94,18 +101,18 @@ export const OutlinerPanel: React.FC = () => {
     };
     roots.forEach((part) => visit(part, 0, null, new Set()));
     return rows;
-  }, [characterParts, collapsedPartIds, partById, search]);
+  }, [characterParts, collapsedPartIds, partById, search, booleanOperandEditingGroupId]);
   const stackIndexById = useMemo(() => new Map(characterParts.map((part, index) => [part.id, index])), [characterParts]);
   const visibilityById = useMemo(() => new Map(tracks.map((track) => [track.partId, track.editVisible !== false])), [tracks]);
   const lockedById = useMemo(() => new Set(tracks.filter((track) => track.locked).map((track) => track.partId)), [tracks]);
-  // WP-05: one derived display ordinal per layer (never an identity).
+  // One derived display ordinal per layer (never an identity).
   const layerOrdinals = useMemo(() => projectLayerOrdinals(characterParts), [characterParts]);
   const selectedSet = useMemo(() => new Set(selectedPartIds ?? []), [selectedPartIds]);
   const rovingId = focusedId && visibleRows.some((row) => row.part.id === focusedId)
     ? focusedId
     : (selectedPartId && visibleRows.some((row) => row.part.id === selectedPartId) ? selectedPartId : visibleRows[0]?.part.id ?? null);
 
-  // C4 — a long list mounts only the rows near its viewport. The roving row
+  // A long list mounts only the rows near its viewport. The roving row
   // (Tab's way into the tree), the renamed, dragged and drop-target rows and
   // the primary selection stay mounted wherever they are.
   const pinnedRows = useMemo(() => {
@@ -143,9 +150,9 @@ export const OutlinerPanel: React.FC = () => {
   });
 
   // Everything a row action needs, read at call time — never a render dependency.
-  const latest = useRef({ animator, visibleRows, draggingId, dropTarget, openContextMenu });
+  const latest = useRef({ visibleRows, draggingId, dropTarget, openContextMenu });
   useLayoutEffect(() => {
-    latest.current = { animator, visibleRows, draggingId, dropTarget, openContextMenu };
+    latest.current = { visibleRows, draggingId, dropTarget, openContextMenu };
   });
 
   const focusRow = useCallback((id: string) => {
@@ -165,8 +172,8 @@ export const OutlinerPanel: React.FC = () => {
     const {
       handleSelectPart, activeTool, focusModeNodeId, setActiveTool, setFocusModeNodeId,
       booleanOperandEditingGroupId, setBooleanOperandEditingGroupId,
-    } = latest.current.animator;
-    const part = latest.current.animator.characterParts.find((candidate) => candidate.id === partId);
+    } = readAnimator();
+    const part = readAnimator().characterParts.find((candidate) => candidate.id === partId);
     // Selecting a part outside the active Boolean structure exits the
     // transient operand editing mode.
     if (booleanOperandEditingGroupId && partId !== booleanOperandEditingGroupId && part?.booleanGroupId !== booleanOperandEditingGroupId) {
@@ -177,7 +184,7 @@ export const OutlinerPanel: React.FC = () => {
       setFocusModeNodeId(null);
     }
     handleSelectPart(partId, additive);
-  }, []);
+  }, [readAnimator]);
 
   const startRename = useCallback((partId: string) => {
     setRenamingId(partId);
@@ -201,26 +208,26 @@ export const OutlinerPanel: React.FC = () => {
       return next;
     }),
     toggleVisibility: (partId) => {
-      const track = latest.current.animator.tracks.find((candidate) => candidate.partId === partId);
-      if (track) latest.current.animator.toggleTrackEditVisibility(track.id);
+      const track = readAnimator().tracks.find((candidate) => candidate.partId === partId);
+      if (track) readAnimator().toggleTrackEditVisibility(track.id);
     },
     toggleLock: (partId) => {
-      const track = latest.current.animator.tracks.find((candidate) => candidate.partId === partId);
-      if (track) latest.current.animator.setLayersLocked([partId], !track.locked);
+      const track = readAnimator().tracks.find((candidate) => candidate.partId === partId);
+      if (track) readAnimator().setLayersLocked([partId], !track.locked);
     },
     moveInStack: (partId, direction) => {
-      const parts = latest.current.animator.characterParts;
+      const parts = readAnimator().characterParts;
       const index = parts.findIndex((part) => part.id === partId);
       const next = index + direction;
       if (index < 0 || next < 0 || next >= parts.length) return;
-      latest.current.animator.reorderParts(index, next);
+      readAnimator().reorderParts(index, next);
     },
     startRename,
     commitRename: (partId, name) => {
-      const part = latest.current.animator.characterParts.find((candidate) => candidate.id === partId);
+      const part = readAnimator().characterParts.find((candidate) => candidate.id === partId);
       setRenamingId(null);
       focusRow(partId);
-      if (part && name.trim() && name.trim() !== part.name) latest.current.animator.renamePartAndTrack(partId, name);
+      if (part && name.trim() && name.trim() !== part.name) readAnimator().renamePartAndTrack(partId, name);
     },
     cancelRename: (partId) => {
       setRenamingId(null);
@@ -236,7 +243,7 @@ export const OutlinerPanel: React.FC = () => {
       if (!dragged) return;
       event.preventDefault();
       const position = dropPositionAt(event);
-      const { characterParts: parts, tracks: currentTracks } = latest.current.animator;
+      const { characterParts: parts, tracks: currentTracks } = readAnimator();
       const target = parts.find((part) => part.id === partId);
       const nextParent = position === 'nest' ? partId : (relationshipParentId(target) ?? null);
       const blockedReason = dragged === partId
@@ -257,17 +264,17 @@ export const OutlinerPanel: React.FC = () => {
       setDraggingId(null);
       setDropTarget(null);
       if (!dragged || dragged === partId) return;
-      if (createLayerParentingActions(latest.current.animator).dropLayer(dragged, partId, position)) focusRow(dragged);
+      if (createLayerParentingActions(readAnimator()).dropLayer(dragged, partId, position)) focusRow(dragged);
     },
     dragEnd: () => {
       // A refused drop never fires `drop` (the browser honours dropEffect
       // "none"), so the reason the hint showed is repeated once on release.
       const refused = latest.current.dropTarget?.blockedReason;
-      if (refused) latest.current.animator.showToast(refused, 'error');
+      if (refused) readAnimator().showToast(refused, 'error');
       setDraggingId(null);
       setDropTarget(null);
     },
-  }), [focusRow, selectRow, setCollapsedPartIds, startRename]);
+  }), [focusRow, readAnimator, selectRow, setCollapsedPartIds, startRename]);
 
   // The context menu's "Rename" (and any other surface) asks through one event.
   useEffect(() => {
@@ -275,7 +282,7 @@ export const OutlinerPanel: React.FC = () => {
       const command = (event as CustomEvent<OutlinerCommand>).detail;
       if (command?.type !== 'rename') return;
       // Reveal the row first: expand every collapsed ancestor.
-      const parts = latest.current.animator.characterParts;
+      const parts = readAnimator().characterParts;
       const ancestors: string[] = [];
       let cursor = relationshipParentId(parts.find((part) => part.id === command.partId));
       while (cursor && !ancestors.includes(cursor)) {
@@ -288,7 +295,7 @@ export const OutlinerPanel: React.FC = () => {
     };
     window.addEventListener(OUTLINER_COMMAND_EVENT, handleCommand);
     return () => window.removeEventListener(OUTLINER_COMMAND_EVENT, handleCommand);
-  }, [setCollapsedPartIds, setIsGroupExpanded, startRename]);
+  }, [readAnimator, setCollapsedPartIds, setIsGroupExpanded, startRename]);
 
   const announce = (message: string) => setStatus(message);
 
@@ -308,7 +315,7 @@ export const OutlinerPanel: React.FC = () => {
       event.stopPropagation();
     };
     if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
-      const actions = createLayerParentingActions(animator);
+      const actions = createLayerParentingActions(readAnimator());
       let done = false;
       if (event.key === 'ArrowUp') done = actions.moveLayerAmongSiblings(id, -1);
       else if (event.key === 'ArrowDown') done = actions.moveLayerAmongSiblings(id, 1);
@@ -369,11 +376,20 @@ export const OutlinerPanel: React.FC = () => {
   };
 
   /*
-   * C5 — what the drop will do, BEFORE the release. Nesting onto a group puts
+   * What the drop will do, BEFORE the release. Nesting onto a group puts
    * the layer IN the container ("Move into group"); nesting onto any other layer
    * is a transform relationship ("Parent to"); a line between rows is a reorder,
    * and the hint also says when that reorder changes the parent.
    */
+  /** What the current drop would do (its colour); see `OutlinerDropKind`. */
+  const dropKind = ((): OutlinerDropKind | undefined => {
+    if (!draggingId || !dropTarget || dropTarget.blockedReason) return undefined;
+    const target = partById.get(dropTarget.id);
+    if (dropTarget.position === 'nest') return target?.isGroup ? 'group' : 'parent';
+    const dragged = partById.get(draggingId);
+    return (relationshipParentId(dragged) ?? null) === (relationshipParentId(target) ?? null) ? 'reorder' : 'reparent';
+  })();
+
   const dropHint = (() => {
     if (!draggingId || !dropTarget) return '';
     if (dropTarget.blockedReason) return `Cannot drop here: ${dropTarget.blockedReason}`;
@@ -496,7 +512,7 @@ export const OutlinerPanel: React.FC = () => {
           >
             {visibleRows.length === 0 ? (
               <div style={{ padding: '12px 14px', fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                No elements in active template yet. Add shapes or text from left toolbar.
+                No elements in active template yet. Add shapes, text or media from the toolbar.
               </div>
             ) : (
               rowWindow.segments.flatMap((segment) => (segment.kind === 'gap' ? [
@@ -524,6 +540,7 @@ export const OutlinerPanel: React.FC = () => {
                     dragging={draggingId === row.part.id}
                     dropPosition={dropTarget?.id === row.part.id ? dropTarget.position : null}
                     dropBlocked={dropTarget?.id === row.part.id && dropTarget.blockedReason !== null}
+                    dropKind={dropTarget?.id === row.part.id ? dropKind : undefined}
                     // The dragged row itself carries no label ("cannot be dropped onto
                     // itself" is noise under the pointer); the footer still says it.
                     dropLabel={dropTarget?.id === row.part.id && row.part.id !== draggingId && (dropTarget.position === 'nest' || dropTarget.blockedReason) ? dropHint : undefined}
@@ -541,7 +558,7 @@ export const OutlinerPanel: React.FC = () => {
       </div>
 
       <div className={`outliner-footer${dropHint || status ? '' : ' is-empty'}`}>
-        <span className={`outliner-drop-hint${dropTarget?.blockedReason ? ' is-blocked' : ''}`} data-testid="outliner-drop-hint" role="status" aria-live="polite">
+        <span className={`outliner-drop-hint${dropTarget?.blockedReason ? ' is-blocked' : dropKind ? ` drop-kind-${dropKind}` : ''}`} data-testid="outliner-drop-hint" role="status" aria-live="polite">
           {dropHint || status}
         </span>
       </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveKeyframeMoveTargets, stretchKeyframesMutator } from '../utils/trackMutations';
+import { resolveKeyframeMoveTargets, stretchKeyframesMutator } from '../utils/animation/trackMutations';
 import type { PropertyKeyframe, Track } from '../types/animator';
 
 const key = (id: string, frame: number): PropertyKeyframe => ({ id, frame, value: frame, easing: 'easeInOut', templateId: 'Sequence' });

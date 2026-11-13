@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { lstat, mkdir, open, writeFile } from 'node:fs/promises';
 import { dirname, join, parse, relative, resolve } from 'node:path';
-import { normalizePackagePath } from '../utils/pathSafety';
+import { normalizePackagePath } from '../utils/persistence/pathSafety';
 import { isSafeOGrafPackagePath } from './compiler';
 import { OGrafPackageWriteError, describeOGrafValueForDiagnostics } from './diagnostics';
 import type { OGrafGeneratedPackage, OGrafMaterializedPackage, OGrafPackageFile } from './types';

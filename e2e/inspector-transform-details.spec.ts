@@ -121,11 +121,12 @@ test('R5-14 — the compact trio stays on one row at the narrowest inspector wid
   const atDefault = await compactTrio(page);
   expect(atDefault.cells).toHaveLength(3);
 
-  // The dock width floor: `min(--right-inspector-width, max(250px, 34vw))` resolves to 250px.
-  await page.setViewportSize({ width: 640, height: 900 });
+  // The narrowest docked Inspector: `min(--right-inspector-width, max(250px, 44vw))`
+  // at the widest window that is not the phone layout (601 px) is 264 px.
+  await page.setViewportSize({ width: 601, height: 900 });
   const inspectorWidth = () => page.evaluate(() => Math.round(document.querySelector('.motion-design-right-sidebar')!.getBoundingClientRect().width));
   // The dock eases its width (240ms), so read the settled value.
-  await expect.poll(inspectorWidth).toBe(250);
+  await expect.poll(inspectorWidth).toBe(264);
 
   const narrow = await compactTrio(page);
   expect(narrow.cells.map((cell) => cell.title)).toEqual(['Rotation', 'Scale', 'Layer opacity']);

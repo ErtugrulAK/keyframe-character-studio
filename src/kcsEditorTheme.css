@@ -94,13 +94,18 @@ body { font-family: Inter, 'Segoe UI', sans-serif; }
 button, input, select, textarea { border-radius: var(--kcs-radius-control); }
 button { transition: background-color var(--kcs-motion-fast) ease, border-color var(--kcs-motion-fast) ease, color var(--kcs-motion-fast) ease, opacity var(--kcs-motion-fast) ease; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--kcs-border-focus); outline-offset: 2px; }
+/* A text field shows its focus by its own border (or underline) and caret; the
+   extra ring around a search, rename or number field read as a stray blue box.
+   Chromium treats every text field as keyboard-focused, so this is the one rule. */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='button']):focus-visible,
+textarea:focus-visible { outline: none; }
 
 .app-container { background: var(--kcs-bg-app); }
 .main-layout { background: var(--kcs-bg-canvas); }
 
 .header-bar {
-  min-height: 79px;
-  height: 79px;
+  min-height: 42px;
+  height: 42px;
   padding: 0 12px;
   gap: 12px;
   background: #232323;
@@ -121,23 +126,15 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .header-actions { gap: 5px; }
 .header-actions button, .header-actions .btn-icon { min-height: 28px; height: 28px; border-radius: 3px; }
 
-.left-sidebar-nav { width: 56px; padding: 8px 5px; gap: 3px; background: #212121; border-right-color: var(--kcs-border-default); }
-.sidebar-nav-item { width: 46px; height: 48px; border-radius: 4px; gap: 3px; color: var(--kcs-text-muted); }
-.sidebar-nav-item:hover { background: var(--kcs-bg-hover); }
-.sidebar-nav-item.active { background: var(--kcs-bg-active); border-color: rgba(72, 141, 231, .42); box-shadow: none; color: var(--kcs-text-primary); }
-.sidebar-nav-item.active .nav-icon { color: var(--kcs-accent); }
-.nav-label { font-size: 10px; font-weight: 500; }
-.left-drawer-panel { background: #242424; border-right-color: var(--kcs-border-default); }
 .drawer-content { padding: 12px; gap: 10px; }
-.drawer-header { padding-bottom: 8px; border-bottom-color: var(--kcs-border-subtle); }
 .drawer-item-card { padding: 10px 6px; border-radius: var(--kcs-radius-panel); background: var(--kcs-bg-surface); border-color: var(--kcs-border-subtle); }
 
 .motion-design-right-sidebar { background: #232323; border-left-color: var(--kcs-border-default); box-shadow: -8px 0 24px rgba(0,0,0,.2); }
 .outliner-dock { background: #242424; border-bottom-color: var(--kcs-border-default); }
-.details-dock { background: #212121; }
+.details-dock { background: var(--kcs-rail); }
 /* C5 — the split is a focusable splitter: a short grip shows it can be moved, and
    keyboard focus gets the same ring as every other control. */
-.sidebar-pane-divider { position: relative; height: 6px; background: #1b1b1b; border-color: var(--kcs-border-subtle); outline: none; }
+.sidebar-pane-divider { position: relative; height: 6px; background: var(--kcs-bg-canvas); border-color: var(--kcs-border-subtle); outline: none; }
 .sidebar-pane-divider::after { content: ''; position: absolute; left: 50%; top: 2px; width: 28px; height: 2px; margin-left: -14px; border-radius: 1px; background: var(--kcs-border-strong); pointer-events: none; }
 .sidebar-pane-divider:hover, .sidebar-pane-divider:focus-visible { background: var(--kcs-bg-active); }
 .sidebar-pane-divider:hover::after, .sidebar-pane-divider:focus-visible::after { background: var(--kcs-accent); }
@@ -171,7 +168,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
    agree at every breakpoint. */
 @media (max-width: 1100px) {
   .header-bar { padding: 0 8px; gap: 6px; }
-  .app-container { --left-drawer-width: 224px; --right-inspector-width: 320px; }
+  .app-container { --right-inspector-width: 416px; }
 }
 @media (max-width: 800px) {
   .header-brand { flex-basis: auto; }
@@ -179,14 +176,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
      icon-only header actions (HeaderBar.css, ≤ 860 px) the header fits one row,
      and it still wraps naturally when it really does not fit. */
   .header-center-controls { flex: 0 0 auto; }
-  .header-bar { height: auto; min-height: 48px; padding-block: 4px; }
-  .app-container { --left-drawer-width: 196px; --right-inspector-width: 286px; }
+  .header-bar { height: auto; min-height: 40px; padding-block: 3px; }
+  .app-container { --right-inspector-width: 372px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  button, .motion-design-right-sidebar, .left-toolbar-container { transition: none !important; }
+  button, .motion-design-right-sidebar { transition: none !important; }
 }
 
-/* UI polish: preserve the 79px shell frame while tightening internal rhythm. */
+/* UI polish: a slim 42 px shell frame with a tight internal rhythm. */
 .header-bar {
   align-items: center;
   gap: 8px;
@@ -260,9 +257,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   background: var(--kcs-border-subtle);
 }
 
+/* No rule under the corner radius: the card's groups are separated by space
+   alone, as in the other Inspector cards (QA 2026-11-13). */
 .appearance-group-corner-radius {
   padding-bottom: var(--space-xs);
-  border-bottom: 1px solid var(--kcs-border-subtle);
 }
 
 .appearance-unit-value {
@@ -349,15 +347,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   padding-inline: 4px;
 }
 
-.sidebar-nav-item.active {
-  border-color: transparent;
-  background: var(--kcs-bg-active-muted);
-}
-
-.sidebar-nav-item.active .nav-icon {
-  color: var(--kcs-accent);
-}
-
 .outliner-header,
 .details-header {
   background: var(--kcs-bg-panel);
@@ -441,7 +430,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .ue-channel-lane,
 .ue-channel-header-lane {
-  background-color: #222222;
+  background-color: var(--kcs-bg-rail);
   border-bottom-color: rgba(166, 166, 166, .08);
 }
 
@@ -535,7 +524,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   min-width: 88px;
   background: var(--kcs-accent) !important;
   border-color: var(--kcs-accent) !important;
-  color: #101b2a !important;
+  color: var(--kcs-on-accent) !important;
   font-weight: 600;
 }
 
@@ -543,33 +532,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   color: var(--kcs-text-muted);
 }
 
-.left-sidebar-nav {
-  width: 56px !important;
-  padding: 8px 5px !important;
-  background: #202020;
-  border-right-color: #353535;
-}
-
-.sidebar-nav-item {
-  width: 46px !important;
-  height: 42px;
-  border: 1px solid transparent;
-  background: transparent;
-}
-
-.sidebar-nav-item.active {
-  background: #202d3d;
-  border-color: #2f4056;
-}
-
-.sidebar-divider {
-  width: 34px;
-  margin: 5px auto;
-  background: #353535;
-}
-
 .motion-design-right-sidebar {
-  background: #212121;
+  background: var(--kcs-rail);
   border-left-color: #383838;
   box-shadow: -10px 0 24px rgba(0,0,0,.24);
 }
@@ -581,7 +545,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .outliner-header,
 .details-header {
-  background: #2a2a2a;
+  background: var(--kcs-bg-surface);
   border-bottom-color: #3c3c3c;
 }
 
@@ -620,7 +584,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   display: block;
   width: 100%;
   max-width: none !important;
-  background: #1e1e1e !important;
+  background: var(--bg-input) !important;
   border: 1px solid #3f3f3f !important;
   border-radius: 3px !important;
 }
@@ -692,7 +656,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .temporal-graph-panel-speed .temporal-graph-svg {
   border-color: #666666 !important;
-  background: #252525 !important;
+  background: var(--bg-panel) !important;
   opacity: .92;
 }
 
@@ -767,8 +731,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   box-shadow: 0 1px 0 rgba(255, 255, 255, .025);
 }
 
-.left-sidebar-nav { background: var(--kcs-bg-rail); }
-.left-drawer-panel { background: var(--kcs-bg-drawer); }
 .motion-design-right-sidebar { background: var(--kcs-bg-inspector); box-shadow: none; }
 .outliner-dock { background: var(--kcs-bg-drawer); }
 .details-dock { background: var(--kcs-bg-inspector); }
@@ -803,7 +765,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 
 .kcs-mode-swap .authoring-toolbar,
-.kcs-mode-swap .left-toolbar-container,
 .kcs-mode-swap .motion-design-right-sidebar,
 .kcs-mode-swap .sequencer-timeline,
 .kcs-mode-swap .live-director-panel {
@@ -812,7 +773,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 @media (prefers-reduced-motion: reduce) {
   .kcs-mode-swap .authoring-toolbar,
-  .kcs-mode-swap .left-toolbar-container,
   .kcs-mode-swap .motion-design-right-sidebar,
   .kcs-mode-swap .sequencer-timeline,
   .kcs-mode-swap .live-director-panel {
@@ -826,13 +786,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   box-shadow: var(--kcs-shadow-card);
 }
 .header-tab:hover,
-.sidebar-nav-item:hover,
 .track-row:hover,
 .track-lane:hover {
   background: var(--kcs-bg-hover);
 }
 .header-tab.active,
-.sidebar-nav-item.active,
 .tree-node.selected,
 .ue-track-lane.selected {
   background: var(--kcs-bg-selected);
@@ -956,7 +914,7 @@ button:disabled {
  * spare 31 px to the stage. Tall windows keep the 79 px frame.
  */
 @media (max-height: 820px) {
-  .header-bar { height: auto; min-height: 48px; padding-block: 4px; }
+  .header-bar { height: auto; min-height: 40px; padding-block: 3px; }
 }
 
 /*
@@ -969,14 +927,12 @@ button:disabled {
  *   scrolling; its height stays fixed (camera invariance).
  */
 @media (max-width: 600px) {
-  .main-layout > .left-toolbar-container,
   .main-layout > .motion-design-right-sidebar {
     position: absolute;
     top: 0;
     bottom: 0;
     z-index: 6;
   }
-  .main-layout > .left-toolbar-container { left: 0; }
   .main-layout > .motion-design-right-sidebar { right: 0; }
 
   .authoring-toolbar { gap: 2px; padding: 0 6px; }
@@ -1202,7 +1158,7 @@ button:disabled {
 .ce-curve-arm.is-in { stroke: rgba(231, 183, 91, .75); }
 .ce-curve-handle-hit { fill: transparent; }
 .ce-curve-handle-dot { stroke: var(--kcs-bg-graph); stroke-width: 2; transition: r var(--kcs-motion-fast); }
-.ce-curve-handle.is-out .ce-curve-handle-dot { fill: #76aaed; }
+.ce-curve-handle.is-out .ce-curve-handle-dot { fill: var(--accent-cyan); }
 .ce-curve-handle.is-in .ce-curve-handle-dot { fill: var(--kcs-accent-keyframe); }
 .ce-curve-handle:hover .ce-curve-handle-hit,
 .ce-curve-handle.is-dragging .ce-curve-handle-hit { fill: rgba(243, 243, 243, .1); }
@@ -1238,7 +1194,7 @@ button:disabled {
 }
 
 .ce-handle-swatch { width: 8px; height: 8px; flex: none; border-radius: 50%; }
-.ce-handle-field.is-out .ce-handle-swatch { background: #76aaed; }
+.ce-handle-field.is-out .ce-handle-swatch { background: var(--accent-cyan); }
 .ce-handle-field.is-in .ce-handle-swatch { background: var(--kcs-accent-keyframe); }
 
 .ce-handle-note {
@@ -1404,7 +1360,7 @@ button:disabled {
   border: 0;
   border-radius: 50%;
   background: var(--kcs-accent);
-  color: #101b2a;
+  color: var(--kcs-on-accent);
   cursor: pointer;
 }
 
@@ -1489,6 +1445,15 @@ button:disabled {
 
 .ce-icon-button:hover { background: var(--kcs-bg-hover); color: var(--kcs-text-primary); }
 
+.ce-copy-status {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--kcs-text-secondary);
+}
+
+.ce-copy-status.is-failed { color: var(--kcs-danger, var(--kcs-text-secondary)); }
+
 .ce-paste { display: flex; gap: 6px; }
 
 .ce-paste .input-control {
@@ -1511,7 +1476,7 @@ button:disabled {
   border: 0;
   border-radius: var(--kcs-radius-control);
   background: var(--kcs-accent);
-  color: #101b2a;
+  color: var(--kcs-on-accent);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -1542,7 +1507,7 @@ button:disabled {
   --radius-lg: 4px;
 }
 
-.app-container :is(.inspector-section-title, .outliner-title, .details-title, .drawer-subtitle, .ue-outliner-ruler-spacer > span) {
+.app-container :is(.inspector-section-title, .outliner-title, .details-title, .ue-outliner-ruler-spacer > span) {
   color: var(--kcs-text-secondary);
   font-size: 11px;
   font-weight: 600;
@@ -1801,4 +1766,20 @@ button:disabled {
   background: var(--kcs-danger);
   border-color: var(--kcs-danger);
   color: var(--kcs-on-accent);
+}
+
+/*
+ * Focus rings belong to keyboard navigation only (`inputModality.ts`). After a
+ * click, a double-click to rename or a right-click menu the editor shows no
+ * blue box: no outline and no focus glow, and a text field keeps its own
+ * neutral border. Tab brings the rings back.
+ */
+html:not([data-input-modality="keyboard"]) :is(*:focus, *:focus-visible) {
+  outline: none !important;
+}
+html:not([data-input-modality="keyboard"]) :is(input, select, textarea, [role="menuitem"], button):focus {
+  box-shadow: none !important;
+}
+html:not([data-input-modality="keyboard"]) .kcs-inline-rename:focus {
+  border-color: transparent;
 }

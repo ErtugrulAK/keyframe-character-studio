@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { cloneAnimationOntoTarget } from '../utils/animationTransfer';
+import { cloneAnimationOntoTarget } from '../utils/animation/animationTransfer';
 import type { CharacterPart, Track } from '../types/animator';
-import { makeEmptyChannels } from '../utils/defaults';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 
 /**
  * M26 26A — COPY ANIMATION ONTO EXISTING PART (pure data layer).
@@ -208,10 +208,10 @@ describe('M26 26A — source immutability + isolation', () => {
 });
 
 describe('M26 26A — M8 / schema', () => {
-  it('channel schema contains the canonical transform, mask, and Trim Path channels', () => {
+  it('channel schema contains the canonical transform, mask, Trim Path and Track Matte channels', () => {
     const res = cloneAnimationOntoTarget(makeSourceTrack(), makePart('src'), 'tgt', undefined);
     const keys = Object.keys(res.track.channels).sort();
-    expect(keys).toEqual(['maskOffsetX', 'maskOffsetY', 'maskRotation', 'maskScale', 'opacity', 'rotation', 'scaleX', 'scaleY', 'trimPathEnd', 'trimPathOffset', 'trimPathStart', 'x', 'y']);
+    expect(keys).toEqual(['maskOffsetX', 'maskOffsetY', 'maskRotation', 'maskScale', 'matteFeather', 'matteGradientAngle', 'matteStrength', 'opacity', 'rotation', 'scaleX', 'scaleY', 'trimPathEnd', 'trimPathOffset', 'trimPathStart', 'x', 'y']);
   });
 
   it('produces a structurally valid Track (all required fields present)', () => {

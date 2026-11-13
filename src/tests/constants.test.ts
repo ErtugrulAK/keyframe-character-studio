@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TOOLBAR_COLORS, DEFAULT_CLONER_CONFIG, DEFAULT_PARTICLE_CONFIG, PART_ANCHOR_OFFSETS, AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
+import { TOOLBAR_COLORS, DEFAULT_CLONER_CONFIG, DEFAULT_PARTICLE_CONFIG, PART_ANCHOR_OFFSETS, AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/editor/constants';
 
 describe('Constants Utility', () => {
   it('exports correctly structured configs', () => {

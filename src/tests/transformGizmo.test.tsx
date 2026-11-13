@@ -3,39 +3,31 @@ import { fireEvent, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { TransformGizmo } from '../components/Canvas/overlays/TransformGizmo';
 import type { CharacterPart, Transform } from '../types/animator';
-import { affineEquals, affineHasShear, affineOfTransform, applyAffine, invertAffine, type WorldAffine } from '../utils/containerMath';
-import { getPartLocalBounds } from '../utils/bounds';
-import { evaluateTransform } from '../utils/evaluateTransform';
-import { selectionFrameGizmoBounds } from '../utils/selectionFrame';
-import { EDITOR_CAMERA_CENTER } from '../utils/projectCoordinates';
-import { getTransformGizmoMetrics } from '../utils/transformGizmoMetrics';
+import { affineEquals, affineHasShear, affineOfTransform, applyAffine, invertAffine, type WorldAffine } from '../utils/geometry/containerMath';
+import { getPartLocalBounds } from '../utils/geometry/bounds';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { selectionFrameGizmoBounds } from '../utils/geometry/selectionFrame';
+import { EDITOR_CAMERA_CENTER } from '../utils/geometry/projectCoordinates';
+import { getTransformGizmoMetrics } from '../utils/geometry/transformGizmoMetrics';
 
-describe('TransformGizmo proportional handle metrics', () => {
-  it('keeps tiny-object visuals bounded while preserving an 8px screen hit radius', () => {
-    const metrics = getTransformGizmoMetrics(4, 4, 1);
-
-    expect(metrics.cornerSize).toBe(3);
-    expect(metrics.rotationRadius).toBe(3.2);
-    expect(metrics.hitRadius).toBe(8);
+describe('TransformGizmo handle metrics: a constant screen size', () => {
+  it('draws the same small handles for a tiny and a huge object', () => {
+    const tiny = getTransformGizmoMetrics(4, 4, 1);
+    const huge = getTransformGizmoMetrics(1600, 900, 1);
+    expect(tiny).toEqual(huge);
+    expect(tiny.cornerSize).toBe(4.5);
+    expect(tiny.edgeRadius).toBe(2.25);
+    expect(tiny.hitRadius).toBe(8);
   });
 
-  it('scales visible controls from the selected object and clamps large objects', () => {
-    const medium = getTransformGizmoMetrics(160, 90, 1);
-    const large = getTransformGizmoMetrics(1600, 900, 1);
-
-    expect(medium.cornerSize).toBe(9);
-    expect(medium.rotationOffset).toBeCloseTo(19.8);
-    expect(large.cornerSize).toBe(9);
-    expect(large.rotationOffset).toBe(28);
-  });
-
-  it('keeps screen hit targets usable across zoom while visual size responds to zoom', () => {
-    const zoomedOut = getTransformGizmoMetrics(100, 60, 3.333333);
-    const zoomedIn = getTransformGizmoMetrics(100, 60, 0.333333);
-
-    expect(zoomedOut.hitRadius / 3.333333).toBeCloseTo(8);
-    expect(zoomedIn.hitRadius / 0.333333).toBeCloseTo(8);
-    expect(zoomedOut.cornerSize / 3.333333).toBeLessThan(zoomedIn.cornerSize / 0.333333);
+  it('keeps every handle the same on screen at any zoom (stage units = pixels x zScale)', () => {
+    for (const zScale of [10, 3.333333, 1, 0.333333, 0.05]) {
+      const metrics = getTransformGizmoMetrics(100, 60, zScale);
+      expect(metrics.cornerSize / zScale).toBeCloseTo(4.5);
+      expect(metrics.edgeRadius / zScale).toBeCloseTo(2.25);
+      expect(metrics.rotationOffset / zScale).toBeCloseTo(18);
+      expect(metrics.hitRadius / zScale).toBeCloseTo(8);
+    }
   });
 });
 
@@ -150,7 +142,7 @@ describe('TransformGizmo — the affine frame of a layer whose map is not a TRS'
       { x: bounds.minX, y: bounds.maxY },
       { x: bounds.maxX, y: bounds.maxY },
     ];
-    const handles = [...rendered.container.querySelectorAll('rect[fill="#00d2ff"]')];
+    const handles = [...rendered.container.querySelectorAll('rect[fill="#4a8fe7"]')];
     expect(handles).toHaveLength(4);
     handles.forEach((handle, index) => {
       const onFrame = applyAffine(affine, corners[index]);
@@ -171,7 +163,7 @@ describe('TransformGizmo — the affine frame of a layer whose map is not a TRS'
     const topEdge = applyAffine(affine, { x: boxCenter.x, y: bounds.minY });
     expect(Number(stem.getAttribute('x1'))).toBeCloseTo(topEdge.x, 6);
     expect(Number(stem.getAttribute('y1'))).toBeCloseTo(topEdge.y, 6);
-    const leftHandle = rendered.container.querySelector('circle[fill="#38bdf8"]')!;
+    const leftHandle = rendered.container.querySelector('circle[fill="#4a8fe7"]')!;
     const leftMid = applyAffine(affine, { x: bounds.minX, y: boxCenter.y });
     expect(Number(leftHandle.getAttribute('cx'))).toBeCloseTo(leftMid.x, 6);
     expect(Number(leftHandle.getAttribute('cy'))).toBeCloseTo(leftMid.y, 6);
@@ -205,7 +197,7 @@ describe('TransformGizmo — the affine frame of a layer whose map is not a TRS'
     const halo = rendered.getByTestId('selection-frame-halo');
     expect(halo.getAttribute('width')).toBe(String(bounds.maxX - bounds.minX));
     expect(halo.getAttribute('height')).toBe(String(bounds.maxY - bounds.minY));
-    const [firstCorner] = [...rendered.container.querySelectorAll('rect[fill="#00d2ff"]')];
+    const [firstCorner] = [...rendered.container.querySelectorAll('rect[fill="#4a8fe7"]')];
     const onFrame = applyAffine(affine, { x: bounds.minX, y: bounds.minY });
     expect(centerOf(firstCorner).x).toBeCloseTo(onFrame.x, 6);
     expect(centerOf(firstCorner).y).toBeCloseTo(onFrame.y, 6);
@@ -230,7 +222,7 @@ describe('TransformGizmo — the affine frame of a layer whose map is not a TRS'
     const halo = rendered.getByTestId('selection-frame-halo');
     expect(halo.getAttribute('x')).toBe(String(bounds.minX * 2));
     expect(halo.getAttribute('width')).toBe(String((bounds.maxX - bounds.minX) * 2));
-    const [firstCorner] = [...rendered.container.querySelectorAll('rect[fill="#00d2ff"]')];
+    const [firstCorner] = [...rendered.container.querySelectorAll('rect[fill="#4a8fe7"]')];
     expect(centerOf(firstCorner).x).toBeCloseTo(bounds.minX * 2, 6);
     expect(centerOf(firstCorner).y).toBeCloseTo(bounds.minY * 0.5, 6);
   });

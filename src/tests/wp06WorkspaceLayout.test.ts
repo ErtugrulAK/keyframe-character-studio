@@ -1,6 +1,6 @@
 /** WP-06 — the Outliner/Details split keeps Details usable when the sidebar has room. */
 import { describe, expect, it } from 'vitest';
-import { resolveOutlinerHeight } from '../utils/workspaceLayout';
+import { resolveOutlinerHeight } from '../utils/editor/workspaceLayout';
 
 describe('WP-06 outliner height bound', () => {
   // C4: Details keeps at least 140 px (was 160) — a short window gives the layer list the 20 px.

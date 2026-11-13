@@ -311,11 +311,13 @@ test('the snap threshold is a screen radius at any zoom: a 4px miss locks, a 16p
       await expect.poll(() => cameraZoom(page), { message: 'the zoom-in never committed' }).toBeGreaterThan(1);
     }
     if (zoom === 'out') {
-      for (let step = 0; step < 13; step += 1) {
+      // Out to about 30 % (the old zoom floor this case was measured at; the
+      // floor is 10 % now, where this small layer is mostly handles).
+      for (let step = 0; step < 13 && (await cameraZoom(page)) > 0.31; step += 1) {
         const before = await cameraZoom(page);
         await page.keyboard.press('-');
         await expect.poll(() => cameraZoom(page), { message: `zoom-out step ${step + 1} never committed` })
-          .toBeLessThanOrEqual(Math.max(0.3, before * 0.9) + 1e-9);
+          .toBeLessThanOrEqual(before * 0.9 + 1e-9);
       }
     }
 

@@ -1,5 +1,6 @@
+import { sceneStepMarkers, stepEndFrames } from '../utils/animation/stepMarkers';
 import type { SceneData } from '../types/composition';
-import { foldDiacritics, isSafePackageRelativePath, sanitizeFilenameComponent } from '../utils/pathSafety';
+import { foldDiacritics, isSafePackageRelativePath, sanitizeFilenameComponent } from '../utils/persistence/pathSafety';
 import { validateSceneForOGraf } from './validation';
 import { describeOGrafValueForDiagnostics } from './diagnostics';
 import {
@@ -72,7 +73,7 @@ export function isSafeOGrafPackagePath(value: string): boolean {
   return isSafePackageRelativePath(value);
 }
 
-export interface OGrafManifestCompilation {
+interface OGrafManifestCompilation {
   manifest: OGrafManifest;
   diagnostics: OGrafExportDiagnostic[];
 }
@@ -81,6 +82,7 @@ export function compileOGrafManifest(sceneData: SceneData, options: OGrafExportO
   const validated = validateSceneForOGraf(sceneData, options);
   const publicFields = [...validated.publicTextFields, ...validated.publicImageFields, ...validated.publicColorFields];
   const diagnostics = [...validated.diagnostics, ...collectCompilerDiagnostics(options, publicFields)];
+  const stepEnds = stepEndFrames(sceneStepMarkers(sceneData), sceneData.totalFrames);
   const manifest: OGrafManifest = {
     $schema: OGRAF_GRAPHICS_SCHEMA_URL,
     id: getGraphicId(sceneData, options),
@@ -88,8 +90,16 @@ export function compileOGrafManifest(sceneData: SceneData, options: OGrafExportO
     main: (options.main?.trim() || OGRAF_DEFAULT_MAIN).replace(/\\/gu, '/'),
     version: options.version?.trim() || OGRAF_DEFAULT_VERSION,
     supportsRealTime: true,
-    supportsNonRealTime: false,
-    stepCount: 1,
+    supportsNonRealTime: true,
+    stepCount: stepEnds.length,
+    // A play runs one step (the whole timeline when there are no step markers)
+    // at the scene's frame rate: the first one from the start; a stop after
+    // it and an update apply at once.
+    actionDurations: [
+      { type: 'playAction', duration: Math.round((stepEnds[0] / sceneData.fps) * 1000) },
+      { type: 'stopAction', duration: 0 },
+      { type: 'updateAction', duration: 0 },
+    ],
     schema: validated.publicStateSchema,
     ...(options.description?.trim() ? { description: options.description.trim() } : {}),
     ...(options.emitRenderRequirements === false ? {} : {

@@ -11,8 +11,8 @@
  * the TRACK, not the part — track visibility is a sequencer concern and is
  * deliberately out of this slice, see the semantics map DEFER list.)
  */
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { isMatteSourceSuppressed, suppressedMatteSourceIds } from '../utils/matte';
+import { render, fireEvent, cleanup } from '@testing-library/react';
+import { isMatteSourceSuppressed, suppressedMatteSourceIds } from '../utils/layers/matte';
 import { StyleMatteSection } from '../components/Inspector/sections/style/StyleMatteSection';
 import type { CharacterPart } from '../types/animator';
 

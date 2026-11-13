@@ -4,24 +4,24 @@ import type { OGrafExportDiagnostic } from '../ograf/types';
 import type { ToastOptions } from './useToast';
 import { renderGif, type GifExportResult } from '../export/gifExport';
 import { validateGifScene } from '../export/gifPlan';
-import { downloadBlob } from '../utils/fileDownload';
-import { sanitizeFilenameComponent } from '../utils/pathSafety';
+import { downloadBlob } from '../utils/persistence/fileDownload';
+import { sanitizeFilenameComponent } from '../utils/persistence/pathSafety';
 
 type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
 
-export interface GifExportProgressState {
+interface GifExportProgressState {
   completed: number;
   total: number;
 }
 
-export interface GifExportStartOptions {
+interface GifExportStartOptions {
   /** The scene SNAPSHOT the panel summarised; never re-read while rendering. */
   scene: SceneData;
   exportFps: number;
   scale: number;
 }
 
-export interface GifExportController {
+interface GifExportController {
   isExporting: boolean;
   progress: GifExportProgressState | null;
   /** The finished export, for the summary the panel keeps on screen. */

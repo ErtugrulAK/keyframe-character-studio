@@ -11,7 +11,7 @@ import {
   resolveColorCorrection,
   resolvedParameters,
   type ColorCorrectionField,
-} from '../../../../utils/colorCorrection';
+} from '../../../../utils/layers/colorCorrection';
 
 interface ColorCorrectionCardProps {
   part: CharacterPart;
@@ -41,7 +41,7 @@ const DRAW_SHAPES: { shape: MaskDrawShape; label: string }[] = [
 ];
 
 /**
- * WP-08 — Inspector › Color Correction (first slice: images). One correction
+ * Inspector › Color Correction (first slice: images). One correction
  * per layer: enable/bypass, reset to neutral, the scope (whole layer or one of
  * this layer's masks — an effect-only mask can be drawn for it), brightness,
  * contrast, saturation and amount. A slider drag is ONE undo step (the
@@ -74,7 +74,7 @@ export const ColorCorrectionCard: React.FC<ColorCorrectionCardProps> = ({
           : 'Not applied';
 
   return (
-    <StyleCard title="COLOR CORRECTION" collapsible defaultOpen retainKey="color-correction" badge={badge}>
+    <StyleCard title="COLOR CORRECTION" collapsible retainKey="color-correction" badge={badge}>
       {!effect ? (
         <>
           <p className="matte-section-intro">Brightness, contrast and saturation for this image, on the whole image or only inside a mask. The image itself is not changed.</p>

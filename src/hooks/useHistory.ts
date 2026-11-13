@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { CharacterPart, MotionTemplate, Track } from '../types/animator';
 import type { SceneCoordinateSystem } from '../types/composition';
+import { deepFreeze, structurallyEqual } from '../utils/persistence/historySnapshot';
 
 /**
  * The document-level authoring state a scene replacement carries.
@@ -19,11 +20,38 @@ export interface HistoryDocumentState {
   activeTemplateId: string;
 }
 
-export interface HistoryState {
+interface HistoryState {
   tracks: Track[];
   characterParts: CharacterPart[];
   motionTemplates?: MotionTemplate[];
   document?: HistoryDocumentState;
+}
+
+/**
+ * A snapshot holds the state arrays themselves, not copies: scene state is
+ * updated immutably, so a recorded array never changes afterwards. Development
+ * builds freeze it to prove that — an in-place edit throws instead of quietly
+ * rewriting history.
+ */
+const recordSnapshot = (
+  tracks: Track[],
+  characterParts: CharacterPart[],
+  motionTemplates: MotionTemplate[] | undefined,
+  document: HistoryDocumentState,
+): HistoryState => {
+  const snapshot: HistoryState = {
+    tracks,
+    characterParts,
+    ...(motionTemplates ? { motionTemplates } : {}),
+    document,
+  };
+  return import.meta.env.DEV ? deepFreeze(snapshot) : snapshot;
+};
+
+/** Which layers were selected; restored with a snapshot, never part of the scene. */
+export interface HistorySelection {
+  primary: string | null;
+  ids: string[];
 }
 
 interface UseHistoryOptions {
@@ -39,6 +67,10 @@ interface UseHistoryOptions {
   documentState: HistoryDocumentState;
   /** Applies a document snapshot verbatim; must be stable (`useCallback`). */
   restoreDocumentState: (state: HistoryDocumentState) => void;
+  /** The selection on screen; undo puts back the selection an edit started from. */
+  selection?: HistorySelection;
+  /** Applies a remembered selection (must be stable). */
+  restoreSelection?: (selection: HistorySelection) => void;
 }
 
 /**
@@ -61,7 +93,37 @@ export const useHistory = ({
   setMotionTemplates,
   documentState,
   restoreDocumentState,
+  selection,
+  restoreSelection,
 }: UseHistoryOptions) => {
+  /**
+   * The selection around each edit, kept beside the snapshots (not inside them,
+   * so a selection change never makes two scenes differ): `before` is what was
+   * selected when the edit started, `after` what was selected when it ended.
+   * Undo restores `before` (the layers a Boolean was made from stay selected),
+   * redo restores `after`.
+   */
+  const selectionAroundRef = useRef(new WeakMap<HistoryState, { before?: HistorySelection; after?: HistorySelection }>());
+  const selectionRef = useRef<HistorySelection | undefined>(selection);
+  // oxlint-disable-next-line react/refs
+  selectionRef.current = selection;
+  /** The selection of the previous render: the one an edit in this render started from. */
+  const committedSelectionRef = useRef<HistorySelection | undefined>(selection);
+  const batchSelectionRef = useRef<HistorySelection | undefined>(undefined);
+  const selectionKey = selection ? `${selection.primary}|${selection.ids.join(',')}` : '';
+  /**
+   * Whether undo/redo puts the remembered selection back: when the selection
+   * on screen is still the one the step left (the user has not picked anything
+   * since), or when it would be lost (nothing selected, or a layer the step
+   * removes). A layer the user picked since, still present, stays selected.
+   */
+  const shouldRestoreSelection = (parts: CharacterPart[], leftByStep: HistorySelection | undefined): boolean => {
+    const current = selectionRef.current;
+    if (!current || current.ids.length === 0) return true;
+    if (leftByStep && current.primary === leftByStep.primary && current.ids.join(',') === leftByStep.ids.join(',')) return true;
+    const present = new Set(parts.map((part) => part.id));
+    return current.ids.some((id) => !present.has(id));
+  };
   // Undo / Redo Stack State
   const [history, setHistory] = useState<HistoryState[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
@@ -120,12 +182,8 @@ export const useHistory = ({
   const startBatchInteraction = useCallback(() => {
     if (!isBatchInteractingRef.current) {
       isBatchInteractingRef.current = true;
-      batchStartSnapshotRef.current = {
-        tracks: structuredClone(tracksRef.current),
-        characterParts: structuredClone(characterPartsRef.current),
-        ...(motionTemplates ? { motionTemplates: structuredClone(motionTemplates) } : {}),
-        document: structuredClone(documentStateRef.current),
-      };
+      batchStartSnapshotRef.current = recordSnapshot(tracksRef.current, characterPartsRef.current, motionTemplates, documentStateRef.current);
+      batchSelectionRef.current = selectionRef.current;
     }
   }, [characterPartsRef, motionTemplates, tracksRef]);
 
@@ -135,18 +193,14 @@ export const useHistory = ({
       isBatchInteractingRef.current = false;
       batchStartSnapshotRef.current = null;
 
-      const finalSnap: HistoryState = {
-        tracks: structuredClone(tracksRef.current),
-        characterParts: structuredClone(characterPartsRef.current),
-        ...(motionTemplates ? { motionTemplates: structuredClone(motionTemplates) } : {}),
-        document: structuredClone(documentStateRef.current),
-      };
+      const finalSnap = recordSnapshot(tracksRef.current, characterPartsRef.current, motionTemplates, documentStateRef.current);
 
-      if (initialSnap && JSON.stringify(initialSnap) !== JSON.stringify(finalSnap)) {
+      if (initialSnap && !structurallyEqual(initialSnap, finalSnap)) {
         const trimmed = historyRef.current.slice(0, historyIndexRef.current + 1);
         // Defensive bootstrap: if the stack is somehow empty, seed it with the
         // pre-interaction state so undo can always restore it.
         const base = trimmed.length === 0 ? [initialSnap] : trimmed;
+        selectionAroundRef.current.set(finalSnap, { before: batchSelectionRef.current, after: selectionRef.current });
         commitHistory([...base, finalSnap].slice(-50));
       }
     }
@@ -179,12 +233,7 @@ export const useHistory = ({
     if (isBatchInteractingRef.current) {
       return;
     }
-    const snap: HistoryState = {
-      tracks: structuredClone(tracks),
-      characterParts: structuredClone(characterParts),
-      ...(motionTemplates ? { motionTemplates: structuredClone(motionTemplates) } : {}),
-      document: structuredClone(documentStateRef.current),
-    };
+    const snap = recordSnapshot(tracks, characterParts, motionTemplates, documentStateRef.current);
 
     if (baselineResetRef.current) {
       // Initialization, not an edit: the restored document IS the baseline.
@@ -195,7 +244,7 @@ export const useHistory = ({
 
     const current = historyRef.current;
     const last = current[current.length - 1];
-    if (last && JSON.stringify(last) === JSON.stringify(snap)) {
+    if (last && structurallyEqual(last, snap)) {
       return; // no change — do not touch the index
     }
 
@@ -206,8 +255,16 @@ export const useHistory = ({
     }
 
     const trimmed = current.slice(0, historyIndexRef.current + 1);
+    selectionAroundRef.current.set(snap, { before: committedSelectionRef.current, after: selectionRef.current });
     commitHistory([...trimmed, snap].slice(-50));
   }, [tracks, characterParts, motionTemplates, documentStateKey, baselineResetToken, commitHistory]);
+
+  // Declared after the recording effect, so that effect still sees the
+  // selection of the previous render when an edit and a selection change land
+  // in the same render.
+  useEffect(() => {
+    committedSelectionRef.current = selectionRef.current;
+  }, [selectionKey]);
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
@@ -221,19 +278,21 @@ export const useHistory = ({
       const targetState = historyRef.current[idx - 1];
       if (targetState) {
         isUndoRedoRef.current = true;
-        setTracks(structuredClone(targetState.tracks));
-        setCharacterParts(structuredClone(targetState.characterParts));
+        setTracks(targetState.tracks);
+        setCharacterParts(targetState.characterParts);
         if (setMotionTemplates && targetState.motionTemplates) {
-          setMotionTemplates(structuredClone(targetState.motionTemplates));
+          setMotionTemplates(targetState.motionTemplates);
         }
         // The document-level state goes back with the layers: restoring only the
         // layers would leave an imported frame rate or canvas on the old scene.
-        if (targetState.document) restoreDocumentState(structuredClone(targetState.document));
+        if (targetState.document) restoreDocumentState(targetState.document);
+        const around = selectionAroundRef.current.get(historyRef.current[idx]);
+        if (around?.before && restoreSelection && shouldRestoreSelection(targetState.characterParts, around.after)) restoreSelection(around.before);
         setHistoryIndex(idx - 1);
         historyIndexRef.current = idx - 1;
       }
     }
-  }, [endBatchInteraction, setTracks, setCharacterParts, setMotionTemplates, restoreDocumentState]);
+  }, [endBatchInteraction, setTracks, setCharacterParts, setMotionTemplates, restoreDocumentState, restoreSelection]);
 
   const redo = useCallback(() => {
     if (isBatchInteractingRef.current) {
@@ -244,17 +303,19 @@ export const useHistory = ({
       const targetState = historyRef.current[idx + 1];
       if (targetState) {
         isUndoRedoRef.current = true;
-        setTracks(structuredClone(targetState.tracks));
-        setCharacterParts(structuredClone(targetState.characterParts));
+        setTracks(targetState.tracks);
+        setCharacterParts(targetState.characterParts);
         if (setMotionTemplates && targetState.motionTemplates) {
-          setMotionTemplates(structuredClone(targetState.motionTemplates));
+          setMotionTemplates(targetState.motionTemplates);
         }
-        if (targetState.document) restoreDocumentState(structuredClone(targetState.document));
+        if (targetState.document) restoreDocumentState(targetState.document);
+        const around = selectionAroundRef.current.get(targetState);
+        if (around?.after && restoreSelection && shouldRestoreSelection(targetState.characterParts, around.before)) restoreSelection(around.after);
         setHistoryIndex(idx + 1);
         historyIndexRef.current = idx + 1;
       }
     }
-  }, [endBatchInteraction, setTracks, setCharacterParts, setMotionTemplates, restoreDocumentState]);
+  }, [endBatchInteraction, setTracks, setCharacterParts, setMotionTemplates, restoreDocumentState, restoreSelection]);
 
   return {
     undo,

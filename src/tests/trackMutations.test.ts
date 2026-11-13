@@ -5,7 +5,7 @@ import {
   deletePropertyKeyframeMutator, 
   updatePropertyKeyframeFrameMutator,
   updateKeyframeBezierPointsMutator 
-} from '../utils/trackMutations';
+} from '../utils/animation/trackMutations';
 import { Track } from '../types/animator';
 
 describe('TrackMutations Utility', () => {

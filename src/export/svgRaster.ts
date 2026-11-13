@@ -46,8 +46,27 @@ export const rasterizeSvgFrame = async (
   }
 };
 
+/** The same rasterisation, encoded as a PNG (the OGraf package thumbnail). */
+export const rasterizeSvgToPng = async (
+  svgMarkup: string,
+  pixelWidth: number,
+  pixelHeight: number,
+  fontCss: string,
+): Promise<Uint8Array> => {
+  const frame = await rasterizeSvgFrame(svgMarkup, pixelWidth, pixelHeight, fontCss);
+  const canvas = document.createElement('canvas');
+  canvas.width = pixelWidth;
+  canvas.height = pixelHeight;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('The browser did not provide a 2D canvas for the thumbnail.');
+  context.putImageData(new ImageData(new Uint8ClampedArray(frame.data), pixelWidth, pixelHeight), 0, 0);
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) throw new Error('The browser could not encode the thumbnail.');
+  return new Uint8Array(await blob.arrayBuffer());
+};
+
 /** The `@font-face` rules are placed INSIDE the rasterised document. */
-export const injectFontStyles = (svgMarkup: string, fontCss: string): string => {
+const injectFontStyles = (svgMarkup: string, fontCss: string): string => {
   const openTagEnd = svgMarkup.indexOf('>');
   if (openTagEnd < 0) return svgMarkup;
   return `${svgMarkup.slice(0, openTagEnd + 1)}<style>${fontCss}</style>${svgMarkup.slice(openTagEnd + 1)}`;

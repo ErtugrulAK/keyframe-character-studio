@@ -67,7 +67,26 @@ describe('StyleEffectsSection compact editor', () => {
     fireEvent.change(colorInput, { target: { value: '#abcdef' } });
     expect(onPartPropChange).toHaveBeenNthCalledWith(4, 'shadowColor', '#abcdef');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Clear Shadow' }));
+    // The box replaces the old "Clear Shadow" button: unticking clears the colour.
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Shadow Enabled' }));
     expect(onPartPropChange).toHaveBeenNthCalledWith(5, 'shadowColor', undefined);
+  });
+
+  it('a layer without a shadow shows the box unticked and no shadow fields', () => {
+    const { onPartPropChange } = renderEffects(makePart({ shadowColor: undefined }));
+    fireEvent.click(screen.getByRole('button', { name: 'Expand EFFECTS' }));
+    const box = screen.getByRole('checkbox', { name: 'Shadow Enabled' });
+    expect(box).not.toBeChecked();
+    expect(screen.queryByText('BLUR RADIUS')).toBeNull();
+    fireEvent.click(box);
+    expect(onPartPropChange).toHaveBeenCalledWith('shadowColor', '#000000');
+  });
+
+  it('ticking the box again brings back the colour it had', () => {
+    const onPartPropChange = vi.fn();
+    const { rerender } = render(<StyleEffectsSection selectedPart={makePart()} onPartPropChange={onPartPropChange} embedded />);
+    rerender(<StyleEffectsSection selectedPart={makePart({ shadowColor: undefined })} onPartPropChange={onPartPropChange} embedded />);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Shadow Enabled' }));
+    expect(onPartPropChange).toHaveBeenCalledWith('shadowColor', '#336699');
   });
 });

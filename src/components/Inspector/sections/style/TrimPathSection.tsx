@@ -1,7 +1,7 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
-import { normalizeTrimPathOffset } from '../../../../utils/trimPath';
+import { normalizeTrimPathOffset } from '../../../../utils/geometry/trimPath';
 import { StyleCard } from './StyleCard';
 
 /** The three keyframeable Trim Path channels. */
@@ -44,7 +44,7 @@ export const TrimPathSection: React.FC<TrimPathSectionProps> = ({
   ];
 
   return (
-    <StyleCard title="TRIM PATH" collapsible defaultOpen={false} retainKey="trim-path">
+    <StyleCard title="TRIM PATH" collapsible retainKey="trim-path">
       <label className="appearance-group-header">
         <span>ENABLE TRIM PATH</span>
         <input

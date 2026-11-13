@@ -1,7 +1,7 @@
-import { useAnimator } from '../context/useAnimator';
+import { useAnimatorAuthority } from '../context/useAnimator';
 import type { CharacterPart, Track, Transform } from '../types/animator';
 import type { ToastOptions } from './useToast';
-import { lockedLayersRefusal } from '../utils/layerLocks';
+import { lockedLayersRefusal } from '../utils/layers/layerLocks';
 import {
   collectArrangeTargets,
   planAlign,
@@ -11,10 +11,11 @@ import {
   planTranslate,
   type AlignEdge,
   type ArrangePlan,
+  type ArrangeTarget,
   type DistributeAxis,
   type FlipAxis,
   type RotateDirection,
-} from '../utils/vectorArrange';
+} from '../utils/layers/vectorArrange';
 
 type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
 
@@ -22,13 +23,13 @@ type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?
  * The one vector-arrange authoring authority for the current selection.
  *
  * It reads the selection, plans the command with the pure helpers in
- * `utils/vectorArrange` and writes the plan through the ONE transform write path
+ * `utils/layers/vectorArrange` and writes the plan through the ONE transform write path
  * (`updateCurrentTransform`: world space in, container-local out) inside a single
  * batch interaction — so a command is one undo step and one history entry, and
  * it works on animated and static layers alike. The toolbar and the keyboard
  * commands run the SAME actions, so no second geometry rule exists.
  */
-export interface VectorArrange {
+interface VectorArrange {
   /** How many measurable layers the current selection would arrange. */
   targetCount: number;
   /** Aligning needs two measurable layers. */
@@ -57,7 +58,7 @@ export interface VectorArrange {
  * from the context so the state provider can build the SAME actions for the
  * keyboard commands without a second implementation.
  */
-export interface VectorArrangeDependencies {
+interface VectorArrangeDependencies {
   currentFrame: number;
   selectedPartId: string | null;
   selectedPartIds: string[];
@@ -90,11 +91,17 @@ export const createVectorArrangeActions = ({
   const selectionIds = selectedPartId && !selectedPartIds.includes(selectedPartId)
     ? [...selectedPartIds, selectedPartId]
     : selectedPartIds;
-  const targets = collectArrangeTargets(
-    characterParts,
-    selectionIds,
-    (partId) => getComputedTransform(partId, currentFrame),
-  );
+  // Measured on first use: the provider builds these commands on every render
+  // (every playback frame) and only runs them on a key press.
+  let measured: ArrangeTarget[] | undefined;
+  const targetsNow = (): ArrangeTarget[] => {
+    measured ??= collectArrangeTargets(
+      characterParts,
+      selectionIds,
+      (partId) => getComputedTransform(partId, currentFrame),
+    );
+    return measured;
+  };
 
   /** One command: write the plan as ONE batch interaction, or explain why not. */
   const commit = (plan: ArrangePlan | null, unavailable: string) => {
@@ -106,7 +113,7 @@ export const createVectorArrangeActions = ({
     // A command that would not move anything writes nothing at all: no empty
     // history entry and no keyframe on a property that did not change.
     if (entries.length === 0) return;
-    // C4 — every target is written or none: a locked one refuses the command.
+    // Every target is written or none: a locked one refuses the command.
     const lockRefusal = lockedLayersRefusal(characterParts, tracks, entries.map(([id]) => id));
     if (lockRefusal) {
       showToast?.(lockRefusal, 'error');
@@ -119,24 +126,25 @@ export const createVectorArrangeActions = ({
   };
 
   return {
-    targetCount: targets.length,
-    canAlign: targets.length >= 2,
-    canDistribute: targets.length >= 3,
-    canTransform: targets.length >= 1,
-    align: (edge) => commit(planAlign(targets, edge), 'Align needs two measurable layers.'),
+    get targetCount() { return targetsNow().length; },
+    get canAlign() { return targetsNow().length >= 2; },
+    get canDistribute() { return targetsNow().length >= 3; },
+    get canTransform() { return targetsNow().length >= 1; },
+    align: (edge) => commit(planAlign(targetsNow(), edge), 'Align needs two measurable layers.'),
     distributeGap: (axis) => commit(
-      planDistributeByGap(targets, axis),
+      planDistributeByGap(targetsNow(), axis),
       'Distribution needs three measurable layers.',
     ),
     rotate: (direction) => commit(
-      planRotate(targets, direction),
+      planRotate(targetsNow(), direction),
       'Select a layer to rotate.',
     ),
     flip: (axis) => commit(
-      planFlip(targets, axis),
+      planFlip(targetsNow(), axis),
       'Select a layer to flip.',
     ),
     beginNudge: () => {
+      const targets = targetsNow();
       if (targets.length === 0) return null;
       const lockRefusal = lockedLayersRefusal(characterParts, tracks, targets.map((target) => target.id));
       if (lockRefusal) {
@@ -153,4 +161,8 @@ export const createVectorArrangeActions = ({
 };
 
 /** The same authority, wired to the animator context for UI callers. */
-export const useVectorArrangeAuthoring = (): VectorArrange => createVectorArrangeActions(useAnimator());
+export const useVectorArrangeAuthoring = (): VectorArrange => useAnimatorAuthority(
+  createVectorArrangeActions,
+  // The arrange targets (and so their counts) come from the selection and the layers.
+  'characterParts', 'tracks', 'selectedPartId', 'selectedPartIds',
+);

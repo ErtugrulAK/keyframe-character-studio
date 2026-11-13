@@ -37,7 +37,7 @@ test.describe('modern stroke-aware editor bounds', () => {
     const shapeBox = await shape.boundingBox();
     expect(shapeBox).not.toBeNull();
 
-    const outline = page.locator('.stage-svg rect[stroke="#00d2ff"][stroke-dasharray]').first();
+    const outline = page.locator('.stage-svg rect[stroke="#4a8fe7"][stroke-dasharray]').first();
     await expect(outline).toBeVisible();
     const outlineBox = await outline.boundingBox();
     expect(outlineBox).not.toBeNull();
@@ -114,7 +114,9 @@ test.describe('modern stroke-aware editor bounds', () => {
       const box = node.getBoundingClientRect();
       return { left: box.left, right: box.right, top: box.top, bottom: box.bottom };
     }));
-    expect(boxes.length).toBe(4);
+    // Fill and stroke swatches, stroke width and alignment, and the shadow
+    // swatch (laid out like fill and stroke since QA 2026-11-13).
+    expect(boxes.length).toBe(5);
     for (const box of boxes) {
       expect(box.left).toBeGreaterThanOrEqual(cardBox!.x);
       expect(box.right).toBeLessThanOrEqual(cardBox!.x + cardBox!.width);

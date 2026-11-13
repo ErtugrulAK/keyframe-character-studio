@@ -397,7 +397,8 @@ test('R3-02 — the side-panel handles do not move when the timeline height chan
       const rect = node.getBoundingClientRect();
       return { top: Math.round(rect.top), height: Math.round(rect.height) };
     };
-    return { left: box('.left-toolbar-toggle'), right: box('.inspector-dock-toggle') };
+    // The left dock is gone; the Inspector handle remains.
+    return { right: box('.inspector-dock-toggle') };
   });
 
   const before = await handleBoxes();
@@ -409,7 +410,6 @@ test('R3-02 — the side-panel handles do not move when the timeline height chan
   const atMinimum = await timelineHeight(page);
   expect(Math.abs(atMinimum - MIN_HEIGHT)).toBeLessThanOrEqual(1);
   const minimumHandles = await handleBoxes();
-  expect(minimumHandles.left.top).toBe(before.left.top);
   expect(minimumHandles.right.top).toBe(before.right.top);
 
   // Maximum: the panel takes as much as the window can spare.
@@ -422,7 +422,6 @@ test('R3-02 — the side-panel handles do not move when the timeline height chan
   }
   expect(atMaximum, 'the drag never resized the panel').toBeGreaterThan(MIN_HEIGHT + 40);
   const maximumHandles = await handleBoxes();
-  expect(maximumHandles.left.top).toBe(before.left.top);
   expect(maximumHandles.right.top).toBe(before.right.top);
 
   // ...and back to the minimum: the handles never moved at any height.
@@ -485,7 +484,6 @@ test('R4-01 — the dock handles stay clear of the timeline at min, default and 
     const row = document.querySelector('.main-layout')!.getBoundingClientRect();
     const panel = document.querySelector('[data-testid="sequencer-timeline"]')!.getBoundingClientRect();
     return {
-      left: read('.left-toolbar-toggle'),
       right: read('.inspector-dock-toggle'),
       rowTop: row.top,
       rowBottom: row.bottom,
@@ -495,7 +493,7 @@ test('R4-01 — the dock handles stay clear of the timeline at min, default and 
   });
 
   const expectClear = (label: string, boxes: Awaited<ReturnType<typeof geometry>>) => {
-    for (const [side, handle] of [['left', boxes.left], ['right', boxes.right]] as const) {
+    for (const [side, handle] of [['right', boxes.right]] as const) {
       // The handle never paints a single pixel over the timeline...
       expect(handle.bottom, `${label}: the ${side} handle paints over the timeline`).toBeLessThanOrEqual(boxes.timelineTop);
       // ...because it lives inside the workspace row, above the timeline.
@@ -506,16 +504,14 @@ test('R4-01 — the dock handles stay clear of the timeline at min, default and 
 
   const atDefault = await geometry();
   // A compact edge handle: no label, no bulky tab.
-  for (const handle of [atDefault.left, atDefault.right]) {
+  for (const handle of [atDefault.right]) {
     expect(handle.label).toBe('');
     expect(handle.width).toBeLessThanOrEqual(22);
     expect(handle.height).toBeLessThanOrEqual(48);
     expect(handle.height).toBeGreaterThan(handle.width);
   }
   // Symmetric: both handles ride the same inset below the workspace top edge.
-  expect(Math.abs(atDefault.left.top - atDefault.right.top)).toBeLessThanOrEqual(1);
   // C8: the shared inset is 112 px (was 32), lower down the side edge.
-  expect(Math.abs(atDefault.left.top - atDefault.rowTop - 112)).toBeLessThanOrEqual(1);
   expectClear('default', atDefault);
 
   // Minimum height: the panel gives the stage nearly everything back.
@@ -539,9 +535,7 @@ test('R4-01 — the dock handles stay clear of the timeline at min, default and 
   expect(maxBoxes.timelineHeight).toBeGreaterThan(atMinimum.timelineHeight + 40);
 
   // The anchor is the workspace row's TOP edge: a resize never moved the handles.
-  expect(Math.abs(maxBoxes.left.top - atDefault.left.top)).toBeLessThanOrEqual(1);
   expect(Math.abs(maxBoxes.right.top - atDefault.right.top)).toBeLessThanOrEqual(1);
-  expect(Math.abs(atMinimum.left.top - atDefault.left.top)).toBeLessThanOrEqual(1);
   expect(Math.abs(atMinimum.right.top - atDefault.right.top)).toBeLessThanOrEqual(1);
 
   // Window-resize safe: a short window re-clamps the panel, and the handles still

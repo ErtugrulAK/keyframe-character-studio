@@ -7,9 +7,9 @@
  */
 
 import { describe, test, expect } from 'vitest';
-import { resolveCurveTarget, resolveCurveSegment } from '../utils/timelineMetrics';
-import { updateKeyframeBezierPointsMutator } from '../utils/trackMutations';
-import { interpolateChannel } from '../utils/defaults';
+import { resolveCurveTarget, resolveCurveSegment } from '../utils/editor/timelineMetrics';
+import { updateKeyframeBezierPointsMutator } from '../utils/animation/trackMutations';
+import { interpolateChannel } from '../utils/animation/defaults';
 import type { Track, TrackChannel, PropertyKeyframe, Keyframe, LayerMaskChannel } from '../types/animator';
 
 function makeTrack(id: string, opts?: {

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 
 /** How a new set of keyframe ids folds into the selection the app already has. */
-export type KeyframeSelectionMode = 'replace' | 'toggle';
+type KeyframeSelectionMode = 'replace' | 'toggle';
 
 const foldKeyframes = (
   previous: string[],

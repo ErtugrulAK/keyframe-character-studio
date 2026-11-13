@@ -25,12 +25,12 @@ const layer = (id: string, name: string, type: string, overrides: Record<string,
 });
 const track = (partId: string) => ({ id: `track-${partId}`, partId, name: partId, color: '#22d3ee', visible: true, locked: false, expanded: false, channels: emptyChannels() });
 
-async function seed(page: Page): Promise<void> {
+async function seed(page: Page, sourceName = 'Circle'): Promise<void> {
   const scene = JSON.stringify({
     version: 1, coordinateSystem: 'project-unit-center-v1', width: 1920, height: 1080, fps: 30, totalFrames: 60,
     layers: [
       layer('landscape', 'Landscape', 'custom_image', { zIndex: 1, width: 480, height: 270, imageUrl: IMAGE, trackMatte: { sourceLayerId: 'circle', mode: 'alpha', sourceVisible: false } }),
-      layer('circle', 'Circle', 'custom_circle', { zIndex: 2, x: -60, fillColor: '#ffffff' }),
+      layer('circle', sourceName, 'custom_circle', { zIndex: 2, x: -60, fillColor: '#ffffff' }),
       layer('caption', 'Caption', 'custom_rect', { zIndex: 3, y: 160, width: 200, height: 40, trackMatte: { sourceLayerId: 'circle', mode: 'alpha', sourceVisible: true } }),
     ],
     tracks: [track('landscape'), track('circle'), track('caption')],
@@ -114,4 +114,32 @@ test('WP-04 — select a hidden matte source, move it, return to the target; con
   await page.getByTitle('Undo').click();
   await expect(summary).toContainText('Matte source: Circle');
   expect(byId(await savedScene(page), 'circle')).toBeDefined();
+});
+
+test('WP-04 — the summary button keeps its place when the reading grows (Inverted)', async ({ page }) => {
+  // A source name long enough that " · Inverted" no longer fits on the line.
+  await seed(page, 'Display Title Source');
+  await page.locator('.ue-track-row', { hasText: 'Landscape' }).first().click();
+  await openDetailsTab(page, 'Masks');
+  await page.getByRole('button', { name: 'Expand TRACK MATTE' }).click();
+  const summary = page.getByTestId('track-matte-summary');
+  // Measured inside the summary box: toggling the checkbox may scroll the panel.
+  const buttonOffset = () => summary.evaluate((box) => {
+    const button = [...box.querySelectorAll('button')].find((node) => node.textContent?.trim() === 'Select Source');
+    if (!button) return null;
+    const outer = box.getBoundingClientRect();
+    const inner = button.getBoundingClientRect();
+    return { top: inner.top - outer.top, right: outer.right - inner.right };
+  });
+  const before = await buttonOffset();
+  expect(before).not.toBeNull();
+
+  await page.getByRole('checkbox', { name: 'Inverted' }).first().check();
+  await expect(summary).toContainText('Inverted');
+
+  // Same column on the right; vertically it only re-centres on the two-line
+  // reading instead of dropping onto a line of its own.
+  const after = await buttonOffset();
+  expect(after?.right).toBe(before?.right);
+  expect(Math.abs((after?.top ?? 0) - (before?.top ?? 0))).toBeLessThan(8);
 });

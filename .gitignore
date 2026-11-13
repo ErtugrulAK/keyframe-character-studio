@@ -32,9 +32,6 @@ playwright-report/
 test-results/
 .omp/backups/
 
-# Runtime-generated embedded database
-server/db/keyframe_studio.sqlite
-
 # Local work notes, agent configuration and QA reports stay out of the repository.
 chatgpt_handoff/
 reports/

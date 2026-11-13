@@ -1,6 +1,6 @@
 import React from 'react';
 
-export interface SmartHexInputProps {
+interface SmartHexInputProps {
   value: string;
   fallback: string;
   onChange: (val: string) => void;

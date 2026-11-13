@@ -6,7 +6,7 @@
  * scene, so the browser only has to rasterise and encode what this module
  * decided.
  *
- * FPS/TIMEBASE CONTRACT (see `utils/timebase`): the requested rate is the
+ * FPS/TIMEBASE CONTRACT (see `utils/animation/timebase`): the requested rate is the
  * sampling grid, not a promise that GIF can display that many distinct frames.
  * GIF stores whole centiseconds; browsers expand delays <= 1cs to 100ms.
  * Displayed frames therefore receive at least 2cs, cumulatively rounded over
@@ -18,7 +18,7 @@
 import type { SceneData } from '../types/composition';
 import type { OGrafExportDiagnostic } from '../ograf/types';
 import { validateSceneForOGraf } from '../ograf/validation';
-import { frameToSeconds, sanitizeProjectFps, secondsToFrame } from '../utils/timebase';
+import { frameToSeconds, sanitizeProjectFps, secondsToFrame } from '../utils/animation/timebase';
 
 /** Requested sampling rates; the encoded playback plan respects GIF timing. */
 export const GIF_EXPORT_FPS_OPTIONS = [10, 12, 15, 20, 24, 25, 30, 50, 60, 120];
@@ -30,7 +30,7 @@ export const GIF_MAX_DISPLAY_FPS = 50;
 export const GIF_SCALE_OPTIONS = [1, 0.5, 0.25, 0.125];
 
 /** The widest/tallest GIF the default scale aims for. */
-export const GIF_DEFAULT_MAX_EDGE = 960;
+const GIF_DEFAULT_MAX_EDGE = 960;
 
 /** Hard ceiling on how many frames one export may encode. */
 export const GIF_MAX_FRAMES = 900;
@@ -48,7 +48,7 @@ export const GIF_MAX_FRAMES = 900;
  *    not the GIF's. The GIF's own media rule is added below.
  */
 const NON_BLOCKING_FOR_GIF = [
-  // WP-08 — the GIF frames come from the SVG renderer, which draws colour
+  // The GIF frames come from the SVG renderer, which draws colour
   // correction and effect-only masks exactly like the editor.
   'OGRAF_UNSUPPORTED_COLOR_CORRECTION',
   'OGRAF_UNSUPPORTED_EFFECT_MASK',
@@ -61,7 +61,7 @@ const NON_BLOCKING_FOR_GIF = [
 ];
 
 /** True for an asset URL the isolated raster context can load (inline bytes only). */
-export const isInlineMediaUrl = (url: string): boolean => /^data:/iu.test(url);
+const isInlineMediaUrl = (url: string): boolean => /^data:/iu.test(url);
 
 /**
  * Whether the current scene can be GIF'd, in the editor's own diagnostic
@@ -102,7 +102,7 @@ export const resolveGifScale = (width: number, height: number): number => {
     ?? GIF_SCALE_OPTIONS[GIF_SCALE_OPTIONS.length - 1];
 };
 
-export interface GifDimensions {
+interface GifDimensions {
   width: number;
   height: number;
 }
@@ -146,7 +146,7 @@ export interface GifFramePlan {
   steps: GifFrameStep[];
 }
 
-export interface GifFramePlanInput {
+interface GifFramePlanInput {
   totalFrames: number;
   projectFps: number;
   exportFps: number;

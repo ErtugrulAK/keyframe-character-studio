@@ -3,7 +3,7 @@ import type { CharacterPart } from '../../../../types/animator';
 import { ColorPickerPopover } from '../../inputs/ColorPickerPopover';
 import { StyleCard } from './StyleCard';
 import { StyleEffectsSection } from './StyleEffectsSection';
-import { isShapeAppearanceEligible } from '../../../../utils/shapeAppearance';
+import { isShapeAppearanceEligible } from '../../../../utils/layers/shapeAppearance';
 
 interface StyleColorSectionProps {
   selectedPart: CharacterPart;
@@ -75,5 +75,5 @@ export const StyleColorSection: React.FC<StyleColorSectionProps> = ({
     </>
   );
 
-  return embedded ? controls : <StyleCard title="APPEARANCE" collapsible defaultOpen={false} retainKey="appearance-color">{controls}</StyleCard>;
+  return embedded ? controls : <StyleCard title="APPEARANCE" collapsible retainKey="appearance-color">{controls}</StyleCard>;
 };

@@ -1,18 +1,13 @@
 import type { SceneData, SceneLayer } from '../types/composition';
 import type { OGrafExportOptions } from './types';
-import { matchTextFontFamily } from '../utils/textFonts';
+import { matchTextFontFamily } from '../utils/layers/textFonts';
 import playfairDisplayUrl from '../assets/fonts/playfair-display/PlayfairDisplay.ttf?url';
 import playfairDisplayLicense from '../assets/fonts/playfair-display/OFL.txt?raw';
+import { EMBEDDED_IMAGE_MIME_TYPES, decodeDataUrl, isSafeEmbeddedImage } from '../utils/persistence/embeddedImage';
+import { BUNDLED_TEXT_FONTS, type BundledFontFamily } from './bundledFonts';
+import type { OGrafAssetCatalogEntry } from './types';
 
-const EMBEDDED_IMAGE_MIME_TYPES: Record<string, string> = {
-  'image/gif': 'gif',
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/svg+xml': 'svg',
-  'image/webp': 'webp',
-};
-
-export interface LegacyOGrafPreparation {
+interface LegacyOGrafPreparation {
   sceneData: SceneData;
   options: OGrafExportOptions;
 }
@@ -33,40 +28,6 @@ function hashBytes(bytes: Uint8Array): string {
   }
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
-
-function bytesFromBinaryString(value: string): Uint8Array {
-  const bytes = new Uint8Array(value.length);
-  for (let index = 0; index < value.length; index += 1) bytes[index] = value.charCodeAt(index) & 0xff;
-  return bytes;
-}
-function isSafeEmbeddedImage(bytes: Uint8Array, mimeType: string): boolean {
-  if (mimeType !== 'image/svg+xml') return true;
-  const source = new TextDecoder().decode(bytes);
-  return !/<(?:script|iframe|object|foreignObject)\b|<!DOCTYPE\b|<!ENTITY\b|(?:on[a-z]+\s*=|(?:href|xlink:href)\s*=\s*["']?\s*(?:javascript:|data:))/iu.test(source);
-}
-
-function decodeDataUrl(source: string): { bytes: Uint8Array; mimeType: string } | undefined {
-  const match = source.match(/^data:([^;,]+)(;base64)?,([\s\S]*)$/iu);
-  if (!match) return undefined;
-  const mimeType = match[1].toLowerCase();
-  if (!Object.prototype.hasOwnProperty.call(EMBEDDED_IMAGE_MIME_TYPES, mimeType)) return undefined;
-  try {
-    const payload = match[2] ? atob(match[3]) : decodeURIComponent(match[3]);
-    const bytes = bytesFromBinaryString(payload);
-    return bytes.length > 0 && isSafeEmbeddedImage(bytes, mimeType) ? { bytes, mimeType } : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * True when `source` is a data URL whose MIME type and payload pass the
- * embedded-image policy (the allowlist above plus the SVG script check).
- *
- * The Lottie importer uses this instead of its own MIME list so a document can
- * never smuggle an image form the rest of the app refuses to embed.
- */
-export const isSupportedEmbeddedImage = (source: string): boolean => decodeDataUrl(source) !== undefined;
 
 async function readBlobUrl(source: string): Promise<{ bytes: Uint8Array; mimeType: string } | undefined> {
   if (!source.startsWith('blob:') || typeof fetch !== 'function') return undefined;
@@ -104,6 +65,39 @@ const sha256Hex = async (bytes: Uint8Array): Promise<string | undefined> => {
     return undefined;
   }
 };
+
+/** The owned bytes at `url`, or undefined unless they hash to `sha256` exactly. */
+async function readPinnedBytes(url: string, sha256: string): Promise<Uint8Array | undefined> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return undefined;
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return await sha256Hex(bytes) === sha256 ? bytes : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * A bundled WOFF2 family as one catalog entry: the Latin face, with the Latin
+ * Extended face as an additional face (each with its unicode-range). Both
+ * subsets are required — Turkish needs both — so a missing or mutated file
+ * leaves the family unpackaged and the validator's font diagnostic stands.
+ */
+async function readBundledWoff2Family(family: BundledFontFamily): Promise<OGrafAssetCatalogEntry | undefined> {
+  const [latin, latinExt] = family.faces;
+  const [latinBytes, latinExtBytes] = await Promise.all([readPinnedBytes(latin.url, latin.sha256), readPinnedBytes(latinExt.url, latinExt.sha256)]);
+  if (!latinBytes || !latinExtBytes) return undefined;
+  return {
+    kind: 'local',
+    packagedPath: `assets/fonts/${family.slug}-latin.woff2`,
+    binaryContent: latinBytes,
+    unicodeRange: latin.unicodeRange,
+    fontWeight: family.fontWeight,
+    licenseText: family.licenseText,
+    additionalFaces: [{ packagedPath: `assets/fonts/${family.slug}-latin-ext.woff2`, binaryContent: latinExtBytes, unicodeRange: latinExt.unicodeRange, fontWeight: family.fontWeight }],
+  };
+}
 
 async function readBundledPlayfairFont(): Promise<PreparedAsset | undefined> {
   try {
@@ -144,8 +138,8 @@ function finishPreparation(state: PreparationState, baseOptions: OGrafExportOpti
 }
 
 /**
- * Converts same-document embedded images and the bundled Playfair Display font
- * into owned package bytes. Remote, executable, file, and unsupported sources
+ * Converts same-document embedded images and the bundled text fonts (Playfair
+ * Display and the WOFF2 families of src/fonts.css) into owned package bytes. Remote, executable, file, and unsupported sources
  * remain untouched so the canonical OGraf validator keeps rejecting them.
  *
  * Data-only images retain the synchronous flow; blob images and bundled fonts
@@ -158,12 +152,14 @@ export function prepareLegacyOGrafExport(sceneData: SceneData, baseOptions: OGra
     preparedBySource: new Map<string, PreparedAsset>(),
   };
   const blobLayers: Array<{ layer: SceneLayer; source: string }> = [];
-  const bundledFontFamilies = new Set<string>();
+  /** Layer font strings (as written) → the bundled family they name. */
+  const bundledFontFamilies = new Map<string, string>();
 
   for (const layer of state.sceneData.layers) {
-    if (layer.fontFamily && matchTextFontFamily(layer.fontFamily) === "'Playfair Display'"
+    const bundled = layer.fontFamily ? matchTextFontFamily(layer.fontFamily) : undefined;
+    if (layer.fontFamily && bundled && (bundled === "'Playfair Display'" || BUNDLED_TEXT_FONTS[bundled])
       && !baseOptions.assetCatalog?.[`font:${layer.fontFamily}`] && !baseOptions.assetCatalog?.[layer.fontFamily]) {
-      bundledFontFamilies.add(layer.fontFamily);
+      bundledFontFamilies.set(layer.fontFamily, bundled);
     }
     if (layer.type !== 'custom_image' || !layer.imageUrl) continue;
     const source = layer.imageUrl;
@@ -174,13 +170,18 @@ export function prepareLegacyOGrafExport(sceneData: SceneData, baseOptions: OGra
 
   if (blobLayers.length === 0 && bundledFontFamilies.size === 0) return finishPreparation(state, baseOptions);
   return (async () => {
-    if (bundledFontFamilies.size > 0) {
-      const font = await readBundledPlayfairFont();
-      if (font) {
-        for (const family of bundledFontFamilies) {
-          state.assetCatalog[`font:${family}`] = { kind: 'local', ...font, licenseText: playfairDisplayLicense };
+    const prepared = new Map<string, OGrafAssetCatalogEntry | undefined>();
+    for (const [written, bundled] of bundledFontFamilies) {
+      if (!prepared.has(bundled)) {
+        if (bundled === "'Playfair Display'") {
+          const font = await readBundledPlayfairFont();
+          prepared.set(bundled, font && { kind: 'local', ...font, fontWeight: '400 900', licenseText: playfairDisplayLicense });
+        } else {
+          prepared.set(bundled, await readBundledWoff2Family(BUNDLED_TEXT_FONTS[bundled]));
         }
       }
+      const entry = prepared.get(bundled);
+      if (entry) state.assetCatalog[`font:${written}`] = entry;
     }
     for (const { layer, source } of blobLayers) {
       const embedded = await readBlobUrl(source);

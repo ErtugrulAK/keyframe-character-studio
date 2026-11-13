@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { validateImportedDocument } from '../utils/importValidation';
+import { validateImportedDocument } from '../utils/persistence/importValidation';
 
 /**
- * The compatibility matrix from `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` §4,
+ * The compatibility matrix from `docs/specs/INTEROP_STUDY.md` §4,
  * executed as fixtures: one document per supported kind, asserting the decision
  * (apply) and the report the user sees (refusal code, or the migration warning).
  */

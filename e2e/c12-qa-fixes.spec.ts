@@ -184,7 +184,7 @@ test.describe('C12 — QA fixes', () => {
     })).toBeLessThan(0.35);
 
     // The artboard's top edge: count the painted cyan rows across it.
-    const border = await page.locator('.stage-canvas-container svg line[stroke="#00d2ff"]').first().boundingBox();
+    const border = await page.locator('.stage-canvas-container svg line[stroke="#4a8fe7"]').first().boundingBox();
     if (!border) throw new Error('artboard border has no box');
     const column = Array.from({ length: 21 }, (_, row) => ({ x: border.x + border.width / 3, y: border.y - 10 + row }));
     // Antialiased, so a row counts once it is clearly cyan-tinted.
@@ -192,7 +192,7 @@ test.describe('C12 — QA fixes', () => {
     expect(cyanRows).toBeGreaterThan(0);
     expect(cyanRows).toBeLessThanOrEqual(3);
 
-    const frame = page.getByTestId('transform-gizmo').first().locator('rect[stroke="#00d2ff"]').first();
+    const frame = page.getByTestId('transform-gizmo').first().locator('rect[stroke="#4a8fe7"]').first();
     await expect(frame).toHaveAttribute('vector-effect', 'non-scaling-stroke');
     await expect(frame).toHaveAttribute('stroke-width', '1.5');
     await expect(frame).toHaveAttribute('stroke-dasharray', '5 4');
@@ -245,28 +245,32 @@ test.describe('C12 — QA fixes', () => {
     for (const layer of zoomed.layers) expect(layer.screen).toBeCloseTo(1.5 * zoomed.view, 3);
   });
 
-  test('the X and Y axis badges are on screen at the opening zoom and at the artboard edges zoomed out', async ({ page }) => {
+  test('small axis markers sit on the stage edges, pointing at the origin, at the opening zoom and zoomed out', async ({ page }) => {
     await seed(page, { version: 1, layers: [], tracks: [], fps: 30, totalFrames: 60, projectResolution: { width: 1920, height: 1080 } });
     const stage = await page.locator('.stage-canvas-container').boundingBox();
     if (!stage) throw new Error('stage has no box');
-    const box = async (axis: 'x' | 'y') => {
-      const found = await page.getByTestId(`coordinate-axis-badge-${axis}`).boundingBox();
-      if (!found) throw new Error(`no ${axis} badge`);
+    const box = async (side: string) => {
+      const found = await page.getByTestId(`coordinate-axis-marker-${side}`).boundingBox();
+      if (!found) throw new Error(`no ${side} marker`);
       return found;
     };
-    // The opening camera shows less than the artboard: the badges sit at the
-    // stage's own right and top edges, on their axes.
-    for (const axis of ['x', 'y'] as const) {
-      const badge = await box(axis);
-      expect(badge.x).toBeGreaterThanOrEqual(stage.x);
-      expect(badge.y).toBeGreaterThanOrEqual(stage.y);
-      expect(badge.x + badge.width).toBeLessThanOrEqual(stage.x + stage.width);
-      expect(badge.y + badge.height).toBeLessThanOrEqual(stage.y + stage.height);
-    }
-    expect(stage.x + stage.width - ((await box('x')).x + (await box('x')).width)).toBeLessThan(12);
-    expect((await box('y')).y - stage.y).toBeLessThan(12);
-    await expect(page.getByTestId('coordinate-axis-badge-x')).toContainText('X');
-    await expect(page.getByTestId('coordinate-axis-badge-y')).toContainText('Y');
+    await expect(page.getByTestId('coordinate-axis-badge-x')).toHaveCount(0);
+    const check = async () => {
+      for (const side of ['left', 'right', 'top', 'bottom']) {
+        const marker = await box(side);
+        // Small (a few pixels) and inside the stage, against its edge.
+        expect(Math.max(marker.width, marker.height)).toBeLessThan(8);
+        expect(marker.x).toBeGreaterThanOrEqual(stage.x - 1);
+        expect(marker.y).toBeGreaterThanOrEqual(stage.y - 1);
+        expect(marker.x + marker.width).toBeLessThanOrEqual(stage.x + stage.width + 1);
+        expect(marker.y + marker.height).toBeLessThanOrEqual(stage.y + stage.height + 1);
+      }
+      expect((await box('left')).x - stage.x).toBeLessThan(2);
+      expect(stage.x + stage.width - ((await box('right')).x + (await box('right')).width)).toBeLessThan(2);
+      expect((await box('top')).y - stage.y).toBeLessThan(2);
+      expect(stage.y + stage.height - ((await box('bottom')).y + (await box('bottom')).height)).toBeLessThan(2);
+    };
+    await check();
 
     const centre = await stageCentre(page);
     await page.mouse.move(centre.x, centre.y);
@@ -275,18 +279,7 @@ test.describe('C12 — QA fixes', () => {
       await page.mouse.wheel(0, 200);
       await page.keyboard.up('Control');
     }
-    // Zoomed out, the whole artboard is on screen: the badges sit just inside
-    // its edges (a 6 px inset, plus the outlines).
-    const border = page.locator('.stage-canvas-container svg line[stroke="#00d2ff"]');
-    const top = await border.nth(0).boundingBox();
-    const right = await border.nth(3).boundingBox();
-    if (!top || !right) throw new Error('artboard border has no box');
-    await expect.poll(async () => right.x - ((await box('x')).x + (await box('x')).width)).toBeLessThan(8);
-    const x = await box('x');
-    expect(x.x + x.width).toBeLessThanOrEqual(right.x + 1);
-    const y = await box('y');
-    expect(y.y).toBeGreaterThanOrEqual(top.y - 1);
-    expect(y.y - top.y).toBeLessThan(8);
+    await check();
   });
 
   for (const size of [{ width: 1440, height: 900 }, { width: 1536, height: 730 }, { width: 1366, height: 650 }, { width: 390, height: 844 }]) {

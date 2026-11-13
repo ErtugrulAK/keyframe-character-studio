@@ -7,10 +7,10 @@ describe('StyleCard unified Inspector disclosure', () => {
   it('renders neutral peer headers without leading decorative content', () => {
     const { container } = render(
       <>
-        <StyleCard title="TRANSFORM" collapsible defaultOpen={false}>Transform content</StyleCard>
-        <StyleCard title="APPEARANCE" collapsible defaultOpen={false}>Appearance content</StyleCard>
-        <StyleCard title="EFFECTS" collapsible defaultOpen={false}>Effects content</StyleCard>
-        <StyleCard title="MASK / TRACK MATTE" collapsible defaultOpen={false}>Matte content</StyleCard>
+        <StyleCard title="TRANSFORM" collapsible>Transform content</StyleCard>
+        <StyleCard title="APPEARANCE" collapsible>Appearance content</StyleCard>
+        <StyleCard title="EFFECTS" collapsible>Effects content</StyleCard>
+        <StyleCard title="MASK / TRACK MATTE" collapsible>Matte content</StyleCard>
       </>,
     );
 
@@ -22,7 +22,7 @@ describe('StyleCard unified Inspector disclosure', () => {
 
   it('keeps disclosure state local and does not alter child content on toggle', () => {
     render(
-      <StyleCard title="TRIM PATH" collapsible defaultOpen={false}>
+      <StyleCard title="TRIM PATH" collapsible>
         <span>Trim content</span>
       </StyleCard>,
     );
@@ -37,9 +37,9 @@ describe('StyleCard unified Inspector disclosure', () => {
   it('C3 — a card with a retainKey keeps its open state across an unmount (Broadcast round trip); keys are independent', () => {
     const cards = () => (
       <>
-        <StyleCard title="APPEARANCE" collapsible defaultOpen={false} retainKey="appearance">A</StyleCard>
-        <StyleCard title="APPEARANCE" collapsible defaultOpen={false} retainKey="text-appearance">T</StyleCard>
-        <StyleCard title="EFFECTS" collapsible defaultOpen={false}>E</StyleCard>
+        <StyleCard title="APPEARANCE" collapsible retainKey="appearance">A</StyleCard>
+        <StyleCard title="APPEARANCE" collapsible retainKey="text-appearance">T</StyleCard>
+        <StyleCard title="EFFECTS" collapsible>E</StyleCard>
       </>
     );
     const first = render(cards());

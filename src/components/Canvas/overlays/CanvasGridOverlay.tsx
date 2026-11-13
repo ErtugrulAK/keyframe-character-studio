@@ -1,5 +1,6 @@
-import React from 'react';
-import type { CoordinatePoint } from '../../../utils/projectCoordinates';
+import React, { useMemo } from 'react';
+import { artboardGridPaths } from '../../../utils/geometry/artboardGrid';
+import type { CoordinatePoint } from '../../../utils/geometry/projectCoordinates';
 
 interface CanvasGridOverlayProps {
   artX: number;
@@ -21,15 +22,22 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
   showGrid,
   appMode,
 }) => {
+  const grid = useMemo(() => artboardGridPaths(artX, artY, width, height), [artX, artY, width, height]);
   if (appMode === 'broadcast') return null;
 
   return (
     <>
-      {/* Solid Grid Pattern (Minor 50px + Major 100px, anchored at the origin so lines pass through the axes) */}
+      {/* The grid: lines through the axes, spaced so every edge cell is whole
+          (`artboardGrid`), drawn as one-pixel lines. A tiled pattern split
+          lines at its tile edges and left part cells at the border. The
+          transparent artboard box under it keeps the stage's hit area. */}
       {showGrid && (
         <>
-          <rect className="canvas-bg" x={artX} y={artY} width={width} height={height} fill="url(#svg-grid-minor)" />
-          <rect className="canvas-bg" x={artX} y={artY} width={width} height={height} fill="url(#svg-grid-major)" />
+          <rect className="canvas-bg" x={artX} y={artY} width={width} height={height} fill="transparent" />
+          <g data-testid="stage-grid" data-grid-major={grid.spacing.major} pointerEvents="none" shapeRendering="crispEdges">
+            <path d={grid.minor} fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            <path d={grid.major} fill="none" stroke="rgba(255, 255, 255, 0.10)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+          </g>
         </>
       )}
 
@@ -41,7 +49,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
           y1={artY}
           x2={artX + width}
           y2={artY}
-          stroke="#00d2ff"
+          stroke="#4a8fe7"
           strokeWidth={2}
           vectorEffect="non-scaling-stroke"
         />
@@ -51,7 +59,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
           y1={artY + height}
           x2={artX + width}
           y2={artY + height}
-          stroke="#00d2ff"
+          stroke="#4a8fe7"
           strokeWidth={2}
           vectorEffect="non-scaling-stroke"
         />
@@ -61,7 +69,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
           y1={artY}
           x2={artX}
           y2={artY + height}
-          stroke="#00d2ff"
+          stroke="#4a8fe7"
           strokeWidth={2}
           vectorEffect="non-scaling-stroke"
         />
@@ -71,7 +79,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
           y1={artY}
           x2={artX + width}
           y2={artY + height}
-          stroke="#00d2ff"
+          stroke="#4a8fe7"
           strokeWidth={2}
           vectorEffect="non-scaling-stroke"
         />
@@ -88,7 +96,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
             cx={corner.x}
             cy={corner.y}
             r={3.5 * Math.min(2.5, zScale)}
-            fill="#00d2ff"
+            fill="#4a8fe7"
             stroke="#ffffff"
             strokeWidth={1.5 * zScale}
           />

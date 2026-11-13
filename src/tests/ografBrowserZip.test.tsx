@@ -28,7 +28,7 @@ const { context, createZipMock } = vi.hoisted(() => ({
   createZipMock: vi.fn(),
 }));
 
-vi.mock('../context/useAnimator', () => ({ useAnimator: () => context }));
+vi.mock('../context/useAnimator', () => ({ useAnimator: () => context, useAnimatorSlice: () => context, useAnimatorReader: () => () => context }));
 vi.mock('../components/Modal/NewItemModal', () => ({ NewItemModal: () => null }));
 vi.mock('../ograf/browserZip', async () => {
   const actual = await vi.importActual<typeof import('../ograf/browserZip')>('../ograf/browserZip');
@@ -49,6 +49,18 @@ function makeScene(layerValue: SceneLayer = makeLayer()): SceneData {
   return { version: 1, coordinateSystem: 'project-unit-center-v1', name: 'My Project / Demo', width: 320, height: 180, fps: 60, totalFrames: 60, layers: [layerValue], tracks: [] };
 }
 
+/**
+ * Replaces only the object-URL statics: the URL constructor stays real, as in
+ * a browser (lazily loaded export modules build asset URLs with it).
+ */
+function stubObjectUrls(createObjectURL: (blob: Blob) => string, revokeObjectURL: (url: string) => void = vi.fn()): void {
+  class StubURL extends URL {
+    static override createObjectURL = createObjectURL;
+    static override revokeObjectURL = revokeObjectURL;
+  }
+  vi.stubGlobal('URL', StubURL);
+}
+
 afterEach(() => {
   cleanup();
   context.showToast.mockClear();
@@ -64,10 +76,27 @@ describe('browser OGraf ZIP writer', () => {
     const first = await actualWriter.createOGrafBrowserZip(plan);
     const second = await actualWriter.createOGrafBrowserZip(plan);
     const firstFiles = Object.keys(unzipSync(first.bytes)).sort();
-    expect(first.fileName).toBe('my-project-demo-ograf.zip');
+    expect(first.fileName).toBe('my-project-demo.ograf.zip');
     expect(first.bytes).toEqual(second.bytes);
     expect(firstFiles).toEqual(['graphic.mjs', 'my-project-demo.ograf.json', 'scene.kcs']);
     expect(new TextDecoder().decode(unzipSync(first.bytes)['scene.kcs'])).toContain('project-unit-center-v1');
+  });
+
+  it('writes the same bytes whatever the clock says', async () => {
+    // The ZIP stamped each file with the current time, so two packages of one
+    // graphic differed across a 2-second step (seen as a flake under load).
+    const plan = compileOGrafPackage(makeScene());
+    const actualWriter = await vi.importActual<typeof import('../ograf/browserZip')>('../ograf/browserZip');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date(2026, 10, 3, 12, 0, 0));
+      const first = await actualWriter.createOGrafBrowserZip(plan);
+      vi.setSystemTime(new Date(2026, 10, 3, 12, 0, 10));
+      const second = await actualWriter.createOGrafBrowserZip(plan);
+      expect(first.bytes).toEqual(second.bytes);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('sanitizes deterministic download names', () => {
@@ -93,8 +122,8 @@ describe('browser OGraf ZIP writer', () => {
 describe('HeaderBar OGraf export integration', () => {
   it('exposes one Export menu with JSON and explicit OGraf choices; Video is absent', async () => {
     context.exportProject.mockReturnValue(JSON.stringify(makeScene()));
-    createZipMock.mockResolvedValue({ fileName: 'my-project-demo-ograf.zip', bytes: new Uint8Array([80, 75, 3, 4]) });
-    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:ograf'), revokeObjectURL: vi.fn() });
+    createZipMock.mockResolvedValue({ fileName: 'my-project-demo.ograf.zip', bytes: new Uint8Array([80, 75, 3, 4]) });
+    stubObjectUrls(vi.fn(() => 'blob:ograf'));
     const downloads: string[] = [];
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function () { downloads.push(this.download); });
     render(<HeaderBar />);
@@ -110,7 +139,7 @@ describe('HeaderBar OGraf export integration', () => {
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['JSON', 'OGraf Package', 'Animated GIF', 'Check OGraf Export…']);
     fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
     await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
-    expect(downloads[0]).toBe('my-project-demo-ograf.zip');
+    expect(downloads[0]).toBe('my-project-demo.ograf.zip');
 
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'JSON', exact: true }));
@@ -120,7 +149,7 @@ describe('HeaderBar OGraf export integration', () => {
   it('blocks unsupported and missing-asset scenes with actionable diagnostics', async () => {
     context.exportProject.mockReturnValue(JSON.stringify(makeScene(makeLayer({ type: 'custom_video', videoUrl: 'video.mp4' }))));
     const createObjectURL = vi.fn(() => 'blob:should-not-download');
-    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL: vi.fn() });
+    stubObjectUrls(createObjectURL);
     render(<HeaderBar />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
@@ -142,7 +171,7 @@ describe('HeaderBar OGraf export integration', () => {
   it('shows a stable title, explanation, and next step for a blocked export', async () => {
     context.exportProject.mockReturnValue(JSON.stringify(makeScene(makeLayer({ type: 'custom_video', videoUrl: 'video.mp4' }))));
     const createObjectURL = vi.fn(() => 'blob:should-not-download');
-    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL: vi.fn() });
+    stubObjectUrls(createObjectURL);
 
     render(<HeaderBar />);
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
@@ -166,7 +195,7 @@ describe('HeaderBar OGraf export integration', () => {
     ['data:application/octet-stream;base64,QUJDREVGRw==', 'data:application/octet-stream', /QUJDREVGRw/u],
   ])('never exposes machine paths or asset secrets from %s', async (imageUrl, remnant, forbidden) => {
     context.exportProject.mockReturnValue(JSON.stringify(makeScene(makeLayer({ type: 'custom_image', imageUrl }))));
-    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:should-not-download'), revokeObjectURL: vi.fn() });
+    stubObjectUrls(vi.fn(() => 'blob:should-not-download'));
 
     render(<HeaderBar />);
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
@@ -203,8 +232,8 @@ describe('HeaderBar OGraf export integration', () => {
       makeLayer({ id: 'target', name: 'Target', matte: { sourcePartId: 'mask', mode: 'clip' } }),
     ];
     context.exportProject.mockReturnValue(JSON.stringify(scene));
-    createZipMock.mockResolvedValue({ fileName: 'my-project-demo-ograf.zip', bytes: new Uint8Array([80, 75, 3, 4]) });
-    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:ograf'), revokeObjectURL: vi.fn() });
+    createZipMock.mockResolvedValue({ fileName: 'my-project-demo.ograf.zip', bytes: new Uint8Array([80, 75, 3, 4]) });
+    stubObjectUrls(vi.fn(() => 'blob:ograf'));
 
     render(<HeaderBar />);
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
@@ -229,7 +258,7 @@ describe('HeaderBar OGraf export integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
     await waitFor(() => expect(context.showToast).toHaveBeenCalledTimes(1));
-    expect(context.showToast.mock.calls[0][0]).toContain('Display Title uses Inter');
+    expect(context.showToast.mock.calls[0][0]).toContain('Text layer Title uses Inter');
   });
 
 
@@ -255,7 +284,7 @@ describe('HeaderBar OGraf export integration', () => {
     fireEvent.click(menuItems[1]);
     expect(createZipMock).toHaveBeenCalledTimes(1);
 
-    resolveZip?.({ fileName: 'project-ograf.zip', bytes: new Uint8Array([1]) });
+    resolveZip?.({ fileName: 'project.ograf.zip', bytes: new Uint8Array([1]) });
     await waitFor(() => expect((screen.getAllByRole('menuitem') as HTMLButtonElement[])[1].disabled).toBe(false));
   });
 
@@ -276,7 +305,7 @@ describe('HeaderBar OGraf export integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
     expect((screen.getAllByRole('menuitem') as HTMLButtonElement[])[1].textContent).toContain('Packaging OGraf');
 
-    resolveZip({ fileName: 'project-ograf.zip', bytes: new Uint8Array([1]) });
+    resolveZip({ fileName: 'project.ograf.zip', bytes: new Uint8Array([1]) });
     await waitFor(() => expect((screen.getAllByRole('menuitem') as HTMLButtonElement[])[1].disabled).toBe(false));
     expect((screen.getAllByRole('menuitem') as HTMLButtonElement[])[1].textContent).toContain('OGraf Package');
   });
@@ -301,7 +330,7 @@ describe('HeaderBar OGraf export integration', () => {
   it('refuses an unreadable OGraf package with a report instead of applying it', async () => {
     render(<HeaderBar />);
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-    fireEvent.change(input, { target: { files: [new File(['PK'], 'graphic-ograf.zip', { type: 'application/zip' })] } });
+    fireEvent.change(input, { target: { files: [new File(['PK'], 'graphic.ograf.zip', { type: 'application/zip' })] } });
 
     const dialog = await screen.findByRole('dialog', { name: 'OGraf package import report' });
     expect(dialog.textContent).toContain('OGRAF_PACKAGE_UNREADABLE');

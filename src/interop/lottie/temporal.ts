@@ -6,7 +6,7 @@ import type { LottieImportDiagnostic } from './diagnostics';
  * Lottie describes a *segment* between two keyframes with `o` (outgoing) and `i`
  * (incoming) Bezier control points; KCS describes a *keyframe* with `bezierIn`
  * and `bezierOut`. One Lottie pair therefore splits across the two keyframes it
- * connects — see `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` §6.
+ * connects — see `docs/specs/LOTTIE_IMPORT_MAPPING.md` §6.
  *
  * The importer preserves the document frame rate as the scene frame rate, so
  * Lottie frame units and scene frames are the same unit and the time mapping is
@@ -49,7 +49,7 @@ export interface LottieHandleComponent {
   y?: number[];
 }
 
-export interface TemporalMappingContext {
+interface TemporalMappingContext {
   /** Which component of the Lottie value this channel maps (`0` for scalars). */
   dimension: number;
   /** Document in-point in Lottie frame units. */
@@ -65,24 +65,24 @@ export interface TemporalMappingContext {
 }
 
 /** The value-independent part of a mapped keyframe. */
-export interface SegmentTiming {
+interface SegmentTiming {
   frame: number;
   easing: 'linear' | 'hold' | 'bezier';
   bezierIn?: { x: number; y: number };
   bezierOut?: { x: number; y: number };
 }
 
-export interface MappedKeyframe extends SegmentTiming {
+interface MappedKeyframe extends SegmentTiming {
   id: string;
   value: number;
 }
 
-export interface TemporalMappingResult {
+interface TemporalMappingResult {
   keyframes: MappedKeyframe[];
   diagnostics: LottieImportDiagnostic[];
 }
 
-export interface SegmentTimingResult {
+interface SegmentTimingResult {
   /** The keyframes inside the limit, in document order. */
   accepted: LottieKeyframe[];
   /** One timing per accepted keyframe, in the same order. */

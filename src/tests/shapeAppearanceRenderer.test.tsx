@@ -90,8 +90,7 @@ describe('native SVG shape appearance rendering', () => {
   it('does not replace modern authored stroke when selected', () => {
     const html = render('custom_rect', { strokeColor: '#ffffff', strokeWidth: 8 }, true);
     expect(html).toContain('stroke="#ffffff"');
-    expect(html).not.toContain('#38bdf8');
-    expect(html).not.toContain('#00d2ff');
+    expect(html).not.toContain('#4a8fe7');
   });
 
   it('keeps legacy appearance behavior and dormant width', () => {

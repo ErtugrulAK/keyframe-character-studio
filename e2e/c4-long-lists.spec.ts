@@ -42,7 +42,10 @@ const visibleListIsFilled = (page: Page, scroller: string, row: string) => page.
   const element = document.querySelector(scrollerSelector) as HTMLElement;
   const box = element.getBoundingClientRect();
   const misses: number[] = [];
-  const contentBottom = Math.min(box.bottom, box.top + element.scrollHeight - element.scrollTop);
+  // Only what is on screen: a list that runs past the window's bottom edge
+  // (the timeline does at some heights) has nothing to hit there, and
+  // elementFromPoint answers null outside the viewport.
+  const contentBottom = Math.min(box.bottom, window.innerHeight, box.top + element.scrollHeight - element.scrollTop);
   for (let y = box.top + 2; y < contentBottom - 2; y += 6) {
     const hit = document.elementFromPoint(box.left + 40, y);
     if (!hit?.closest(rowSelector)) misses.push(Math.round(y - box.top));

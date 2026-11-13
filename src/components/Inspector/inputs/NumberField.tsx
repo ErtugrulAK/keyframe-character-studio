@@ -2,7 +2,7 @@ import React from 'react';
 
 type NativeNumberProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'defaultValue' | 'onChange'>;
 
-export interface NumberFieldProps extends NativeNumberProps {
+interface NumberFieldProps extends NativeNumberProps {
   value: number;
   /** Receives every parsed number ('live') or the parsed number once on Enter/blur ('blur'). */
   onValue: (value: number) => void;
@@ -11,7 +11,7 @@ export interface NumberFieldProps extends NativeNumberProps {
 }
 
 /**
- * C10 — a numeric field that keeps what the user TYPES while it has focus.
+ * A numeric field that keeps what the user TYPES while it has focus.
  *
  * A plain controlled `<input type="number" value={n}>` re-renders the stored
  * number on every keystroke, so an emptied field jumps back to "0" (the 0

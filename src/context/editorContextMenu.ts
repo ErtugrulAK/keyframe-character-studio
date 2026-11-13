@@ -6,9 +6,13 @@ export interface ContextMenuRequest {
   targetId: string | null;
 }
 
-export interface EditorContextMenuApi {
+interface EditorContextMenuApi {
   openContextMenu: (request: ContextMenuRequest) => void;
   closeContextMenu: () => void;
+  /** Select every unlocked layer (the menu's own Select All). */
+  selectAll: () => void;
+  /** Delete the selection as the menu's Delete does (a Boolean group dissolves). */
+  deleteSelection: () => void;
 }
 
 /**

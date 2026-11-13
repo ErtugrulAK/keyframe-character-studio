@@ -180,7 +180,7 @@ export interface OGrafDiagnosticRemediation {
   context?: string;
 }
 
-export interface OGrafExportRemediationReport {
+interface OGrafExportRemediationReport {
   blocking: OGrafDiagnosticRemediation[];
   warnings: OGrafDiagnosticRemediation[];
   hasBlocking: boolean;
@@ -247,7 +247,7 @@ export function getOGrafExportRemediationReport(diagnostics: OGrafExportDiagnost
  * changed afterwards is recompiled when the export runs, and it never implies
  * that a package was written.
  */
-export interface OGrafExportReadiness {
+interface OGrafExportReadiness {
   status: 'ready' | 'warnings' | 'blocked';
   /** Stable short title, same shape as a diagnostic title. */
   title: string;
@@ -266,8 +266,8 @@ export function summarizeOGrafExportReadiness(
   packageBaseName?: string,
 ): OGrafExportReadiness {
   const report = getOGrafExportRemediationReport(diagnostics);
-  // Same naming rule as the ZIP writer in ./browserZip: <sanitized name>-ograf.zip.
-  const target = packageBaseName ? `${packageBaseName}-ograf.zip` : 'the -ograf.zip archive';
+  // Same naming rule as the ZIP writer in ./browserZip: <sanitized name>.ograf.zip.
+  const target = packageBaseName ? `${packageBaseName}.ograf.zip` : 'the .ograf.zip archive';
 
   if (report.hasBlocking) {
     const blocking = report.blocking[0];

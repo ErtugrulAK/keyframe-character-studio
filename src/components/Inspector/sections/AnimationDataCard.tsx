@@ -7,11 +7,10 @@ interface AnimationDataCardProps {
   onPasteAnimation?: () => void;
   onClearAnimation?: () => void;
   clipboardSourceId?: string | null;
-  defaultOpen?: boolean;
 }
 
 /**
- * M26 — the canonical animation-data actions (copy, paste onto this layer,
+ * The canonical animation-data actions (copy, paste onto this layer,
  * clear). Named sequences still use them; the legacy procedural IN/OUT editor
  * is intentionally de-emphasized without removing its data model or runtime
  * support.
@@ -22,9 +21,8 @@ export const AnimationDataCard: React.FC<AnimationDataCardProps> = ({
   onPasteAnimation,
   onClearAnimation,
   clipboardSourceId,
-  defaultOpen = false,
 }) => (
-  <StyleCard title="ANIMATION DATA" collapsible defaultOpen={defaultOpen} retainKey="animation-data">
+  <StyleCard title="ANIMATION DATA" collapsible retainKey="animation-data">
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
       <button
         type="button"

@@ -68,7 +68,7 @@ const frame = (page: Page) => page.evaluate(() => {
   const rects = Array.from(box.querySelectorAll('rect'));
   // The accent dash is the frame geometry itself; the paired light/dark outline
   // shares its geometry but carries the wider light stroke.
-  const drawn = rects.find((rect) => rect.getAttribute('stroke') === '#00d2ff');
+  const drawn = rects.find((rect) => rect.getAttribute('stroke') === '#4a8fe7');
   if (!drawn) throw new Error('no drawn frame');
   const client = drawn.getBoundingClientRect();
   const gizmo = box.querySelector('[data-testid="transform-gizmo"]');
@@ -287,7 +287,7 @@ test('C — the geometryless group container emits no stray selection geometry',
       })
       .map((node) => ({ tag: node.tagName, fill: node.getAttribute('fill'), testid: node.getAttribute('data-testid') }));
     return {
-      centreMarkers: box.querySelectorAll('circle[fill="#00d2ff"]').length,
+      centreMarkers: box.querySelectorAll('circle:not([data-testid="gizmo-hit-target"]):not([fill="#4a8fe7"]):not([fill="#c084fc"]):not([fill="#ffb700"])').length,
       stray,
       containerNode: document.querySelectorAll('[data-group-id] [data-part-id]').length,
       gizmoCount: document.querySelectorAll('[data-testid="transform-gizmo"]').length,
@@ -349,8 +349,8 @@ test('E — every edge handle anchors the opposite edge (unrotated)', async ({ p
   await groupPair(page);
 
   const cases = [
-    { edge: 'left', fill: '#38bdf8', index: 0, oppositeFill: '#38bdf8', oppositeIndex: 1, delta: { x: 60, y: 0 } },
-    { edge: 'right', fill: '#38bdf8', index: 1, oppositeFill: '#38bdf8', oppositeIndex: 0, delta: { x: -60, y: 0 } },
+    { edge: 'left', fill: '#4a8fe7', index: 0, oppositeFill: '#4a8fe7', oppositeIndex: 1, delta: { x: 60, y: 0 } },
+    { edge: 'right', fill: '#4a8fe7', index: 1, oppositeFill: '#4a8fe7', oppositeIndex: 0, delta: { x: -60, y: 0 } },
     { edge: 'top', fill: '#c084fc', index: 0, oppositeFill: '#c084fc', oppositeIndex: 1, delta: { x: 0, y: 40 } },
     { edge: 'bottom', fill: '#c084fc', index: 1, oppositeFill: '#c084fc', oppositeIndex: 0, delta: { x: 0, y: -40 } },
   ] as const;
@@ -396,8 +396,8 @@ test('E — a rotated group still anchors the opposite edge', async ({ page }) =
   await expect(page.getByTestId('transform-gizmo')).toHaveAttribute('transform', /rotate\(30\)/);
 
   const cases = [
-    { edge: 'left', fill: '#38bdf8', index: 0, delta: { x: 50, y: 29 } },
-    { edge: 'right', fill: '#38bdf8', index: 1, delta: { x: -50, y: -29 } },
+    { edge: 'left', fill: '#4a8fe7', index: 0, delta: { x: 50, y: 29 } },
+    { edge: 'right', fill: '#4a8fe7', index: 1, delta: { x: -50, y: -29 } },
     { edge: 'top', fill: '#c084fc', index: 0, delta: { x: -35, y: 20 } },
     { edge: 'bottom', fill: '#c084fc', index: 1, delta: { x: 35, y: -20 } },
   ] as const;
@@ -405,17 +405,17 @@ test('E — a rotated group still anchors the opposite edge', async ({ page }) =
   for (const item of cases) {
     const handle = await handleCentre(page, item.fill, item.index);
     const before = await Promise.all([
-      handleCentre(page, '#38bdf8', 0),
-      handleCentre(page, '#38bdf8', 1),
+      handleCentre(page, '#4a8fe7', 0),
+      handleCentre(page, '#4a8fe7', 1),
       handleCentre(page, '#c084fc', 0),
       handleCentre(page, '#c084fc', 1),
     ]);
     const oppositeIndex = item.index === 0 ? 1 : 0;
-    const oppositeKey = item.fill === '#38bdf8' ? (oppositeIndex === 0 ? 0 : 1) : (oppositeIndex === 0 ? 2 : 3);
+    const oppositeKey = item.fill === '#4a8fe7' ? (oppositeIndex === 0 ? 0 : 1) : (oppositeIndex === 0 ? 2 : 3);
     await dragHandle(page, handle, item.delta);
     const after = await Promise.all([
-      handleCentre(page, '#38bdf8', 0),
-      handleCentre(page, '#38bdf8', 1),
+      handleCentre(page, '#4a8fe7', 0),
+      handleCentre(page, '#4a8fe7', 1),
       handleCentre(page, '#c084fc', 0),
       handleCentre(page, '#c084fc', 1),
     ]);
@@ -423,7 +423,7 @@ test('E — a rotated group still anchors the opposite edge', async ({ page }) =
       Math.hypot(after[oppositeKey].x - before[oppositeKey].x, after[oppositeKey].y - before[oppositeKey].y),
       `${item.edge}: opposite edge moved on a rotated group`,
     ).toBeLessThanOrEqual(1.5);
-    const draggedKey = item.fill === '#38bdf8' ? (item.index === 0 ? 0 : 1) : (item.index === 0 ? 2 : 3);
+    const draggedKey = item.fill === '#4a8fe7' ? (item.index === 0 ? 0 : 1) : (item.index === 0 ? 2 : 3);
     expect(
       Math.hypot(after[draggedKey].x - handle.x, after[draggedKey].y - handle.y),
       `${item.edge}: dragged edge did not travel`,
@@ -445,7 +445,7 @@ const image = (id: string, name: string, x: number, y: number) => ({
 const frameCentre = (page: Page) => page.evaluate(() => {
   const box = document.querySelector('[data-testid="group-aggregate-box"]');
   if (!box) throw new Error('no aggregate box');
-  const drawn = Array.from(box.querySelectorAll('rect')).find((rect) => rect.getAttribute('stroke') === '#00d2ff');
+  const drawn = Array.from(box.querySelectorAll('rect')).find((rect) => rect.getAttribute('stroke') === '#4a8fe7');
   if (!drawn) throw new Error('no drawn frame');
   const rect = drawn.getBoundingClientRect();
   return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
@@ -479,37 +479,53 @@ const childSeparation = (page: Page) => page.evaluate(() => {
 });
 
 /**
- * Drags the rotation handle around the frame centre, sampling the drawn frame's
- * centre on every step. Returns the worst distance the pivot travelled.
+ * Where the selected layer's origin (the crosshair the coordinate overlay marks)
+ * is drawn: the gizmo group is translated to it.
  */
-async function dragRotation(page: Page, sweepRadians: number, steps = 14): Promise<{ worstPivotDrift: number; rotation: number }> {
-  const centre = await frameCentre(page);
+const originCentre = (page: Page) => page.evaluate(() => {
+  const gizmo = document.querySelector('[data-testid="transform-gizmo"]') as SVGGElement | null;
+  const ctm = gizmo?.getScreenCTM();
+  if (!ctm) throw new Error('no gizmo');
+  return { x: ctm.e, y: ctm.f };
+});
+
+/**
+ * Drags the rotation handle around the layer origin, sampling on every step how
+ * far the origin and the drawn frame centre travelled.
+ */
+async function dragRotation(page: Page, sweepRadians: number, steps = 14): Promise<{ worstPivotDrift: number; frameTravel: number; rotation: number }> {
+  const origin = await originCentre(page);
+  const frameStart = await frameCentre(page);
   const handle = await handleCentre(page, '#ffb700');
-  const radius = Math.hypot(handle.x - centre.x, handle.y - centre.y);
-  const startAngle = Math.atan2(handle.y - centre.y, handle.x - centre.x);
+  const radius = Math.hypot(handle.x - origin.x, handle.y - origin.y);
+  const startAngle = Math.atan2(handle.y - origin.y, handle.x - origin.x);
 
   await page.mouse.move(handle.x, handle.y);
   await page.mouse.down();
   let worst = 0;
   for (let step = 1; step <= steps; step += 1) {
     const angle = startAngle + (sweepRadians * step) / steps;
-    await page.mouse.move(centre.x + Math.cos(angle) * radius, centre.y + Math.sin(angle) * radius);
+    await page.mouse.move(origin.x + Math.cos(angle) * radius, origin.y + Math.sin(angle) * radius);
     await nextFrame(page);
-    const sample = await frameCentre(page);
-    worst = Math.max(worst, Math.hypot(sample.x - centre.x, sample.y - centre.y));
+    const sample = await originCentre(page);
+    worst = Math.max(worst, Math.hypot(sample.x - origin.x, sample.y - origin.y));
   }
   await page.mouse.up();
-  return { worstPivotDrift: worst, rotation: await renderedRotation(page) };
+  const frameEnd = await frameCentre(page);
+  return {
+    worstPivotDrift: worst,
+    frameTravel: Math.hypot(frameEnd.x - frameStart.x, frameEnd.y - frameStart.y),
+    rotation: await renderedRotation(page),
+  };
 }
 
-test('F — the rotation gesture turns the group about one fixed world pivot', async ({ page }) => {
+test('F — the rotation gesture turns the group about its own origin (the crosshair)', async ({ page }) => {
   // An asymmetric group: an image and a shape, neither centred on the container.
   await seed(page, [image('a', 'Alpha', -150, -60), shape('b', 'Beta', 130, 90)]);
   await groupPair(page);
 
   // Move ONE child after grouping, so the group's visible centre no longer sits
-  // where its transform origin is: this is the case a pivot re-derived from the
-  // rotating box gets wrong.
+  // where its transform origin is: the frame then visibly orbits the origin.
   await page.locator('.actor-node', { hasText: 'Beta' }).first().click();
   await page.getByRole('button', { name: 'Expand TRANSFORM' }).first().click();
   const childX = page.getByLabel('Position X').first();
@@ -521,17 +537,18 @@ test('F — the rotation gesture turns the group about one fixed world pivot', a
   const rotationBefore = await renderedRotation(page);
   const separationBefore = await childSeparation(page);
 
-  const { worstPivotDrift, rotation } = await dragRotation(page, Math.PI * 0.8);
+  const { worstPivotDrift, frameTravel, rotation } = await dragRotation(page, Math.PI * 0.8);
 
-  // The visible centre never leaves the point the drag started from — on ANY
-  // sampled frame, not just at the end.
-  expect(worstPivotDrift, 'the rotation pivot wandered during the gesture').toBeLessThanOrEqual(1);
+  // The origin never leaves its place — on ANY sampled frame, not just at the
+  // end — while the off-centre frame swings around it.
+  expect(worstPivotDrift, 'the layer origin moved during the rotation').toBeLessThanOrEqual(1);
+  expect(frameTravel, 'the frame turned about its own centre, not the origin').toBeGreaterThan(10);
   // It really was a rotation...
   expect(Math.abs(rotation - rotationBefore), 'the group did not rotate').toBeGreaterThan(20);
   // ...and a rigid one: the layers keep their mutual distance.
   expect(Math.abs(await childSeparation(page) - separationBefore), 'relative geometry changed').toBeLessThanOrEqual(1);
 
-  // ONE history entry: a single undo puts both the rotation and the position back.
+  // ONE history entry: a single undo puts the rotation back.
   await page.locator('.actor-node[data-group-container="true"]').first().click();
   await page.keyboard.press('Control+z');
   await nextFrame(page);
@@ -541,7 +558,7 @@ test('F — the rotation gesture turns the group about one fixed world pivot', a
   expect(await renderedRotation(page), 'redo did not restore the rotation').toBeCloseTo(rotation, 3);
 });
 
-test('G — a translated, already-rotated and nested group keeps the same pivot', async ({ page }) => {
+test('G — a translated, already-rotated and nested group turns about its own origin', async ({ page }) => {
   await seed(page, [image('a', 'Alpha', -150, -60), shape('b', 'Beta', 130, 90), shape('c', 'Gamma', 260)]);
   await groupPair(page);
 
@@ -565,7 +582,7 @@ test('G — a translated, already-rotated and nested group keeps the same pivot'
   expect(Math.abs(second.rotation - first.rotation), 'the second gesture did not rotate further').toBeGreaterThan(5);
 
   // Nested group: group the container together with a third layer and turn the
-  // OUTER box. Its pivot is still its own aggregate centre.
+  // OUTER box. It turns about its own origin too.
   await page.locator('.actor-node', { hasText: 'Gamma' }).first().click();
   await page.locator('.actor-node[data-group-container="true"]').first().click({ modifiers: ['Control'] });
   await page.getByRole('button', { name: 'Group layers', exact: true }).click();
@@ -581,7 +598,7 @@ test('G — a translated, already-rotated and nested group keeps the same pivot'
 const drawnFrames = (page: Page) => page.evaluate(() => Array.from(
   document.querySelectorAll('[data-testid="transform-gizmo"]'),
 ).map((gizmo) => {
-  const drawn = Array.from(gizmo.querySelectorAll('rect')).find((rect) => rect.getAttribute('stroke') === '#00d2ff');
+  const drawn = Array.from(gizmo.querySelectorAll('rect')).find((rect) => rect.getAttribute('stroke') === '#4a8fe7');
   if (!drawn) throw new Error('gizmo without a drawn frame');
   return {
     width: Number(drawn.getAttribute('width')),
@@ -633,8 +650,8 @@ test('H — no grouped selection ever draws the container placeholder square', a
   expect(coveredFrames).toHaveLength(2);
   expect(coveredFrames.every((frame) => frame.width !== 64 && frame.height !== 64)).toBe(true);
   expect(coveredFrames.every((frame) => frame.width < 300), 'a duplicate container envelope was drawn').toBe(true);
-  // And no pivot marker anywhere in the multi-selection.
-  expect(await page.locator('[data-testid="transform-gizmo"] circle[fill="#00d2ff"]').count()).toBe(0);
+  // And no pivot marker anywhere in the multi-selection: only handles are circles.
+  expect(await page.locator('[data-testid="transform-gizmo"] circle:not([data-testid="gizmo-hit-target"]):not([fill="#4a8fe7"]):not([fill="#c084fc"]):not([fill="#ffb700"])').count()).toBe(0);
 
   // Selecting a nested container's own row still frames it by its children.
   await page.locator('.actor-node[data-group-container="true"]').first().click();
@@ -794,8 +811,8 @@ for (const rotation of [90, 30]) {
     await groupPair(page);
     const child = page.locator('[data-part-id="a"]').first();
     const before = (await child.boundingBox())!;
-    const left = await handleCentre(page, '#38bdf8', 0);
-    const right = await handleCentre(page, '#38bdf8', 1);
+    const left = await handleCentre(page, '#4a8fe7', 0);
+    const right = await handleCentre(page, '#4a8fe7', 1);
     const delta = 60;
     const ratio = (right.x - left.x + delta) / (right.x - left.x);
     await page.mouse.move(right.x, right.y);
@@ -804,7 +821,7 @@ for (const rotation of [90, 30]) {
     await page.mouse.move(right.x + delta, right.y, { steps: 8 });
     await page.mouse.up();
     const after = (await child.boundingBox())!;
-    const anchored = await handleCentre(page, '#38bdf8', 0);
+    const anchored = await handleCentre(page, '#4a8fe7', 0);
     expect(Math.abs(anchored.x - left.x)).toBeLessThanOrEqual(1);
     expect(Math.abs(anchored.y - left.y)).toBeLessThanOrEqual(1);
     expect(Math.abs(after.x - (left.x + (before.x - left.x) * ratio))).toBeLessThanOrEqual(1);

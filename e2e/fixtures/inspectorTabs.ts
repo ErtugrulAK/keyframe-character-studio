@@ -27,3 +27,14 @@ export async function duplicateSelectedLayer(page: Page): Promise<void> {
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await page.keyboard.press('Control+d');
 }
+
+/**
+ * Inspector cards start closed. Opens the card with this title unless it is
+ * already open (its open state is remembered for the session).
+ */
+export async function openInspectorCard(page: Page, title: string | RegExp): Promise<void> {
+  const name = typeof title === 'string' ? new RegExp(`^(Expand|Collapse) ${title}$`) : title;
+  const disclosure = page.getByRole('button', { name }).first();
+  if (await disclosure.getAttribute('aria-expanded') !== 'true') await disclosure.click();
+  await expect(disclosure).toHaveAttribute('aria-expanded', 'true');
+}

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { openShortcutsFromMenu } from './fixtures/toolbarTools';
 
 /**
  * The shortcut system, driven in a real browser.
@@ -53,7 +54,7 @@ test('the reference lists the bindings for this platform and closes on Escape', 
 
   // The header control is one way in.
   // (Rows are counted from the table itself: the reference is the keymap.)
-  await page.getByRole('button', { name: 'Keyboard shortcuts' }).click();
+  await openShortcutsFromMenu(page);
   const dialog = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
   await expect(dialog).toBeVisible();
 
@@ -73,7 +74,8 @@ test('the reference lists the bindings for this platform and closes on Escape', 
   // (C2 added the layer-list, drawing and mask-editing bindings: 28 → 42.)
   // C4 added five rows: lock / unlock all layers, and the mask point focus, ends and type keys.
   // C8 added the arrow-key nudge of the selected layers: 48.
-  await expect(dialog.locator('.shortcut-reference-row')).toHaveCount(48);
+  // F9 Easy Ease on the selected keyframes: 49.
+  await expect(dialog.locator('.shortcut-reference-row')).toHaveCount(49);
 
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
@@ -109,18 +111,26 @@ test('select all, group and ungroup run from the keyboard', async ({ page }) => 
 
 test('creation keys arm the same flow the toolbar does, and Escape cancels it', async ({ page }) => {
   await seed(page);
-  const leftToolbar = page.locator('.left-toolbar-container');
+  const stage = page.locator('.stage-canvas-container');
 
-  await expect(leftToolbar).not.toHaveClass(/tool-capturing/);
+  await expect(stage).not.toHaveClass(/drawing-tool/);
 
   await page.keyboard.press('r');
-  await expect(leftToolbar).toHaveClass(/tool-capturing/);
+  await expect(stage).toHaveClass(/drawing-tool/);
 
   await page.keyboard.press('Escape');
-  await expect(leftToolbar).not.toHaveClass(/tool-capturing/);
+  await expect(stage).not.toHaveClass(/drawing-tool/);
 
-  // `T` adds a text layer immediately, exactly like the toolbar's text button.
+  // `T` arms the Text tool, like the toolbar's text button: a drag on the
+  // stage then draws a text layer (a click alone places none).
   await page.keyboard.press('t');
+  await expect(stage).toHaveClass(/drawing-tool/);
+  const box = await stage.boundingBox();
+  if (!box) throw new Error('stage has no box');
+  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.25);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.35, { steps: 5 });
+  await page.mouse.up();
   await expect(page.locator('.actor-node', { hasText: 'Text' })).toHaveCount(1);
   await expect.poll(() => rowCount(page)).toBe(3);
 });
@@ -142,7 +152,7 @@ test('a text field owns the keyboard, so no command fires while typing', async (
   await page.keyboard.press('t');
   await page.keyboard.press(`${modifier}+a`);
 
-  await expect(page.locator('.left-toolbar-container')).not.toHaveClass(/tool-capturing/);
+  await expect(page.locator('.stage-canvas-container')).not.toHaveClass(/drawing-tool/);
   await expect.poll(() => rowCount(page)).toBe(2);
   await expect.poll(() => selectedRowCount(page)).toBe(1);
 });

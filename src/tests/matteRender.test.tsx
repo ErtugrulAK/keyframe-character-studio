@@ -13,9 +13,9 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
 import { StagePartLayers } from '../components/Canvas/StagePartLayers';
-import { makeEmptyChannels } from '../utils/defaults';
-import { matteClipPathId, buildMatteClipPath, resolveMatteSource } from '../utils/matte';
-import { evaluateTransform } from '../utils/evaluateTransform';
+import { makeEmptyChannels } from '../utils/animation/defaults';
+import { matteClipPathId, buildMatteClipPath, resolveMatteSource } from '../utils/layers/matte';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
 import type { CharacterPart, Track } from '../types/animator';
 
 function makePart(id: string, type: string, matte?: CharacterPart['matte']): CharacterPart {
@@ -776,11 +776,11 @@ describe('StagePartLayers — M18 text matte render (mask content <text>)', () =
     expect(html).not.toContain('<path d="M 270');
   });
 
-  it('B. text luminance: mask-type luminance + white text', () => {
-    const html = renderStage([textSource(), target({ sourcePartId: 'txt', mode: 'luminance' })]);
+  it('B. text luminance: mask-type luminance + the text in its own colour (as a shape source)', () => {
+    const html = renderStage([textSource({ fillColor: '#808080' }), target({ sourcePartId: 'txt', mode: 'luminance' })]);
     expect(html).toContain('<mask id="kcs-mask-txt-luminance"');
     expect(html).toContain('mask-type="luminance"');
-    expect(html).toContain('fill="white"');
+    expect(html).toMatch(/<mask id="kcs-mask-txt-luminance"[\s\S]*?<text[^>]*fill="#808080"/);
     expect(html).toContain('>HELLO</text>');
   });
 

@@ -1,18 +1,18 @@
 import { useAnimator } from '../context/useAnimator';
-import { bindParts, isRelationshipChainRelated, resolveBondGroup, unbindPart } from '../utils/partBinding';
+import { bindParts, resolveBondGroup, selectionHasChainRelation, unbindPart } from '../utils/layers/partBinding';
 
 /**
  * The one layer-bond authoring authority for the current selection.
  *
  * Bind/Bond is position-only: it writes `boundPartIds` through
- * `utils/partBinding` and nothing else. The write goes through the ordinary
+ * `utils/layers/partBinding` and nothing else. The write goes through the ordinary
  * `setCharacterParts` setter inside a single batch interaction — the same shape
  * as the grouping and Boolean authorities — so bonding is one undo step and one
  * history entry. There is exactly one bind write path, and it is shared by every
  * authoring surface (the toolbars and the editor context menu), so Details can
  * stay an information surface with no structural command of its own.
  */
-export interface PartBindingAuthoring {
+interface PartBindingAuthoring {
   /** The bond group of the selected layer (empty when it is not bonded). */
   bondGroupIds: string[];
   /** Whether the current selection can be bonded right now. */
@@ -43,8 +43,7 @@ export const usePartBindingAuthoring = (): PartBindingAuthoring => {
    * or a container and its member — would apply the same motion twice, so the
    * pair is refused instead of silently double-transforming the child.
    */
-  const relatedPair = selectedIds.some((first, index) =>
-    selectedIds.slice(index + 1).some((second) => isRelationshipChainRelated(characterParts, first, second)));
+  const relatedPair = selectionHasChainRelation(characterParts, selectedIds);
   const bindBlockReason = selectedIds.length < 2
     ? 'Bond needs two or more selected layers.'
     : relatedPair

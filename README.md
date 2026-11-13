@@ -5,13 +5,13 @@
 **A 2D keyframe and motion-design editor that runs in the browser.**
 Draw, mask and animate vector scenes, then export them as broadcast graphics (OGraf), animated GIFs or project files.
 
-[![Version](https://img.shields.io/badge/version-1.1.0--rc.3-35c8b0)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0--rc.6-35c8b0)](CHANGELOG.md)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Rendering](https://img.shields.io/badge/rendering-SVG-FFB13B?logo=svg&logoColor=black)](#-how-it-works)
-[![Unit tests](https://img.shields.io/badge/unit%20tests-3%2C220-2ea44f?logo=vitest&logoColor=white)](#-quality)
-[![E2E tests](https://img.shields.io/badge/E2E-636%20in%20Chromium-2ea44f?logo=playwright&logoColor=white)](#-quality)
+[![Unit tests](https://img.shields.io/badge/unit%20tests-3%2C339-2ea44f?logo=vitest&logoColor=white)](#-quality)
+[![E2E tests](https://img.shields.io/badge/E2E-689%20in%20Chromium-2ea44f?logo=playwright&logoColor=white)](#-quality)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
 <img src="docs/assets/readme/demo.gif" alt="An animated lower third, a masked landscape and a spinning star, exported by KCS as a GIF" width="720">
@@ -26,9 +26,10 @@ Draw, mask and animate vector scenes, then export them as broadcast graphics (OG
 
 | | | |
 |:---:|:---:|:---:|
-| 🎞️ **Keyframe animation**<br><sub>Position, rotation, scale, opacity, Trim Path; bezier easing per segment</sub> | 🎭 **Masks & Track Matte**<br><sub>Draw masks on the canvas, cut holes, use any layer as a matte</sub> | ✏️ **Vector paths**<br><sub>Pen tool, editable paths, corner ↔ smooth points with handles</sub> |
-| 📈 **Motion curves**<br><sub>Curve editor, value and speed graphs, presets, paste CSS easing</sub> | 🧩 **Layers & groups**<br><sub>Parenting, locks, Boolean operations, bonds between layers</sub> | 📡 **Broadcast mode**<br><sub>A live director panel that plays sequences with IN/OUT motion</sub> |
-| 📦 **OGraf export**<br><sub>Web-standard broadcast graphics packages, checked per layer first</sub> | 🖼️ **Animated GIF**<br><sub>Frame-exact export with a built-in encoder</sub> | 📱 **Any screen**<br><sub>Desktop, half-screen windows, tablets and phones</sub> |
+| 🎞️ **Keyframe animation**<br><sub>Position, rotation, scale, opacity, Trim Path; bezier easing per segment; an After Effects-style property tree</sub> | 🎭 **Masks & Track Matte**<br><sub>Draw masks on the canvas, cut holes, use any layer as a matte</sub> | ✏️ **Vector paths**<br><sub>Pen tool, editable paths, corner ↔ smooth points with handles</sub> |
+| 📈 **Motion curves**<br><sub>Curve editor, value and speed graphs, presets, paste CSS easing</sub> | 🧩 **Layers & groups**<br><sub>Parenting (a child moves in its parent's space), locks, Boolean operations, Shape to Path</sub> | 📡 **Broadcast mode**<br><sub>A live director panel that plays sequences with IN/OUT motion</sub> |
+| 📦 **OGraf export**<br><sub>Web-standard broadcast graphics packages, checked per layer first; multi-step graphics from timeline step markers</sub> | 🖼️ **Animated GIF**<br><sub>Frame-exact export with a built-in encoder</sub> | 📱 **Any screen**<br><sub>Desktop, half-screen windows, tablets and phones</sub> |
+| 🧲 **Layout modifiers**<br><sub>Auto Size, Text Box, Auto Follow, Look At, Justify, Repeater: lower thirds that fit their text, live in OGraf too</sub> | 🎚️ **Keyed mattes**<br><sub>Track Matte feather, strength and gradient angle keyframed like any property</sub> | 🗂️ **Big scenes**<br><sub>Thousands of layers; only what changes re-renders</sub> |
 
 ## 📸 A look inside
 
@@ -81,7 +82,7 @@ flowchart TB
 git clone https://github.com/ErtugrulAK/keyframe-character-studio.git
 cd keyframe-character-studio
 npm install
-npm run dev:frontend      # editor only → http://localhost:5173
+npm run dev               # the editor → http://localhost:5173
 ```
 
 <details>
@@ -89,14 +90,15 @@ npm run dev:frontend      # editor only → http://localhost:5173
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Editor plus the optional Express API (SQLite by default) |
+| `npm run dev` | The editor (Vite dev server) |
 | `npm run build` | Type-check and production build |
 | `npm run check` | Lint, type check, unit tests and build |
 | `npx vitest run` | Unit and component tests |
 | `npm run test:e2e` | Playwright end-to-end tests in Chromium |
+| `npm run test:e2e:fast` | The same suite in about half the time: a production build and more workers |
 | `npm run validate:ograf` | Validate the OGraf fixture offline |
 
-Requires Node.js `^22.22.2 || ^24.15.0 || >=26.0.0`. The editor runs entirely in the browser; the API in `server/` (projects and presets, SQLite or PostgreSQL) is optional.
+Requires Node.js `^22.22.2 || ^24.15.0 || >=26.0.0`. The editor runs entirely in the browser: projects autosave in its storage and the Library keeps graphics in IndexedDB.
 </details>
 
 ## 🧪 Quality
@@ -105,8 +107,8 @@ Requires Node.js `^22.22.2 || ^24.15.0 || >=26.0.0`. The editor runs entirely in
 %%{init: {'theme': 'base', 'themeVariables': {'pie1': '#35c8b0', 'pie2': '#38bdf8', 'pieStrokeColor': '#0d141b', 'pieSectionTextColor': '#0d141b', 'pieTitleTextSize': '18px', 'pieTitleTextColor': '#8b9baa', 'pieLegendTextColor': '#8b9baa'}}}%%
 pie showData
     title Automated tests
-    "Unit & component (Vitest)" : 3220
-    "End-to-end in Chromium (Playwright)" : 636
+    "Unit & component (Vitest)" : 3339
+    "End-to-end in Chromium (Playwright)" : 689
 ```
 
 - 🔍 Visual fixes are **measured** (pixel samples, element boxes), and new regression tests are checked against the old code.
@@ -128,10 +130,12 @@ gitGraph
     commit id: "paths + workspace"
     commit id: "QA rounds C1-C12"
     checkout main
-    merge feature id: "v1.1.0-rc.3 (next)" type: HIGHLIGHT
+    merge feature id: "v1.1.0-rc.3"
+    commit id: "v1.1.0-rc.4 Neutral Pro"
+    commit id: "v1.1.0-rc.6 (next)" type: HIGHLIGHT
 ```
 
-Versions follow [Semantic Versioning](https://semver.org/). Each candidate is QA'd by hand, and the accepted one becomes the final release. See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASING.md](docs/RELEASING.md).
+Versions follow [Semantic Versioning](https://semver.org/). Each candidate is QA'd by hand, and the accepted one becomes the final release. See [CHANGELOG.md](CHANGELOG.md), [docs/RELEASING.md](docs/RELEASING.md) and the [documentation index](docs/README.md).
 
 ## 🧭 Project status
 

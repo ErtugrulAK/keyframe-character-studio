@@ -1,5 +1,14 @@
 import { test, expect, type Page } from '@playwright/test';
 
+/*
+ * The stage size is pinned: these checks compare positions and pixels measured
+ * at the stage's fit scale, where font hinting, anti-aliasing and pixel
+ * rounding move a box or an edge sample by up to a pixel between window
+ * layouts. A 1028×889 window gives the 708×461 px stage the checks were
+ * calibrated on (before the left panel was removed and the header slimmed).
+ */
+test.use({ viewport: { width: 1028, height: 889 } });
+
 /**
  * A text layer's glyphs land in the same place on the stage, in its text matte
  * and in the OGraf/GIF renderer.
@@ -51,9 +60,8 @@ async function seed(page: Page, layers: Record<string, unknown>[]): Promise<void
 type InkBox = { x0: number; x1: number; y0: number; y1: number };
 
 /** The screen box of the pure-red (stage text) or pure-green (matted target) pixels on the stage. */
-async function inkBox(page: Page, channel: 'red' | 'green'): Promise<InkBox | null> {
-  const stage = page.locator('.stage-svg').first();
-  const png = await stage.screenshot();
+async function inkBox(page: Page, channel: 'red' | 'green', area: 'stage' | 'viewport' = 'stage'): Promise<InkBox | null> {
+  const png = area === 'viewport' ? await page.screenshot() : await page.locator('.stage-svg').first().screenshot();
   return page.evaluate(async ([base64, wanted]) => {
     const image = new Image();
     image.src = `data:image/png;base64,${base64}`;
@@ -113,3 +121,61 @@ test('the OGraf/GIF renderer puts the text where the stage does', async ({ page 
   expect(Math.abs(boxes.exported.y - boxes.stage.y), 'export vs stage glyph top').toBeLessThanOrEqual(1);
   expect(Math.abs(boxes.exported.height - boxes.stage.height)).toBeLessThanOrEqual(1);
 });
+
+for (const origin of ['center', 'baseline'] as const) {
+  test(`a ${origin}-origin text: its matte cut and its OGraf render match the stage`, async ({ page }) => {
+    await seed(page, [textSource({ textOrigin: origin })]);
+    const letters = await inkBox(page, 'red');
+    const boxes = await page.evaluate(async () => {
+      const stage = document.querySelector<SVGTextElement>('.stage-svg [data-part-id="txt"] text')!.getBBox();
+      const { evaluateSceneFrame } = await import('/src/ograf/evaluation.ts');
+      const { renderOGrafSvg } = await import('/src/ograf/svgRenderer.ts');
+      const host = document.createElement('div');
+      host.innerHTML = renderOGrafSvg(evaluateSceneFrame(JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5')!), 0));
+      document.body.appendChild(host);
+      const exported = host.querySelector<SVGTextElement>('text')!.getBBox();
+      host.remove();
+      return { stage: { y: stage.y, height: stage.height }, exported: { y: exported.y, height: exported.height } };
+    });
+    expect(Math.abs(boxes.exported.y - boxes.stage.y), 'export vs stage glyph top').toBeLessThanOrEqual(1);
+
+    await seed(page, [textSource({ textOrigin: origin, visible: false }), coveringTarget()]);
+    const cut = await inkBox(page, 'green');
+    for (const edge of ['x0', 'x1', 'y0', 'y1'] as const) {
+      expect(Math.abs(cut![edge] - letters![edge]), `matte ${edge} vs stage ${edge}`).toBeLessThanOrEqual(2);
+    }
+  });
+}
+
+test('a centre-origin text sits with its box centred on the origin; a baseline text sits above it', async ({ page }) => {
+  const glyphCentreY = async (origin: 'center' | 'baseline') => {
+    await seed(page, [textSource({ textOrigin: origin })]);
+    return page.evaluate(() => {
+      const box = document.querySelector<SVGTextElement>('.stage-svg [data-part-id="txt"] text')!.getBBox();
+      return box.y + box.height / 2;
+    });
+  };
+  // Local units, origin at 0: the em box centre of 80px text is 0.346 em above its baseline.
+  expect(Math.abs(await glyphCentreY('center')), 'centred text box centre').toBeLessThanOrEqual(3);
+  expect(await glyphCentreY('baseline'), 'baseline text box centre').toBeLessThan(-20);
+});
+
+for (const origin of ['center', 'baseline'] as const) {
+  test(`the selection frame of a ${origin}-origin text hugs its letters`, async ({ page }) => {
+    await seed(page, [textSource({ textOrigin: origin })]);
+    // Both measured in viewport pixels.
+    const letters = await inkBox(page, 'red', 'viewport');
+    await page.locator('[role="tree"] [data-layer-id="txt"]').click();
+    const frame = await page.evaluate(() => {
+      const drawn = [...document.querySelectorAll('[data-testid="transform-gizmo"] rect')].find((rect) => rect.getAttribute('stroke') === '#4a8fe7');
+      const box = drawn!.getBoundingClientRect();
+      return { x0: box.left, x1: box.right, y0: box.top, y1: box.bottom };
+    });
+    expect(letters, 'the stage drew no text').not.toBeNull();
+    // Within a few pixels of the ink on every side (the old em box ran a quarter
+    // of a line above the capitals and below the baseline).
+    for (const edge of ['x0', 'x1', 'y0', 'y1'] as const) {
+      expect(Math.abs(frame[edge] - letters![edge]), `frame ${edge} vs ink ${edge}`).toBeLessThanOrEqual(3);
+    }
+  });
+}

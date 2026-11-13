@@ -1,5 +1,5 @@
 import type { SceneData } from '../types/composition';
-import { normalizePackagePath } from '../utils/pathSafety';
+import { normalizePackagePath } from '../utils/persistence/pathSafety';
 import { compileOGrafManifest, isSafeOGrafPackagePath, sanitizeOGrafId } from './compiler';
 import { describeOGrafValueForDiagnostics } from './diagnostics';
 import { generateGraphicModule } from './runtimeTemplate';
@@ -93,7 +93,7 @@ function packageAssetDiagnostics(sceneData: SceneData, options: OGrafExportOptio
  * element, where the renderer uses it.
  */
 const fontFaceFamily = (source: string): string => {
-  const familyList = source.slice('font:'.length);
+  const familyList = source.slice('font:'.length).replace(/#\d+$/u, '');
   const primary = (familyList.split(',')[0] ?? '').trim();
   return primary.replace(/^(['"])(.*)\1$/u, '$2').trim() || familyList;
 };
@@ -107,10 +107,15 @@ function generatedFiles(
 ): OGrafPackageFile[] {
   const graphicName = sanitizeOGrafId(options.name?.trim() || sceneData.name?.trim() || 'graphic');
   const imageReferences = Object.fromEntries(assets.filter((asset) => asset.kind === 'image').map((asset) => [asset.source, asset.packagedPath]));
-  const fontReferences = Object.fromEntries(assets.filter((asset) => asset.kind === 'font').map((asset) => [
-    fontFaceFamily(asset.source),
-    asset.packagedPath,
-  ]));
+  // One family may be several faces (character subsets), each with its range.
+  const fontReferences: Record<string, Array<{ path: string; unicodeRange?: string; fontWeight?: string }>> = {};
+  for (const asset of assets.filter((candidate) => candidate.kind === 'font')) {
+    (fontReferences[fontFaceFamily(asset.source)] ??= []).push({
+      path: asset.packagedPath,
+      ...(asset.unicodeRange ? { unicodeRange: asset.unicodeRange } : {}),
+      ...(asset.fontWeight ? { fontWeight: asset.fontWeight } : {}),
+    });
+  }
   const runtime = generateGraphicModule(
     sceneData,
     publicControls.textFields,
@@ -149,8 +154,11 @@ function packageEntryDiagnostics(files: OGrafPackageFile[], diagnostics: OGrafEx
 }
 export function compileOGrafPackage(sceneData: SceneData, options: OGrafExportOptions = {}): OGrafGeneratedPackage {
   const packageOptions = { ...options, requirePortableAssets: true };
+  // This pass only plans the assets. Its scene diagnostics are reported once,
+  // by the manifest compile below, which validates again with the packaged
+  // catalog; keeping both listed every scene problem twice.
   const validated = validateSceneForOGraf(sceneData, packageOptions);
-  const diagnostics = [...validated.diagnostics];
+  const diagnostics: OGrafExportDiagnostic[] = [];
   const assets = uniqueAssetPlans(validated.assets, diagnostics);
   packageAssetDiagnostics(sceneData, packageOptions, assets, diagnostics);
   const packagedCatalog = Object.fromEntries(assets.map((asset) => [asset.source, {

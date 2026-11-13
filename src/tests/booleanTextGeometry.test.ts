@@ -4,10 +4,10 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { normalizeSvgText, primaryFontFamily, canvasAcceptedFamilies } from '../utils/textOutline';
-import { computeBooleanContours, inspectBooleanOperands } from '../utils/booleanGeometry';
-import { sampleBezierPath } from '../utils/bezierPath';
-import { normalizeClosedPoints } from '../utils/freeform';
+import { normalizeSvgText, primaryFontFamily, canvasAcceptedFamilies } from '../utils/geometry/textOutline';
+import { computeBooleanContours, inspectBooleanOperands } from '../utils/geometry/booleanGeometry';
+import { sampleBezierPath } from '../utils/geometry/bezierPath';
+import { normalizeClosedPoints } from '../utils/geometry/freeform';
 import type { BezierPath, BezierVertex, CharacterPart } from '../types/animator';
 
 const part = (id: string, over: Partial<CharacterPart>): CharacterPart => ({

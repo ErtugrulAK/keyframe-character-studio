@@ -3,7 +3,7 @@
  *
  * One entry per affected construct, shaped like the existing export diagnostics
  * (`src/ograf/diagnostics.ts`) so the import UI needs no second reporting model.
- * The design's contract (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` §8) requires
+ * The design's contract (`docs/specs/LOTTIE_IMPORT_MAPPING.md` §8) requires
  * a stable code, the source document path, a severity, a message and a concrete
  * action for every entry — an entry without an action is not actionable and
  * therefore not allowed here.
@@ -47,8 +47,3 @@ export const LOTTIE_IMPORT_LIMITS = {
   /** Refuse documents larger than this before parsing them. */
   characters: 32 * 1024 * 1024,
 } as const;
-
-export const summarizeLottieDiagnostics = (diagnostics: LottieImportDiagnostic[]): { errors: number; warnings: number } => ({
-  errors: diagnostics.filter((entry) => entry.severity === 'error').length,
-  warnings: diagnostics.filter((entry) => entry.severity === 'warning').length,
-});

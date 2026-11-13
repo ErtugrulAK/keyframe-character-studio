@@ -77,11 +77,15 @@ describe('C7 Details tabs', () => {
     expect(properties).not.toContain('ANIMATION DATA');
 
     act(() => { fireEvent.mouseDown(tab(/^Masks/)); });
-    expect(cardTitles()).toEqual(['LAYER MASKS', 'TRACK MATTE', 'LEGACY CLIP MATTE']);
+    // The legacy matte card shows only on a layer that already has a legacy matte.
+    expect(cardTitles()).toEqual(['LAYER MASKS', 'TRACK MATTE']);
 
     act(() => { fireEvent.mouseDown(tab(/^Layer/)); });
     // C10: no DUPLICATE card (duplicate is Ctrl+D; flipping is the toolbar's).
     expect(cardTitles()).toEqual(['HIERARCHY', 'ANIMATION DATA']);
+    // Cards start closed; the Parent field is one click away.
+    expect(screen.queryByLabelText('Parent')).toBeNull();
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Expand HIERARCHY' })); });
     expect(screen.getByLabelText('Parent')).toBeTruthy();
   });
 

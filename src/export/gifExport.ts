@@ -30,18 +30,18 @@ import {
   resolvePaletteSampleIndexes,
   type GifFramePlan,
 } from './gifPlan';
-import { KCS_DEFAULT_TEXT_FONT } from '../utils/textFonts';
+import { KCS_DEFAULT_TEXT_FONT } from '../utils/layers/textFonts';
 
 /** How many frames the palette is sampled from. */
-export const GIF_PALETTE_SAMPLE_FRAMES = 8;
+const GIF_PALETTE_SAMPLE_FRAMES = 8;
 
-export interface GifExportProgress {
+interface GifExportProgress {
   /** Frames whose pixels are done, against the plan's total. */
   completed: number;
   total: number;
 }
 
-export interface GifExportRequest {
+interface GifExportRequest {
   scene: SceneData;
   exportFps: number;
   scale: number;

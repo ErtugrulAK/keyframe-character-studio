@@ -5,12 +5,12 @@ import {
   supportsStrokeAlignment,
   toAuthoringStrokeAlignment,
   toStrokeAlignmentControlValue,
-} from '../../../../utils/shapeAppearance';
-import type { StrokeAlignmentControlValue } from '../../../../utils/shapeAppearance';
-import { ColorPickerPopover } from '../../inputs/ColorPickerPopover';
+} from '../../../../utils/layers/shapeAppearance';
+import type { StrokeAlignmentControlValue } from '../../../../utils/layers/shapeAppearance';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { StyleCard } from './StyleCard';
 import { StyleEffectsSection } from './StyleEffectsSection';
+import { CompactColorControl } from './CompactColorControl';
 interface StyleAppearanceSectionProps {
   selectedPart: CharacterPart;
   onPartPropChange: (key: keyof CharacterPart, value: unknown) => void;
@@ -18,30 +18,6 @@ interface StyleAppearanceSectionProps {
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
 }
-
-const ColorControl: React.FC<{
-  label: string;
-  value: string;
-  alpha: number;
-  fallback: string;
-  onColorChange: (value: string) => void;
-  onAlphaChange: (value: number) => void;
-  onInteractionStart?: () => void;
-  onInteractionEnd?: () => void;
-}> = ({ label, value, alpha, fallback, onColorChange, onAlphaChange, onInteractionStart, onInteractionEnd }) => (
-  <div className="appearance-color-field">
-    <ColorPickerPopover
-      label={label}
-      color={value || fallback}
-      alpha={alpha}
-      fallback={fallback}
-      onColorChange={onColorChange}
-      onAlphaChange={onAlphaChange}
-      onInteractionStart={onInteractionStart}
-      onInteractionEnd={onInteractionEnd}
-    />
-  </div>
-);
 
 export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
   selectedPart,
@@ -69,7 +45,7 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
   const hasStrokeAlignmentControl = supportsStrokeAlignment(selectedPart.type);
 
   return (
-    <StyleCard title="APPEARANCE" collapsible defaultOpen={false} retainKey="appearance">
+    <StyleCard title="APPEARANCE" collapsible retainKey="appearance">
       {hasCornerRadiusControl && (
         <div className="appearance-group appearance-group-corner-radius">
           <div className="appearance-group-header">
@@ -91,12 +67,14 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
           />
         </div>
       )}
+      {/* Fill and stroke side by side, each a small swatch and its value. */}
+      <div className="appearance-paint-row">
       <div className={`appearance-group${selectedPart.fillEnabled === false ? ' is-muted' : ''}`}>
         <div className="appearance-group-header">
           <label htmlFor="appearance-fill-enabled">FILL</label>
           <input id="appearance-fill-enabled" type="checkbox" aria-label="Fill Enabled" checked={selectedPart.fillEnabled ?? true} onChange={(e) => onPartPropChange('fillEnabled', e.target.checked)} />
         </div>
-        <ColorControl
+        <CompactColorControl
           label="FILL COLOR"
           value={selectedPart.fillColor}
           alpha={selectedPart.fillOpacity ?? 1}
@@ -113,7 +91,7 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
           <label htmlFor="appearance-stroke-enabled">STROKE</label>
           <input id="appearance-stroke-enabled" type="checkbox" aria-label="Stroke Enabled" checked={selectedPart.strokeEnabled ?? true} onChange={(e) => onPartPropChange('strokeEnabled', e.target.checked)} />
         </div>
-        <ColorControl
+        <CompactColorControl
           label="STROKE COLOR"
           value={selectedPart.strokeColor}
           alpha={selectedPart.strokeOpacity ?? 1}
@@ -123,6 +101,7 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
           onInteractionStart={onInteractionStart}
           onInteractionEnd={onInteractionEnd}
         />
+        {/* Width and alignment belong to the stroke, so they sit under its swatch. */}
         <div className="stroke-inline-fields">
           <div className="appearance-field">
             <label className="appearance-field-label" htmlFor="stroke-width-input">WIDTH</label>
@@ -139,14 +118,15 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
             </div>
           )}
         </div>
-        <StyleEffectsSection
-          selectedPart={selectedPart}
-          onPartPropChange={onPartPropChange}
-          onColorInteractionStart={onInteractionStart}
-          onColorInteractionEnd={onInteractionEnd}
-          embedded
-        />
       </div>
+      </div>
+      <StyleEffectsSection
+        selectedPart={selectedPart}
+        onPartPropChange={onPartPropChange}
+        onColorInteractionStart={onInteractionStart}
+        onColorInteractionEnd={onInteractionEnd}
+        embedded
+      />
     </StyleCard>
   );
 };

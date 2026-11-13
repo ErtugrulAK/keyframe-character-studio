@@ -2,8 +2,9 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import { retireStaleDevServiceWorker } from './utils/devFreshness'
+import { retireStaleDevServiceWorker } from './utils/editor/devFreshness'
 import { installPerfMonitor } from './perf/perfMonitor'
+import { installInputModality } from './utils/editor/inputModality'
 
 // DEV FRESHNESS CONTRACT — a dev session must never be served by a stale
 // service worker left on this origin by an earlier dev server. Dev-only: a
@@ -12,6 +13,9 @@ import { installPerfMonitor } from './perf/perfMonitor'
 if (import.meta.env.DEV && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
   void retireStaleDevServiceWorker(navigator.serviceWorker)
 }
+
+// Focus rings only for keyboard navigation (see inputModality).
+installInputModality()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

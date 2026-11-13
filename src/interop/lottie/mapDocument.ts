@@ -1,9 +1,9 @@
 import type { AnimationTrackData, BezierPath, LayerMask, LayerMaskChannel, LayerMaskMode, LayerMaskPathChannel, PathKeyframe, PropertyKeyframe, TrackChannel } from '../../types/animator';
 import { layerMaskChannel, layerMaskPathChannel } from '../../types/animator';
 import type { SceneData, SceneLayer } from '../../types/composition';
-import { isPrototypeSensitiveKey } from '../../utils/pathSafety';
-import { KCS_DEFAULT_TEXT_FONT, matchTextFontFamily, normalizeTextFontName } from '../../utils/textFonts';
-import { isSupportedEmbeddedImage } from '../../ograf/legacyCompatibility';
+import { isPrototypeSensitiveKey } from '../../utils/persistence/pathSafety';
+import { KCS_DEFAULT_TEXT_FONT, matchTextFontFamily, normalizeTextFontName } from '../../utils/layers/textFonts';
+import { isSupportedEmbeddedImage } from '../../utils/persistence/embeddedImage';
 import { LOTTIE_IMPORT_LIMITS, lottieError, lottieWarning, type LottieImportDiagnostic } from './diagnostics';
 import { mapLottieKeyframes, mapLottieSegmentTiming, type LottieHandleComponent, type LottieKeyframe } from './temporal';
 
@@ -11,7 +11,7 @@ import { mapLottieKeyframes, mapLottieSegmentTiming, type LottieHandleComponent,
  * Lottie import core (Milestone F, item 10).
  *
  * Implements the document- and layer-level mapping of
- * `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` for the constructs the imported
+ * `docs/specs/LOTTIE_IMPORT_MAPPING.md` for the constructs the imported
  * slices cover — document timing, shape/solid/null layers, transforms, paths,
  * primitives, fill/stroke/trim, layer masks and track mattes — and **reports**
  * everything the slices do not convert (precomps, text, images, effects,
@@ -798,7 +798,7 @@ const BASIC_LAYER_TYPES: Record<number, string> = {
 };
 
 /** Maps a Lottie document (already parsed) into a KCS scene plus a loss report. */
-export const mapLottieDocument = (document: unknown): LottieImportResult => {
+const mapLottieDocument = (document: unknown): LottieImportResult => {
   const diagnostics: LottieImportDiagnostic[] = [];
   const root = asRecord(document);
   if (!root) {

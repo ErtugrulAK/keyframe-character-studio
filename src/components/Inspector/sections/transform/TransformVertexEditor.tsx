@@ -3,7 +3,7 @@ import type { BezierPath, CharacterPart, FreeformPoint, Transform } from '../../
 import type { SceneCoordinateSystem } from '../../../../types/composition';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { StyleCard } from '../style/StyleCard';
-import { freeformVertexToDisplay, freeformVertexToLocal, resolveFreeformPath } from '../../../../utils/freeform';
+import { freeformVertexToDisplay, freeformVertexToLocal, resolveFreeformPath } from '../../../../utils/geometry/freeform';
 
 interface TransformVertexEditorProps {
   selectedPart: CharacterPart;
@@ -11,7 +11,7 @@ interface TransformVertexEditorProps {
   coordinateSystem: SceneCoordinateSystem;
   onPartPropChange: (key: keyof CharacterPart, value: unknown) => void;
   /**
-   * C6 — writes the canonical path. The canvas draws `path` whenever it exists,
+   * Writes the canonical path. The canvas draws `path` whenever it exists,
    * so a vertex typed here must move THAT point (with its handles); writing the
    * legacy `points` alone changed nothing on screen.
    */
@@ -49,7 +49,7 @@ export const TransformVertexEditor: React.FC<TransformVertexEditorProps> = ({ se
   };
 
   return (
-    <StyleCard title={`FREE DRAW VERTICES (${points.length})`} collapsible defaultOpen={false} retainKey="free-draw-vertices">
+    <StyleCard title={`FREE DRAW VERTICES (${points.length})`} collapsible retainKey="free-draw-vertices">
       <div style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 6 }}>
         Same coordinates as POS X / POS Y (canvas center = 0). Numbered markers on the canvas show which vertex is which.
       </div>

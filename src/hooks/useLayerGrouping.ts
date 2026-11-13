@@ -1,14 +1,14 @@
-import { useAnimator } from '../context/useAnimator';
-import { generateId } from '../utils/idGenerator';
+import { useAnimatorAuthority } from '../context/useAnimator';
+import { generateId } from '../utils/layers/idGenerator';
 import {
   createGroupDisplayName,
   createLayerGroup,
   dissolveLayerGroup,
   groupSelectionBlockReason,
   ungroupBlockReason,
-} from '../utils/layerGrouping';
+} from '../utils/layers/layerGrouping';
 import type { CharacterPart, Track, Transform } from '../types/animator';
-import { lockedOutcomeRefusal } from '../utils/layerLocks';
+import { lockedOutcomeRefusal } from '../utils/layers/layerLocks';
 import type { ToastOptions } from './useToast';
 
 /** The toast writer the context exposes. */
@@ -18,7 +18,7 @@ type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?
  * The one layer-group authoring authority for the current selection.
  *
  * It reads the selection, plans the change with the pure helpers in
- * `utils/layerGrouping` and writes the result through the ordinary
+ * `utils/layers/layerGrouping` and writes the result through the ordinary
  * `setCharacterParts`/`setTracks` setters inside a single batch interaction —
  * the same shape as the Boolean and bind authorities, so grouping is one undo
  * step and one history entry. There is exactly one group write path, shared by
@@ -40,7 +40,7 @@ export interface LayerGrouping {
  * from the context so the state provider can build the SAME actions for the
  * keyboard commands without a second implementation.
  */
-export interface LayerGroupingDependencies {
+interface LayerGroupingDependencies {
   currentFrame: number;
   selectedPartId: string | null;
   selectedPartIds: string[];
@@ -86,7 +86,7 @@ export const createLayerGroupingActions = ({
       showToast(outcome.reason, 'error');
       return;
     }
-    // C4 — refused whole when it would change a locked layer (nothing written).
+    // Refused whole when it would change a locked layer (nothing written).
     const lockRefusal = lockedOutcomeRefusal(characterParts, tracks, outcome.parts, outcome.tracks);
     if (lockRefusal) {
       showToast(lockRefusal, 'error');
@@ -110,7 +110,7 @@ export const createLayerGroupingActions = ({
       showToast(outcome.reason, 'error');
       return;
     }
-    // C4 — refused whole when it would change a locked layer (nothing written).
+    // Refused whole when it would change a locked layer (nothing written).
     const lockRefusal = lockedOutcomeRefusal(characterParts, tracks, outcome.parts, outcome.tracks);
     if (lockRefusal) {
       showToast(lockRefusal, 'error');
@@ -134,4 +134,8 @@ export const createLayerGroupingActions = ({
 };
 
 /** The same authority, wired to the animator context for UI callers. */
-export const useLayerGrouping = (): LayerGrouping => createLayerGroupingActions(useAnimator());
+export const useLayerGrouping = (): LayerGrouping => useAnimatorAuthority(
+  createLayerGroupingActions,
+  // `selectedGroup` and the group block reason come from these.
+  'characterParts', 'selectedPartId', 'selectedPartIds',
+);

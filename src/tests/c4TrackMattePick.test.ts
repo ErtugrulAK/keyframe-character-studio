@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart } from '../types/animator';
-import { pickedTrackMatte, trackMattePickVerdict } from '../utils/trackMattePick';
+import { pickedTrackMatte, trackMattePickVerdict } from '../utils/layers/trackMattePick';
 
 const part = (id: string, extra: Partial<CharacterPart> = {}): CharacterPart => ({
   id, name: id.toUpperCase(), type: 'custom_rect', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1,

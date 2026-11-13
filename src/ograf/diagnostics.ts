@@ -266,8 +266,8 @@ export function summarizeOGrafExportReadiness(
   packageBaseName?: string,
 ): OGrafExportReadiness {
   const report = getOGrafExportRemediationReport(diagnostics);
-  // Same naming rule as the ZIP writer in ./browserZip: <sanitized name>-ograf.zip.
-  const target = packageBaseName ? `${packageBaseName}-ograf.zip` : 'the -ograf.zip archive';
+  // Same naming rule as the ZIP writer in ./browserZip: <sanitized name>.ograf.zip.
+  const target = packageBaseName ? `${packageBaseName}.ograf.zip` : 'the .ograf.zip archive';
 
   if (report.hasBlocking) {
     const blocking = report.blocking[0];

@@ -11,10 +11,10 @@ import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { CharacterPart, PropertyKeyframe, Track, TrackChannel, Transform } from '../types/animator';
-import { makeEmptyChannels } from '../utils/defaults';
-import { evaluateTransform } from '../utils/evaluateTransform';
-import { getPartLocalBounds } from '../utils/bounds';
-import { resolveCornerResize } from '../utils/cornerResize';
+import { makeEmptyChannels } from '../utils/animation/defaults';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { getPartLocalBounds } from '../utils/geometry/bounds';
+import { resolveCornerResize } from '../utils/geometry/cornerResize';
 import { useInspector } from '../hooks/useInspector';
 import { useHistory, type HistoryDocumentState } from '../hooks/useHistory';
 

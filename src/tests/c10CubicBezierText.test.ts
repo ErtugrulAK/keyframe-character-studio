@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCubicBezierText } from '../utils/cubicBezierText';
+import { parseCubicBezierText } from '../utils/animation/cubicBezierText';
 
 describe('C10 parseCubicBezierText — easing code pasted from elsewhere', () => {
   it('reads CSS, arrays, bare numbers and CSS keywords', () => {

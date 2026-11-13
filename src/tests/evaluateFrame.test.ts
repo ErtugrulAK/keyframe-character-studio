@@ -6,8 +6,8 @@
  */
 
 import { describe, test, expect } from 'vitest';
-import { evaluateFrame } from '../utils/evaluateFrame';
-import { evaluateTransform } from '../utils/evaluateTransform';
+import { evaluateFrame } from '../utils/animation/evaluateFrame';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
 import type { CharacterPart, Track, Keyframe, CustomMotionPreset } from '../types/animator';
 import type { RuntimeData } from '../types/composition';
 

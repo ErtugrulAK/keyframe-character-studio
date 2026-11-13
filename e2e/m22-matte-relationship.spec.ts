@@ -52,28 +52,48 @@ async function selectPart(page: Page, name: string): Promise<void> {
   await page.waitForTimeout(300);
 }
 
-/** Open the Inspector's legacy clip matte card (renamed from MASK / TRACK MATTE in WP-04). */
+/** Open the Inspector's Track Matte card: since the matte cards were merged it
+ *  is the one place a new matte relationship is made. */
 async function openMatteSection(page: Page): Promise<void> {
   await openDetailsTab(page, 'Masks');
-  const disclosure = page.getByRole('button', { name: /(?:Expand|Collapse) LEGACY CLIP MATTE/ });
+  const disclosure = page.getByRole('button', { name: /(?:Expand|Collapse) TRACK MATTE/ });
   await expect(disclosure).toBeVisible();
   if (await disclosure.getAttribute('aria-expanded') === 'false') {
     await disclosure.click();
   }
 }
 
-/** Set the matte source via the Inspector's MATTE SOURCE select. */
+/** Set the matte source via the Track Matte card's SOURCE LAYER select. */
 async function setMatteSource(page: Page, sourceId: string): Promise<void> {
   await openMatteSection(page);
-  // The matte source select is the select containing the eligible sources.
-  const select = page.locator(`select.select-control:has(option[value="${sourceId}"])`);
+  const select = page.getByLabel('Track matte source', { exact: true });
   await select.waitFor({ state: 'visible', timeout: 10000 });
   await select.selectOption(sourceId);
   await page.waitForTimeout(300);
 }
 
+/** Re-point the legacy matte a layer already carries (its own card's source select). */
+async function setLegacyMatteSource(page: Page, sourceId: string): Promise<void> {
+  await openDetailsTab(page, 'Masks');
+  const disclosure = page.getByRole('button', { name: /(?:Expand|Collapse) LEGACY CLIP MATTE/ });
+  if (await disclosure.getAttribute('aria-expanded') === 'false') await disclosure.click();
+  const card = page.locator('.inspector-section-card', { has: page.locator('.inspector-section-title', { hasText: 'LEGACY CLIP MATTE' }) });
+  await card.locator('.matte-source-field select').selectOption(sourceId);
+  await page.waitForTimeout(300);
+}
+
+/** The outliner indicator of a relationship. A legacy matte reads "Matte
+ *  source: X"; a Track Matte reads "Track matte source: X", with a note when
+ *  its source is hidden. */
+const indicatorLocator = (page: Page, label: string) => {
+  const name = label.startsWith('Matte source: ') ? label.slice('Matte source: '.length) : null;
+  return name === null
+    ? page.locator(`[aria-label="${label}"]`)
+    : page.locator(`[aria-label="${label}"], [aria-label="Track matte source: ${name}"], [aria-label^="Track matte source: ${name} ("]`);
+};
+
 async function matteIndicator(page: Page, label: string): Promise<boolean> {
-  return (await page.locator(`[aria-label="${label}"]`).count()) > 0;
+  return (await indicatorLocator(page, label).count()) > 0;
 }
 
 test.describe('M22 — outliner matte relationship + validation (real UI)', () => {
@@ -86,11 +106,11 @@ test.describe('M22 — outliner matte relationship + validation (real UI)', () =
     await setMatteSource(page, 'cow');
     // outliner: target row shows the relationship with the SOURCE PART name
     expect(await matteIndicator(page, 'Matte source: The Cow')).toBe(true);
-    const tooltip = await page.locator('[aria-label="Matte source: The Cow"]').getAttribute('title');
-    expect(tooltip).toBe('Matte source: The Cow');
+    const tooltip = await indicatorLocator(page, 'Matte source: The Cow').first().getAttribute('title');
+    expect(tooltip).toMatch(/^Track matte source: The Cow/);
     // the row that carries it is the Logo row (not the Cow row)
     const logoRow = page.locator('.actor-node', { has: page.locator('.actor-name', { hasText: 'The Logo' }) }).first();
-    expect(await logoRow.locator('[aria-label="Matte source: The Cow"]').count()).toBe(1);
+    expect(await logoRow.locator('[aria-label^="Track matte source: The Cow"]').count()).toBe(1);
     // no "Missing" anywhere
     expect(await matteIndicator(page, 'Missing matte source')).toBe(false);
   });
@@ -137,20 +157,18 @@ test.describe('M22 — outliner matte relationship + validation (real UI)', () =
   });
 
   test('E2E-4 — direct cycle A→B, B→A: both indicators visible, no missing, no crash', async ({ page }) => {
+    // The Track Matte refuses the pick that would close a cycle, so a cycle
+    // only arrives in older (legacy clip matte) data: it loads, shows both
+    // relationships and keeps rendering.
     await seed(page, [
-      makeLayer('a', 'Part A', 'custom_circle'),
-      makeLayer('b', 'Part B', 'custom_circle'),
+      makeLayer('a', 'Part A', 'custom_circle', { matte: { sourcePartId: 'b', mode: 'clip', enabled: true } }),
+      makeLayer('b', 'Part B', 'custom_circle', { matte: { sourcePartId: 'a', mode: 'clip', enabled: true } }),
     ]);
-    await selectPart(page, 'Part A');
-    await setMatteSource(page, 'b');
-    await selectPart(page, 'Part B');
-    await setMatteSource(page, 'a');
     // both relationships visible, neither missing (both sources exist)
     expect(await matteIndicator(page, 'Matte source: Part B')).toBe(true);
     expect(await matteIndicator(page, 'Matte source: Part A')).toBe(true);
     expect(await matteIndicator(page, 'Missing matte source')).toBe(false);
-    // renderer keeps working: a fresh matte assignment defaults to CLIP mode
-    // (the UI contract) → the clipPath pipeline emits defs for both parts
+    // renderer keeps working: the clipPath pipeline emits defs for both parts
     expect(await page.locator('clipPath[id^="kcs-clip"]').count()).toBeGreaterThanOrEqual(2);
     expect(await page.locator('.actor-node').count()).toBe(2);
   });
@@ -200,7 +218,7 @@ test.describe('M22 — outliner matte relationship + validation (real UI)', () =
     ]);
     expect(await matteIndicator(page, 'Matte source: The Cow')).toBe(true);
     await selectPart(page, 'The Logo');
-    await setMatteSource(page, 'lion');
+    await setLegacyMatteSource(page, 'lion');
     expect(await matteIndicator(page, 'Matte source: The Lion')).toBe(true);
     expect(await matteIndicator(page, 'Matte source: The Cow')).toBe(false);
     // selection survived the switch (The Logo row is still primary-selected)

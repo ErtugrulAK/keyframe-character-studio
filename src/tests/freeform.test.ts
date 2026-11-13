@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { CharacterPart, Transform } from '../types/animator';
-import { affineOfTransform, composeAffine } from '../utils/containerMath';
-import { evaluateTransform } from '../utils/evaluateTransform';
+import { affineOfTransform, composeAffine } from '../utils/geometry/containerMath';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
 import {
   buildFreeformPath,
   freeformVertexToDisplay,
@@ -15,7 +15,7 @@ import {
   simplifyFreeformPoints,
   normalizeClosedPoints,
   MIN_FREEFORM_POINTS,
-} from '../utils/freeform';
+} from '../utils/geometry/freeform';
 
 /** A 90°-rotated child inside a container with scaleX 2 — the sheared nesting. */
 const STRETCHED_CONTAINER: Transform = { x: 40, y: 0, rotation: 0, scaleX: 2, scaleY: 1, opacity: 1 };

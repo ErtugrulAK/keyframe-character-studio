@@ -10,7 +10,7 @@ interface TransformScaleCardProps {
 }
 
 /**
- * R5-14 — Scale as one cell of the compact transform trio: a single percentage
+ * Scale as one cell of the compact transform trio: a single percentage
  * input (50 = half size, 200 = double size) that writes `scaleX` and `scaleY`
  * together, exactly as this control has always done — the two channels stay
  * independent in the model, and the aspect lock below is what governs a uniform

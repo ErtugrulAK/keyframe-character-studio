@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart } from '../types/animator';
-import { matteTargetsOfSource, resolveEffectiveMatteRelationship } from '../utils/matteRelationship';
+import { matteTargetsOfSource, resolveEffectiveMatteRelationship } from '../utils/layers/matteRelationship';
 
 const part = (id: string, overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id,

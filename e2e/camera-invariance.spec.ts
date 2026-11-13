@@ -195,15 +195,7 @@ async function showInspector(page: Page) {
   await settle(page);
 }
 
-async function hideLeftToolbar(page: Page) {
-  await page.getByRole('button', { name: 'Hide Left Toolbar' }).click();
-  await settle(page);
-}
 
-async function showLeftToolbar(page: Page) {
-  await page.getByRole('button', { name: 'Show Left Toolbar' }).click();
-  await settle(page);
-}
 
 async function dragTimelineTo(page: Page, targetPx: number) {
   const bar = page.locator('.timeline-resizer-bar');
@@ -246,23 +238,12 @@ test('sidebar disclosure never moves the authored world', async ({ page }) => {
   report('right sidebar closed->open', baseline, rightOpen);
   expectInvariant('right sidebar closed->open', baseline, rightOpen);
 
-  await hideLeftToolbar(page);
-  const leftClosed = await probe(page);
-  report('left sidebar open->closed', baseline, leftClosed);
-  expectInvariant('left sidebar open->closed', baseline, leftClosed);
-
-  await showLeftToolbar(page);
-  const leftOpen = await probe(page);
-  report('left sidebar closed->open', baseline, leftOpen);
-  expectInvariant('left sidebar closed->open', baseline, leftOpen);
+  // (The left sidebar is gone: the menu bar and the toolbar replaced it.)
 
   // The layout really did move: the stage box changed while the world did not.
   expect(rightClosed.stage.width).toBeGreaterThan(baseline.stage.width + 1);
-  expect(leftClosed.stage.left).toBeLessThan(baseline.stage.left - 1);
-  expect(leftClosed.stage.width).toBeGreaterThan(baseline.stage.width + 1);
-
-  expect(leftOpen.stage.width).toBeCloseTo(baseline.stage.width, 0);
-  expect(leftOpen.undoDisabled).toBe(undoBefore);
+  expect(rightOpen.stage.width).toBeCloseTo(baseline.stage.width, 0);
+  expect(rightOpen.undoDisabled).toBe(undoBefore);
   expect(await snapshot(page)).toBe(sceneBefore);
   expect(await undoDepth(page)).toBe(historyDepth);
 });
@@ -327,14 +308,6 @@ test('repeated chrome toggles do not accumulate camera drift', async ({ page }) 
   expectInvariant('inspector toggled 10x', baseline, afterTenInspectorCycles);
 
   for (let cycle = 0; cycle < 10; cycle += 1) {
-    await hideLeftToolbar(page);
-    await showLeftToolbar(page);
-  }
-  const afterTenToolbarCycles = await probe(page);
-  report('left toolbar toggled 10x', baseline, afterTenToolbarCycles);
-  expectInvariant('left toolbar toggled 10x', baseline, afterTenToolbarCycles);
-
-  for (let cycle = 0; cycle < 10; cycle += 1) {
     await dragTimelineTo(page, baseline.stage.top + baseline.stage.height + 120);
     await dragTimelineTo(page, baseline.stage.top + baseline.stage.height - 120);
   }
@@ -397,12 +370,7 @@ test('pan survives chrome changes for the panned camera too', async ({ page }) =
   report('panned camera: right sidebar open->closed', panned, afterRight);
   expectInvariant('panned camera: right sidebar open->closed', panned, afterRight);
 
-  await hideLeftToolbar(page);
-  const afterLeft = await probe(page);
-  report('panned camera: left sidebar open->closed', panned, afterLeft);
-  expectInvariant('panned camera: left sidebar open->closed', panned, afterLeft);
-
-  await dragTimelineTo(page, afterLeft.stage.top + afterLeft.stage.height + 150);
+  await dragTimelineTo(page, afterRight.stage.top + afterRight.stage.height + 150);
   const afterTimeline = await probe(page);
   report('panned camera: timeline resize down', panned, afterTimeline);
   expectInvariant('panned camera: timeline resize down', panned, afterTimeline);

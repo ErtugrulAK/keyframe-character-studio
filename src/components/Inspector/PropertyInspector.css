@@ -4,9 +4,9 @@
   --inspector-control-sm: 88px;
   --inspector-control-md: 112px;
   position: relative;
-  width: min(var(--right-inspector-width), max(250px, 34vw));
-  min-width: min(var(--right-inspector-width), max(250px, 34vw));
-  flex: 0 0 min(var(--right-inspector-width), max(250px, 34vw));
+  width: min(var(--right-inspector-width), max(250px, 44vw));
+  min-width: min(var(--right-inspector-width), max(250px, 44vw));
+  flex: 0 0 min(var(--right-inspector-width), max(250px, 44vw));
   background: var(--bg-darkest);
   border-left: 1px solid var(--border-color);
   display: flex;
@@ -48,7 +48,7 @@
    without changing its workspace-row vertical anchor or overlay layer. */
 .app-container:not(.inspector-hidden) .inspector-dock-toggle {
   top: var(--kcs-panel-handle-top);
-  right: calc(min(var(--right-inspector-width), max(250px, 34vw)) - 10px);
+  right: calc(min(var(--right-inspector-width), max(250px, 44vw)) - 10px);
 }
 
 .app-container.inspector-hidden .inspector-dock-toggle {
@@ -158,7 +158,7 @@
 /* Outliner Search & Filter Bar */
 .outliner-search-box {
   height: 28px;
-  background: #212121;
+  background: var(--kcs-rail);
   display: flex;
   align-items: center;
   gap: var(--space-2xs);
@@ -217,7 +217,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  background: #212121;
+  background: var(--kcs-rail);
 }
 
 .tree-node {
@@ -250,7 +250,7 @@
 }
 
 .sub-root-node {
-  background: #252525;
+  background: var(--bg-panel);
   color: var(--text-muted);
 }
 
@@ -354,7 +354,7 @@
 
 .template-select-pill {
   background: #2c2c2c;
-  border: 1px solid #3a3a3a;
+  border: 1px solid var(--kcs-border-default);
   color: var(--accent-cyan);
   font-size: 10.5px;
   font-weight: 500;
@@ -372,7 +372,7 @@
   border-top: 1px solid var(--border-color);
   font-size: 10.5px;
   font-weight: 600;
-  color: #8c8c8c;
+  color: var(--kcs-text-muted);
   display: flex;
   align-items: center;
   padding: 0 var(--space-xs);
@@ -389,7 +389,7 @@
 
 .outliner-count {
   margin-left: auto;
-  color: #8c8c8c;
+  color: var(--kcs-text-muted);
   font-size: 10.5px;
   font-weight: 600;
   white-space: nowrap;
@@ -489,7 +489,7 @@
   align-items: center;
   gap: var(--space-2xs);
   padding: var(--space-2xs) var(--space-xs);
-  background: #212121;
+  background: var(--kcs-rail);
   border-bottom: 1px solid var(--border-color);
   overflow-x: auto;
   white-space: nowrap;
@@ -498,7 +498,7 @@
 .details-chips-bar::-webkit-scrollbar { height: 3px; }
 
 .chip-btn {
-  background: #2a2a2a;
+  background: var(--kcs-bg-surface);
   border: 1px solid #373737;
   color: var(--text-muted);
   font-size: 10.5px;
@@ -1099,6 +1099,43 @@
   align-items: flex-start;
 }
 
+/* A keyable field's name with its keyframe button (After Effects' navigator). */
+.matte-key-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+.matte-key-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.matte-key-button:hover:not(:disabled),
+.matte-key-button:focus-visible {
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+.matte-key-button.is-animated,
+.matte-key-button.is-key {
+  color: var(--accent-teal);
+}
+
+.matte-key-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
 .matte-compact-field > .select-control {
   width: var(--inspector-control-sm);
   max-width: 100%;
@@ -1132,27 +1169,6 @@
   grid-column: 1 / -1;
 }
 
-.effects-color-field {
-  min-width: 0;
-  margin-bottom: var(--space-xs);
-}
-
-.effects-color-row {
-  min-width: 0;
-}
-
-.effects-color-controls {
-  flex: 1;
-  min-width: 0;
-}
-
-.effects-clear-button {
-  flex: 0 0 auto;
-  height: 26px;
-  padding: 0 var(--space-xs);
-  font-size: var(--font-size-caption);
-}
-
 .effects-property-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1181,17 +1197,6 @@
 }
 
 @container (max-width: 300px) {
-  .effects-color-row {
-    align-items: stretch;
-    flex-direction: column;
-    gap: var(--space-2xs);
-  }
-
-  .effects-color-controls {
-    flex: 0 0 auto;
-    width: 100%;
-  }
-
   .effects-property-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1275,10 +1280,9 @@
   opacity: 0.55;
 }
 
-.appearance-group-stroke {
-  border-top: 1px solid var(--border-color);
-  padding-top: var(--space-xs);
-  margin-top: var(--space-2xs);
+/* The shadow sits under the fill/stroke row, as one more paint group. */
+.appearance-group-shadow {
+  margin-top: var(--space-sm, 8px);
 }
 
 .appearance-group-header {
@@ -1365,7 +1369,7 @@
   flex: 1 !important;
   width: 100% !important;
   height: 22px !important;
-  background: #212121 !important;
+  background: var(--kcs-rail) !important;
   border: 1px solid #353535 !important;
   border-radius: var(--radius-xs) !important;
   color: #fff !important;
@@ -1592,7 +1596,8 @@
 
 .rgba-picker-alpha-fill {
   position: absolute;
-  inset: 0 auto 0 0;
+  inset: 0;
+  border-radius: inherit;
   pointer-events: none;
 }
 
@@ -1664,7 +1669,7 @@
 .outliner-relation-badge.is-missing {
   border-color: rgba(245, 158, 11, 0.45);
   background: rgba(245, 158, 11, 0.1);
-  color: #fbbf24;
+  color: var(--accent-gold);
 }
 .outliner-relation-badge.is-mask {
   border-color: rgba(166, 166, 166, 0.35);
@@ -1748,7 +1753,7 @@
 }
 .layer-mask-row-off {
   background: rgba(245, 158, 11, 0.12);
-  color: #fbbf24;
+  color: var(--accent-gold);
 }
 .layer-mask-add {
   align-self: flex-start;
@@ -1838,7 +1843,7 @@
 }
 /* V3 Inspector: selected-object identity and property-editor density. */
 .motion-design-right-sidebar {
-  background: #212121;
+  background: var(--kcs-rail);
   border-left-color: #383838;
 }
 
@@ -1850,7 +1855,7 @@
 .outliner-header,
 .details-header {
   min-height: 36px;
-  background: #2a2a2a;
+  background: var(--kcs-bg-surface);
   border-bottom-color: #3c3c3c;
 }
 
@@ -1904,7 +1909,7 @@
 
 .details-body {
   padding: 8px 10px 16px;
-  background: #212121;
+  background: var(--kcs-rail);
 }
 
 .inspector-section,
@@ -2288,7 +2293,7 @@
 }
 
 .track-matte-summary-warning {
-  color: #fbbf24;
+  color: var(--accent-gold);
 }
 
 .track-matte-summary-note {
@@ -2296,56 +2301,6 @@
   font-style: italic;
 }
 
-
-/* C2 — the mask path editor: full Inspector width, the owner's proportions,
-   an expandable view, and control rows that wrap instead of squeezing. */
-.bezier-path-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-}
-
-.bezier-path-editor__header,
-.bezier-path-editor__row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.bezier-path-editor__header {
-  justify-content: space-between;
-}
-
-.bezier-path-editor__status {
-  color: var(--text-secondary, #d6d6d6);
-  font-size: 11px;
-}
-
-.bezier-path-editor__canvas {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: 220px;
-  border-radius: 4px;
-  touch-action: none;
-}
-
-/* C5 — the focused vertex is also the selected one (white fill), so its ring
-   uses the focus token, not white. */
-.bezier-path-editor__canvas circle[role="button"]:focus-visible {
-  outline: none;
-  stroke: var(--kcs-border-focus);
-  stroke-width: 3;
-}
-
-.bezier-path-editor__note {
-  margin: 0;
-  color: #fbbf24;
-  font-size: 11px;
-  line-height: 1.4;
-}
 
 /* C2-E — layer tree drop affordance: a line for Before/After, a box for Nest. */
 .tree-node:focus-visible {
@@ -2410,6 +2365,32 @@
 .outliner-drop-label.is-blocked {
   background: rgba(239, 68, 68, 0.24);
 }
+
+/*
+ * Each drop intent has its own colour, so a parent link never reads like a
+ * reorder: orange = becomes a child (Parent to), green = moves into a group,
+ * violet = reorders and changes the parent, blue = order only. Red (above)
+ * stays the refusal.
+ */
+.tree-node.drop-kind-parent { --drop-colour: #ff9f43; }
+.tree-node.drop-kind-group { --drop-colour: #34d399; }
+.tree-node.drop-kind-reparent { --drop-colour: #a78bfa; }
+.tree-node.drop-kind-reorder { --drop-colour: #4a8fe7; }
+
+.tree-node.drop-before[class*='drop-kind-'] { box-shadow: inset 0 2px 0 0 var(--drop-colour); }
+.tree-node.drop-after[class*='drop-kind-'] { box-shadow: inset 0 -2px 0 0 var(--drop-colour); }
+.tree-node.drop-nest[class*='drop-kind-'] {
+  outline-color: var(--drop-colour);
+  background: color-mix(in srgb, var(--drop-colour) 14%, transparent);
+}
+.tree-node[class*='drop-kind-'] .outliner-drop-label {
+  background: color-mix(in srgb, var(--drop-colour) 28%, transparent);
+}
+
+.outliner-drop-hint.drop-kind-parent { color: #ff9f43; }
+.outliner-drop-hint.drop-kind-group { color: #34d399; }
+.outliner-drop-hint.drop-kind-reparent { color: #a78bfa; }
+.outliner-drop-hint.drop-kind-reorder { color: #4a8fe7; }
 
 .tree-node .outliner-rename-input {
   flex: 1;
@@ -2794,25 +2775,6 @@
   min-width: 56px;
 }
 
-/* C6 — shape geometry: parametric shape vs editable path. */
-.path-geometry-note {
-  margin: 0 0 8px;
-  color: var(--kcs-text-secondary, var(--text-secondary));
-  font-size: var(--font-size-caption);
-  line-height: 1.4;
-}
-
-.path-geometry-convert {
-  width: 100%;
-}
-
-.path-geometry-reason {
-  margin: 6px 0 0;
-  color: var(--kcs-text-muted, var(--text-muted));
-  font-size: var(--font-size-caption);
-  line-height: 1.35;
-}
-
 /* C6 — a card's status next to its title, and the quiet look of a
    compatibility card that this layer does not use. */
 .inspector-section-title {
@@ -2935,7 +2897,7 @@
   flex-shrink: 0;
   gap: 2px;
   padding: 0 10px;
-  background: var(--kcs-bg-inspector, #212121);
+  background: var(--kcs-bg-inspector, var(--kcs-rail));
   border-bottom: 1px solid var(--kcs-border-subtle);
 }
 
@@ -3034,4 +2996,161 @@
 
 .details-tab-list[data-pointer="true"] .details-tab:focus-visible {
   outline: none;
+}
+
+/* MODIFIERS: one row per modifier the layer can take, switched on by its
+   checkbox; an active one opens its settings in the two-column field grid. */
+.modifier-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.modifier-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-xs) 0;
+  min-width: 0;
+}
+
+
+.modifier-group-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.modifier-group-header input[type='checkbox'] {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin: 1px 0 0;
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+}
+
+.modifier-group-header input[type='checkbox']:disabled {
+  cursor: not-allowed;
+}
+
+.modifier-group-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.modifier-group-name {
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.modifier-group.is-on .modifier-group-name {
+  color: var(--text-primary);
+}
+
+.modifier-group-hint,
+.modifier-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.modifier-group-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-xs);
+  padding-left: 23px;
+  min-width: 0;
+}
+
+.modifier-group-fields .input-control,
+.modifier-group-fields .select-control {
+  width: 100%;
+  min-width: 0;
+}
+
+.modifier-text-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 132px;
+  overflow-y: auto;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.modifier-text-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+  cursor: pointer;
+}
+
+.modifier-text-option > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modifier-text-option input[type='checkbox'] {
+  flex: none;
+  margin: 0;
+  accent-color: var(--accent-cyan);
+}
+
+.modifier-text-option.is-missing {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+@container (max-width: 300px) {
+  .modifier-group-fields {
+    grid-template-columns: minmax(0, 1fr);
+    padding-left: 0;
+  }
+}
+
+/* Appearance: fill and stroke side by side, each a compact swatch and its hex. */
+.appearance-paint-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-sm, 8px);
+}
+
+.appearance-color-compact {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The swatch keeps its own size so the hex beside it stays visible (the
+   generic picker field is full-width and pushed the hex to zero width). */
+.appearance-color-compact .color-picker-field {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.appearance-color-compact .color-swatch-button {
+  width: 36px;
+  height: 22px;
+}
+
+.appearance-color-hex {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--kcs-text-secondary, #cfcfcf);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }

@@ -4,6 +4,7 @@ import type { SceneData, SceneLayer } from '../types/composition';
 import { evaluateOGrafScene } from '../ograf/evaluation';
 import { compileOGrafPackage } from '../ograf/packageCompiler';
 import { renderOGrafSvg } from '../ograf/svgRenderer';
+import { onAir } from './helpers/ografOnAir';
 
 function layer(overrides: Partial<SceneLayer> = {}): SceneLayer {
   return {
@@ -100,6 +101,7 @@ describe('generated runtime parity', () => {
     expect(plan.status).toBe('ready-to-materialize');
     const graphic = instantiateGraphic(plan.files.find((file) => file.path === 'graphic.mjs')?.content || '');
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
 
     // 320x180 scene: the runtime and the canonical renderer both place the
     // origin at the artboard centre (160, 90).
@@ -122,6 +124,7 @@ describe('generated runtime parity', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
 
     const canonical = renderOGrafSvg(evaluateOGrafScene(authored, 0));
     const generated = graphic.innerHTML;
@@ -166,6 +169,7 @@ describe('generated runtime parity', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
 
     const canonical = renderOGrafSvg(evaluateOGrafScene(authored, 0));
     expect(graphic.innerHTML).toContain('clipPath id="kcs-clip-source"');
@@ -218,6 +222,7 @@ describe('generated runtime parity', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic, 0);
     const canonical = renderOGrafSvg(evaluateOGrafScene(authored, 0));
     const filterId = 'kcs-layer-mask-filter-kcs-ograf-layer-mask-shape-subtract';
     expect(graphic.innerHTML).toContain(`id="${filterId}"`);
@@ -249,6 +254,7 @@ describe('generated runtime parity', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
     const canonical = renderOGrafSvg(evaluateOGrafScene(authored, 0));
     const id = 'kcs-ograf-track-matte-target-source-alpha-inverted';
 
@@ -268,6 +274,72 @@ describe('generated runtime parity', () => {
     await graphic.dispose();
   });
 
+  test('a keyed Track Matte feather and strength animate the same in the runtime and the canonical SVG', async () => {
+    const keys = (values: [number, number][]): PropertyKeyframe[] => values.map(([frame, value]) => ({ id: `k${frame}-${value}`, frame, value, easing: 'linear' }));
+    const authored = scene([
+      layer({ id: 'source', type: 'custom_circle', strokeEnabled: false, trimPathEnabled: undefined }),
+      layer({
+        id: 'target',
+        zIndex: 1,
+        trackMatte: { sourceLayerId: 'source', mode: 'alpha', inverted: false, sourceVisible: false },
+        trimPathEnabled: undefined,
+      }),
+    ], [{
+      ...track('target', []),
+      channels: { ...track('target', []).channels, matteFeather: keys([[0, 0], [60, 20]]), matteStrength: keys([[0, 1], [60, 0.5]]) },
+    }]);
+    const plan = compileOGrafPackage(authored);
+    const graphic = instantiateGraphic(plan.files.find((file) => file.path === 'graphic.mjs')?.content || '');
+    await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
+    const id = 'kcs-ograf-track-matte-target-source-alpha';
+
+    for (const [frame, blur, strength] of [[0, null, null], [30, '5', '0.75'], [60, '10', '0.5']] as const) {
+      graphic._currentFrame = frame;
+      graphic._render();
+      for (const svg of [graphic.innerHTML, renderOGrafSvg(evaluateOGrafScene(authored, frame))]) {
+        expect(svg).toContain(`<mask id="${id}`);
+        if (blur === null) expect(svg).not.toContain('feGaussianBlur');
+        else expect(svg).toContain(`stdDeviation="${blur}"`);
+        if (strength === null) expect(svg).not.toContain('fill-opacity="0.');
+        else expect(svg).toMatch(new RegExp(`opacity="${strength}"`));
+      }
+    }
+    await graphic.dispose();
+  });
+
+  test('a keyed Track Matte gradient angle turns the same in the runtime and the canonical SVG', async () => {
+    const keys = (values: [number, number][]): PropertyKeyframe[] => values.map(([frame, value]) => ({ id: `a${frame}`, frame, value, easing: 'linear' }));
+    const authored = scene([
+      layer({ id: 'source', type: 'custom_rect', strokeEnabled: false, trimPathEnabled: undefined }),
+      layer({
+        id: 'target',
+        zIndex: 1,
+        trackMatte: { sourceLayerId: 'source', mode: 'alpha', inverted: false, sourceVisible: false, gradient: { angle: 0 } },
+        trimPathEnabled: undefined,
+      }),
+    ], [{ ...track('target', []), channels: { ...track('target', []).channels, matteGradientAngle: keys([[0, 0], [60, 90]]) } }]);
+    const plan = compileOGrafPackage(authored);
+    const graphic = instantiateGraphic(plan.files.find((file) => file.path === 'graphic.mjs')?.content || '');
+    await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
+    const gradientOf = (svg: string) => /<linearGradient[^>]*x1="([^"]*)"[^>]*y1="([^"]*)"[^>]*x2="([^"]*)"[^>]*y2="([^"]*)"/u.exec(svg)?.slice(1).map(Number);
+    for (const frame of [0, 30, 60]) {
+      graphic._currentFrame = frame;
+      graphic._render();
+      const runtime = gradientOf(graphic.innerHTML);
+      const canonical = gradientOf(renderOGrafSvg(evaluateOGrafScene(authored, frame)));
+      expect(runtime).toBeDefined();
+      expect(runtime!.map((value) => Math.round(value * 1000) / 1000)).toEqual(canonical!.map((value) => Math.round(value * 1000) / 1000));
+    }
+    // It turned: the frame 0 and frame 60 ramps run along different axes.
+    graphic._currentFrame = 0; graphic._render();
+    const start = gradientOf(graphic.innerHTML)!;
+    graphic._currentFrame = 60; graphic._render();
+    expect(gradientOf(graphic.innerHTML)).not.toEqual(start);
+    await graphic.dispose();
+  });
+
   test('a normal alpha track matte keeps the alpha mask it always used', async () => {
     const authored = scene([
       layer({ id: 'source', type: 'custom_circle', strokeEnabled: false, trimPathEnabled: undefined }),
@@ -282,6 +354,7 @@ describe('generated runtime parity', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
     const canonical = renderOGrafSvg(evaluateOGrafScene(authored, 0));
     const id = 'kcs-ograf-track-matte-target-source-alpha';
 
@@ -341,6 +414,7 @@ describe('generated runtime parity', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
     expect(graphic.innerHTML).toContain('id="kcs-clip-source___hostile"');
     expect(graphic.innerHTML).toContain('clip-path="url(#kcs-clip-source___hostile)"');
     expect(graphic.innerHTML).toContain('id="kcs-ograf-layer-mask-target___hostile-mask___hostile-add"');
@@ -368,6 +442,7 @@ describe('generated runtime parity', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
     const updated = await graphic.updateAction({
       data: {
         headline: 'After',

@@ -179,7 +179,9 @@ test.describe('editor interaction regressions', () => {
     await page.locator('.actor-node', { hasText: 'Triangle' }).click({ modifiers: ['Control'] });
     // Boolean creation is an authoring command: the top toolbar owns it.
     await page.getByRole('button', { name: 'Boolean Union' }).click();
-    await expect(page.locator('.nested-node.actor-node')).toHaveCount(2);
+    // The result reads as one layer; its operands are listed only while it is opened.
+    await expect(page.locator('.actor-node', { hasText: 'Union' })).toHaveCount(1);
+    await expect(page.locator('.nested-node.actor-node')).toHaveCount(0);
 
     await page.keyboard.press('Delete');
     // C5 — a (Boolean) group is a container: its operands are named before the delete.
@@ -201,9 +203,10 @@ test.describe('editor interaction regressions', () => {
     }, STORAGE_KEY)).toEqual({ layers: ['circle'], tracks: ['circle'] });
 
     await page.keyboard.press('Control+Z');
-    await expect(page.locator('.nested-node.actor-node', { hasText: 'Rectangle' })).toHaveCount(1);
-    await expect(page.locator('.nested-node.actor-node', { hasText: 'Triangle' })).toHaveCount(1);
-    await expect(page.locator('.nested-node.actor-node')).toHaveCount(2);
+    await expect(page.locator('.actor-node', { hasText: 'Union' })).toHaveCount(1);
+    await saveNow(page);
+    await expect.poll(() => page.evaluate((key) => (JSON.parse(localStorage.getItem(key) ?? '{}').layers ?? []).map((item: { id: string }) => item.id).sort(), STORAGE_KEY))
+      .toEqual(expect.arrayContaining(['circle', 'rect', 'tri']));
     await page.keyboard.press('Control+Y');
     await expect(page.locator('.actor-node', { hasText: 'Rectangle' })).toHaveCount(0);
     await expect(page.locator('.actor-node', { hasText: 'Triangle' })).toHaveCount(0);

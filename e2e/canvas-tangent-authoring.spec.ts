@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { openPathEditing } from './fixtures/toolbarTools';
 
 /**
  * Milestone A — direct canvas tangent handle authoring, real-browser smoke.
@@ -67,7 +68,8 @@ async function seed(page: Page): Promise<void> {
 
 /** The rendered geometry of the seeded freeform layer. */
 const freeformD = (page: Page) => page.evaluate(() => {
-  const target = Array.from(document.querySelectorAll('path[d]'))
+  // The layer's own outline (other chrome, such as the grid tiles, also draws paths).
+  const target = Array.from(document.querySelectorAll('.stage-svg [data-part-id="free"] path[d]'))
     .find((element) => (element.getAttribute('d') ?? '').startsWith('M 0 0'));
   return target ? target.getAttribute('d') : null;
 });
@@ -93,6 +95,9 @@ test.describe('canvas tangent authoring', () => {
     await expect(page.locator('[data-testid="freeform-tangent-overlay"]')).toHaveCount(0);
 
     await page.locator('.actor-node', { hasText: 'Free' }).click();
+    // A click selects the path (its frame); a double-click opens its points.
+    await expect(page.locator('[data-testid="freeform-tangent-overlay"]')).toHaveCount(0);
+    await openPathEditing(page, 'free');
     await expect(page.locator('[data-testid="freeform-tangent-overlay"]')).toHaveCount(1);
     await expect(page.locator('[data-testid="freeform-vertex-marker"]')).toHaveCount(3);
 
@@ -133,10 +138,13 @@ test.describe('canvas tangent authoring', () => {
 
     await page.screenshot({ path: 'test-results/tangent-authoring-handles.png' });
 
-    // The overlay follows the selection: away from the freeform layer and back.
+    // Selecting another layer closes the points; back on the path, a click
+    // shows its frame and a double-click opens the points again.
     await page.locator('.actor-node', { hasText: 'Box' }).click();
     await expect(page.locator('[data-testid="freeform-tangent-overlay"]')).toHaveCount(0);
     await page.locator('.actor-node', { hasText: 'Free' }).click();
+    await expect(page.locator('[data-testid="freeform-tangent-overlay"]')).toHaveCount(0);
+    await openPathEditing(page, 'free');
     await expect(page.locator('[data-testid="freeform-tangent-overlay"]')).toHaveCount(1);
     await page.screenshot({ path: 'test-results/tangent-authoring-eligibility.png' });
   });

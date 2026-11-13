@@ -64,8 +64,8 @@ async function settleForCapture(page: Page): Promise<void> {
   await page.waitForFunction(() => {
     const measure = () => {
       const ruler = document.querySelector('.time-ruler')?.getBoundingClientRect();
-      const rail = document.querySelector('.left-sidebar-nav')?.getBoundingClientRect();
-      return ruler && rail ? [ruler.width, ruler.height, rail.width, rail.height].join('|') : null;
+      const tools = document.querySelector('.authoring-toolbar')?.getBoundingClientRect();
+      return ruler && tools ? [ruler.width, ruler.height, tools.width, tools.height].join('|') : null;
     };
     const first = measure();
     if (!first) return false;
@@ -78,6 +78,11 @@ async function settleForCapture(page: Page): Promise<void> {
 }
 
 test.describe('@visual — stable region baselines', () => {
+  // The capture viewport is set before the first navigation: the timeline's
+  // opening height depends on the window the editor opens in, so a page opened
+  // at the device default and resized afterwards captures a different layout.
+  test.use({ viewport: { width: 1440, height: 900 } });
+
   test.beforeEach(async ({ page }) => {
     await seedVisualScene(page);
     await settleForCapture(page);
@@ -90,8 +95,10 @@ test.describe('@visual — stable region baselines', () => {
     });
   });
 
-  test('@visual left rail renders the icon column', async ({ page }) => {
-    await expect(page.locator('.left-sidebar-nav')).toHaveScreenshot('left-rail.png', {
+  // The left rail this region used to capture is gone (the menu bar and the
+  // toolbar replaced it); the toolbar is the stable chrome region now.
+  test('@visual toolbar renders the tool row', async ({ page }) => {
+    await expect(page.locator('.authoring-toolbar')).toHaveScreenshot('authoring-toolbar.png', {
       animations: 'disabled',
       maxDiffPixelRatio: 0.001,
     });

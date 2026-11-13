@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { traceBinaryMask, type BinaryMask } from '../utils/textOutline';
+import { traceBinaryMask, type BinaryMask } from '../utils/geometry/textOutline';
 
 /**
  * The mask tracer behind a text Boolean operand. The rasteriser needs a canvas,

@@ -43,7 +43,7 @@
   margin-bottom: 6px;
 }
 
-.ograf-capability-layer.is-supported { border-left-color: #10b981; }
+.ograf-capability-layer.is-supported { border-left-color: var(--accent-green); }
 .ograf-capability-layer.is-conditional { border-left-color: #f59e0b; }
 .ograf-capability-layer.is-blocked { border-left-color: #ef4444; }
 

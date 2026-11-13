@@ -136,7 +136,7 @@ describe('OGraf package import', () => {
   };
 
   it('bounds a stored entry by the bytes it actually materialises', () => {
-    // Astra F-05: a stored member larger than the per-entry limit declared a
+    // Review F-05: a stored member larger than the per-entry limit declared a
     // one-byte uncompressed size, and the budget trusted that declaration. A
     // stored member is copied from its compressed size, so the two declared
     // sizes are the same one; a disagreement is refused instead of trusted.

@@ -15,7 +15,8 @@ vi.mock('../context/EditorContextMenuContext', () => ({
   EditorContextMenuProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 vi.mock('../components/Toolbar/AuthoringToolbar', () => ({ AuthoringToolbar: () => <div data-testid="authoring-toolbar" /> }));
-vi.mock('../components/Toolbar/LeftToolbar', () => ({ LeftToolbar: () => <nav /> }));
+vi.mock('../components/MenuBar/MenuBar', () => ({ MenuBar: () => <nav data-testid="menu-bar" /> }));
+vi.mock('../components/Toolbar/ToolOptionsBar', () => ({ ToolOptionsBar: () => null }));
 vi.mock('../components/Canvas/StageCanvas', () => ({ StageCanvas: () => <main data-testid="stage" /> }));
 vi.mock('../components/Timeline/SequencerTimeline', () => ({ SequencerTimeline: () => <footer /> }));
 vi.mock('../components/Broadcast/LiveDirectorPanel', () => ({ LiveDirectorPanel: () => <footer /> }));
@@ -36,6 +37,9 @@ describe('App Inspector visibility', () => {
     expect(toggle().parentElement).toHaveClass('main-layout');
     expect(toggle().closest('.app-container')).not.toBeNull();
     expect(screen.getAllByRole('button', { name: /Inspector/ })).toHaveLength(1);
+    // The left panel is gone: the menu bar and the toolbar replace it.
+    expect(screen.getByTestId('menu-bar')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Left Toolbar/ })).toBeNull();
     fireEvent.click(toggle());
     expect(toggle()).toHaveAccessibleName('Show Inspector');
     expect(screen.getByTestId('inspector')).toHaveAttribute('data-hidden', 'true');

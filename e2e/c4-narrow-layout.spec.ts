@@ -32,9 +32,9 @@ const roundTrip = async (page: Page) => {
   await expect(page.locator('.sequencer-timeline')).toBeVisible();
 };
 
-test('1440×900 is unchanged: 79 px header, 320 px timeline, every band on the strip', async ({ page }) => {
+test('1440×900: slim 42 px header, 320 px timeline, every band on the strip', async ({ page }) => {
   await open(page, 1440, 900);
-  expect(await height(page, '.header-bar')).toBe(79);
+  expect(await height(page, '.header-bar')).toBe(42);
   expect(await height(page, '.sequencer-timeline')).toBe(320);
   await expect(page.getByRole('button', { name: 'Toggle grid' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Boolean operations' })).toBeHidden();

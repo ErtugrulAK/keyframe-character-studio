@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { migrateSceneLayerV6 } from '../utils/v6Migration';
+import { migrateSceneLayerV6 } from '../utils/persistence/v6Migration';
 import type { SceneLayer } from '../types/composition';
 
 const baseLayer = (overrides: Partial<SceneLayer> = {}): SceneLayer => ({

@@ -3,10 +3,10 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { SelectionGizmo } from '../components/Canvas/SelectionGizmo';
 import type { CharacterPart, Transform } from '../types/animator';
-import { affineHasShear, applyAffine, type WorldAffine } from '../utils/containerMath';
-import { evaluateTransform } from '../utils/evaluateTransform';
-import { getSelectionFrameBounds } from '../utils/selectionFrame';
-import { EDITOR_CAMERA_CENTER } from '../utils/projectCoordinates';
+import { affineHasShear, applyAffine, type WorldAffine } from '../utils/geometry/containerMath';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { getSelectionFrameBounds } from '../utils/geometry/selectionFrame';
+import { EDITOR_CAMERA_CENTER } from '../utils/geometry/projectCoordinates';
 
 const transform: Transform = { x: 120, y: -40, rotation: 15, scaleX: 2, scaleY: 0.5, opacity: 1 };
 

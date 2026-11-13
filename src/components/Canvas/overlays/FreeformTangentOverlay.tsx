@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { BezierPath, CharacterPart, Transform } from '../../../types/animator';
-import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
-import { getFreeformVertexWorldPositions, resolveFreeformPath } from '../../../utils/freeform';
-import { buildBezierPathD, altMoveVertexHandle, moveVertexHandle, pullVertexHandles, toggleVertexKind, type BezierHandleKind } from '../../../utils/bezierPath';
-import { isEditableElement, ownsShortcutScope } from '../../../utils/keyboardFocus';
-import { isBlockingModalOpen } from '../../../utils/modalBoundary';
-import { insertMaskVertex, nearestMaskPathSegment } from '../../../utils/maskPathCreation';
-import { worldAffineOf } from '../../../utils/containerMath';
-import { worldToLocal } from '../../../utils/matte';
-import type { WorldAffine } from '../../../utils/containerMath';
+import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/geometry/projectCoordinates';
+import { getFreeformVertexWorldPositions, resolveFreeformPath } from '../../../utils/geometry/freeform';
+import { buildBezierPathD, altMoveVertexHandle, moveVertexHandle, pullVertexHandles, toggleVertexKind, type BezierHandleKind } from '../../../utils/geometry/bezierPath';
+import { isEditableElement, ownsShortcutScope } from '../../../utils/editor/keyboardFocus';
+import { isBlockingModalOpen } from '../../../utils/editor/modalBoundary';
+import { insertMaskVertex, nearestMaskPathSegment } from '../../../utils/geometry/maskPathCreation';
+import { worldAffineOf } from '../../../utils/geometry/containerMath';
+import { worldToLocal } from '../../../utils/layers/matte';
+import type { WorldAffine } from '../../../utils/geometry/containerMath';
 
 /** Marker sizes, scaled by the canvas zScale so they stay screen-constant. */
 const VERTEX_RADIUS = 7;
@@ -37,7 +37,7 @@ interface DragState {
   startClient: { x: number; y: number };
   /** False until the gesture changes something: a plain click on a point opens no history batch. */
   started: boolean;
-  /** C10 — Alt held at the press: a handle breaks or relinks, a point pulls out new handles. */
+  /** Alt held at the press: a handle breaks or relinks, a point pulls out new handles. */
   alt: boolean;
 }
 
@@ -55,7 +55,7 @@ interface FreeformTangentOverlayProps {
   onBatchStart: () => void;
   onBatchEnd: () => void;
   outputOrigin?: CoordinatePoint;
-  /** C6 — the selected point, shared with the Inspector (controlled when given). */
+  /** The selected point, shared with the Inspector (controlled when given). */
   selectedIndex?: number | null;
   onSelectIndex?: (index: number | null) => void;
 }
@@ -138,7 +138,7 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     onBatchEnd();
   }, [pendingCancel, onBatchEnd]);
 
-  // C10 — C switches the selected point between Corner and Smooth, as in mask
+  // C switches the selected point between Corner and Smooth, as in mask
   // editing (one write, one undo step).
   const latestKey = useRef({ path, selectedIndex, onPathChange });
   useEffect(() => {
@@ -213,7 +213,7 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     const { svgX, svgY } = toWorld(event.clientX, event.clientY);
     const currentLocal = toLocal({ x: svgX, y: svgY });
     if (active.handle === 'vertex' && active.alt) {
-      // C10 — Alt-drag from a point pulls out new mirrored handles; the point stays.
+      // Alt-drag from a point pulls out new mirrored handles; the point stays.
       const offset = { x: currentLocal.x - active.startLocal.x, y: currentLocal.y - active.startLocal.y };
       onPathChange({
         ...active.initialPath,

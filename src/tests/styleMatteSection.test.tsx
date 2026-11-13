@@ -10,7 +10,7 @@ import React from 'react';
 import { render, fireEvent, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { StyleMatteSection } from '../components/Inspector/sections/style/StyleMatteSection';
-import { normalizeGradientType, normalizeGradientStops, gradientId, gradientStopsHash } from '../utils/matte';
+import { normalizeGradientType, normalizeGradientStops, gradientId, gradientStopsHash } from '../utils/layers/matte';
 import type { CharacterPart } from '../types/animator';
 
 function makePart(id: string, type: string, name: string, matte?: CharacterPart['matte']): CharacterPart {
@@ -32,7 +32,8 @@ function renderMatte(target: CharacterPart, allParts: CharacterPart[]) {
   const own = within(utils.container);
   const expand = own.queryByRole('button', { name: 'Expand LEGACY CLIP MATTE' });
   if (expand) fireEvent.click(expand);
-  expect(own.getByRole('button', { name: 'Collapse LEGACY CLIP MATTE' })).toBeInTheDocument();
+  // The legacy card exists only for a layer that already carries a legacy matte.
+  if (target.matte) expect(own.getByRole('button', { name: 'Collapse LEGACY CLIP MATTE' })).toBeInTheDocument();
   return { onPartPropChange, ...utils };
 }
 
@@ -76,15 +77,17 @@ describe('StyleMatteSection — track matte editor UI', () => {
     expect(screen.getByRole('option', { name: longName })).toBeTruthy();
   });
 
-  it('starts with None when no matte is set', () => {
+  it('offers no legacy matte on a layer that has none: new mattes are Track Mattes', () => {
     const { container } = renderMatte(BOX, [STAR, BOX, FREEFORM, TEXT]);
-    const select = container.querySelector('select') as HTMLSelectElement;
-    expect(select.value).toBe('');
-    expect(screen.getByText('None')).toBeTruthy();
+    expect(screen.queryByText('LEGACY CLIP MATTE')).toBeNull();
+    expect(screen.queryByText('MASK SOURCE')).toBeNull();
+    expect(screen.getByText('TRACK MATTE')).toBeTruthy();
+    expect(container.querySelector('[data-testid="legacy-matte-intro"]')).toBeNull();
   });
 
   it('lists eligible sources (static shapes + M15 freeform + M18 text); excludes self and image/video', () => {
-    const { container } = renderMatte(BOX, [STAR, BOX, FREEFORM, TEXT]);
+    const withLegacy = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'src', mode: 'clip', enabled: true });
+    const { container } = renderMatte(withLegacy, [STAR, withLegacy, FREEFORM, TEXT]);
     const options = Array.from(container.querySelectorAll('option')).map((o) => o.textContent);
     expect(options).toContain('Star Part');           // shape source eligible
     expect(options).toContain('Free Part');           // M15: freeform eligible
@@ -92,9 +95,10 @@ describe('StyleMatteSection — track matte editor UI', () => {
     expect(options).not.toContain('Box Part');        // self excluded
   });
 
-  it('selecting a source creates the canonical PartMatte', () => {
-    const { onPartPropChange, container } = renderMatte(BOX, [STAR, BOX]);
-    const select = container.querySelector('select') as HTMLSelectElement;
+  it('re-pointing a legacy matte whose source is gone keeps its other fields', () => {
+    const orphan = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'ghost', mode: 'clip', enabled: true });
+    const { onPartPropChange, container } = renderMatte(orphan, [STAR, orphan]);
+    const select = container.querySelector('.matte-source-field select') as HTMLSelectElement;
     fireEvent.change(select, { target: { value: 'src' } });
     expect(onPartPropChange).toHaveBeenCalledWith('matte', {
       sourcePartId: 'src',
@@ -313,13 +317,16 @@ describe('StyleMatteSection — M15 freeform source UI', () => {
   const options = (container: HTMLElement) =>
     Array.from(container.querySelectorAll('option')).map((o) => o.textContent);
 
+  // The legacy source list exists only on a layer with a legacy matte.
+  const legacy = () => target({ sourcePartId: 'src', mode: 'clip', enabled: true });
+
   it('freeform source is visible in the list', () => {
-    const { container } = renderMatte(target(), [FREEFORM_PART, target()]);
+    const { container } = renderMatte(legacy(), [FREEFORM_PART, legacy()]);
     expect(options(container)).toContain('Freeform Part');
   });
 
   it('freeform source is selectable → sourcePartId becomes the freeform id', () => {
-    const { onPartPropChange, container } = renderMatte(target(), [FREEFORM_PART, target()]);
+    const { onPartPropChange, container } = renderMatte(legacy(), [FREEFORM_PART, legacy()]);
     const select = container.querySelector('select') as HTMLSelectElement;
     fireEvent.change(select, { target: { value: 'ff' } });
     expect(onPartPropChange).toHaveBeenCalledWith('matte', {
@@ -328,7 +335,7 @@ describe('StyleMatteSection — M15 freeform source UI', () => {
   });
 
   it('image IS an eligible source (M21); video is NOT', () => {
-    const { container } = renderMatte(target(), [IMAGE, VIDEO, STAR, target()]);
+    const { container } = renderMatte(legacy(), [IMAGE, VIDEO, STAR, legacy()]);
     const list = options(container);
     expect(list).toContain('Image Part'); // M21: image → mask content element
     expect(list).not.toContain('Video Part');
@@ -336,7 +343,7 @@ describe('StyleMatteSection — M15 freeform source UI', () => {
   });
 
   it('self reference still excluded (freeform target cannot select itself)', () => {
-    const selfFreeform = makePart('self', 'custom_freeform', 'Self Freeform');
+    const selfFreeform = makePart('self', 'custom_freeform', 'Self Freeform', { sourcePartId: 'src', mode: 'clip', enabled: true });
     const { container } = renderMatte(selfFreeform, [selfFreeform, STAR]);
     expect(options(container)).not.toContain('Self Freeform');
   });
@@ -990,8 +997,11 @@ describe('StyleMatteSection — M21 image matte UI', () => {
   const options = (container: HTMLElement): string[] =>
     [...container.querySelectorAll('select option')].map((o) => (o as HTMLOptionElement).textContent ?? '');
 
+  // The legacy source list exists only on a layer with a legacy matte.
+  const LISTED: CharacterPart['matte'] = { sourcePartId: 'src', mode: 'alpha', enabled: true };
+
   it('1. image source appears in the eligible source list', () => {
-    const { container } = renderMatte(imgTarget(), [IMAGE, STAR, BOX, TEXT, VIDEO, imgTarget()]);
+    const { container } = renderMatte(imgTarget(LISTED), [IMAGE, STAR, BOX, TEXT, VIDEO, imgTarget(LISTED)]);
     const list = options(container);
     expect(list).toContain('Image Part');
     expect(list).toContain('Star Part');
@@ -999,12 +1009,12 @@ describe('StyleMatteSection — M21 image matte UI', () => {
   });
 
   it('2. video remains ineligible', () => {
-    const { container } = renderMatte(imgTarget(), [IMAGE, VIDEO, STAR, imgTarget()]);
+    const { container } = renderMatte(imgTarget(LISTED), [IMAGE, VIDEO, STAR, imgTarget(LISTED)]);
     expect(options(container)).not.toContain('Video Part');
   });
 
   it('3-4. shape and text remain eligible', () => {
-    const { container } = renderMatte(imgTarget(), [STAR, TEXT, FREEFORM, IMAGE, imgTarget()]);
+    const { container } = renderMatte(imgTarget(LISTED), [STAR, TEXT, FREEFORM, IMAGE, imgTarget(LISTED)]);
     const list = options(container);
     expect(list).toContain('Star Part');
     expect(list).toContain('Text Part');
@@ -1296,5 +1306,49 @@ describe('StyleMatteSection — Track Matte V2 source affordance', () => {
     expect(onPartPropChange).toHaveBeenCalledWith('trackMatte', {
       sourceLayerId: 'src', mode: 'alpha', enabled: false, inverted: false, sourceVisible: true,
     });
+  });
+});
+
+describe('StyleMatteSection — one matte card: the Track Matte carries every setting', () => {
+  const v2 = (trackMatte: CharacterPart['trackMatte']) => ({ ...makePart('tgt', 'custom_box', 'Box'), trackMatte }) as CharacterPart;
+
+  function renderTrackMatte(target: CharacterPart) {
+    const onPartPropChange = vi.fn();
+    const utils = render(<StyleMatteSection selectedPart={target} characterParts={[target, STAR]} onPartPropChange={onPartPropChange} />);
+    const own = within(utils.container);
+    const expand = own.queryByRole('button', { name: 'Expand TRACK MATTE' });
+    if (expand) fireEvent.click(expand);
+    return { onPartPropChange, own };
+  }
+
+  it('offers feather, strength and gradient once a source is chosen', () => {
+    const { own } = renderTrackMatte(v2({ sourceLayerId: 'src', mode: 'alpha' }));
+    expect(own.getByLabelText('Feather')).not.toBeDisabled();
+    expect(own.getByLabelText('Strength')).not.toBeDisabled();
+    expect(own.getByLabelText('Gradient')).not.toBeDisabled();
+    expect(own.queryByText('LEGACY CLIP MATTE')).toBeNull();
+  });
+
+  it('writes each setting onto the Track Matte and keeps the rest', () => {
+    const tm = { sourceLayerId: 'src', mode: 'luminance' as const, inverted: true, sourceVisible: false };
+    const { own, onPartPropChange } = renderTrackMatte(v2(tm));
+    fireEvent.change(own.getByLabelText('Feather'), { target: { value: '12' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('trackMatte', { ...tm, feather: 12 });
+    fireEvent.change(own.getByLabelText('Strength'), { target: { value: '40' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('trackMatte', { ...tm, strength: 0.4 });
+    fireEvent.click(own.getByLabelText('Gradient'));
+    expect(onPartPropChange).toHaveBeenLastCalledWith('trackMatte', { ...tm, gradient: { angle: 0 } });
+  });
+
+  it('edits an existing gradient: type, angle and stops', () => {
+    const tm = { sourceLayerId: 'src', mode: 'alpha' as const, gradient: { angle: 0 } };
+    const { own, onPartPropChange } = renderTrackMatte(v2(tm));
+    fireEvent.change(own.getByLabelText('Gradient angle'), { target: { value: '90' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('trackMatte', { ...tm, gradient: { angle: 90 } });
+    fireEvent.change(own.getByLabelText('Gradient type'), { target: { value: 'radial' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('trackMatte', { ...tm, gradient: { angle: 0, type: 'radial' } });
+    fireEvent.click(own.getByLabelText('Add gradient stop'));
+    const last = onPartPropChange.mock.calls.at(-1)![1];
+    expect(last.gradient.stops).toHaveLength(3);
   });
 });

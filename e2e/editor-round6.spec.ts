@@ -235,13 +235,13 @@ test('the zoom bar shows and sets the real zoom, 1:1 and Fit', async ({ page }) 
   await page.getByRole('combobox', { name: 'Zoom presets' }).selectOption('25');
   await expect.poll(width).toBeCloseTo(1920 * 0.25, 0);
   await expect(page.getByRole('textbox', { name: 'Zoom percentage' })).toHaveValue('25%');
-  await page.getByRole('group', { name: 'Zoom' }).getByRole('button', { name: 'Actual size (1:1)' }).click();
+  await page.getByRole('group', { name: 'Zoom and guides' }).getByRole('button', { name: 'Actual size (1:1)' }).click();
   await expect.poll(width).toBeCloseTo(1920, 0);
   const field = page.getByRole('textbox', { name: 'Zoom percentage' });
   await field.fill('40');
   await field.press('Enter');
   await expect.poll(width).toBeCloseTo(1920 * 0.4, 0);
-  await page.getByRole('group', { name: 'Zoom' }).getByRole('button', { name: 'Fit the artboard' }).click();
+  await page.getByRole('group', { name: 'Zoom and guides' }).getByRole('button', { name: 'Fit the artboard' }).click();
   const stage = await stageBox(page);
   await expect.poll(async () => {
     const box = (await artboard.boundingBox())!;
@@ -254,7 +254,7 @@ test('the safe-area guides frame 93 % and 90 % of the artboard, and are off by d
   // Round 6 (OGraf Studio review): EBU R95 action-safe and title-safe guides.
   await seed(page);
   await expect(page.getByTestId('stage-safe-areas')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Toggle safe areas' }).first().click();
+  await page.getByRole('group', { name: 'Zoom and guides' }).getByRole('button', { name: 'Toggle safe areas' }).click();
   const artboard = (await page.locator('rect.canvas-bg[filter]').boundingBox())!;
   const action = (await page.getByTestId('safe-area-action').boundingBox())!;
   const title = (await page.getByTestId('safe-area-title').boundingBox())!;

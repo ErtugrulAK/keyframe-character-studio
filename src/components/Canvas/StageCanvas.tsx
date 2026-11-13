@@ -133,6 +133,7 @@ export const StageCanvas: React.FC = () => {
     updatePartMedia,
     showGrid,
     showSafeAreas,
+    setShowSafeAreas,
     showCoordinateOverlay,
     snapEnabled,
     cropMode,
@@ -2239,10 +2240,10 @@ export const StageCanvas: React.FC = () => {
       {appMode !== 'broadcast' && cameraScale > 0 && (
         <StageZoomControl
           scale={cameraScale}
-          onZoomIn={() => setZoomFromBar(clampZoom(zoomRef.current * 1.1))}
-          onZoomOut={() => setZoomFromBar(clampZoom(zoomRef.current * 0.9))}
           onZoomTo={zoomToScale}
           onFit={fitArtboardInView}
+          showSafeAreas={showSafeAreas}
+          onToggleSafeAreas={() => setShowSafeAreas(!showSafeAreas)}
         />
       )}
 

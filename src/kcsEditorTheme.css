@@ -257,9 +257,10 @@ textarea:focus-visible { outline: none; }
   background: var(--kcs-border-subtle);
 }
 
+/* No rule under the corner radius: the card's groups are separated by space
+   alone, as in the other Inspector cards (QA 2026-11-13). */
 .appearance-group-corner-radius {
   padding-bottom: var(--space-xs);
-  border-bottom: 1px solid var(--kcs-border-subtle);
 }
 
 .appearance-unit-value {

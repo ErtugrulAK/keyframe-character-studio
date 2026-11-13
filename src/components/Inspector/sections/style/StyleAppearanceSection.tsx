@@ -7,10 +7,10 @@ import {
   toStrokeAlignmentControlValue,
 } from '../../../../utils/layers/shapeAppearance';
 import type { StrokeAlignmentControlValue } from '../../../../utils/layers/shapeAppearance';
-import { ColorPickerPopover } from '../../inputs/ColorPickerPopover';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { StyleCard } from './StyleCard';
 import { StyleEffectsSection } from './StyleEffectsSection';
+import { CompactColorControl } from './CompactColorControl';
 interface StyleAppearanceSectionProps {
   selectedPart: CharacterPart;
   onPartPropChange: (key: keyof CharacterPart, value: unknown) => void;
@@ -18,34 +18,6 @@ interface StyleAppearanceSectionProps {
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
 }
-
-const ColorControl: React.FC<{
-  label: string;
-  value: string;
-  alpha: number;
-  fallback: string;
-  onColorChange: (value: string) => void;
-  onAlphaChange: (value: number) => void;
-  onInteractionStart?: () => void;
-  onInteractionEnd?: () => void;
-}> = ({ label, value, alpha, fallback, onColorChange, onAlphaChange, onInteractionStart, onInteractionEnd }) => (
-  // A compact swatch with its hex value beside it (the full picker opens on click).
-  <div className="appearance-color-field appearance-color-compact">
-    <ColorPickerPopover
-      label={label}
-      color={value || fallback}
-      alpha={alpha}
-      fallback={fallback}
-      onColorChange={onColorChange}
-      onAlphaChange={onAlphaChange}
-      onInteractionStart={onInteractionStart}
-      onInteractionEnd={onInteractionEnd}
-    />
-    <span className="appearance-color-hex" aria-hidden="true">
-      {(value || fallback).toUpperCase()}{alpha < 1 ? ` · ${Math.round(alpha * 100)}%` : ''}
-    </span>
-  </div>
-);
 
 export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
   selectedPart,
@@ -102,7 +74,7 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
           <label htmlFor="appearance-fill-enabled">FILL</label>
           <input id="appearance-fill-enabled" type="checkbox" aria-label="Fill Enabled" checked={selectedPart.fillEnabled ?? true} onChange={(e) => onPartPropChange('fillEnabled', e.target.checked)} />
         </div>
-        <ColorControl
+        <CompactColorControl
           label="FILL COLOR"
           value={selectedPart.fillColor}
           alpha={selectedPart.fillOpacity ?? 1}
@@ -119,7 +91,7 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
           <label htmlFor="appearance-stroke-enabled">STROKE</label>
           <input id="appearance-stroke-enabled" type="checkbox" aria-label="Stroke Enabled" checked={selectedPart.strokeEnabled ?? true} onChange={(e) => onPartPropChange('strokeEnabled', e.target.checked)} />
         </div>
-        <ColorControl
+        <CompactColorControl
           label="STROKE COLOR"
           value={selectedPart.strokeColor}
           alpha={selectedPart.strokeOpacity ?? 1}
@@ -129,9 +101,7 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
           onInteractionStart={onInteractionStart}
           onInteractionEnd={onInteractionEnd}
         />
-      </div>
-      </div>
-      <div className={`appearance-group appearance-group-stroke-details${selectedPart.strokeEnabled === false ? ' is-muted' : ''}`}>
+        {/* Width and alignment belong to the stroke, so they sit under its swatch. */}
         <div className="stroke-inline-fields">
           <div className="appearance-field">
             <label className="appearance-field-label" htmlFor="stroke-width-input">WIDTH</label>
@@ -148,14 +118,15 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
             </div>
           )}
         </div>
-        <StyleEffectsSection
-          selectedPart={selectedPart}
-          onPartPropChange={onPartPropChange}
-          onColorInteractionStart={onInteractionStart}
-          onColorInteractionEnd={onInteractionEnd}
-          embedded
-        />
       </div>
+      </div>
+      <StyleEffectsSection
+        selectedPart={selectedPart}
+        onPartPropChange={onPartPropChange}
+        onColorInteractionStart={onInteractionStart}
+        onColorInteractionEnd={onInteractionEnd}
+        embedded
+      />
     </StyleCard>
   );
 };

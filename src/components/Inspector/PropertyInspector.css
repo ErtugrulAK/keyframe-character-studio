@@ -1169,27 +1169,6 @@
   grid-column: 1 / -1;
 }
 
-.effects-color-field {
-  min-width: 0;
-  margin-bottom: var(--space-xs);
-}
-
-.effects-color-row {
-  min-width: 0;
-}
-
-.effects-color-controls {
-  flex: 1;
-  min-width: 0;
-}
-
-.effects-clear-button {
-  flex: 0 0 auto;
-  height: 26px;
-  padding: 0 var(--space-xs);
-  font-size: var(--font-size-caption);
-}
-
 .effects-property-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1218,17 +1197,6 @@
 }
 
 @container (max-width: 300px) {
-  .effects-color-row {
-    align-items: stretch;
-    flex-direction: column;
-    gap: var(--space-2xs);
-  }
-
-  .effects-color-controls {
-    flex: 0 0 auto;
-    width: 100%;
-  }
-
   .effects-property-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1312,10 +1280,9 @@
   opacity: 0.55;
 }
 
-.appearance-group-stroke {
-  border-top: 1px solid var(--border-color);
-  padding-top: var(--space-xs);
-  margin-top: var(--space-2xs);
+/* The shadow sits under the fill/stroke row, as one more paint group. */
+.appearance-group-shadow {
+  margin-top: var(--space-sm, 8px);
 }
 
 .appearance-group-header {
@@ -3046,9 +3013,6 @@
   min-width: 0;
 }
 
-.modifier-group + .modifier-group {
-  border-top: 1px solid var(--border-color);
-}
 
 .modifier-group-header {
   display: flex;
@@ -3169,8 +3133,11 @@
   gap: 8px;
 }
 
+/* The swatch keeps its own size so the hex beside it stays visible (the
+   generic picker field is full-width and pushed the hex to zero width). */
 .appearance-color-compact .color-picker-field {
   flex: 0 0 auto;
+  width: auto;
 }
 
 .appearance-color-compact .color-swatch-button {

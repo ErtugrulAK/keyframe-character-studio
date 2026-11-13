@@ -523,3 +523,29 @@ describe('C8: the arrow keys nudge the selected layers', () => {
     input.remove();
   });
 });
+
+describe('keyframe navigation shortcuts', () => {
+  it('moves to the previous and next keyframe on Ctrl+Left / Ctrl+Right', () => {
+    const jump = vi.fn(() => true);
+    renderHook(() => useKeyboardShortcuts({
+      selectedPartId: null,
+      undo: vi.fn(),
+      redo: vi.fn(),
+      copySelectedPart: vi.fn(),
+      pasteCopiedPart: vi.fn(),
+      duplicateSelectedPart: vi.fn(),
+      deleteSelectedKeyframes: vi.fn(() => false),
+      deletePart: vi.fn(),
+      jumpToAdjacentKeyframe: jump,
+    }));
+    const left = new KeyboardEvent('keydown', { key: 'ArrowLeft', ctrlKey: true, cancelable: true });
+    act(() => { window.dispatchEvent(left); });
+    expect(jump).toHaveBeenLastCalledWith('previous');
+    expect(left.defaultPrevented).toBe(true);
+    act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', ctrlKey: true })); });
+    expect(jump).toHaveBeenLastCalledWith('next');
+    // A plain arrow is still the canvas nudge, not a keyframe jump.
+    act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' })); });
+    expect(jump).toHaveBeenCalledTimes(2);
+  });
+});

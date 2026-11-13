@@ -70,6 +70,8 @@ export interface EditorShortcutCommands {
   easySelectedKeyframes?: () => boolean;
   /** Unlocks every layer. */
   unlockAllLayers?: () => void;
+  /** Ctrl+Left / Ctrl+Right — moves the playhead to the adjacent keyframe; false when there is none. */
+  jumpToAdjacentKeyframe?: (direction: 'previous' | 'next') => boolean;
   /**
    * The arrow-key nudge, run through the arrange authority: `beginNudge`
    * opens one batch and returns the mover (total offset since the start), or
@@ -159,6 +161,7 @@ export const useKeyboardShortcuts = ({
   toggleSelectionLock,
   easySelectedKeyframes,
   unlockAllLayers,
+  jumpToAdjacentKeyframe,
   beginNudge,
   endNudge,
 }: EditorShortcutCommands) => {
@@ -368,6 +371,11 @@ export const useKeyboardShortcuts = ({
           event.preventDefault();
           unlockAllLayers();
           return;
+        case 'keyframe-previous':
+        case 'keyframe-next':
+          if (!jumpToAdjacentKeyframe) return;
+          if (jumpToAdjacentKeyframe(id === 'keyframe-previous' ? 'previous' : 'next')) event.preventDefault();
+          return;
         case 'shortcut-reference':
           if (openShortcutReference) {
             event.preventDefault();
@@ -436,5 +444,6 @@ export const useKeyboardShortcuts = ({
     toggleSelectionLock,
     easySelectedKeyframes,
     unlockAllLayers,
+    jumpToAdjacentKeyframe,
   ]);
 };

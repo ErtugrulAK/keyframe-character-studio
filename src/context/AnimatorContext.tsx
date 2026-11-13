@@ -57,6 +57,7 @@ import { useMaskEditing, type MaskDrawSession, type MaskDrawShape, type MaskEdit
 import { createLayerGroupingActions } from '../hooks/useLayerGrouping';
 import { createVectorArrangeActions } from '../hooks/useVectorArrangeAuthoring';
 import { createStageCropActions } from '../hooks/useStageCropAuthoring';
+import { resolveSceneAdjacentKeyframeFrame } from '../utils/editor/keyframeNavigation';
 import type { StageCropRect } from '../utils/geometry/stageCrop';
 import { resolveOutermostGroupAncestor } from '../utils/layers/layerGrouping';
 import { selectAllLayers } from '../utils/layers/layerSelection';
@@ -1011,6 +1012,12 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [easeKeyframeGroups, selectedKeyframeIds, tracks]);
 
   useKeyboardShortcuts({
+    jumpToAdjacentKeyframe: (direction) => {
+      const frame = resolveSceneAdjacentKeyframeFrame({ tracks, parts: characterParts, activeTemplateId, partIds: selectedPartIds, frame: currentFrame, direction });
+      if (frame === null) return false;
+      setCurrentFrame(frame);
+      return true;
+    },
     easySelectedKeyframes,
     toggleSelectionLock,
     unlockAllLayers,

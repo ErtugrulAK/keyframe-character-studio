@@ -134,7 +134,7 @@ export type ShortcutCommandId =
   | 'select-all' | 'group-layers' | 'ungroup-layers'
   | 'rotate-ccw' | 'rotate-cw' | 'flip-horizontal' | 'flip-vertical' | 'nudge-selection'
   | 'undo' | 'redo' | 'copy' | 'paste' | 'duplicate' | 'delete-selection' | 'cancel-gesture' | 'context-menu'
-  | 'keyframe-select' | 'keyframe-walk' | 'easy-ease' | 'marquee-cancel'
+  | 'keyframe-select' | 'keyframe-walk' | 'easy-ease' | 'marquee-cancel' | 'keyframe-previous' | 'keyframe-next'
   | 'play-pause' | 'zoom-in' | 'zoom-out'
   | 'mask-point-next' | 'mask-point-previous' | 'mask-point-nudge' | 'mask-point-ends' | 'mask-point-type' | 'mask-point-focus'
   | 'draw-finish' | 'draw-undo-point' | 'draw-discard'
@@ -254,6 +254,8 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
   { id: 'keyframe-select', label: 'Select the focused keyframe', category: 'timeline', gestures: ['enter', 'space'], scope: 'timeline', detail: 'With a keyframe diamond focused: selects it and moves the playhead to it.' },
   { id: 'keyframe-walk', label: 'Walk focus along the lane', category: 'timeline', gestures: ['arrowleft', 'arrowright'], scope: 'timeline', detail: 'With a keyframe diamond focused.' },
   { id: 'easy-ease', label: 'Easy Ease the selected keyframes', category: 'timeline', gestures: ['f9'], scope: 'global', detail: 'Ease In-Out on every selected keyframe group, as one undo step. Right-click a keyframe for Linear, Ease In, Ease Out and Hold.' },
+  { id: 'keyframe-previous', label: 'Go to the previous keyframe', category: 'timeline', gestures: ['mod+arrowleft'], scope: 'global', detail: 'Of the selected layers, or of every layer when nothing is selected.' },
+  { id: 'keyframe-next', label: 'Go to the next keyframe', category: 'timeline', gestures: ['mod+arrowright'], scope: 'global', detail: 'Of the selected layers, or of every layer when nothing is selected.' },
   { id: 'marquee-cancel', label: 'Cancel a timeline marquee', category: 'timeline', gestures: ['escape'], scope: 'timeline', detail: 'While a marquee drag is in flight it restores the selection it started from.' },
 
   { id: 'play-pause', label: 'Play / pause', category: 'view', gestures: ['space'], scope: 'global' },

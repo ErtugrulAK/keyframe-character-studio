@@ -1,10 +1,10 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CharacterPart, LayerMask, Track } from '../types/animator';
-import { makeEmptyChannels } from '../utils/defaults';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 import { layerMaskChannel } from '../types/animator';
-import { updateShapeAppearance } from '../utils/shapeAppearance';
-import { updateTrimPath } from '../utils/trimPathAuthoring';
+import { updateShapeAppearance } from '../utils/layers/shapeAppearance';
+import { updateTrimPath } from '../utils/geometry/trimPathAuthoring';
 
 const shape = (id: string, overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id,

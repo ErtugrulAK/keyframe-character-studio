@@ -2,7 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePlayback } from '../hooks/usePlayback';
 import { useSerialization } from '../hooks/useSerialization';
-import { frameToSeconds, sanitizeProjectFps, secondsToFrame } from '../utils/timebase';
+import { frameToSeconds, sanitizeProjectFps, secondsToFrame } from '../utils/animation/timebase';
 import { generateGraphicModule } from '../ograf/runtimeTemplate';
 import type { SceneData, SceneLayer } from '../types/composition';
 

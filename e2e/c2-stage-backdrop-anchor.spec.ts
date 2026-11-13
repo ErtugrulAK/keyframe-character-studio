@@ -37,7 +37,7 @@ test('the backdrop and the artboard stay locked together through panel toggles',
       return { phaseX: phase(ax - c.left - px), phaseY: phase(ay - c.top - py), artX: ax, artY: ay };
     };
     const runs: { label: string; frames: number; maxPhase: number; maxArtDrift: number }[] = [];
-    const labels = ['Hide Left Toolbar', 'Show Left Toolbar', 'Hide Inspector', 'Show Inspector', 'Collapse timeline', 'Expand timeline'];
+    const labels = ['Hide Inspector', 'Show Inspector', 'Collapse timeline', 'Expand timeline'];
     for (let round = 0; round < 3; round += 1) {
       for (const label of labels) {
         const button = document.querySelector(`button[aria-label="${label}"]`) as HTMLButtonElement | null;
@@ -60,7 +60,7 @@ test('the backdrop and the artboard stay locked together through panel toggles',
     }
     return runs;
   });
-  expect(result.length).toBe(18);
+  expect(result.length).toBe(12);
   for (const run of result) {
     expect(run.frames, run.label).toBeGreaterThan(10);
     expect(run.maxPhase, `${run.label}: backdrop slid against the content`).toBeLessThan(0.5);

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { BooleanOperation } from '../../utils/booleanGeometry';
+import type { BooleanOperation } from '../../utils/geometry/booleanGeometry';
 
 /**
  * Original KCS icons for the four Boolean operations.
@@ -9,7 +9,7 @@ import type { BooleanOperation } from '../../utils/booleanGeometry';
  * stay visually consistent with each other. Drawn here rather than taken from an
  * icon set — no third-party icon assets are used.
  *
- * C3 — drawn in the toolbar's line language (24-unit grid, 2-unit round
+ * Drawn in the toolbar's line language (24-unit grid, 2-unit round
  * stroke, like the Lucide glyphs beside them): both operands are always
  * outlined and only the RESULT of the operation is filled. Solid blocks read
  * as another icon family, and the four blurred into each other at 15 px.

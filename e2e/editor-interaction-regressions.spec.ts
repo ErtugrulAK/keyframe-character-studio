@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { armTool } from './fixtures/toolbarTools';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -40,8 +41,7 @@ test('drawing a Parallelogram keeps the editor mounted without runtime errors', 
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await seedParallelogram(page);
-  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements', exact: true }).click();
-  await page.getByRole('button', { name: 'Parallelogram', exact: true }).click();
+  await armTool(page, 'Parallelogram');
   const canvas = page.locator('.stage-canvas-container');
   const box = await canvas.boundingBox();
   if (!box) throw new Error('Canvas bounds unavailable');

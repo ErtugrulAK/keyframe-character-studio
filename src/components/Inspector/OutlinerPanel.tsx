@@ -3,16 +3,16 @@ import { ChevronDown, ChevronRight, Layers, Search, X } from 'lucide-react';
 import { useAnimatorSlice, useAnimatorReader } from '../../context/useAnimator';
 import { useEditorContextMenu } from '../../context/editorContextMenu';
 import type { CharacterPart } from '../../types/animator';
-import { resolveMatteSource } from '../../utils/matte';
-import { projectLayerOrdinals } from '../../utils/layerOrdinal';
-import { reparentBlockReason, type LayerDropPosition } from '../../utils/layerParenting';
-import { relationshipParentId } from '../../utils/partBinding';
+import { resolveMatteSource } from '../../utils/layers/matte';
+import { projectLayerOrdinals } from '../../utils/layers/layerOrdinal';
+import { reparentBlockReason, type LayerDropPosition } from '../../utils/layers/layerParenting';
+import { relationshipParentId } from '../../utils/layers/partBinding';
 import { createLayerParentingActions } from '../../hooks/useLayerParenting';
-import { OUTLINER_COMMAND_EVENT, type OutlinerCommand } from '../../utils/outlinerCommands';
-import { OutlinerRow, type OutlinerRowActions } from './OutlinerRow';
+import { OUTLINER_COMMAND_EVENT, type OutlinerCommand } from '../../utils/layers/outlinerCommands';
+import { OutlinerRow, type OutlinerDropKind, type OutlinerRowActions } from './OutlinerRow';
 import { useRetainedScrollTop, useRetainedUiState } from '../../hooks/useRetainedUiState';
 import { useRowWindow, type RowViewport } from '../../hooks/useRowWindow';
-import { searchLayers } from '../../utils/layerSearch';
+import { searchLayers } from '../../utils/layers/layerSearch';
 
 /** The row pitch assumed until a mounted row has been measured. */
 const OUTLINER_ROW_PITCH_ESTIMATE = 28;
@@ -49,7 +49,8 @@ export const OutlinerPanel: React.FC = () => {
     selectedPartId,
     selectedPartIds,
     sceneTitle,
-  } = useAnimatorSlice('tracks', 'characterParts', 'selectedPartId', 'selectedPartIds', 'sceneTitle');
+    booleanOperandEditingGroupId,
+  } = useAnimatorSlice('tracks', 'characterParts', 'selectedPartId', 'selectedPartIds', 'sceneTitle', 'booleanOperandEditingGroupId');
   const readAnimator = useAnimatorReader();
   const { openContextMenu } = useEditorContextMenu();
 
@@ -66,7 +67,7 @@ export const OutlinerPanel: React.FC = () => {
   const pendingFocusRef = useRef<string | null>(null);
 
   const partById = useMemo(() => new Map(characterParts.map((part) => [part.id, part])), [characterParts]);
-  // C5 — layer search on the scene data (the windowed list cannot be searched
+  // Layer search on the scene data (the windowed list cannot be searched
   // by the browser's find): matches and their ancestors, expanded.
   const [layerQuery, setLayerQuery] = useRetainedUiState('outliner.query', '');
   const search = useMemo(() => searchLayers(characterParts, layerQuery), [characterParts, layerQuery]);
@@ -86,7 +87,12 @@ export const OutlinerPanel: React.FC = () => {
     const rows: VisibleRow[] = [];
     const visit = (part: CharacterPart, depth: number, parentRowId: string | null, ancestry: Set<string>) => {
       if (search && !search.shownIds.has(part.id)) return;
-      const children = (childrenOf.get(part.id) ?? []).filter((child) => !ancestry.has(child.id) && (!search || search.shownIds.has(child.id)));
+      // A Boolean result reads as one shape: its operands are listed only
+      // while it is opened for editing (double-click it on the stage).
+      const showOperands = booleanOperandEditingGroupId === part.id;
+      const children = (childrenOf.get(part.id) ?? []).filter((child) => !ancestry.has(child.id)
+        && (!search || search.shownIds.has(child.id))
+        && (showOperands || child.booleanGroupId !== part.id));
       const isExpanded = search ? true : !collapsedPartIds.has(part.id);
       rows.push({ part, depth, hasChildren: children.length > 0, isExpanded, parentRowId });
       if (!isExpanded) return;
@@ -95,18 +101,18 @@ export const OutlinerPanel: React.FC = () => {
     };
     roots.forEach((part) => visit(part, 0, null, new Set()));
     return rows;
-  }, [characterParts, collapsedPartIds, partById, search]);
+  }, [characterParts, collapsedPartIds, partById, search, booleanOperandEditingGroupId]);
   const stackIndexById = useMemo(() => new Map(characterParts.map((part, index) => [part.id, index])), [characterParts]);
   const visibilityById = useMemo(() => new Map(tracks.map((track) => [track.partId, track.editVisible !== false])), [tracks]);
   const lockedById = useMemo(() => new Set(tracks.filter((track) => track.locked).map((track) => track.partId)), [tracks]);
-  // WP-05: one derived display ordinal per layer (never an identity).
+  // One derived display ordinal per layer (never an identity).
   const layerOrdinals = useMemo(() => projectLayerOrdinals(characterParts), [characterParts]);
   const selectedSet = useMemo(() => new Set(selectedPartIds ?? []), [selectedPartIds]);
   const rovingId = focusedId && visibleRows.some((row) => row.part.id === focusedId)
     ? focusedId
     : (selectedPartId && visibleRows.some((row) => row.part.id === selectedPartId) ? selectedPartId : visibleRows[0]?.part.id ?? null);
 
-  // C4 — a long list mounts only the rows near its viewport. The roving row
+  // A long list mounts only the rows near its viewport. The roving row
   // (Tab's way into the tree), the renamed, dragged and drop-target rows and
   // the primary selection stay mounted wherever they are.
   const pinnedRows = useMemo(() => {
@@ -370,11 +376,20 @@ export const OutlinerPanel: React.FC = () => {
   };
 
   /*
-   * C5 — what the drop will do, BEFORE the release. Nesting onto a group puts
+   * What the drop will do, BEFORE the release. Nesting onto a group puts
    * the layer IN the container ("Move into group"); nesting onto any other layer
    * is a transform relationship ("Parent to"); a line between rows is a reorder,
    * and the hint also says when that reorder changes the parent.
    */
+  /** What the current drop would do (its colour); see `OutlinerDropKind`. */
+  const dropKind = ((): OutlinerDropKind | undefined => {
+    if (!draggingId || !dropTarget || dropTarget.blockedReason) return undefined;
+    const target = partById.get(dropTarget.id);
+    if (dropTarget.position === 'nest') return target?.isGroup ? 'group' : 'parent';
+    const dragged = partById.get(draggingId);
+    return (relationshipParentId(dragged) ?? null) === (relationshipParentId(target) ?? null) ? 'reorder' : 'reparent';
+  })();
+
   const dropHint = (() => {
     if (!draggingId || !dropTarget) return '';
     if (dropTarget.blockedReason) return `Cannot drop here: ${dropTarget.blockedReason}`;
@@ -497,7 +512,7 @@ export const OutlinerPanel: React.FC = () => {
           >
             {visibleRows.length === 0 ? (
               <div style={{ padding: '12px 14px', fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                No elements in active template yet. Add shapes or text from left toolbar.
+                No elements in active template yet. Add shapes, text or media from the toolbar.
               </div>
             ) : (
               rowWindow.segments.flatMap((segment) => (segment.kind === 'gap' ? [
@@ -525,6 +540,7 @@ export const OutlinerPanel: React.FC = () => {
                     dragging={draggingId === row.part.id}
                     dropPosition={dropTarget?.id === row.part.id ? dropTarget.position : null}
                     dropBlocked={dropTarget?.id === row.part.id && dropTarget.blockedReason !== null}
+                    dropKind={dropTarget?.id === row.part.id ? dropKind : undefined}
                     // The dragged row itself carries no label ("cannot be dropped onto
                     // itself" is noise under the pointer); the footer still says it.
                     dropLabel={dropTarget?.id === row.part.id && row.part.id !== draggingId && (dropTarget.position === 'nest' || dropTarget.blockedReason) ? dropHint : undefined}
@@ -542,7 +558,7 @@ export const OutlinerPanel: React.FC = () => {
       </div>
 
       <div className={`outliner-footer${dropHint || status ? '' : ' is-empty'}`}>
-        <span className={`outliner-drop-hint${dropTarget?.blockedReason ? ' is-blocked' : ''}`} data-testid="outliner-drop-hint" role="status" aria-live="polite">
+        <span className={`outliner-drop-hint${dropTarget?.blockedReason ? ' is-blocked' : dropKind ? ` drop-kind-${dropKind}` : ''}`} data-testid="outliner-drop-hint" role="status" aria-live="polite">
           {dropHint || status}
         </span>
       </div>

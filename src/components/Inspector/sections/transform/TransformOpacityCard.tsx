@@ -7,7 +7,7 @@ interface TransformOpacityCardProps {
 }
 
 /**
- * R5-14 — Opacity as one cell of the compact transform trio. The value is
+ * Opacity as one cell of the compact transform trio. The value is
  * authored 0..1 and displayed as a percentage; edits go through the canonical
  * transform path: once the `opacity` channel carries keyframes the edit lands on
  * the current frame, otherwise it updates the layer's base transform.
@@ -15,7 +15,7 @@ interface TransformOpacityCardProps {
  * The cell holds no keyframe action: keyframing is the timeline property row's
  * authority, and Details does not duplicate it.
  *
- * C8: named "Layer opacity" so it reads apart from the Fill and Stroke
+ * Named "Layer opacity" so it reads apart from the Fill and Stroke
  * opacities in Appearance (those fade one paint; this fades the whole layer).
  */
 export const TransformOpacityCard: React.FC<TransformOpacityCardProps> = ({ opacity, onOpacityChange }) => (

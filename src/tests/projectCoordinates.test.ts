@@ -7,7 +7,7 @@ import {
   projectOutputToRelative,
   relativeToEditorCamera,
   relativeToProjectOutput,
-} from '../utils/projectCoordinates';
+} from '../utils/geometry/projectCoordinates';
 
 describe('project coordinate authority', () => {
   it.each([

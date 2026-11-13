@@ -57,7 +57,13 @@ describe('OGraf Export V1 Phase 1', () => {
 
     expect(manifest.$schema).toBe(OGRAF_GRAPHICS_SCHEMA_URL);
     expect(manifest.supportsRealTime).toBe(true);
-    expect(manifest.supportsNonRealTime).toBe(false);
+    expect(manifest.supportsNonRealTime).toBe(true);
+    // makeScene: 120 frames at 60 fps.
+    expect(manifest.actionDurations).toEqual([
+      { type: 'playAction', duration: 2000 },
+      { type: 'stopAction', duration: 0 },
+      { type: 'updateAction', duration: 0 },
+    ]);
     expect(manifest.main).toBe('graphic.mjs');
     expect(manifest.stepCount).toBe(1);
     expect(manifest.version).toBe('1.0.0');
@@ -84,7 +90,9 @@ describe('OGraf Export V1 Phase 1', () => {
         format: 'color',
         gddType: 'color-rrggbb',
         pattern: '^#[0-9a-f]{6}$',
+        hidden: true,
         title: 'Box Fill Color',
+        label: 'Box Fill Color',
         default: '#ffffff',
       },
       stroke_layer_1: {
@@ -92,7 +100,9 @@ describe('OGraf Export V1 Phase 1', () => {
         format: 'color',
         gddType: 'color-rrggbb',
         pattern: '^#[0-9a-f]{6}$',
+        hidden: true,
         title: 'Box Stroke Color',
+        label: 'Box Stroke Color',
         default: '#000000',
       },
     });
@@ -106,13 +116,16 @@ describe('OGraf Export V1 Phase 1', () => {
     });
 
     expect(manifest.schema.properties).toEqual({
-      headline: { type: 'string', title: 'Headline', default: 'Hello' },
+      // GDD: a single-line text; it names the graphic (colours are hidden from the name).
+      headline: { type: 'string', gddType: 'single-line', title: 'Headline', label: 'Headline', default: 'Hello' },
       fill_layer_1: {
         type: 'string',
         format: 'color',
         gddType: 'color-rrggbb',
         pattern: '^#[0-9a-f]{6}$',
+        hidden: true,
         title: 'Box Fill Color',
+        label: 'Box Fill Color',
         default: '#ffffff',
       },
       stroke_layer_1: {
@@ -120,7 +133,9 @@ describe('OGraf Export V1 Phase 1', () => {
         format: 'color',
         gddType: 'color-rrggbb',
         pattern: '^#[0-9a-f]{6}$',
+        hidden: true,
         title: 'Box Stroke Color',
+        label: 'Box Stroke Color',
         default: '#000000',
       },
     });

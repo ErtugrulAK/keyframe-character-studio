@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, FreeformPoint, Transform } from '../types/animator';
-import { affineOfTransform, composeAffine, worldAffineOf } from '../utils/containerMath';
-import { evaluateTransform } from '../utils/evaluateTransform';
-import { computeBooleanContours, createBooleanDisplayName, deriveBooleanGeometry, dissolveBooleanGroup, inverseTransformBooleanContours, isBooleanEligible, isGeneratedBooleanName, partToWorldPolygons, transformBooleanContours } from '../utils/booleanGeometry';
+import { affineOfTransform, composeAffine, worldAffineOf } from '../utils/geometry/containerMath';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { computeBooleanContours, createBooleanDisplayName, deriveBooleanGeometry, dissolveBooleanGroup, inverseTransformBooleanContours, isBooleanEligible, isGeneratedBooleanName, partToWorldPolygons, transformBooleanContours } from '../utils/geometry/booleanGeometry';
 
 const part = (id: string, type: CharacterPart['type'], x: number, y: number): CharacterPart => ({
   id,

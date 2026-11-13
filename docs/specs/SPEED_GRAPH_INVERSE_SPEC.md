@@ -3,7 +3,7 @@
 Status: **specification only** — explicitly NOT an approval to implement interactive
 inverse mapping (V6+ roadmap gate; round-1 blueprint §"explicitly not planned").
 Companion to Round-2 blueprint F5. Inputs: `applyEasing`/`interpolateChannel`
-(`src/utils/defaults.ts`), `channelVelocityAt` (`src/utils/velocityMath.ts`, PR #47),
+(`src/utils/animation/defaults.ts`), `channelVelocityAt` (`src/utils/animation/velocityMath.ts`, PR #47),
 `bezierIn`/`bezierOut` temporal handles (`src/types/animator.ts`),
 `TemporalGraphPanel` (presentation-only speed mode, PR #49).
 
@@ -111,7 +111,7 @@ $$y_1=g_0\,x_1,\qquad y_2=1-g_1\,(1-x_2)$$
    §2.4) — outside it the Newton solver is unreliable, a runtime property,
    not a validation rule. This domain is broader than "any finite": the
    current import / autosave-restore boundary (`validateImportedDocument`,
-   `src/utils/importValidation.ts`) performs no typed or finite check on
+   `src/utils/persistence/importValidation.ts`) performs no typed or finite check on
    `bezierIn`/`bezierOut`/`bezierControlPoints` at all, so malformed and
    non-finite handles CAN reach stored project fields; handle finiteness is
    enforced only downstream, at the OGraf export gate
@@ -218,7 +218,7 @@ Evaluator precedence (defaults.applyEasing, mirrored by the runtime):
 ## 6. PR decomposition if ever approved
 
 - F5a (pure math): **implemented as PR #58 (OPEN — not main behavior)**:
-  `src/utils/speedInverse.ts` exposes `endpointSlopesFromHandles`,
+  `src/utils/animation/speedInverse.ts` exposes `endpointSlopesFromHandles`,
   `handlesFromEndpointSlopes`, `segmentVelocityScale`,
   `physicalVelocityToNormalized`, `normalizedSlopeToPhysicalVelocity`;
   V6-corrected classification, V7-signed divergent readings and

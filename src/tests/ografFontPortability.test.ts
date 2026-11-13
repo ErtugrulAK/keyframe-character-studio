@@ -45,8 +45,8 @@ describe('D-01 — a fallback-list family registers the primary face', () => {
 
     // The generated runtime registers ONE face identity, not the CSS list: the
     // @font-face descriptor takes a single family name.
-    expect(runtime).toContain('[["Playfair Display","assets/fonts/playfair-display.ttf"]]');
-    expect(runtime).not.toContain('"\'Playfair Display\', serif","assets/fonts/playfair-display.ttf"');
+    expect(runtime).toContain('[["Playfair Display",[{"path":"assets/fonts/playfair-display.ttf","fontWeight":"400 900"}]]]');
+    expect(runtime).not.toContain('"\'Playfair Display\', serif",[{"path"');
     // The element keeps the authored fallback list.
     expect(runtime).toContain("\"'Playfair Display', serif\"");
   });
@@ -54,8 +54,8 @@ describe('D-01 — a fallback-list family registers the primary face', () => {
   test('a bare and a quoted family both register the same face identity', async () => {
     const bare = await runtimeOf('Playfair Display', realFont());
     const quoted = await runtimeOf("'Playfair Display'", realFont());
-    expect(bare).toContain('[["Playfair Display","assets/fonts/playfair-display.ttf"]]');
-    expect(quoted).toContain('[["Playfair Display","assets/fonts/playfair-display.ttf"]]');
+    expect(bare).toContain('[["Playfair Display",[{"path":"assets/fonts/playfair-display.ttf","fontWeight":"400 900"}]]]');
+    expect(quoted).toContain('[["Playfair Display",[{"path":"assets/fonts/playfair-display.ttf","fontWeight":"400 900"}]]]');
   });
 
   test('the packaged ZIP keeps the owned font and its license', async () => {

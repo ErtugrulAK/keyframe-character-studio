@@ -28,9 +28,9 @@ export type OGrafDiagnosticCode =
   | 'OGRAF_INVALID_PROJECT'
   | 'OGRAF_INVALID_PUBLIC_FIELD'
   | 'OGRAF_INVALID_MAIN'
-  /** WP-08 — colour correction is drawn by the editor and GIF, not yet by the OGraf runtime. */
+  /** Colour correction is drawn by the editor and GIF, not yet by the OGraf runtime. */
   | 'OGRAF_UNSUPPORTED_COLOR_CORRECTION'
-  /** WP-08 — an effect-only mask would cut the layer in the OGraf runtime (it reads every mask as alpha). */
+  /** An effect-only mask would cut the layer in the OGraf runtime (it reads every mask as alpha). */
   | 'OGRAF_UNSUPPORTED_EFFECT_MASK';
 
 export interface OGrafExportDiagnostic {
@@ -62,6 +62,12 @@ export interface OGrafAssetCatalogEntry {
   binaryContent?: Uint8Array;
   /** Original redistribution license, emitted beside the packaged asset. */
   licenseText?: string;
+  /** Font only: the characters this face covers (CSS unicode-range). */
+  unicodeRange?: string;
+  /** Font only: the weights the face provides (CSS font-weight, e.g. "100 900"), as the editor declares it. */
+  fontWeight?: string;
+  /** Font only: further faces of the same family (other character subsets). */
+  additionalFaces?: Array<{ packagedPath: string; binaryContent: Uint8Array; unicodeRange: string; fontWeight?: string }>;
 }
 
 export interface OGrafPublicTextField {
@@ -69,6 +75,8 @@ export interface OGrafPublicTextField {
   title?: string;
   defaultValue?: string;
   layerId: string;
+  /** The text layer's character limit (`textFit.maxLength`): the field accepts no more. */
+  maxLength?: number;
 }
 
 export interface OGrafPublicImageField {
@@ -124,9 +132,15 @@ export interface OGrafManifest {
   main: string;
   version: string;
   supportsRealTime: true;
-  supportsNonRealTime: false;
-  stepCount: 1;
+  /** The runtime implements goToTime() and setActionsSchedule(). */
+  supportsNonRealTime: true;
+  /** One step per step marker of the exported sequence, plus one (`utils/animation/stepMarkers`). */
+  stepCount: number;
+  /** How long the normal (animated) actions take, in milliseconds. */
+  actionDurations: Array<{ type: 'playAction' | 'stopAction' | 'updateAction'; duration: number }>;
   schema: OGrafPublicStateSchema;
+  /** Added by the browser export when it could render the preview image. */
+  thumbnails?: Array<{ file: string; resolution: { width: number; height: number } }>;
   renderRequirements?: Array<{
     resolution: {
       width: { ideal: number };
@@ -152,6 +166,10 @@ export interface OGrafAssetPlan {
   sourcePath?: string;
   binaryContent?: Uint8Array;
   licenseText?: string;
+  /** Font only: the characters this face covers (CSS unicode-range). */
+  unicodeRange?: string;
+  /** Font only: the weights the face provides (CSS font-weight). */
+  fontWeight?: string;
 }
 
 export interface OGrafPackagePlan {

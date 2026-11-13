@@ -7,9 +7,9 @@
  */
 
 import { describe, test, expect } from 'vitest';
-import { resolveCurveTarget, resolveCurveSegment } from '../utils/timelineMetrics';
-import { updateKeyframeBezierPointsMutator } from '../utils/trackMutations';
-import { interpolateChannel } from '../utils/defaults';
+import { resolveCurveTarget, resolveCurveSegment } from '../utils/editor/timelineMetrics';
+import { updateKeyframeBezierPointsMutator } from '../utils/animation/trackMutations';
+import { interpolateChannel } from '../utils/animation/defaults';
 import type { Track, TrackChannel, PropertyKeyframe, Keyframe, LayerMaskChannel } from '../types/animator';
 
 function makeTrack(id: string, opts?: {
@@ -48,7 +48,7 @@ const lkf = (id: string, frame: number, templateId?: string): Keyframe =>
   }) as Keyframe;
 
 describe('C-01 — resolveCurveTarget resolves the exact selected layer/channel', () => {
-  test('the exact Astra repro: selected legacy track never borrows another layer\'s canonical curve', () => {
+  test('the exact review repro: selected legacy track never borrows another layer\'s canonical curve', () => {
     const canonicalA = makeTrack('a', { channels: { x: [pk('ax0', 0, 0), pk('ax30', 30, 30)] } });
     const legacyB = makeTrack('b', { keyframes: [lkf('b0', 0), lkf('b30', 30)] });
 

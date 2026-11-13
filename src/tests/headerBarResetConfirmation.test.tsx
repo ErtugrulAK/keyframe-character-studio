@@ -45,7 +45,7 @@ const animatorCtx = vi.hoisted(() => ({
 }));
 vi.mock('../components/Canvas/GifExportPanel', () => ({ GifExportPanel: () => null }));
 
-vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx.value }));
+vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx.value, useAnimatorSlice: () => animatorCtx.value, useAnimatorReader: () => () => animatorCtx.value }));
 
 function useContext(overrides: Record<string, unknown> = {}) {
   animatorCtx.value = {

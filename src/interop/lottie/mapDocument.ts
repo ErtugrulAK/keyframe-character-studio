@@ -1,9 +1,9 @@
 import type { AnimationTrackData, BezierPath, LayerMask, LayerMaskChannel, LayerMaskMode, LayerMaskPathChannel, PathKeyframe, PropertyKeyframe, TrackChannel } from '../../types/animator';
 import { layerMaskChannel, layerMaskPathChannel } from '../../types/animator';
 import type { SceneData, SceneLayer } from '../../types/composition';
-import { isPrototypeSensitiveKey } from '../../utils/pathSafety';
-import { KCS_DEFAULT_TEXT_FONT, matchTextFontFamily, normalizeTextFontName } from '../../utils/textFonts';
-import { isSupportedEmbeddedImage } from '../../utils/embeddedImage';
+import { isPrototypeSensitiveKey } from '../../utils/persistence/pathSafety';
+import { KCS_DEFAULT_TEXT_FONT, matchTextFontFamily, normalizeTextFontName } from '../../utils/layers/textFonts';
+import { isSupportedEmbeddedImage } from '../../utils/persistence/embeddedImage';
 import { LOTTIE_IMPORT_LIMITS, lottieError, lottieWarning, type LottieImportDiagnostic } from './diagnostics';
 import { mapLottieKeyframes, mapLottieSegmentTiming, type LottieHandleComponent, type LottieKeyframe } from './temporal';
 

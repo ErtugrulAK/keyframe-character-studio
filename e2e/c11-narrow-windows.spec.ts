@@ -62,7 +62,6 @@ const chromeProblems = (page: Page) => page.evaluate(() => {
 });
 
 const stageWidth = (page: Page) => page.locator('.stage-canvas-container').evaluate((node) => node.getBoundingClientRect().width);
-const leftToggle = (page: Page) => page.locator('.left-toolbar-toggle');
 const inspectorToggle = (page: Page) => page.locator('.inspector-dock-toggle');
 
 const SIZES = [
@@ -88,9 +87,10 @@ for (const size of SIZES) {
   });
 }
 
-test('a phone opens with both docks closed; a dock opens OVER the stage, not beside it', async ({ page }) => {
+test('a phone opens with the Inspector closed; it opens OVER the stage, not beside it', async ({ page }) => {
   await open(page, 390, 844);
-  await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'false');
+  // The left dock is gone (menu bar and toolbar replaced it).
+  await expect(page.locator('.left-toolbar-toggle')).toHaveCount(0);
   await expect(inspectorToggle(page)).toHaveAttribute('aria-expanded', 'false');
   expect(await stageWidth(page)).toBe(390);
 
@@ -102,43 +102,26 @@ test('a phone opens with both docks closed; a dock opens OVER the stage, not bes
   expect(panel!.width).toBeGreaterThan(200);
   expect(await stageWidth(page)).toBe(390);
   expect(await chromeProblems(page)).toEqual([]);
-
-  await leftToggle(page).click();
-  await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'true');
-  await expect.poll(() => page.locator('#left-toolbar-panel').evaluate((node) => (node as HTMLElement).style.width)).toBe('');
-  const left = await page.locator('#left-toolbar-panel').boundingBox();
-  expect(left!.x).toBeGreaterThanOrEqual(-0.5);
-  expect(await stageWidth(page)).toBe(390);
 });
 
-test('making the window narrower closes the docks the stage no longer has room for; a dock the user reopens stays open', async ({ page }) => {
+test('making the window narrower closes the Inspector only at phone width; a reopened Inspector stays open', async ({ page }) => {
   await open(page, 1440, 900);
-  await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'true');
   await expect(inspectorToggle(page)).toHaveAttribute('aria-expanded', 'true');
 
-  // Snapped to a third of the screen: the left dock gives the stage its room.
+  // Snapped to a third of the screen: the stage still has room beside the Inspector.
   await page.setViewportSize({ width: 640, height: 900 });
-  await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'false');
   await expect(inspectorToggle(page)).toHaveAttribute('aria-expanded', 'true');
-  expect(await stageWidth(page)).toBeGreaterThanOrEqual(380);
   expect(await chromeProblems(page)).toEqual([]);
-
-  // The user reopens it on purpose: nothing closes it again while they work.
-  await leftToggle(page).click();
-  await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'true');
-  await page.setViewportSize({ width: 640, height: 700 });
   await page.getByRole('button', { name: 'Add rectangle' }).click();
-  await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'true');
 
-  // Down to phone width: both docks close and the chrome still fits.
+  // Down to phone width: the Inspector closes and the chrome still fits.
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'false');
   await expect(inspectorToggle(page)).toHaveAttribute('aria-expanded', 'false');
   expect(await stageWidth(page)).toBe(390);
   expect(await chromeProblems(page)).toEqual([]);
 
   // Wider again: nothing reopens on its own, and nothing is cut off.
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'false');
+  await expect(inspectorToggle(page)).toHaveAttribute('aria-expanded', 'false');
   expect(await chromeProblems(page)).toEqual([]);
 });

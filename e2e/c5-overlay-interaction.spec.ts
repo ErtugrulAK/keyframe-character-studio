@@ -12,6 +12,7 @@
  * `coordinate-overlay.spec.ts`.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { armTool } from './fixtures/toolbarTools';
 import { readFile } from 'node:fs/promises';
 import { strFromU8, unzipSync } from 'fflate';
 import { openDetailsTab } from './fixtures/inspectorTabs';
@@ -93,8 +94,7 @@ test('drawing a shape across the origin and dragging a mask point on it work wit
   const origin = await centreOf(page, 'base');
 
   // A rectangle drawn from one side of the origin to the other.
-  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
-  await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+  await armTool(page, 'Rectangle');
   await page.mouse.move(origin.x - 50, origin.y - 70);
   await page.mouse.down();
   await page.mouse.move(origin.x + 50, origin.y + 70, { steps: 6 });

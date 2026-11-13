@@ -15,7 +15,7 @@ import { compileOGrafPackage } from '../ograf/packageCompiler';
 import { renderOGrafSvg } from '../ograf/svgRenderer';
 import { evaluateOGrafScene } from '../ograf/evaluation';
 import { generateGraphicModule } from '../ograf/runtimeTemplate';
-import { stackingOrder } from '../utils/stackingOrder';
+import { stackingOrder } from '../utils/layers/stackingOrder';
 
 function layer(overrides: Partial<SceneLayer> = {}): SceneLayer {
   return {

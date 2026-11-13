@@ -1,14 +1,17 @@
+import { isHomeTransform } from '../utils/layers/resetTransform';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AnimationTrackData, CharacterPart, Track, MotionTemplate, PropertyKeyframe } from '../types/animator';
 import type { PersistedTrackState, SceneCoordinateSystem, SceneData, SceneLayer } from '../types/composition';
-import { initializeIdCounter } from '../utils/idGenerator';
-import { makeEmptyChannels, DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../utils/defaults';
-import { convertLegacyKeyframesToChannels, fillChannelsFromLegacyKeyframes } from '../utils/legacyKeyframeConversion';
-import { resolveAuthoredBasePose } from '../utils/channelKeyframeGroups';
-import { AUTOSAVE_LOCK_NAME, AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
-import { DEFAULT_SCENE_COORDINATE_SYSTEM, isSceneCoordinateSystem, migrateSceneCoordinates } from '../utils/coordinateMigration';
-import { normalizeMotionTemplates } from '../utils/motionTemplates';
-import { migrateSceneLayerV6 } from '../utils/v6Migration';
+import type { FitToTextSettings } from '../utils/layers/layoutModifiers';
+import { initializeIdCounter } from '../utils/layers/idGenerator';
+import { makeEmptyChannels, DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../utils/animation/defaults';
+import { convertLegacyKeyframesToChannels, fillChannelsFromLegacyKeyframes } from '../utils/animation/legacyKeyframeConversion';
+import { resolveAuthoredBasePose } from '../utils/animation/channelKeyframeGroups';
+import { AUTOSAVE_LOCK_NAME, AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/editor/constants';
+import { DEFAULT_SCENE_COORDINATE_SYSTEM, isSceneCoordinateSystem, migrateSceneCoordinates } from '../utils/persistence/coordinateMigration';
+import { normalizeMotionTemplates } from '../utils/animation/motionTemplates';
+import { migrateSceneLayerV6 } from '../utils/persistence/v6Migration';
+import { ASSET_REF_PREFIX, createAssetStore, createIndexedDbAssetBackend, startAssetSession, type AssetLockManager } from '../utils/persistence/assetStore';
 
 /**
  * Narrowing helpers for the legacy document's optional fields. The import
@@ -18,6 +21,13 @@ import { migrateSceneLayerV6 } from '../utils/v6Migration';
  */
 const readOptionalNumber = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
 const readOptionalString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
+
+/** An Auto Size setting with its own copy of the extra text list (only the ids that are strings). */
+const cloneFitToText = (settings: FitToTextSettings): FitToTextSettings => {
+  const { extraTextLayerIds, ...rest } = settings;
+  const extra = Array.isArray(extraTextLayerIds) ? extraTextLayerIds.filter((id): id is string => typeof id === 'string') : [];
+  return extra.length > 0 ? { ...rest, extraTextLayerIds: extra } : rest;
+};
 /** A saved ISO timestamp, only when it actually parses to a valid date. */
 const readOptionalDate = (value: unknown): Date | undefined => {
   const text = readOptionalString(value);
@@ -38,9 +48,10 @@ const readMotionTemplates = (value: unknown): MotionTemplate[] | undefined => {
     typeof entry === 'object' && entry !== null && typeof (entry as { id?: unknown }).id === 'string' && typeof (entry as { name?: unknown }).name === 'string');
   return templates.length > 0 ? templates : undefined;
 };
-import { normalizeBezierPath } from '../utils/bezierPath';
-import { SCENE_VERSION_WITH_EFFECTS, sceneUsesEffectFeatures } from '../utils/colorCorrection';
-import { validateImportedDocument, type ImportResult } from '../utils/importValidation';
+import { normalizeBezierPath } from '../utils/geometry/bezierPath';
+import { SCENE_VERSION_WITH_EFFECTS, sceneUsesEffectFeatures } from '../utils/layers/colorCorrection';
+import { validateImportedDocument, type ImportResult } from '../utils/persistence/importValidation';
+import { DEFAULT_AUTOSAVE_SECONDS, readAutosaveSeconds, writeAutosaveSeconds } from '../utils/persistence/autosaveInterval';
 const noopSetCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>> = () => undefined;
 // A module-level stable default: a per-render inline default would join the
 // restore effect's dependencies and re-arm the one-shot sync on every render.
@@ -105,6 +116,13 @@ function toSceneData(
     matte: p.matte,
     masks: p.masks,
     trackMatte: p.trackMatte,
+    ...(p.textFit ? { textFit: { ...p.textFit } } : {}),
+    ...(p.fitToText ? { fitToText: cloneFitToText(p.fitToText) } : {}),
+    ...(p.follow ? { follow: { ...p.follow } } : {}),
+    ...(p.lookAt ? { lookAt: { ...p.lookAt } } : {}),
+    ...(p.homeTransform ? { homeTransform: { ...p.homeTransform } } : {}),
+    ...(p.justify ? { justify: { ...p.justify } } : {}),
+    ...(p.repeater ? { repeater: { ...p.repeater } } : {}),
     ...(p.effects?.length ? { effects: p.effects } : {}),
     booleanGroupId: p.booleanGroupId,
     booleanOperation: p.booleanOperation,
@@ -158,7 +176,7 @@ function toSceneData(
   // M8e: channels-only export policy. keyframes[] is NOT exported anymore —
   // legacy-only tracks (empty channels + populated keyframes[]) are converted
   // to canonical channels at export time so no animation data is lost.
-  // F-01: a track with *partly* populated channels still resolves its remaining
+  // A track with *partly* populated channels still resolves its remaining
   // channels from the legacy composite at evaluation time, so those channels are
   // filled here. Writing only the populated ones dropped that fallback and
   // changed the animation the next load produced.
@@ -239,6 +257,13 @@ function fromSceneData(
     matte: l.matte,
     masks: l.masks,
     trackMatte: l.trackMatte,
+    ...(l.textFit && typeof l.textFit === 'object' ? { textFit: { ...l.textFit } } : {}),
+    ...(l.fitToText && typeof l.fitToText === 'object' && typeof l.fitToText.textLayerId === 'string' ? { fitToText: cloneFitToText(l.fitToText) } : {}),
+    ...(l.follow && typeof l.follow === 'object' && typeof l.follow.targetLayerId === 'string' ? { follow: { ...l.follow } } : {}),
+    ...(l.lookAt && typeof l.lookAt === 'object' && typeof l.lookAt.targetLayerId === 'string' ? { lookAt: { ...l.lookAt } } : {}),
+    ...(isHomeTransform(l.homeTransform) ? { homeTransform: { ...l.homeTransform } } : {}),
+    ...(l.justify && typeof l.justify === 'object' ? { justify: { ...l.justify } } : {}),
+    ...(l.repeater && typeof l.repeater === 'object' ? { repeater: { ...l.repeater } } : {}),
     ...(l.effects?.length ? { effects: l.effects.map((effect) => ({ ...effect })) } : {}),
     booleanGroupId: l.booleanGroupId,
     booleanOperation: l.booleanOperation,
@@ -312,12 +337,12 @@ function fromSceneData(
       })),
       // BUG #1 fix: import the canonical channels written by toSceneData
       // instead of resetting to empty. Legacy files without channels fall back.
-      // M2: if the file has NO channels but HAS legacy keyframes, convert them
+      // If the file has NO channels but HAS legacy keyframes, convert them
       // into canonical channels at import time. Existing channels always win.
       // M8e-prepB: "channels exist" now means they carry ACTUAL keyframe data —
       // an all-empty channel structure (e.g. 10 empty arrays) falls back to the
       // legacy conversion instead of silently dropping populated keyframes[].
-      // R3-11: the resolution is the EVALUATOR's own (`fillChannelsFromLegacyKeyframes`),
+      // The resolution is the EVALUATOR's own (`fillChannelsFromLegacyKeyframes`),
       // so a file with partially populated channels plus a legacy keyframe list
       // imports what it plays — nothing can be hidden from the timeline, and a
       // channel the legacy list still drives becomes canonical at import. The
@@ -416,10 +441,19 @@ interface UseSerializationOptions {
    * the new S0: the restore is initialization, never a user-undoable change.
    */
   requestHistoryBaseline?: () => void;
+  /**
+   * The saved scene could not be restored (its reason). The editor starts
+   * empty, and the refused copy is kept under `AUTOSAVE_REFUSED_STORAGE_KEY`
+   * so the next autosave cannot destroy it.
+   */
+  onRestoreRefused?: (message: string) => void;
 }
 
+/** Where a saved scene the restore refused is kept, so a later autosave cannot overwrite the only copy. */
+export const AUTOSAVE_REFUSED_STORAGE_KEY = `${AUTOSAVE_STORAGE_KEY}_REFUSED`;
+
 /**
- * SAFE-02: bounded wait a manual save gives the shared autosave lock before
+ * Bounded wait a manual save gives the shared autosave lock before
  * its intent is reported as not completed. Interval ticks never wait.
  */
 const MANUAL_SAVE_LOCK_WAIT_MS = 1_000;
@@ -428,13 +462,14 @@ const MANUAL_SAVE_LOCK_WAIT_MS = 1_000;
  * Autosave writes unsaved changes at most this long after the FIRST change
  * that is not yet saved. Further edits never push the deadline back, so
  * continuous editing cannot postpone the save indefinitely; a failed or
- * deferred attempt is retried this long after it.
+ * deferred attempt is retried this long after it. This is the default; the
+ * user sets their own in the header (`autosaveIntervalSeconds`).
  */
-export const AUTOSAVE_DELAY_MS = 10_000;
+export const AUTOSAVE_DELAY_MS = DEFAULT_AUTOSAVE_SECONDS * 1000;
 /** How often the autosave deadline is checked (cheap: refs only). */
 const AUTOSAVE_CHECK_INTERVAL_MS = 1_000;
 
-/** D2: the last persistence failure, exposed so the badge can speak instead
+/** The last persistence failure, exposed so the badge can speak instead
  *  of showing a stale success. Cleared by the first write that lands. */
 export type AutosavePersistenceError = { kind: 'quota' | 'unavailable'; at: number };
 
@@ -476,7 +511,7 @@ export interface UseSerializationApi {
    */
   restoredFromLocalStorage: boolean;
   /**
-   * SAFE-01: true once another writer is detected to have changed the shared
+   * True once another writer is detected to have changed the shared
    * autosave storage outside this tab. Unsafe background and manual writes
    * are then paused until reload, so a foreign document is never silently
    * overwritten; the header surfaces the pause and the user can export or
@@ -484,7 +519,7 @@ export interface UseSerializationApi {
    */
   autosaveConflict: boolean;
   /**
-   * SAFE-02: wall-clock timestamp of the last manual save whose bounded Web
+   * Wall-clock timestamp of the last manual save whose bounded Web
    * Lock wait expired, or null when none needs attention. A deferred save is
    * NOT a conflict pause: the edits are kept and the next autosave tick
    * retries; the header surfaces exactly one notice per event.
@@ -518,6 +553,10 @@ export interface UseSerializationApi {
   importProject: (jsonStr: string, defaultName?: string) => ImportResult;
   resetProject: () => void;
   migrateLegacyCoordinates: () => boolean;
+  /** The autosave delay in seconds: this browser's editor preference, not scene data. */
+  autosaveIntervalSeconds: number;
+  /** Sets (normalizes and stores) the delay; a pending change is re-timed from its start. */
+  setAutosaveIntervalSeconds: (seconds: number) => void;
 }
 
 export const useSerialization = ({
@@ -546,18 +585,27 @@ export const useSerialization = ({
   setCurrentFrame,
   setIsPlaying,
   requestHistoryBaseline = noopRequestHistoryBaseline,
+  onRestoreRefused,
 }: UseSerializationOptions): UseSerializationApi => {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   const [restoredFromLocalStorage, setRestoredFromLocalStorage] = useState<boolean>(false);
 
-  // SAFE-02: bumped when a queued reset finalizes outside a render
+  // Bumped when a queued reset finalizes outside a render
   // commit, so the settle effect re-runs for the post-reset document exactly
   // like the synchronous fallback does (adopted ownership must not wait for
   // the next unrelated state change to capture its baseline).
   const [settleEpoch, setSettleEpoch] = useState(0);
 
-  // SAFE-01 — cross-tab write discipline. storageKnownRef holds the exact
+  // The autosave keeps media in a content-addressed IndexedDB store and the
+  // stored scene names them (`utils/persistence/assetStore`): localStorage holds the scene,
+  // not the photos. Everything else keeps the data URLs.
+  const [assetStore] = useState(() => createAssetStore(createIndexedDbAssetBackend()));
+  // Media are stored only once the asset session started: a tab that is alone
+  // first deletes the media no saved text names (`startAssetSession`).
+  const [assetSessionReady, setAssetSessionReady] = useState(false);
+
+  // Cross-tab write discipline. storageKnownRef holds the exact
   // string this tab last READ at boot (a refused/corrupted value included:
   // "whatever was there") or last WROTE itself: every attempted save compares
   // the live key against it — optimistic concurrency, because localStorage
@@ -573,8 +621,13 @@ export const useSerialization = ({
   const autosavePausedRef = useRef<boolean>(false);
   const restoreDecidedRef = useRef<boolean>(false);
   const restoreAppliedRef = useRef<boolean>(false);
+  // The latest callback, read by the one-shot restore without re-running it.
+  const onRestoreRefusedRef = useRef(onRestoreRefused);
+  useEffect(() => {
+    onRestoreRefusedRef.current = onRestoreRefused;
+  }, [onRestoreRefused]);
 
-  // SAFE-02 — the SAFE-01 read-compare-write runs as one critical section
+  // The SAFE-01 read-compare-write runs as one critical section
   // inside the Web Lock named after the guarded key. manualPendingRef keeps a
   // single queued manual intent (the grant re-reads state, so the pending
   // save always writes the LATEST document — extra clicks add nothing);
@@ -587,6 +640,17 @@ export const useSerialization = ({
   const unsavedSinceRef = useRef<number | null>(null);
   /** When the next autosave attempt is due. */
   const nextAttemptAtRef = useRef<number>(0);
+  const [autosaveIntervalSeconds, setAutosaveIntervalState] = useState<number>(readAutosaveSeconds);
+  /** The delay the stable autosave clock reads. */
+  const autosaveDelayMsRef = useRef<number>(autosaveIntervalSeconds * 1000);
+  const setAutosaveIntervalSeconds = useCallback((seconds: number) => {
+    const next = writeAutosaveSeconds(seconds);
+    autosaveDelayMsRef.current = next * 1000;
+    // A change waiting to be saved follows the new delay from when it started:
+    // shortening it saves sooner, lengthening it waits longer.
+    if (unsavedSinceRef.current !== null) nextAttemptAtRef.current = unsavedSinceRef.current + next * 1000;
+    setAutosaveIntervalState(next);
+  }, []);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const clearUnsaved = useCallback(() => {
@@ -598,89 +662,155 @@ export const useSerialization = ({
 
   // 1. Initial Load: Restore from LocalStorage (SceneData v1 or legacy AnimationProject)
   useEffect(() => {
+    const applySavedScene = (saved: string) => {
+      try {
+        // The autosave payload goes through the same boundary as an imported
+        // document: a corrupted or tampered entry is reported and skipped
+        // instead of being applied, and the defaults stay in place.
+        const validation = validateImportedDocument(saved);
+        if (!validation.ok) {
+          const reason = validation.diagnostics[0];
+          console.warn('[Storage] Autosave restore refused:', reason?.code, reason?.message);
+          let kept = false;
+          try {
+            localStorage.setItem(AUTOSAVE_REFUSED_STORAGE_KEY, saved);
+            kept = true;
+          } catch {
+            kept = false;
+          }
+          onRestoreRefusedRef.current?.(`The saved scene could not be opened: ${reason?.message ?? 'it is not a valid scene'}${kept ? ' A copy was kept in this browser.' : ''}`);
+          return;
+        }
+
+        if (validation.document.kind === 'scene') {
+          const scene = validation.document.scene;
+          const applied = fromSceneData(scene, scene.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
+          if (applied) {
+            // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
+            setRestoredFromLocalStorage(true);
+            // The restored scene is the baseline, not an undoable edit.
+            requestHistoryBaseline();
+            restoreAppliedRef.current = true;
+          }
+          return;
+        }
+
+        // Legacy AnimationProject format (backward compat)
+        const parsed = validation.document.project;
+        const hasLegacyStickman = parsed.characterParts.some((part) => (part as { type?: unknown }).type === 'head' || (part as { type?: unknown }).type === 'torso');
+        const legacyMotionTemplates = readMotionTemplates(parsed.motionTemplates);
+        if (hasLegacyStickman) {
+          localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
+          // This tab legitimately deleted the key; that deletion is its own last-known write.
+          storageKnownRef.current = null;
+          return;
+        }
+        const savedResolution = readProjectResolution(parsed.projectResolution);
+        const migratedTracks = parsed.tracks.map(migrateTrack);
+        const savedFps = readOptionalNumber(parsed.fps);
+        const savedTotalFrames = readOptionalNumber(parsed.totalFrames);
+        const savedAt = readOptionalDate(parsed.lastSavedTime);
+        // The id sweep and the counter init read the same boundary fields the
+        // setters below queue. They run FIRST, mirroring `fromSceneData`: every
+        // derivable throw happens while the live document is still untouched,
+        // so a failed restore mutates nothing and never requests a baseline.
+        const allIds: string[] = [];
+        parsed.characterParts.forEach((p) => allIds.push(p.id));
+        parsed.tracks.forEach((t) => {
+          allIds.push(t.id);
+          t.keyframes?.forEach((k) => allIds.push(k.id));
+          if (t.channels) {
+            Object.values(t.channels).forEach((channel) => channel?.forEach((pk) => allIds.push(pk.id)));
+          }
+        });
+        for (const template of legacyMotionTemplates ?? []) {
+          allIds.push(template.id);
+        }
+        initializeIdCounter(allIds);
+        // From here to the baseline request the block is pure setter dispatch:
+        // a successful legacy startup restore is all-or-nothing (N1), and the
+        // baseline request is the final statement of the success path.
+        if (savedResolution) setProjectResolution(savedResolution);
+        setTracks(migratedTracks);
+        setCharacterParts(parsed.characterParts);
+        if (savedFps !== undefined) setFps(savedFps);
+        if (savedTotalFrames !== undefined) setTotalFrames(savedTotalFrames);
+        // Autosave restoration synchronizes React state with persisted storage.
+        // oxlint-disable-next-line react/set-state-in-effect
+        setLastSavedAt(savedAt ?? new Date());
+        // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
+        setRestoredFromLocalStorage(true);
+        // The restored legacy scene is the baseline, not an undoable edit.
+        requestHistoryBaseline();
+        restoreAppliedRef.current = true;
+      } catch (e) {
+        console.warn('[AutoSave] Failed to restore saved state', e);
+      }
+    };
+
+    let saved: string | null;
     try {
-      const saved = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
-      // Whatever is in the key at boot — applied, refused, or absent — is what
-      // this tab last observed; every later write compares against it (SAFE-01).
-      storageKnownRef.current = saved;
-      restoreDecidedRef.current = true;
-      if (!saved) return;
-      // The autosave payload goes through the same boundary as an imported
-      // document: a corrupted or tampered entry is reported and skipped
-      // instead of being applied, and the defaults stay in place.
-      const validation = validateImportedDocument(saved);
-      if (!validation.ok) {
-        console.warn('[Storage] Autosave restore refused:', validation.diagnostics[0]?.code, validation.diagnostics[0]?.message);
-        return;
-      }
-
-      if (validation.document.kind === 'scene') {
-        const scene = validation.document.scene;
-        const applied = fromSceneData(scene, scene.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
-        if (applied) {
-          // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
-          setRestoredFromLocalStorage(true);
-          // N1: the restored scene is the baseline, not an undoable edit.
-          requestHistoryBaseline();
-          restoreAppliedRef.current = true;
-        }
-        return;
-      }
-
-      // Legacy AnimationProject format (backward compat)
-      const parsed = validation.document.project;
-      const hasLegacyStickman = parsed.characterParts.some((part) => (part as { type?: unknown }).type === 'head' || (part as { type?: unknown }).type === 'torso');
-      const legacyMotionTemplates = readMotionTemplates(parsed.motionTemplates);
-      if (hasLegacyStickman) {
-        localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
-        // This tab legitimately deleted the key; that deletion is its own last-known write.
-        storageKnownRef.current = null;
-        return;
-      }
-      const savedResolution = readProjectResolution(parsed.projectResolution);
-      const migratedTracks = parsed.tracks.map(migrateTrack);
-      const savedFps = readOptionalNumber(parsed.fps);
-      const savedTotalFrames = readOptionalNumber(parsed.totalFrames);
-      const savedAt = readOptionalDate(parsed.lastSavedTime);
-      // The id sweep and the counter init read the same boundary fields the
-      // setters below queue. They run FIRST, mirroring `fromSceneData`: every
-      // derivable throw happens while the live document is still untouched,
-      // so a failed restore mutates nothing and never requests a baseline.
-      const allIds: string[] = [];
-      parsed.characterParts.forEach((p) => allIds.push(p.id));
-      parsed.tracks.forEach((t) => {
-        allIds.push(t.id);
-        t.keyframes?.forEach((k) => allIds.push(k.id));
-        if (t.channels) {
-          Object.values(t.channels).forEach((channel) => channel?.forEach((pk) => allIds.push(pk.id)));
-        }
-      });
-      for (const template of legacyMotionTemplates ?? []) {
-        allIds.push(template.id);
-      }
-      initializeIdCounter(allIds);
-      // From here to the baseline request the block is pure setter dispatch:
-      // a successful legacy startup restore is all-or-nothing (N1), and the
-      // baseline request is the final statement of the success path.
-      if (savedResolution) setProjectResolution(savedResolution);
-      setTracks(migratedTracks);
-      setCharacterParts(parsed.characterParts);
-      if (savedFps !== undefined) setFps(savedFps);
-      if (savedTotalFrames !== undefined) setTotalFrames(savedTotalFrames);
-      // Autosave restoration synchronizes React state with persisted storage.
-      // oxlint-disable-next-line react/set-state-in-effect
-      setLastSavedAt(savedAt ?? new Date());
-      // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
-      setRestoredFromLocalStorage(true);
-      // N1: the restored legacy scene is the baseline, not an undoable edit.
-      requestHistoryBaseline();
-      restoreAppliedRef.current = true;
+      saved = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
     } catch (e) {
       console.warn('[AutoSave] Failed to restore saved state', e);
+      restoreDecidedRef.current = true;
+      return;
     }
-  }, [setTotalFrames, setProjectResolution, setTracks, setCharacterParts, setFps, setCoordinateSystem, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState, requestHistoryBaseline]);
+    // Whatever is in the key at boot — applied, refused, or absent — is what
+    // this tab last observed; every later write compares against it (SAFE-01).
+    storageKnownRef.current = saved;
+    if (saved === null || !saved.includes(ASSET_REF_PREFIX)) {
+      restoreDecidedRef.current = true;
+      if (saved) applySavedScene(saved);
+      return;
+    }
+    // The saved scene names stored media: resolve them before it goes through
+    // the import boundary. Until then the restore is undecided, so the settle
+    // capture and every save wait. A medium whose bytes are missing keeps its
+    // reference (the layer shows no image) and is never dropped from storage.
+    const savedScene = saved;
+    let cancelled = false;
+    void assetStore.internalize(savedScene)
+      .catch((error: unknown) => {
+        console.warn('[Assets] Stored media could not be read', error);
+        return { json: savedScene, missing: [] as string[] };
+      })
+      .then(({ json, missing }) => {
+        if (cancelled) return;
+        if (missing.length > 0) console.warn(`[Assets] ${missing.length} stored medium(s) not found; their layers keep the reference.`);
+        restoreDecidedRef.current = true;
+        applySavedScene(json);
+        setSettleEpoch((epoch) => epoch + 1);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [assetStore, setTotalFrames, setProjectResolution, setTracks, setCharacterParts, setFps, setCoordinateSystem, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState, requestHistoryBaseline]);
 
-  // 2. Auto-Save: SceneData format, at most AUTOSAVE_DELAY_MS after the first unsaved change (SAFE-01 write discipline).
+  // Media enter the asset store as soon as they are in the scene, so the save
+  // that follows can name them; one still being stored is saved inline.
+  useEffect(() => {
+    let cancelled = false;
+    const readLiveTexts = (): string[] => {
+      const texts: string[] = [];
+      for (let index = 0; index < localStorage.length; index += 1) texts.push(localStorage.getItem(localStorage.key(index) ?? '') ?? '');
+      return texts;
+    };
+    void startAssetSession(assetStore, autosaveLockManager() as unknown as AssetLockManager | null, readLiveTexts).then((removed) => {
+      if (removed > 0) console.info(`[Assets] ${removed} unused stored medium(s) deleted.`);
+      if (!cancelled) setAssetSessionReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [assetStore]);
+
+  useEffect(() => {
+    if (!assetSessionReady) return;
+    void assetStore.ingest(characterParts as unknown as Array<Record<string, unknown>>);
+  }, [assetStore, assetSessionReady, characterParts]);
+
+  // 2. Auto-Save: SceneData format, at most the user's autosave delay after the first unsaved change (SAFE-01 write discipline).
   const buildSceneJson = useCallback((): string => {
     const scene = toSceneData(characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId);
     scene.name = sceneTitle || 'Untitled';
@@ -688,7 +818,7 @@ export const useSerialization = ({
   }, [characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId]);
 
   /**
-   * SAFE-01: capture the document THIS TAB WAS GIVEN as its idle baseline.
+   * Capture the document THIS TAB WAS GIVEN as its idle baseline.
    * Runs after the mount effect and, when a restore was applied, after that
    * restore's state commit (signalled by restoredFromLocalStorage) — always
    * before any user edit is possible, so an edit made in the first seconds of
@@ -720,11 +850,19 @@ export const useSerialization = ({
     if (same) return;
     const now = Date.now();
     unsavedSinceRef.current = now;
-    nextAttemptAtRef.current = now + AUTOSAVE_DELAY_MS;
+    nextAttemptAtRef.current = now + autosaveDelayMsRef.current;
     // The document changed: the header must say so (an external, committed edit).
     // oxlint-disable-next-line react/set-state-in-effect
     setHasUnsavedChanges(true);
   }, [buildSceneJson]);
+
+  /** The autosave form of a serialized scene: confirmed media replaced by their references. */
+  const storedFormOf = useCallback((json: string): string => {
+    if (!json.includes('"data:')) return json;
+    const scene = JSON.parse(json) as SceneData;
+    const stored = assetStore.externalize(scene as unknown as { layers?: Array<Record<string, unknown>> });
+    return stored === (scene as unknown) ? json : JSON.stringify(stored);
+  }, [assetStore]);
 
   /**
    * SAFE-01 read-compare-write as one callable so SAFE-02 can run the whole
@@ -736,6 +874,8 @@ export const useSerialization = ({
   const casWrite = useCallback((force: boolean): boolean => {
     const nextJson = buildSceneJson();
     if (!force && nextJson === settledSaveRef.current) return false;
+    // What the key receives: the same scene with its stored media named.
+    const storedJson = storedFormOf(nextJson);
     let currentStored: string | null;
     try {
       currentStored = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
@@ -754,8 +894,8 @@ export const useSerialization = ({
       return false;
     }
     try {
-      localStorage.setItem(AUTOSAVE_STORAGE_KEY, nextJson);
-      storageKnownRef.current = nextJson;
+      localStorage.setItem(AUTOSAVE_STORAGE_KEY, storedJson);
+      storageKnownRef.current = storedJson;
       settledSaveRef.current = nextJson;
       setLastSavedAt(new Date());
       setAutosaveError(null);
@@ -768,7 +908,7 @@ export const useSerialization = ({
       console.error('[AutoSave] Failed to save project to LocalStorage', e);
       return false;
     }
-  }, [buildSceneJson, clearUnsaved]);
+  }, [buildSceneJson, clearUnsaved, storedFormOf]);
 
   type LockRunOutcome<T> = { ran: boolean; value?: T };
 
@@ -803,7 +943,7 @@ export const useSerialization = ({
     // Whatever the outcome, the next attempt is one delay away: a success
     // clears the unsaved state; a failure, a busy lock (SAFE-02: never a queue
     // behind another writer) or a rejected lock call keeps it and retries.
-    nextAttemptAtRef.current = Date.now() + AUTOSAVE_DELAY_MS;
+    nextAttemptAtRef.current = Date.now() + autosaveDelayMsRef.current;
     setIsSaving(true);
     void runWithAutosaveLock(() => casWrite(false), 'try')
       .catch(() => undefined)
@@ -813,7 +953,7 @@ export const useSerialization = ({
   }, [buildSceneJson, casWrite, clearUnsaved, runWithAutosaveLock]);
 
   // One stable clock (it is never re-created by edits, which used to restart a
-  // 10 s interval on every change and postpone the save while the user kept
+  // fixed interval on every change and postpone the save while the user kept
   // editing). It only reads refs; the save runs when the deadline is due.
   const performSaveRef = useRef(performSave);
   useEffect(() => {
@@ -854,7 +994,7 @@ export const useSerialization = ({
     })();
   }, [casWrite, runWithAutosaveLock]);
 
-  // SAFE-02: a late continuation after unmount must not touch state, notify,
+  // A late continuation after unmount must not touch state, notify,
   // or (worse) write: drop the queued manual intent at the boundary.
   useEffect(() => {
     // StrictMode remounts effects in dev: the flag must be re-armed at setup,
@@ -868,7 +1008,7 @@ export const useSerialization = ({
   }, []);
 
   /**
-   * SAFE-01: import and reset are EXPLICIT document replacements — the user's
+   * Import and reset are EXPLICIT document replacements — the user's
    * intent is to own whatever the shared key holds. Re-observe the key right
    * now (so the next save compares against reality, not the boot value), lift
    * any previous conflict pause, and hand the fresh document to the settle
@@ -969,7 +1109,7 @@ export const useSerialization = ({
     setCurrentFrame(0);
     setIsPlaying(false);
     setCoordinateSystem('project-unit-center-v1');
-    // SAFE-02: removal of the key joins the same critical section as saves,
+    // Removal of the key joins the same critical section as saves,
     // so a concurrent tab's write can neither slip between the reset tabs
     // intent and the deletion, nor be clobbered by a reset-time snapshot.
     // Synchronous fallback where Web Locks are unavailable (SAFE-01).
@@ -1058,7 +1198,7 @@ export const useSerialization = ({
     return true;
   }, [activeProjectTemplateId, activeTemplateId, characterParts, coordinateSystem, fps, motionTemplates, projectResolution, sceneTitle, setCharacterParts, setCoordinateSystem, setTemplateCanvasStore, setTracks, totalFrames, tracks]);
 
-  // A1: single synchronous verdict for destructive-navigation callers. All
+  // Single synchronous verdict for destructive-navigation callers. All
   // state lives in refs set synchronously by the write path, so this is a
   // point-in-time fact, not a render-time approximation.
   const getPersistenceSafety = useCallback((): PersistenceSafety => {
@@ -1073,7 +1213,7 @@ export const useSerialization = ({
     return { safe: true, reason: 'clean' };
   }, [buildSceneJson, autosaveError]);
 
-  // A1: one forced durable write through the existing SAFE-01/02 critical
+  // One forced durable write through the existing SAFE-01/02 critical
   // section; resolves true only when the key actually advanced (casWrite's
   // own honest contract).
   const forceSaveNow = useCallback(async (): Promise<boolean> => {
@@ -1097,5 +1237,7 @@ export const useSerialization = ({
     importProject,
     resetProject,
     migrateLegacyCoordinates,
+    autosaveIntervalSeconds,
+    setAutosaveIntervalSeconds,
   };
 };

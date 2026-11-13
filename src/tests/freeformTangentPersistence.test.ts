@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart } from '../types/animator';
-import { resolveFreeformPath } from '../utils/freeform';
-import { buildBezierPathD, initializeSmoothHandles, legacyFreeformPointsToPath, normalizeBezierPath } from '../utils/bezierPath';
+import { resolveFreeformPath } from '../utils/geometry/freeform';
+import { buildBezierPathD, initializeSmoothHandles, legacyFreeformPointsToPath, normalizeBezierPath } from '../utils/geometry/bezierPath';
 
 const makePart = (overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id: 'free',

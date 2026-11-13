@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { CustomMotionPreset, CustomMotionPresetKeyframe } from '../types/animator';
 import { DEFAULT_INITIAL_PRESETS } from '../context/initialStateData';
-import { generateId } from '../utils/idGenerator';
+import { generateId } from '../utils/layers/idGenerator';
 
 const STORAGE_KEY = 'keyframe_custom_motion_presets';
 
@@ -14,6 +14,10 @@ const PRESET_TYPES = ['in', 'out', 'stunt'] as const;
  * access itself, and that must not take the editor down while it mounts. A
  * malformed value is the same kind of input and falls back the same way.
  */
+const isStoredPresetEntry = (entry: unknown): entry is CustomMotionPreset =>
+  typeof entry === 'object' && entry !== null && !Array.isArray(entry)
+  && typeof (entry as { id?: unknown }).id === 'string' && (entry as { id: string }).id.length > 0;
+
 const readStoredPresets = (): CustomMotionPreset[] => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -22,7 +26,16 @@ const readStoredPresets = (): CustomMotionPreset[] => {
     // A parsed non-array (object/string/number) is corrupt storage — fall back
     // to defaults instead of returning a value that would crash
     // `customPresets.map(...)` downstream.
-    return Array.isArray(parsed) ? parsed : DEFAULT_INITIAL_PRESETS;
+    if (!Array.isArray(parsed)) return DEFAULT_INITIAL_PRESETS;
+    // An entry that is not an object with an id cannot be a preset, and every
+    // consumer reads `preset.type` / `preset.id` — one `null` in the stored
+    // array would take the Inspector down on every load. Only those entries
+    // are dropped; any other stored preset is kept exactly as it was saved.
+    const presets = parsed.filter(isStoredPresetEntry);
+    if (presets.length !== parsed.length) {
+      console.warn(`[Presets] Skipped ${parsed.length - presets.length} unreadable entr${parsed.length - presets.length === 1 ? 'y' : 'ies'} in the saved preset library.`);
+    }
+    return presets;
   } catch (error) {
     console.warn('[Presets] Could not read the saved preset library; using the defaults.', error);
     return DEFAULT_INITIAL_PRESETS;
@@ -66,7 +79,7 @@ export const usePresets = (options: UsePresetsOptions = {}) => {
   // oxlint-disable-next-line react/refs
   customPresetsRef.current = customPresets;
 
-  // N3 PR-2b: persistence is change-driven, never mount-driven. Booting a tab
+  // Persistence is change-driven, never mount-driven. Booting a tab
   // has nothing to save, and writing the just-read (or just-defaulted) value
   // back would destroy corrupt-but-recoverable bytes and clobber fresher
   // writes from other tabs inside the boot window. The effect only persists
@@ -90,7 +103,7 @@ export const usePresets = (options: UsePresetsOptions = {}) => {
   }, [customPresets]);
 
   /**
-   * M25 — save a custom preset into the existing collection and persist it
+   * Save a custom preset into the existing collection and persist it
    * to the existing localStorage key. Pure data-layer operation (no UI, no
    * animation edit, no history). Returns the created preset, or null when
    * the input is invalid (empty/whitespace name, unknown type, non-finite or
@@ -162,7 +175,7 @@ export const usePresets = (options: UsePresetsOptions = {}) => {
   }, []);
 
   /**
-   * M25 — remove a custom preset by id and persist. Missing id is a safe
+   * Remove a custom preset by id and persist. Missing id is a safe
    * no-op (never throws). Builtin/default presets are never deleted — they
    * are only re-seeded when storage is empty/corrupt.
    */
@@ -178,7 +191,7 @@ export const usePresets = (options: UsePresetsOptions = {}) => {
   }, []);
 
   /**
-   * M30 — import already validated + merged presets (30A pure helpers own
+   * Import already validated + merged presets (30A pure helpers own
    * validation/collision logic; this API only replaces the collection and
    * lets the existing useEffect persist to keyframe_custom_motion_presets).
    * Library operation: no history, no scene mutation.

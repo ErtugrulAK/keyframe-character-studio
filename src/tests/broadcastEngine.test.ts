@@ -6,7 +6,7 @@ import {
   tickBroadcastState,
   tickLiveStuntsState,
   tickNamedSequenceRuntime,
-} from '../utils/broadcastEngine';
+} from '../utils/animation/broadcastEngine';
 import type { BroadcastObjectState } from '../types/animator';
 
 describe('BroadcastEngine Utility', () => {

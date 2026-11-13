@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { BezierPath, CharacterPart, Track } from '../types/animator';
 import type { ToastOptions } from './useToast';
-import { convertShapeToEditablePath } from '../utils/shapeToPath';
-import { deleteMaskVertex } from '../utils/maskPathCreation';
-import { resolveFreeformPath } from '../utils/freeform';
+import { convertShapeToEditablePath } from '../utils/geometry/shapeToPath';
+import { deleteMaskVertex } from '../utils/geometry/maskPathCreation';
+import { resolveFreeformPath } from '../utils/geometry/freeform';
 
 /** The selected point of an editable path layer (transient editor state, never scene data). */
 export interface PathVertexSelection {
@@ -21,7 +21,7 @@ interface UsePathEditingOptions {
 }
 
 /**
- * C6 — editable paths: converting a basic shape into a path layer, and the
+ * Editable paths: converting a basic shape into a path layer, and the
  * point selection the canvas and the Inspector share. Every write goes through
  * the editor's (lock-guarded) part setter, so convert / add / remove / move
  * are ordinary scene edits with their usual undo step.
@@ -66,7 +66,8 @@ export const usePathEditing = ({ characterParts, tracks, setCharacterParts, sele
 
   /**
    * Delete on a selected path point removes that point (not the layer). True
-   * when the key was used for the path; a path keeps at least three points.
+   * when the key was used for the path; a closed path keeps at least three
+   * points and an open one at least two.
    */
   const deleteSelectedPathVertex = useCallback((): boolean => {
     if (!pathVertex || pathVertex.partId !== selectedPartId) return false;
@@ -75,7 +76,7 @@ export const usePathEditing = ({ characterParts, tracks, setCharacterParts, sele
     if (!part || !path || !path.points[pathVertex.index]) return false;
     const next = deleteMaskVertex(path, pathVertex.index);
     if (!next) {
-      showToast('A closed path keeps at least three points.', 'info');
+      showToast(path.closed ? 'A closed path keeps at least three points.' : 'An open path keeps at least two points.', 'error');
       return true;
     }
     setPartPath(part.id, next);

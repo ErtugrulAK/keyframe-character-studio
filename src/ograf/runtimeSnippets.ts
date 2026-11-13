@@ -19,9 +19,15 @@
  * like the imported helper.
  */
 
-import { compareByStackingOrder } from '../utils/stackingOrder';
-import { resolveMatteSource } from '../utils/matte';
-import { createWorldAffineAlgebra } from '../utils/containerMath';
+import { compareByStackingOrder } from '../utils/layers/stackingOrder';
+import { resolveMatteSource } from '../utils/layers/matte';
+import { createWorldAffineAlgebra } from '../utils/geometry/containerMath';
+import { createGraphicRuntime } from './runtime/graphicRuntime';
+import { createShapeAppearance } from '../utils/layers/shapeAppearance';
+import { describePaint, describeText } from '../utils/layers/drawDescriptor';
+import { createLayoutModifiers, SHAPE_EXTENTS } from '../utils/layers/layoutModifiers';
+import { createTrackMatteMarkup, SHAPE_BOUNDS } from './trackMatteMarkup';
+import { matteContentBlurBox } from '../utils/layers/matte';
 
 /**
  * A helper's source, as the runtime will receive it.
@@ -41,23 +47,30 @@ export const runtimeCompareByStackingOrder = (): string => sourceOf(compareBySta
 export const runtimeResolveMatteSource = (): string => sourceOf(resolveMatteSource as (...args: never[]) => unknown);
 
 /**
- * Embed the ONE affine authority as a complete lexical closure.
+ * Embed the ONE affine authority as a complete lexical closure: an expression
+ * that evaluates to the algebra.
  *
  * Serializing helpers separately is unsafe in production: the minifier renames
  * module-scope references inside their source. The self-contained factory keeps
  * those declarations and references together, so its source remains executable
  * after minification without name rewriting or a second copy of the math.
  */
-export const runtimeWorldAffineAlgebra = (): string => `const {
-  AFFINE_EPSILON,
-  affineOfTransform,
-  composeWorldTransform,
-  composeAffine,
-  applyAffine,
-  affineHasShear,
-  affineToTransform,
-  affineEquals,
-  withWorldAffine,
-  worldAffineOf,
-  affineTrsReading,
-} = (${sourceOf(createWorldAffineAlgebra as (...args: never[]) => unknown)})();`;
+export const runtimeWorldAffineAlgebra = (): string => `(${sourceOf(createWorldAffineAlgebra as (...args: never[]) => unknown)})()`;
+
+/** The editor's appearance rules, as an expression that evaluates to the resolver. */
+export const runtimeResolveShapeAppearance = (): string => `(${sourceOf(createShapeAppearance as (...args: never[]) => unknown)})().resolveShapeAppearance`;
+
+/** The shared draw descriptors (`utils/layers/drawDescriptor`): what a layer paints and writes. */
+export const runtimeDescribePaint = (): string => sourceOf(describePaint as (...args: never[]) => unknown);
+export const runtimeDescribeText = (): string => sourceOf(describeText as (...args: never[]) => unknown);
+
+/** The Track Matte mask markup, with the shapes' local bounds as data and the soft-edge region of a text or image. */
+export const runtimeTrackMatteMarkup = (): string => `(${sourceOf(createTrackMatteMarkup as (...args: never[]) => unknown)})(${JSON.stringify(SHAPE_BOUNDS)}, ${sourceOf(matteContentBlurBox as (...args: never[]) => unknown)})`;
+
+export const runtimeLayoutModifiers = (): string => `(${sourceOf(createLayoutModifiers as (...args: never[]) => unknown)})(${JSON.stringify(SHAPE_EXTENTS)})`;
+
+/**
+ * The graphic runtime factory itself. Like the affine algebra it is one
+ * self-contained function, so its source runs unchanged in the package.
+ */
+export const runtimeGraphicFactory = (): string => sourceOf(createGraphicRuntime as (...args: never[]) => unknown);

@@ -8,11 +8,72 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+- Layout modifiers (Inspector → Properties → MODIFIERS), live in the editor and in the exported OGraf graphic, each one a checkbox:
+  - Text Box: a text keeps a width (it shrinks, then squeezes), aligns left, centre or right, and caps its characters (also the OGraf field's limit).
+  - Hide When Empty: an empty text hides, with every shape sized to it.
+  - Auto Size: a box sizes to one or more texts (a title and a subtitle) with padding, between a minimum and a maximum width, growing from either edge or the centre; it can fit the height too.
+  - Auto Follow: a layer sits next to another layer's edge and moves as it grows, sideways and (optionally) up and down.
+  - Look At: a layer turns to face another layer.
+  - Justify: a group keeps its layers left, centred or right on its origin as they resize.
+  - Repeater: copies in a line, a grid or a ring, each one offset, turned, scaled, faded and delayed a step further.
+- Track Matte feather, strength and gradient angle can be keyed: a keyframe button beside each field, and Track Matte rows on the timeline.
+- Step markers (the flag button on the timeline, at the playhead) split a sequence into OGraf steps: each Next in a playout plays to the next marker and holds.
+- Crop ends the sequence at the playhead, and DURATION shows the new length (two decimals: 60 frames at 120 fps read 0.5 s).
+- The autosave delay is set in the Project panel.
+- A menu bar (File, Edit, Object, View, Help) above the toolbar runs the editor's commands; File > Project Settings holds the resolution, autosave delay and Library.
+- Tool flyouts: hold (or right-click) the shape button for Rectangle, Square, Triangle, Rhombus, Parallelogram and Star, or the ellipse button for Ellipse and Circle (always round); the picked tool stays on the button.
+- An options row under the toolbar edits the selected text: style, text, font, size, colour, outline and alignment.
+- Double-click edit modes: a path's points, a layer's mask or a Boolean result's operands open on a double-click on the layer and close on a double-click on empty stage (or Escape).
+- A Boolean result is one shape in the layer tree, and it can join another Boolean or become a path with Shape to Path.
+- Edit > Paste in Place puts the copy exactly over the original.
+- The Text tool draws a text box: a drag sets its width and font size, a click places a text.
+- A Media button (and File > Add Image or Video…) opens the file picker directly.
+- Ctrl+V pastes at the mouse; animated copies carry their motion.
+- Alt on a corner or edge handle scales about the centre; Alt while drawing draws from the centre.
+- Reset Transform returns layers to the pose they were made with; the conversion is named Shape to Path.
+- The marquee outlines the layers it will select while it is dragged; undo and redo restore the selection.
+- A rotation ring shows the turn while the rotate handle is dragged.
+- Freeform paths get a transform frame (corners and rotation) beside their points.
+- The timeline groups properties like After Effects (Trim Paths, Masks, Track Matte, Transform) and U shows only animated properties.
+
+### Changed
+- The left panel is gone: the menu bar, the toolbar flyouts and the Media button replace it. The header is 42 px tall instead of 79 px.
+- The coordinate axes are faint white with small edge markers pointing at the origin; the X/Y badges, the origin mark and the selection centre mark are gone.
+- Zoom reaches 4000 %; transform handles keep one small size at every zoom.
+- Shift and Alt apply the moment they are pressed during a drag.
+- A tool stays on when its button is pressed again; the active tool has no underline; a draw tool keeps the crosshair over layers.
+- The mask path pad and its commands left the Inspector, and so did the Path Points card: masks and paths are shaped on the canvas.
+- The menu bar keeps only what the toolbar does not offer, and the header's shortcuts button moved to Help > Keyboard Shortcuts.
+- The Inspector is 30 % wider, and Appearance shows fill and stroke side by side as a swatch and a hex code.
+- The timeline lists layers in the layer tree's order, children indented under their parent.
+- The ruler markers follow the mouse over the stage; zoom is smooth on a wheel or trackpad, and the grid stays one pixel thin at any zoom.
+- Focus rings show only while moving with Tab, not after a click.
+- The colour picker's alpha bar fades from transparent to the colour; layer tree drops are coloured by what they do.
+- A dragged layer also snaps by its own position, so a text lands on X/Y = 0.
+- New shapes drawn one after another differ in colour; a new text is 72 px.
+- Inspector cards (Text, Modifiers, Track Matte) start closed on each layer.
+- Large scenes: layers re-render only when they change, a selection of more than 200 layers is framed by one box, and a large selection no longer mounts every timeline row (Select All on 3000 layers: playback 6 → 18 fps).
+
+### Fixed
+- A scene of more than 2,500 layers was refused on reload (the limit counted layers and their tracks), so the editor opened empty and the next autosave overwrote the work. The limit now counts layers (5,000), and a saved scene the editor cannot open is kept in its own storage key, with a message.
+- Ctrl+Z / Ctrl+Y work while a slider, checkbox or list still has focus.
+- Select All on a large scene took seconds.
+- The Display Title and Cinematic Title text styles left the Font list blank: they stored their family without the quotes the list uses.
+- A shape or ellipse toolbar button activated without a pointer (a screen reader, a switch device) did nothing.
+- An SVG image stored as a percent-encoded data URL lost its non-ASCII text in the OGraf package ("Işık" became "I_1k"), and one with a bare `%` (`width="100%"`) or a `;charset=utf-8` parameter was refused by the export and the Lottie import.
+- Unlocking a layer re-enabled an Inspector control that had become disabled for its own reason while the layer was locked.
+
 ## [1.1.0-rc.6] - 2026-10-30
 
 The sixth release candidate of 1.1.0: rc.5 with the fixes from its manual QA,
-the rotation handle turning a layer about its own origin, and a dead-code
-cleanup. No scene-format changes.
+the rotation handle turning a layer about its own origin, centred text origins,
+bundled fonts, a graphic library and a dead-code cleanup. One optional scene
+field is added (`textOrigin`); scenes saved before open unchanged.
+
+### Added
+- A Library (left toolbar → Project → Open Library…) keeps graphics in this browser's IndexedDB: save the current template under a name, open one (in a new tab — the work on screen is never replaced), duplicate, delete.
+- Quick easing: right-click a keyframe for Linear, Ease In, Ease Out, Easy Ease or Hold; F9 applies Easy Ease to the selected keyframes.
 
 ### Changed
 - A new text layer's origin (its crosshair) sits in the middle of the text, as for a rectangle, so it is placed, turned and scaled about its middle. Text layers made before keep their origin on the baseline and do not move.
@@ -20,7 +81,12 @@ cleanup. No scene-format changes.
 - Inspector sections start closed; Hierarchy, Animation Data, Shape Geometry, Path Points and Colour Correction no longer open by themselves. A section you open stays open for the session.
 - A new group's timeline row starts closed, like every other new layer.
 
+### Removed
+- The unused Express/SQLite/PostgreSQL server (`server/`): the editor never called it. `npm run dev` now starts the editor alone; its dependencies (express, pg, sqlite3, cors, dotenv, concurrently) are gone.
+
 ### Fixed
+- Bebas Neue, Montserrat and Roboto were offered but never loaded, so the editor drew them with a fallback font; all seven text fonts are now bundled (no font CDN, works offline), and an OGraf export packages any of them (it used to be blocked for every font but Playfair Display).
+- A text layer's selection frame hugs its letters.
 - The Export menu closes on a click outside it or on Escape.
 - A luminance Track Matte with a text source follows the text's colour, as it does for shapes and in OGraf export; it used to behave exactly like Alpha.
 - The matte summary's "Select Source" button stays on its line when the reading grows (for example "· Inverted").

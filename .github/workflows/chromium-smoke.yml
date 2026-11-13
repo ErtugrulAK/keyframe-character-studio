@@ -13,7 +13,7 @@ name: Chromium Smoke
 #     cannot collide with any other checkout on a self-hosted machine.
 #   - Workers and the job timeout bound time and resource usage; traces and
 #     the HTML report are uploaded when anything fails.
-#   - See docs/KCS_CHROMIUM_SMOKE.md for the spec rationale and how to extend.
+#   - See docs/guides/CHROMIUM_SMOKE.md for the spec rationale and how to extend.
 
 on:
   workflow_dispatch:

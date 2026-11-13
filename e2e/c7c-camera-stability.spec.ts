@@ -19,10 +19,9 @@ const EMPTY = { x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [] 
 const FRAME_MS = 16;
 const TOLERANCE_PX = 1;
 
-type Panel = 'right' | 'left' | 'timeline';
+type Panel = 'right' | 'timeline';
 const LABELS: Record<Panel, [string, string]> = {
   right: ['Hide Inspector', 'Show Inspector'],
-  left: ['Hide Left Toolbar', 'Show Left Toolbar'],
   timeline: ['Collapse timeline', 'Expand timeline'],
 };
 
@@ -208,7 +207,8 @@ const CONDITIONS = [
 
 for (const condition of CONDITIONS) {
   test.describe(`C7c — world stays put while panels move (${condition.name})`, () => {
-    for (const panel of ['right', 'left', 'timeline'] as const) {
+    // The left panel is gone (menu bar and toolbar replaced it).
+    for (const panel of ['right', 'timeline'] as const) {
       test(`${panel}: hide and show`, async ({ page }) => {
         await open(page, condition.viewport, condition.reducedMotion);
         await expectStable(page, [[panel, 30], [panel, 30]]);
@@ -216,7 +216,7 @@ for (const condition of CONDITIONS) {
     }
     test('rapid repeats and reversals mid-slide', async ({ page }) => {
       await open(page, condition.viewport, condition.reducedMotion);
-      await expectStable(page, [['right', 5], ['right', 3], ['right', 2], ['left', 4], ['timeline', 6], ['left', 3], ['timeline', 3], ['right', 30]]);
+      await expectStable(page, [['right', 5], ['right', 3], ['right', 2], ['timeline', 6], ['timeline', 3], ['right', 30]]);
     });
   });
 }
@@ -226,7 +226,7 @@ test.describe('C7c — 200 % device scale (a 200 % browser zoom of a 1440×900 w
   for (const reducedMotion of [false, true]) {
     test(`all panels${reducedMotion ? ', reduced motion' : ''}`, async ({ page }) => {
       await open(page, { width: 720, height: 450 }, reducedMotion);
-      await expectStable(page, [['right', 30], ['right', 30], ['left', 30], ['left', 30], ['timeline', 30], ['timeline', 30]]);
+      await expectStable(page, [['right', 30], ['right', 30], ['timeline', 30], ['timeline', 30]]);
     });
   }
 });
@@ -249,7 +249,7 @@ test('C7c — after a zoom and a pan, toggles are not a pan or zoom', async ({ p
   await page.locator('[role="tree"] [data-layer-id="centre"]').click();
   await page.clock.runFor(200);
   const zoom = await page.locator('.stage-canvas-container').getAttribute('data-camera-zoom');
-  await expectStable(page, [['right', 30], ['right', 30], ['left', 30], ['left', 30], ['timeline', 30], ['timeline', 30]]);
+  await expectStable(page, [['right', 30], ['right', 30], ['timeline', 30], ['timeline', 30]]);
   // No automatic fit or recentre: the camera's zoom is the user's.
   expect(await page.locator('.stage-canvas-container').getAttribute('data-camera-zoom')).toBe(zoom);
 });

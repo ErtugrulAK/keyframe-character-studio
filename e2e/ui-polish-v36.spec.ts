@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { armTool, openShortcutsFromMenu } from './fixtures/toolbarTools';
 
 /**
  * V3.6 UI POLISH CONTRACTS — the nine manual-QA findings, pinned in the browser.
@@ -61,8 +62,7 @@ const stageCursor = (page: Page) => stage(page).evaluate((el) => getComputedStyl
 test('an armed primitive owns the stage cursor with a crosshair and Escape gives it back', async ({ page }) => {
   await seed(page, [shape('a', 'Alpha', 0, 0)]);
   // The Elements band of the left rail arms the rectangle draw tool.
-  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
-  await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+  await armTool(page, 'Rectangle');
   await expect(stage(page)).toHaveClass(/drawing-tool/);
   expect(await stageCursor(page)).toBe('crosshair');
   // The crosshair is on the drawing surface too, not just its frame.
@@ -75,17 +75,17 @@ test('an armed primitive owns the stage cursor with a crosshair and Escape gives
 
 test('the docked chrome resolves from the shared width tokens', async ({ page }) => {
   await seed(page, []);
-  const [rail, drawer, inspector, handleLeft] = await page.evaluate(() => {
-    const width = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().width;
-    const handle = document.querySelector('.left-toolbar-toggle')!.getBoundingClientRect();
-    return [width('.left-sidebar-nav'), width('.left-drawer-panel'), width('.motion-design-right-sidebar'), handle.left];
-  });
-  // One token contract: rail 56 + drawer 304, inspector 372, and the left dock
-  // handle sits on the rail+drawer boundary (not on a stale 280 assumption).
-  expect(Math.round(rail)).toBe(56);
-  expect(Math.round(drawer)).toBe(304);
-  expect(Math.round(inspector)).toBe(372);
-  expect(Math.round(handleLeft + handleLeft % 1)).toBeCloseTo(56 + 304 - 10, 0);
+  // The left panel is gone (the menu bar and the toolbar replaced it); the
+  // inspector still takes its width from the shared token, and the stage
+  // starts at the window's left edge.
+  const [inspector, stageLeft, leftDock] = await page.evaluate(() => [
+    document.querySelector('.motion-design-right-sidebar')!.getBoundingClientRect().width,
+    document.querySelector('.stage-canvas-container')!.getBoundingClientRect().left,
+    document.querySelectorAll('.left-toolbar-container, .left-toolbar-toggle').length,
+  ]);
+  expect(Math.round(inspector)).toBe(484);
+  expect(Math.round(stageLeft)).toBe(0);
+  expect(leftDock).toBe(0);
 });
 
 test('the GIF panel closes from its X alone and states the format in tooltips', async ({ page }) => {
@@ -137,21 +137,21 @@ test('the arrange bands are the documented command groups in the documented orde
   }
 });
 
-test('focus rings are KCS-styled for pointer and keyboard alike — never the white browser ring', async ({ page }) => {
+test('focus rings show for the keyboard only, in the KCS style — never the white browser ring', async ({ page }) => {
   await seed(page, []);
   const fpsSelect = page.locator('.header-actions select').first();
 
-  // Chromium settles the select's focus state over the frames it needs to
-  // open the popup; poll the computed ring, do not sleep for it. The ring is
-  // the inset authority: it rides inside the control box, never outside it.
+  // A click leaves no ring (the user asked for no blue boxes after a click).
   await fpsSelect.click();
-  const ringAfterMouse = () => fpsSelect.evaluate((el) => {
-    const cs = getComputedStyle(el);
-    return `${cs.outlineStyle} ${cs.outlineWidth} ${cs.outlineColor} ${cs.outlineOffset}`;
-  });
-  await expect.poll(ringAfterMouse, 'pointer focus must land on the inset KCS ring').toBe(`solid 2px ${KCS_RING_COLOUR} -2px`);
+  const ringAfterMouse = () => fpsSelect.evaluate((el) => getComputedStyle(el).outlineStyle);
+  await expect.poll(ringAfterMouse, 'pointer focus must not draw a ring').toBe('none');
+  await page.keyboard.press('Escape');
 
+  // Tab switches to keyboard navigation: the inset KCS ring is back.
+  await page.keyboard.press('Tab');
   await fpsSelect.focus();
+  // Chromium settles a select's focus state over a few frames: poll the ring.
+  await expect.poll(() => fpsSelect.evaluate((el) => getComputedStyle(el).outlineColor)).toBe(KCS_RING_COLOUR);
   const afterKeyboard = await fpsSelect.evaluate((el) => {
     const cs = getComputedStyle(el);
     return { style: cs.outlineStyle, color: cs.outlineColor, offset: cs.outlineOffset, fv: el.matches(':focus-visible') };
@@ -202,7 +202,7 @@ test('the mode segment is quiet chrome with an unmistakable pressed half', async
 
 test('the shortcut reference is one dense row per command with the detail one hover away', async ({ page }) => {
   await seed(page, []);
-  await page.getByRole('button', { name: 'Keyboard shortcuts' }).click();
+  await openShortcutsFromMenu(page);
   const rows = page.locator('.shortcut-reference-row');
   await expect(rows.first()).toBeVisible();
 

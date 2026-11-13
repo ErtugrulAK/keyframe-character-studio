@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
 /**
- * Astra F-08: the naming dialog let the keyboard walk out of the modal and left
+ * Review F-08: the naming dialog let the keyboard walk out of the modal and left
  * focus on `body` after it closed. This drives the real editor with real keys —
  * the trap only exists in the browser's own focus order.
  */

@@ -12,7 +12,7 @@ import {
   SHORTCUT_COMMANDS,
   type KeyboardLike,
   type ShortcutScope,
-} from '../utils/shortcuts';
+} from '../utils/editor/shortcuts';
 
 const press = (key: string, init: Partial<KeyboardLike> = {}): KeyboardLike => ({
   key,

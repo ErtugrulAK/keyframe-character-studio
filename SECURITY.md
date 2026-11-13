@@ -36,7 +36,6 @@ flowchart LR
 | 🗜️ **OGraf ZIP** | Decoded in memory with entry-count and entry-size limits. Unsafe, duplicate or reserved paths are refused. |
 | 🖼️ **SVG input** | Bounded and sanitised at the import boundary. |
 | 💾 **Saved data** | Lives in the user's own browser storage. Concurrent tabs cannot overwrite each other's autosave. |
-| 🌐 **Optional API** (`server/`) | Parameterised SQL, an explicit CORS allow-list, body-size limits. Secrets stay in `.env`, never in Git. |
 | 📦 **Dependencies** | `npm audit` is part of the release check. |
 
-> KCS is a prototype. The optional API is meant for trusted local use, not for hostile multi-tenant hosting.
+> KCS is a prototype that runs entirely in the browser; there is no server component.

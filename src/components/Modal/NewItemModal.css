@@ -58,7 +58,7 @@
 }
 
 .text-cyan {
-  color: #76aaed;
+  color: var(--accent-cyan);
 }
 
 /* The title mark follows this dialog's feature accent, not the shared utility hue. */

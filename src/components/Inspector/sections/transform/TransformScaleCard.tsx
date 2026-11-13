@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, Unlink } from 'lucide-react';
 import type { Transform } from '../../../../types/animator';
-import { useAnimator } from '../../../../context/useAnimator';
+import { useAnimatorSlice } from '../../../../context/useAnimator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 
 interface TransformScaleCardProps {
@@ -10,7 +10,7 @@ interface TransformScaleCardProps {
 }
 
 /**
- * R5-14 — Scale as one cell of the compact transform trio: a single percentage
+ * Scale as one cell of the compact transform trio: a single percentage
  * input (50 = half size, 200 = double size) that writes `scaleX` and `scaleY`
  * together, exactly as this control has always done — the two channels stay
  * independent in the model, and the aspect lock below is what governs a uniform
@@ -21,7 +21,7 @@ interface TransformScaleCardProps {
  * make a free (non-uniform) corner drag unreachable.
  */
 export const TransformScaleCard: React.FC<TransformScaleCardProps> = ({ transform, onUpdate }) => {
-  const { isScaleLocked, setIsScaleLocked } = useAnimator();
+  const { isScaleLocked, setIsScaleLocked } = useAnimatorSlice('isScaleLocked', 'setIsScaleLocked');
   const avgScale = (Math.abs(transform.scaleX) + Math.abs(transform.scaleY)) / 2;
 
   return (

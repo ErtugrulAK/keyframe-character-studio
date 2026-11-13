@@ -128,7 +128,7 @@ describe('dialog focus restoration', () => {
 });
 
 /**
- * Astra F-08: the naming dialog left the keyboard free to walk out of the modal
+ * Review F-08: the naming dialog left the keyboard free to walk out of the modal
  * and did not return focus to its opener.
  */
 describe('new item modal focus lifecycle', () => {

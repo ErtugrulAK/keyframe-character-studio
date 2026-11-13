@@ -115,8 +115,9 @@ test.describe('modern stroke-aware editor bounds', () => {
       return { left: box.left, right: box.right, top: box.top, bottom: box.bottom };
     }));
     // Fill and stroke swatches, stroke width and alignment, and the shadow
-    // swatch (laid out like fill and stroke since QA 2026-11-13).
-    expect(boxes.length).toBe(5);
+    // swatch (laid out like fill and stroke since QA 2026-11-13), and the glow
+    // swatch (round 6).
+    expect(boxes.length).toBe(6);
     for (const box of boxes) {
       expect(box.left).toBeGreaterThanOrEqual(cardBox!.x);
       expect(box.right).toBeLessThanOrEqual(cardBox!.x + cardBox!.width);

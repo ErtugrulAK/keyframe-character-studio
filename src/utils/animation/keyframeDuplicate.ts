@@ -3,7 +3,7 @@ import { TRACK_CHANNELS } from '../../types/animator';
 import { generateId } from '../layers/idGenerator';
 
 /**
- * Duplicate Keyframes (AGENTS.md §14): the whole frame group of one track —
+ * Duplicate Keyframes: the whole frame group of one track —
  * transform channels, mask channels, mask-path channels and legacy composite
  * keyframes at `sourceFrame` — is copied to `sourceFrame + offset` on the same
  * track with fresh ids. Values, easing, template and bezier metadata are kept.

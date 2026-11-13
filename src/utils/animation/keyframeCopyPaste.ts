@@ -3,7 +3,7 @@ import { TRACK_CHANNELS } from '../../types/animator';
 import { generateId } from '../layers/idGenerator';
 
 /**
- * Timeline-local keyframe copy / paste (AGENTS.md §14).
+ * Timeline-local keyframe copy / paste.
  *
  * Copy takes every keyframe at one frame of one track — transform channels,
  * mask channels, mask-path channels and legacy composite keyframes — without

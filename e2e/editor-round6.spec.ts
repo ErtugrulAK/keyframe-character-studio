@@ -119,10 +119,16 @@ test('the Text tool places nothing on a plain click, and its preview fits the bo
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   await page.mouse.move(to.x, to.y, { steps: 6 });
-  const frame = (await page.getByTestId('shape-creation-preview').locator('rect').boundingBox())!;
+  const area = (await page.getByTestId('text-creation-area').boundingBox())!;
   const ink = (await page.getByTestId('text-creation-preview').boundingBox())!;
-  expect(ink.x).toBeGreaterThanOrEqual(frame.x - 1);
-  expect(ink.x + ink.width).toBeLessThanOrEqual(frame.x + frame.width + 1);
+  expect(ink.x).toBeGreaterThanOrEqual(area.x - 1);
+  expect(ink.x + ink.width).toBeLessThanOrEqual(area.x + area.width + 1);
+  // The dashed frame is the one the text gets once placed: it hugs the
+  // letters, inside the drawn area (no padding above and below them).
+  const frame = (await page.getByTestId('text-creation-frame').boundingBox())!;
+  expect(frame.y).toBeGreaterThanOrEqual(area.y);
+  expect(frame.y + frame.height).toBeLessThanOrEqual(area.y + area.height);
+  expect(frame.height).toBeLessThan(area.height * 0.8);
   await page.mouse.up();
   await expect(page.locator('.actor-node', { hasText: 'Text' })).toHaveCount(1);
 });

@@ -79,7 +79,7 @@ export const getTextMetrics = (text: string, fontSize: number, fontFamily?: stri
 };
 
 /** A box around the drawn glyphs, relative to the text's anchor on its baseline. */
-type TextInkBox = { minX: number; maxX: number; minY: number; maxY: number };
+export type TextInkBox = { minX: number; maxX: number; minY: number; maxY: number };
 
 /**
  * The box the glyphs actually cover (the ink), as the stage draws them: bold,
@@ -87,7 +87,7 @@ type TextInkBox = { minX: number; maxX: number; minY: number; maxY: number };
  * measure it (no DOM, no ink metrics, nothing visible) — callers then use the
  * em box from `getTextMetrics`.
  */
-const getTextInkBox = (text: string, fontSize: number, fontFamily?: string): TextInkBox | null => {
+export const getTextInkBox = (text: string, fontSize: number, fontFamily?: string): TextInkBox | null => {
   if (typeof document === 'undefined') return null;
   try {
     const context = document.createElement('canvas').getContext('2d');

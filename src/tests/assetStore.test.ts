@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { ASSET_SESSION_LOCK, createAssetStore, createMemoryAssetBackend, isAssetRef, startAssetSession, type AssetLockManager } from '../utils/persistence/assetStore';
+import { describe, expect, it, vi } from 'vitest';
+import { ASSET_SESSION_LOCK, createAssetStore, createIndexedDbAssetBackend, createMemoryAssetBackend, isAssetRef, startAssetSession, type AssetLockManager } from '../utils/persistence/assetStore';
 
 const photo = `data:image/png;base64,${'A'.repeat(4096)}`;
 const other = `data:image/png;base64,${'B'.repeat(4096)}`;
@@ -146,5 +146,24 @@ describe('asset session', () => {
     const { manager } = lockManager();
     expect(await startAssetSession(createAssetStore(backend), manager, () => { throw new Error('denied'); })).toBe(0);
     expect(backend.entries.size).toBe(1);
+  });
+});
+
+describe('asset store without crypto.subtle (an http:// LAN address)', () => {
+  it('stores media under the same reference Web Crypto gives', async () => {
+    const secure = createAssetStore(createMemoryAssetBackend());
+    await secure.ingest(sceneWith(photo).layers);
+    const expected = secure.externalize(sceneWith(photo)).layers[0].imageUrl;
+
+    vi.stubGlobal('crypto', {});
+    try {
+      const lan = createAssetStore(createMemoryAssetBackend());
+      expect(await lan.ingest(sceneWith(photo).layers)).toBe(true);
+      expect(lan.externalize(sceneWith(photo)).layers[0].imageUrl).toBe(expected);
+      // The IndexedDB backend no longer gives up there.
+      expect(createIndexedDbAssetBackend({ open: () => { throw new Error('unused'); } } as unknown as IDBFactory)).not.toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

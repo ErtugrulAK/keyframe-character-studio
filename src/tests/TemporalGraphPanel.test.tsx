@@ -198,7 +198,7 @@ describe('TemporalGraphPanel — V6 full authority precedence', () => {
   });
 
   it('classifier agrees with the evaluator branch order behaviorally', async () => {
-    const { applyEasing, effectiveSegmentAuthority } = await import('../utils/defaults');
+    const { applyEasing, effectiveSegmentAuthority } = await import('../utils/animation/defaults');
     const cp: [number, number, number, number] = [0.42, 0, 1, 1];
     const out = { x: 0.2, y: 0.8 };
     const inH = { x: 0.8, y: 0.2 };

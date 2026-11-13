@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BezierPath, FreeformPoint } from '../types/animator';
-import { MIN_FREEFORM_POINTS } from '../utils/freeform';
-import { isEditableElement } from '../utils/keyboardFocus';
+import { MIN_FREEFORM_POINTS } from '../utils/geometry/freeform';
+import { isEditableElement } from '../utils/editor/keyboardFocus';
 import {
   addPenAnchor,
   dedupePenAnchors,
   dragPenTangent,
   penAnchorsToPath,
   type PenAnchor,
-} from '../utils/penDraft';
+} from '../utils/geometry/penDraft';
 
 /** Pointer travel (CSS px) after a press that turns it into a tangent drag. */
 export const PEN_DRAG_THRESHOLD_PX = 4;

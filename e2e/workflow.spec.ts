@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { armTool } from './fixtures/toolbarTools';
 
 test.describe('Phase 6.4 E2E Workflows', () => {
   test.beforeEach(async ({ page }) => {
@@ -12,7 +13,7 @@ test.describe('Phase 6.4 E2E Workflows', () => {
  * the layout — can never push a drag onto the timeline panel below.
  */
 async function createShapeByDrag(page: Page, name: string, offsetX = 0, offsetY = 0, halfSize = 40): Promise<void> {
-  await page.getByRole('button', { name, exact: true }).click();
+  await armTool(page, name);
   const canvas = page.locator('.stage-canvas-container');
   const box = await canvas.boundingBox();
   if (!box) throw new Error('Canvas bounds unavailable');
@@ -40,8 +41,6 @@ async function clickStagePoint(page: Page, offsetX: number, offsetY: number): Pr
     // The application should initialize and render the canvas
     await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 
-    // Navigate to Vector Shapes Toolbar
-    await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
 
     // Add Rectangle and Circle through the approved drag-creation contract.
     await createShapeByDrag(page, 'Rectangle', -40, 0);
@@ -83,10 +82,12 @@ async function clickStagePoint(page: Page, offsetX: number, offsetY: number): Pr
     // Delete part
     await page.keyboard.press('Delete');
 
-    // The current V6 workflow keeps project templates in the Project Workspace.
+    // Project settings live in the File menu now (the left panel is gone).
     // The former Motion Transitions surface is intentionally not part of the
     // consolidated toolbar.
-    await expect(page.getByRole('button', { name: 'Project Workspace' })).toBeVisible();
+    await page.getByRole('menuitem', { name: 'File', exact: true }).click();
+    await expect(page.getByRole('menuitem', { name: 'Project Settings…' })).toBeVisible();
+    await page.keyboard.press('Escape');
     await expect(page.getByTitle('Motion Transitions')).toHaveCount(0);
   });
 
@@ -94,9 +95,7 @@ async function clickStagePoint(page: Page, offsetX: number, offsetY: number): Pr
     test.setTimeout(60000);
     await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 
-    await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
-    await page.getByRole('button', { name: 'Free Draw', exact: true }).click();
-    await page.getByRole('button', { name: 'Hide Left Toolbar', exact: true }).click();
+    await armTool(page, 'Free Draw');
 
     await clickStagePoint(page, -80, 20);
     await clickStagePoint(page, 80, 0);
@@ -112,8 +111,7 @@ async function clickStagePoint(page: Page, offsetX: number, offsetY: number): Pr
     await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 
     // Open the vector shapes drawer and activate the Free Draw tool
-    await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
-    await page.getByRole('button', { name: 'Free Draw', exact: true }).click();
+    await armTool(page, 'Free Draw');
 
     // Draw an irregular polygon: 3 corner clicks + double-click to finish
     await clickStagePoint(page, -80, 20);
@@ -129,12 +127,11 @@ async function clickStagePoint(page: Page, offsetX: number, offsetY: number): Pr
     test.setTimeout(60000);
     await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 
-    await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
 
     // Draw the small freeform first, at the stage centre: a mousedown that lands
     // on an existing layer belongs to that layer, so the freeform tool only ever
     // receives clicks on empty canvas.
-    await page.getByRole('button', { name: 'Free Draw', exact: true }).click();
+    await armTool(page, 'Free Draw');
     await clickStagePoint(page, -80, 20);
     await clickStagePoint(page, 80, 0);
     await clickStagePoint(page, 0, 50);

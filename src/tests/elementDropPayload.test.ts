@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ELEMENT_DROP_TYPES,
   parseElementDropPayload,
-} from '../utils/elementDropPayload';
+} from '../utils/editor/elementDropPayload';
 
 describe('parseElementDropPayload — legitimate drawer payloads (anti-regression)', () => {
   it('accepts every ElementsDrawer/TextsDrawer drag payload unchanged', () => {

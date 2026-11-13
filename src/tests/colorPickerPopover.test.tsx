@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ColorPickerPopover } from '../components/Inspector/inputs/ColorPickerPopover';
-import { hsvToRgb, toHexColor } from '../utils/colorUtils';
+import { hsvToRgb, toHexColor } from '../utils/layers/colorUtils';
 
 const mockBounds = (element: HTMLElement, width = 100, height = 10) => {
   vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({

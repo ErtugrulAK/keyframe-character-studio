@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fullRowWindow, planRowWindow, rowOffsets, rowWindowRange, type RowWindowSegment } from '../utils/rowWindow';
+import { fullRowWindow, planRowWindow, rowOffsets, rowWindowRange, type RowWindowSegment } from '../utils/editor/rowWindow';
 
 const mountedRows = (segments: RowWindowSegment[]): number[] => segments.flatMap((segment) => (
   segment.kind === 'rows' ? Array.from({ length: segment.end - segment.start }, (_, offset) => segment.start + offset) : []

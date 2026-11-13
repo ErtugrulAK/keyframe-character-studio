@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, Track } from '../types/animator';
-import { evaluateTransform } from '../utils/evaluateTransform';
-import { worldAffineOf, affineEquals } from '../utils/containerMath';
-import { moveLayerInOrder, planLayerDrop, planReparent, reparentBlockReason } from '../utils/layerParenting';
-import { deleteParts, matteDependentsOfDeletion } from '../utils/partDeletion';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { worldAffineOf, affineEquals } from '../utils/geometry/containerMath';
+import { moveLayerInOrder, planLayerDrop, planReparent, reparentBlockReason } from '../utils/layers/layerParenting';
+import { deleteParts, matteDependentsOfDeletion } from '../utils/layers/partDeletion';
 
 const part = (id: string, base: Partial<CharacterPart['baseTransform']> = {}, extra: Partial<CharacterPart> = {}): CharacterPart => ({
   id,

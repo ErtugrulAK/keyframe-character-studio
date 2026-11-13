@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { evaluateTransform } from '../utils/evaluateTransform';
-import { syncBroadcastParts } from '../utils/broadcastEngine';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { syncBroadcastParts } from '../utils/animation/broadcastEngine';
 import { SmartNumberInput } from '../components/Inspector/inputs/SmartNumberInput';
 import type { CharacterPart, Track } from '../types/animator';
 

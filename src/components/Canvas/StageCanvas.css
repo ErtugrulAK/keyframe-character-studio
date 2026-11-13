@@ -132,6 +132,12 @@
   cursor: crosshair;
 }
 
+/* The crosshair stays over existing layers too: a hover cursor there read as
+   "this click selects" while the click still draws. */
+.stage-canvas-container.drawing-tool * {
+  cursor: crosshair !important;
+}
+
 /*
  * While a creation tool, the Hand or crop owns the stage, the selection gizmo
  * stays visible (what is selected) but passive: dimmed, no resize/rotate

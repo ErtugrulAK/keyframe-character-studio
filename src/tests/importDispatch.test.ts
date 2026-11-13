@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { classifyImport } from '../utils/importDispatch';
+import { classifyImport } from '../utils/persistence/importDispatch';
 import { OGRAF_GRAPHICS_SCHEMA_URL } from '../ograf/types';
-import { MAX_IMPORT_CHARACTERS } from '../utils/importValidation';
+import { MAX_IMPORT_CHARACTERS } from '../utils/persistence/importValidation';
 
 /**
  * Milestone F item 12 — the unified import entry's dispatcher.

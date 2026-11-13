@@ -5,13 +5,13 @@
 **A 2D keyframe and motion-design editor that runs in the browser.**
 Draw, mask and animate vector scenes, then export them as broadcast graphics (OGraf), animated GIFs or project files.
 
-[![Version](https://img.shields.io/badge/version-1.1.0--rc.6-35c8b0)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0--rc.7-35c8b0)](CHANGELOG.md)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Rendering](https://img.shields.io/badge/rendering-SVG-FFB13B?logo=svg&logoColor=black)](#-how-it-works)
-[![Unit tests](https://img.shields.io/badge/unit%20tests-3%2C339-2ea44f?logo=vitest&logoColor=white)](#-quality)
-[![E2E tests](https://img.shields.io/badge/E2E-689%20in%20Chromium-2ea44f?logo=playwright&logoColor=white)](#-quality)
+[![Unit tests](https://img.shields.io/badge/unit%20tests-3%2C712-2ea44f?logo=vitest&logoColor=white)](#-quality)
+[![E2E tests](https://img.shields.io/badge/E2E-705%20in%20Chromium-2ea44f?logo=playwright&logoColor=white)](#-quality)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
 <img src="docs/assets/readme/demo.gif" alt="An animated lower third, a masked landscape and a spinning star, exported by KCS as a GIF" width="720">
@@ -30,6 +30,27 @@ Draw, mask and animate vector scenes, then export them as broadcast graphics (OG
 | 📈 **Motion curves**<br><sub>Curve editor, value and speed graphs, presets, paste CSS easing</sub> | 🧩 **Layers & groups**<br><sub>Parenting (a child moves in its parent's space), locks, Boolean operations, Shape to Path</sub> | 📡 **Broadcast mode**<br><sub>A live director panel that plays sequences with IN/OUT motion</sub> |
 | 📦 **OGraf export**<br><sub>Web-standard broadcast graphics packages, checked per layer first; multi-step graphics from timeline step markers</sub> | 🖼️ **Animated GIF**<br><sub>Frame-exact export with a built-in encoder</sub> | 📱 **Any screen**<br><sub>Desktop, half-screen windows, tablets and phones</sub> |
 | 🧲 **Layout modifiers**<br><sub>Auto Size, Text Box, Auto Follow, Look At, Justify, Repeater: lower thirds that fit their text, live in OGraf too</sub> | 🎚️ **Keyed mattes**<br><sub>Track Matte feather, strength and gradient angle keyframed like any property</sub> | 🗂️ **Big scenes**<br><sub>Thousands of layers; only what changes re-renders</sub> |
+| 🧰 **Ready-made graphics**<br><sub>New from Template: lower third, corner bug, scoreboard, title card, at your size and frame rate</sub> | ⌨️ **Text over time**<br><sub>Typewriter, counting numbers, stopwatch and countdown; the same in the export</sub> | 🛤️ **Motion paths**<br><sub>A layer follows a drawn path and turns with the direction of travel</sub> |
+| ✨ **Layer effects**<br><sub>Drop shadow, glow, blur and blend modes, in the editor and in every export</sub> | ✂️ **Crop & replace**<br><sub>Trim what a layer shows; swap a picture and keep its animation</sub> | 🔭 **Stage aids**<br><sub>Real zoom, Fit, 1:1, safe-area guides, artboard backdrops, Inspector search</sub> |
+
+## 🎬 Made with KCS
+
+Every clip below is a KCS scene, exported by the editor's own GIF exporter. The first four are the ready-made graphics behind **File → New from Template…**
+
+<table>
+<tr>
+<td width="33%"><img src="docs/assets/readme/gallery/lower-third.gif" alt="A lower third sliding in: a name and a role on a dark bar with a red accent"><br><sub><b>Lower third</b>: a name and a role that slide in.</sub></td>
+<td width="33%"><img src="docs/assets/readme/gallery/title-card.gif" alt="A centred title with an underline and a subtitle fading in"><br><sub><b>Title card</b>: a title, an underline and a subtitle.</sub></td>
+<td width="33%"><img src="docs/assets/readme/gallery/scoreboard.gif" alt="A compact scoreboard in the top left corner: HOME 2, 1 AWAY"><br><sub><b>Scoreboard</b>: two teams and a score.</sub></td>
+</tr>
+<tr>
+<td><img src="docs/assets/readme/gallery/corner-bug.gif" alt="A LIVE bug with a red dot in the top right corner"><br><sub><b>Corner bug</b>: a LIVE badge.</sub></td>
+<td><img src="docs/assets/readme/gallery/text-effects.gif" alt="A headline typing itself out above a countdown clock and a shrinking progress bar"><br><sub><b>Text over time</b>: a typewriter and a countdown.</sub></td>
+<td><img src="docs/assets/readme/gallery/motion-path.gif" alt="A glowing dart following a curved path and turning with it"><br><sub><b>Motion path</b>: a glowing layer follows a curve.</sub></td>
+</tr>
+</table>
+
+<sub>The gallery is reproducible: `node scripts/capture-readme-gallery.mjs` drives the editor in a browser and saves these files.</sub>
 
 ## 📸 A look inside
 
@@ -85,6 +106,8 @@ npm install
 npm run dev               # the editor → http://localhost:5173
 ```
 
+New here? Open **File → New from Template…**, pick a lower third and press <kbd>Space</kbd> to play it.
+
 <details>
 <summary>More commands</summary>
 
@@ -107,8 +130,8 @@ Requires Node.js `^22.22.2 || ^24.15.0 || >=26.0.0`. The editor runs entirely in
 %%{init: {'theme': 'base', 'themeVariables': {'pie1': '#35c8b0', 'pie2': '#38bdf8', 'pieStrokeColor': '#0d141b', 'pieSectionTextColor': '#0d141b', 'pieTitleTextSize': '18px', 'pieTitleTextColor': '#8b9baa', 'pieLegendTextColor': '#8b9baa'}}}%%
 pie showData
     title Automated tests
-    "Unit & component (Vitest)" : 3339
-    "End-to-end in Chromium (Playwright)" : 689
+    "Unit & component (Vitest)" : 3712
+    "End-to-end in Chromium (Playwright)" : 705
 ```
 
 - 🔍 Visual fixes are **measured** (pixel samples, element boxes), and new regression tests are checked against the old code.
@@ -132,7 +155,8 @@ gitGraph
     checkout main
     merge feature id: "v1.1.0-rc.3"
     commit id: "v1.1.0-rc.4 Neutral Pro"
-    commit id: "v1.1.0-rc.6 (next)" type: HIGHLIGHT
+    commit id: "v1.1.0-rc.7 layout + menus"
+    commit id: "templates, text, paths (next)" type: HIGHLIGHT
 ```
 
 Versions follow [Semantic Versioning](https://semver.org/). Each candidate is QA'd by hand, and the accepted one becomes the final release. See [CHANGELOG.md](CHANGELOG.md), [docs/RELEASING.md](docs/RELEASING.md) and the [documentation index](docs/README.md).

@@ -296,3 +296,36 @@ test('Replace Image swaps the picture and keeps the layer, its animation and its
   await page.keyboard.press('Control+z');
   await expect.poll(async () => (await savedLayers(page)).find((candidate) => candidate.id === 'img')?.height).toBe(100);
 });
+
+test('New from Template opens a ready-made lower third, fitted in view, in the empty tab', async ({ page }) => {
+  // Round 6 (OGraf Studio review): start from a ready-made graphic.
+  await seed(page);
+  await page.getByRole('menubar').getByRole('menuitem', { name: 'File' }).click();
+  await page.getByRole('menuitem', { name: 'New from Template…' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New from Template' });
+  await dialog.getByRole('combobox', { name: 'Frame rate' }).selectOption('25');
+  await dialog.getByRole('button', { name: /^Lower Third/ }).click();
+  await expect(dialog).toHaveCount(0);
+  for (const name of ['Bar', 'Accent', 'Name', 'Title']) {
+    await expect(page.locator('.actor-node', { has: page.locator('.actor-name', { hasText: new RegExp(`^${name}$`) }) })).toHaveCount(1);
+  }
+  // The empty tab took the graphic and its name (no second tab).
+  await expect(page.locator('.header-tab.active')).toContainText('Lower Third');
+  await expect(page.locator('.header-tab:not(.add-tab)')).toHaveCount(1);
+  // The five-second sequence at 25 fps.
+  await expect(page.locator('.timecode-total')).toHaveText('/ 00:05:00');
+  // Seek past the entrance: the bar hugs the name (narrower than its authored 820 px) and holds the text.
+  const field = page.getByRole('textbox', { name: 'Current time' });
+  await field.fill('2s');
+  await field.press('Enter');
+  const box = async (id: string) => (await page.locator(`.stage-canvas-container [data-part-id="${id}"]`).first().boundingBox())!;
+  await expect.poll(async () => {
+    const [bar, name] = [await box('bar'), await box('title')];
+    return bar.x <= name.x && bar.x + bar.width >= name.x + name.width && bar.width < name.width * 2;
+  }).toBe(true);
+  // The whole artboard is in view.
+  const stage = await stageBox(page);
+  const artboard = (await page.locator('rect.canvas-bg[filter]').boundingBox())!;
+  expect(artboard.x).toBeGreaterThanOrEqual(stage.x);
+  expect(artboard.x + artboard.width).toBeLessThanOrEqual(stage.x + stage.width);
+});

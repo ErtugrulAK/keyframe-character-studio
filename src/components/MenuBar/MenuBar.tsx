@@ -5,6 +5,7 @@ import { detectShortcutPlatform, formatShortcutHint, type ShortcutCommandId } fr
 import { isConvertibleShapeType, shapeToPathBlockReason } from '../../utils/geometry/shapeToPath';
 import { ProjectSettingsDialog } from './ProjectSettingsDialog';
 import { useGraphicLibrary } from './useGraphicLibrary';
+import { useStartRecipes } from './useStartRecipes';
 import './MenuBar.css';
 
 interface MenuItem {
@@ -53,6 +54,7 @@ export const MenuBar: React.FC = () => {
   const [projectSettingsOpen, setProjectSettingsOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
   const { openLibrary, dialog: libraryDialog } = useGraphicLibrary();
+  const { openStartRecipes, dialog: startRecipeDialog } = useStartRecipes();
 
   const platform = detectShortcutPlatform();
   const hint = (id: ShortcutCommandId) => formatShortcutHint(id, platform);
@@ -78,6 +80,7 @@ export const MenuBar: React.FC = () => {
       id: 'file',
       label: 'File',
       groups: [
+        [{ id: 'new-from-template', label: 'New from Template…', run: () => openStartRecipes() }],
         [{ id: 'library', label: 'Library…', run: () => openLibrary() }],
         [{ id: 'project-settings', label: 'Project Settings…', run: () => setProjectSettingsOpen(true) }],
       ],
@@ -233,6 +236,7 @@ export const MenuBar: React.FC = () => {
         </div>
       ))}
       {libraryDialog}
+      {startRecipeDialog}
       <ProjectSettingsDialog isOpen={projectSettingsOpen} onClose={() => setProjectSettingsOpen(false)} />
     </div>
   );

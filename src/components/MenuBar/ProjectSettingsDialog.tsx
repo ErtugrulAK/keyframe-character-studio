@@ -12,7 +12,7 @@ interface ProjectSettingsDialogProps {
 }
 
 /**
- * The project's settings (Library, canvas size, autosave delay), opened from
+ * The project's settings (canvas size, autosave delay), opened from
  * File > Project Settings. They lived in the left panel, which the menu bar
  * replaced; the controls are the same ones.
  */

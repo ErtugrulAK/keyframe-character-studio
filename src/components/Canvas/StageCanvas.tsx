@@ -1159,6 +1159,10 @@ export const StageCanvas: React.FC = () => {
         flushSync(() => applyStageBox(box, false));
         return;
       }
+      if (type === 'fit-artboard') {
+        fitArtboardRef.current();
+        return;
+      }
       if (type !== 'zoom-in' && type !== 'zoom-out') return;
       const nextZoom = clampZoom(zoomRef.current * (type === 'zoom-in' ? 1.1 : 0.9));
       setZoomLevel(nextZoom);
@@ -1185,6 +1189,12 @@ export const StageCanvas: React.FC = () => {
       ? { ...current, center: snapToDevicePixel({ x: box.left + box.width / 2, y: box.top + box.height / 2 }) }
       : current));
   };
+
+  // The viewport command listener is bound once; it reaches the latest Fit through this ref.
+  const fitArtboardRef = useRef(fitArtboardInView);
+  useEffect(() => {
+    fitArtboardRef.current = fitArtboardInView;
+  });
 
   const [isDropTargetHover, setIsDropTargetHover] = useState<boolean>(false);
   const handleDragOverStage = (e: React.DragEvent) => {

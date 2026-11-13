@@ -56,7 +56,7 @@ describe('usePathEditing', () => {
     act(() => result.current.selectPathVertex('p', 0));
     act(() => { result.current.deleteSelectedPathVertex(); });
     expect(pathOfPart(result.current.characterParts, 'p').points).toHaveLength(3);
-    expect(showToast).toHaveBeenCalledWith('A closed path keeps at least three points.', 'info');
+    expect(showToast).toHaveBeenCalledWith('A closed path keeps at least three points.', 'error');
   });
 
   it('an open path at two points keeps them and names its own minimum', () => {
@@ -64,7 +64,7 @@ describe('usePathEditing', () => {
     act(() => result.current.selectPathVertex('p', 0));
     act(() => { result.current.deleteSelectedPathVertex(); });
     expect(pathOfPart(result.current.characterParts, 'p').points).toHaveLength(2);
-    expect(showToast).toHaveBeenCalledWith('An open path keeps at least two points.', 'info');
+    expect(showToast).toHaveBeenCalledWith('An open path keeps at least two points.', 'error');
   });
 
   it('an open path above its minimum loses the point', () => {

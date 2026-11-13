@@ -76,7 +76,7 @@ export const usePathEditing = ({ characterParts, tracks, setCharacterParts, sele
     if (!part || !path || !path.points[pathVertex.index]) return false;
     const next = deleteMaskVertex(path, pathVertex.index);
     if (!next) {
-      showToast(path.closed ? 'A closed path keeps at least three points.' : 'An open path keeps at least two points.', 'info');
+      showToast(path.closed ? 'A closed path keeps at least three points.' : 'An open path keeps at least two points.', 'error');
       return true;
     }
     setPartPath(part.id, next);

@@ -60,6 +60,8 @@ fix after a candidate is the next candidate.
 - `v1.1.0-rc.4`: prepared on 2026-10-30; rc.3 plus the Neutral Pro editor look.
 - `v1.1.0-rc.5`: prepared on 2026-10-30, superseded before tagging by rc.6 (its QA found the fixes rc.6 carries).
 - `v1.1.0-rc.6`: prepared on 2026-10-30; rc.5 plus its QA fixes.
+- `v1.1.0-rc.7`: prepared on 2026-11-13; rc.6 plus the layout modifiers, OGraf renderer
+  support and the editor layout from the QA rounds since rc.6. rc.5 and rc.6 were never tagged.
 - `v1.1.0-rc.5`: prepared on 2026-10-30; rc.4 plus text matte and exported text
   on the editor's baseline.
 - On 2026-10-27 the remote was cleaned: 75 merged, integrated or stale branches

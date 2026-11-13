@@ -1,0 +1,63 @@
+/*
+ * The options bar: one slim row under the toolbar with the settings of what
+ * is selected (Photoshop and Illustrator call it the options or control bar).
+ */
+.tool-options-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 3px 12px;
+  overflow-x: auto;
+  background: var(--kcs-bg-shell, #232323);
+  border-bottom: 1px solid var(--kcs-border-default, #333);
+  flex: 0 0 auto;
+}
+
+.tool-options-title {
+  color: var(--kcs-text-muted, #8a8a8a);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.tool-options-bar .select-control,
+.tool-options-bar .input-control {
+  height: 26px;
+  min-height: 26px;
+  font-size: 12px;
+}
+
+.tool-options-style { width: 130px; }
+.tool-options-text { width: 220px; }
+.tool-options-font { width: 150px; }
+.tool-options-size { width: 64px; }
+.tool-options-stroke-width { width: 58px; }
+
+.tool-options-color .color-swatch-button {
+  width: 30px;
+  height: 22px;
+}
+
+.tool-options-color.is-muted { opacity: 0.45; }
+
+.tool-options-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--kcs-text-secondary, #cfcfcf);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.tool-options-group {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.tool-options-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--kcs-border-default, #3a3a3a);
+}

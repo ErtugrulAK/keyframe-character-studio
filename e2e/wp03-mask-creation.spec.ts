@@ -139,6 +139,11 @@ test.describe('WP-03 — mask creation and path edits', () => {
       return element?.getAttribute('data-testid');
     }, top);
     expect(hit).toBe('mask-path-hit-area');
+    // QA 2026-11-13: the outline shows the "add point" cursor, the inside the
+    // "move" one (the whole mask showed "move").
+    const cursorAt = (point: { x: number; y: number }) => page.evaluate(({ x, y }) => getComputedStyle(document.elementFromPoint(x, y)!).cursor, point);
+    expect(await cursorAt(top)).toBe('copy');
+    expect(await cursorAt({ x: c.x, y: c.y + 5 })).toBe('move');
     await page.mouse.dblclick(top.x, top.y);
     await expect(page.getByTestId('mask-vertex')).toHaveCount(5);
     expect((await contours(page, 'mask-1')).overlay).not.toBe(outlineBefore);
@@ -155,6 +160,13 @@ test.describe('WP-03 — mask creation and path edits', () => {
     // outline still matches the clip after the point edits.
     const lines = await contours(page, 'mask-1');
     expect(lines.overlay).toBe(lines.clip);
+
+    // QA 2026-11-13: a double-click INSIDE the mask (the drag area, away from
+    // the outline) added a point on the nearest edge. It adds none and closes
+    // the mask, as a second double-click on a path closes its points.
+    await page.mouse.dblclick(c.x, c.y + 5);
+    await expect(page.getByTestId('mask-path-overlay')).toHaveCount(0);
+    expect((await savedScene(page)).layers[0].masks[0].path.points).toHaveLength(4);
   });
 
   test('circle → move → path key at frame 20 (armed by the path row\'s "+"), and topology is locked once animated', async ({ page }) => {
@@ -181,7 +193,7 @@ test.describe('WP-03 — mask creation and path edits', () => {
     await expect(ruler).toHaveAttribute('aria-valuenow', '20');
     await expect(page.getByTestId('mask-path-overlay')).toBeVisible();
 
-    const handle = await page.getByTestId('mask-path-move-handle').boundingBox();
+    const handle = await page.getByTestId('mask-path-hit-area').boundingBox();
     if (!handle) throw new Error('no move handle');
     await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
     await page.mouse.down();

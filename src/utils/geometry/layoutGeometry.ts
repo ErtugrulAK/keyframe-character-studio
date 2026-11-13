@@ -229,6 +229,12 @@ interface ResolveSnapInput {
   thresholdWorld: number;
   /** When false the raw delta is returned unchanged and no guide is produced. */
   enabled: boolean;
+  /**
+   * The dragged layer's own position (its anchor) at the START of the drag, in
+   * the same world space. A text's box centre is not its position, so without
+   * it a text could not land on X/Y = 0 or on another layer's line.
+   */
+  movingAnchor?: { x: number; y: number };
 }
 
 /**
@@ -246,6 +252,7 @@ export const resolveSnap = ({
   candidates,
   thresholdWorld,
   enabled,
+  movingAnchor,
 }: ResolveSnapInput): SnapResolution => {
   const unchanged: SnapResolution = { delta: { ...delta }, guides: [], snappedX: false, snappedY: false };
   if (!enabled || thresholdWorld <= 0 || candidates.length === 0) return unchanged;
@@ -256,6 +263,10 @@ export const resolveSnap = ({
     x: [proposed.minX, center.x, proposed.maxX],
     y: [proposed.minY, center.y, proposed.maxY],
   };
+  if (movingAnchor) {
+    movingPoints.x.push(movingAnchor.x + delta.x);
+    movingPoints.y.push(movingAnchor.y + delta.y);
+  }
 
   const resolveAxis = (axis: SnapAxis): { adjustment: number; line: SnapLine } | null => {
     let best: { adjustment: number; line: SnapLine } | null = null;

@@ -1,3 +1,4 @@
+import { contoursToPolygons } from './booleanFlatten';
 import { difference, intersection, union, xor, type MultiPolygon, type Polygon } from 'polygon-clipping';
 import type { CharacterPart, FreeformPoint, Track, Transform } from '../../types/animator';
 import { getShapeGeometry } from './shapeGeometry';
@@ -88,6 +89,11 @@ const localPolygons = (part: CharacterPart): OutlinePolygon[] | null => {
   if (part.type === 'custom_text') return getTextOutlinePolygons(part);
 
   if (part.type === 'custom_freeform') {
+    // A flattened Boolean result (no operands left) keeps its regions and holes.
+    if (part.booleanContours?.length && !part.booleanOperandIds?.length) {
+      const polygons = contoursToPolygons(part.booleanContours);
+      return polygons.length > 0 ? polygons : null;
+    }
     const samples = sampleBezierPath(resolveFreeformPath(part));
     if (samples.length < 3) return null;
     return [[samples.map((point): [number, number] => [point.x, point.y])]];
@@ -232,7 +238,8 @@ export const dissolveBooleanGroup = (
 export const isBooleanEligible = (part: CharacterPart | undefined): boolean => {
   if (!part) return false;
   if (CLOSED_VECTOR_TYPES.has(part.type)) return true;
-  if (part.type === 'custom_freeform') return hasPathGeometry(part);
+  // A Boolean result joins another Boolean too: it is flattened first.
+  if (part.type === 'custom_freeform') return hasPathGeometry(part) || Boolean(part.booleanContours?.length);
   if (part.type === 'custom_text') return hasStaticTextGeometry(part);
   return false;
 };

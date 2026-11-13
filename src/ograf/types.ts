@@ -75,6 +75,8 @@ export interface OGrafPublicTextField {
   title?: string;
   defaultValue?: string;
   layerId: string;
+  /** The text layer's character limit (`textFit.maxLength`): the field accepts no more. */
+  maxLength?: number;
 }
 
 export interface OGrafPublicImageField {
@@ -130,9 +132,15 @@ export interface OGrafManifest {
   main: string;
   version: string;
   supportsRealTime: true;
-  supportsNonRealTime: false;
-  stepCount: 1;
+  /** The runtime implements goToTime() and setActionsSchedule(). */
+  supportsNonRealTime: true;
+  /** One step per step marker of the exported sequence, plus one (`utils/animation/stepMarkers`). */
+  stepCount: number;
+  /** How long the normal (animated) actions take, in milliseconds. */
+  actionDurations: Array<{ type: 'playAction' | 'stopAction' | 'updateAction'; duration: number }>;
   schema: OGrafPublicStateSchema;
+  /** Added by the browser export when it could render the preview image. */
+  thumbnails?: Array<{ file: string; resolution: { width: number; height: number } }>;
   renderRequirements?: Array<{
     resolution: {
       width: { ideal: number };

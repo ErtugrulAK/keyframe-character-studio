@@ -28,6 +28,7 @@ import { affineOfTransform, composeAffine, withWorldAffine } from '../geometry/c
 import { computeProceduralDelta } from './proceduralAnimation';
 import { evaluateLayerMasks } from './evaluateLayerMasks';
 import { evaluateTrimPath } from '../geometry/trimPath';
+import { evaluateTrackMatte } from '../layers/matte';
 import { compareByStackingOrder } from '../layers/stackingOrder';
 
 /**
@@ -125,7 +126,7 @@ export function evaluateFrame(
       },
       opacity: finalOpacity,
       visible,
-      content: extractContent(layer, trim, masks),
+      content: extractContent(layer, trim, masks, evaluateTrackMatte(layer.trackMatte, track, layerFrame, sequenceId || 'Sequence')),
       zIndex: layer.zIndex,
     });
   }
@@ -141,6 +142,7 @@ function extractContent(
   layer: CharacterPart,
   trim: ReturnType<typeof evaluateTrimPath>,
   masks?: LayerMask[],
+  trackMatte: CharacterPart['trackMatte'] = layer.trackMatte,
 ): LayerContent {
   return {
     fillColor: layer.fillColor,
@@ -153,7 +155,7 @@ function extractContent(
     strokeAlignment: layer.strokeAlignment,
     matte: layer.matte,
     masks: masks ?? layer.masks,
-    trackMatte: layer.trackMatte,
+    trackMatte,
     effects: layer.effects,
     textValue: layer.textValue,
     fontSize: layer.fontSize,

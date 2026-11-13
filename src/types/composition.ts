@@ -8,7 +8,8 @@
 // Animation track model is defined once in `animator.ts` as `AnimationTrackData`
 // (partId-based, canonical). `SceneData.tracks` references it directly —
 // there is no separate AnimationTrack type (P4-S3).
-import type { AnimationTrackData, BezierPath, ColorCorrectionEffect, ImageContentBounds, LayerMask, MotionTemplate, PartMatte, TrackMatteV2 } from './animator';
+import type { AnimationTrackData, BezierPath, ColorCorrectionEffect, HomeTransform, ImageContentBounds, LayerMask, MotionTemplate, PartMatte, TrackMatteV2 } from './animator';
+import type { FitToTextSettings, FollowSettings, JustifySettings, LookAtSettings, RepeaterSettings, TextFitSettings } from '../utils/layers/layoutModifiers';
 import type { WorldAffine } from '../utils/geometry/containerMath';
 /**
  * Coordinate-unit semantics for persisted scene data.
@@ -135,6 +136,20 @@ export interface SceneLayer {
   textValue?: string;
   fontSize?: number;
   fontFamily?: string;
+  /** Text: its box, alignment and hiding (`utils/layers/layoutModifiers`). */
+  textFit?: TextFitSettings;
+  /** Box-like shape: Auto Size, the text layer whose width it follows (`utils/layers/layoutModifiers`). */
+  fitToText?: FitToTextSettings;
+  /** Auto Follow: sits next to another layer's edge; x is the gap (`utils/layers/layoutModifiers`). */
+  follow?: FollowSettings;
+  /** Look At: turns to face another layer (`utils/layers/layoutModifiers`). */
+  lookAt?: LookAtSettings;
+  /** Where the layer was made (position, turn, size, opacity); Reset Transform returns it there. */
+  homeTransform?: HomeTransform;
+  /** Group: Justify, where its children's combined bounds sit (`utils/layers/layoutModifiers`). */
+  justify?: JustifySettings;
+  /** Repeater: copies in a line, grid or ring (`utils/layers/layoutModifiers`). */
+  repeater?: RepeaterSettings;
   /** Absent = the origin sits on the baseline. See utils/geometry/textOrigin. */
   textOrigin?: import('../utils/geometry/textOrigin').TextOrigin;
   imageUrl?: string;
@@ -264,6 +279,18 @@ export interface LayerContent {
   textValue?: string;
   fontSize?: number;
   fontFamily?: string;
+  /** Text: its box, alignment and hiding (`utils/layers/layoutModifiers`). */
+  textFit?: TextFitSettings;
+  /** Box-like shape: Auto Size, the text layer whose width it follows (`utils/layers/layoutModifiers`). */
+  fitToText?: FitToTextSettings;
+  /** Auto Follow: sits next to another layer's edge; x is the gap (`utils/layers/layoutModifiers`). */
+  follow?: FollowSettings;
+  /** Look At: turns to face another layer (`utils/layers/layoutModifiers`). */
+  lookAt?: LookAtSettings;
+  /** Group: Justify, where its children's combined bounds sit (`utils/layers/layoutModifiers`). */
+  justify?: JustifySettings;
+  /** Repeater: copies in a line, grid or ring (`utils/layers/layoutModifiers`). */
+  repeater?: RepeaterSettings;
   /** Absent = the origin sits on the baseline. See utils/geometry/textOrigin. */
   textOrigin?: import('../utils/geometry/textOrigin').TextOrigin;
   imageUrl?: string;

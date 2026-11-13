@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createAssetStore, createMemoryAssetBackend, isAssetRef } from '../utils/persistence/assetStore';
+import { ASSET_SESSION_LOCK, createAssetStore, createMemoryAssetBackend, isAssetRef, startAssetSession, type AssetLockManager } from '../utils/persistence/assetStore';
 
 const photo = `data:image/png;base64,${'A'.repeat(4096)}`;
 const other = `data:image/png;base64,${'B'.repeat(4096)}`;
@@ -65,5 +65,86 @@ describe('asset store', () => {
     const unavailable = createAssetStore(null);
     expect(await unavailable.ingest(sceneWith(photo).layers)).toBe(false);
     expect(unavailable.externalize(sceneWith(photo)).layers[0].imageUrl).toBe(photo);
+  });
+
+  it('deletes the stored media no saved text names, and forgets them', async () => {
+    const backend = createMemoryAssetBackend();
+    const store = createAssetStore(backend);
+    await store.ingest(sceneWith(photo, other).layers);
+    const kept = JSON.stringify(store.externalize(sceneWith(photo)));
+    expect(await store.sweep([kept, 'unrelated'])).toBe(1);
+    expect([...backend.entries.keys()]).toEqual([JSON.parse(kept).layers[0].imageUrl]);
+    // The deleted medium is no longer named by a reference: it is saved inline until stored again.
+    expect(store.externalize(sceneWith(other)).layers[0].imageUrl).toBe(other);
+    expect(await store.sweep([kept])).toBe(0);
+  });
+
+  it('does not sweep while a medium is still being stored', async () => {
+    let release = () => {};
+    const started = new Promise<void>((markStarted) => { release = markStarted; });
+    let finish = () => {};
+    const backend = createMemoryAssetBackend();
+    const slow = { ...backend, put: (ref: string, dataUrl: string) => { release(); return new Promise<void>((resolve) => { finish = () => { void backend.put(ref, dataUrl).then(resolve); }; }); } };
+    const store = createAssetStore(slow);
+    backend.entries.set('kcs-asset:sha256-' + '0'.repeat(64), other);
+    const storing = store.ingest(sceneWith(photo).layers);
+    expect(await store.sweep([])).toBe(0);
+    await started;
+    expect(await store.sweep([])).toBe(0);
+    finish();
+    await storing;
+    expect(backend.entries.size).toBe(2);
+  });
+});
+
+describe('asset session', () => {
+  /** An in-process Web Locks model: one exclusive holder, or any number of shared ones. */
+  const lockManager = () => {
+    const held: Array<'shared' | 'exclusive'> = [];
+    const manager: AssetLockManager = {
+      request: async (_name, { mode = 'exclusive', ifAvailable }, callback) => {
+        const free = mode === 'shared' ? !held.includes('exclusive') : held.length === 0;
+        if (!free) return ifAvailable ? callback(null) : new Promise(() => {});
+        held.push(mode);
+        const result = callback({ name: _name, mode });
+        if (result instanceof Promise) {
+          // A shared session lock is never released; an exclusive one is released when its work ends.
+          // A rejected callback releases the lock too, as Web Locks do.
+          if (mode === 'exclusive') { try { await result; } finally { held.splice(held.indexOf('exclusive'), 1); } }
+          return undefined;
+        }
+        if (mode === 'exclusive') held.splice(held.indexOf('exclusive'), 1);
+        return result;
+      },
+    };
+    return { manager, held };
+  };
+
+  it('sweeps when the tab is alone, then holds the shared session lock', async () => {
+    const backend = createMemoryAssetBackend();
+    backend.entries.set('kcs-asset:sha256-' + 'a'.repeat(64), photo);
+    const { manager, held } = lockManager();
+    expect(await startAssetSession(createAssetStore(backend), manager, () => [])).toBe(1);
+    expect(held).toEqual(['shared']);
+    expect(ASSET_SESSION_LOCK).toBe('kcs-assets-session');
+  });
+
+  it('does not sweep while another tab holds its session', async () => {
+    const backend = createMemoryAssetBackend();
+    backend.entries.set('kcs-asset:sha256-' + 'a'.repeat(64), photo);
+    const { manager } = lockManager();
+    await startAssetSession(createAssetStore(backend), manager, () => []);
+    backend.entries.set('kcs-asset:sha256-' + 'b'.repeat(64), other);
+    expect(await startAssetSession(createAssetStore(backend), manager, () => [])).toBe(0);
+    expect(backend.entries.size).toBe(1);
+  });
+
+  it('does not sweep without Web Locks or when the saved texts cannot be read', async () => {
+    const backend = createMemoryAssetBackend();
+    backend.entries.set('kcs-asset:sha256-' + 'a'.repeat(64), photo);
+    expect(await startAssetSession(createAssetStore(backend), null, () => [])).toBe(0);
+    const { manager } = lockManager();
+    expect(await startAssetSession(createAssetStore(backend), manager, () => { throw new Error('denied'); })).toBe(0);
+    expect(backend.entries.size).toBe(1);
   });
 });

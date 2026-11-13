@@ -76,4 +76,27 @@ describe('useToast Hook', () => {
 
     expect(result.current.toasts.length).toBe(0);
   });
+  it('a repeated message replaces the one on screen instead of stacking', () => {
+    // QA 2026-11-13: pressing a refused command three times showed three
+    // identical error toasts.
+    const { result } = renderHook(() => useToast());
+    act(() => { result.current.showToast('Refused.', 'error'); });
+    act(() => { vi.advanceTimersByTime(2000); });
+    act(() => { result.current.showToast('Refused.', 'error'); });
+    act(() => { result.current.showToast('Refused.', 'error'); });
+    expect(result.current.toasts).toHaveLength(1);
+    // The repeat restarts its time on screen.
+    act(() => { vi.advanceTimersByTime(2000); });
+    expect(result.current.toasts).toHaveLength(1);
+    act(() => { vi.advanceTimersByTime(1200); });
+    expect(result.current.toasts).toHaveLength(0);
+  });
+
+  it('different messages still stack', () => {
+    const { result } = renderHook(() => useToast());
+    act(() => { result.current.showToast('One', 'error'); });
+    act(() => { result.current.showToast('Two', 'error'); });
+    act(() => { result.current.showToast('One', 'info'); });
+    expect(result.current.toasts).toHaveLength(3);
+  });
 });

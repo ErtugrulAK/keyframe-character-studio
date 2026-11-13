@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { AppMode, BodyPartType, ToolType } from '../types/animator';
 import { isBlockingModalOpen } from '../utils/editor/modalBoundary';
-import { focusedShortcutScope, isEditableElement, ownsShortcutScope } from '../utils/editor/keyboardFocus';
+import { focusedShortcutScope, isEditableElement, isTextEntryElement, ownsShortcutScope } from '../utils/editor/keyboardFocus';
 import {
   detectShortcutPlatform,
   resolveShortcutCommand,
@@ -215,10 +215,11 @@ export const useKeyboardShortcuts = ({
           armShapeCreation?.('custom_rect', 'Rectangle');
           return;
         case 'create-circle':
-          armShapeCreation?.('custom_circle', 'Circle');
+          armShapeCreation?.('custom_circle', 'Ellipse');
           return;
         case 'create-text':
-          addCustomPart?.('custom_text', 'Text');
+          // The Text tool: click to place a text, drag to draw its box.
+          armShapeCreation?.('custom_text', 'Text');
           return;
         case 'select-all':
           if (isMaskEditing) {
@@ -387,10 +388,14 @@ export const useKeyboardShortcuts = ({
       // A blocking dialog owns the keyboard while it is on screen: none of these
       // commands may reach project state, and the dialog itself handles Escape.
       if (isBlockingModalOpen()) return;
-      if (isEditableElement(document.activeElement)) return;
+      const focusedControl = isEditableElement(document.activeElement);
+      // A slider, checkbox or select keeps focus after the user changed it;
+      // undo/redo still reach the scene from there (it has no text to undo).
+      if (focusedControl && isTextEntryElement(document.activeElement)) return;
 
       const command = resolveShortcutCommand(event, platformRef.current);
       if (!command) return;
+      if (focusedControl && command.id !== 'undo' && command.id !== 'redo') return;
       // Broadcast shows no editor: its keys must not edit, select, create
       // or undo anything in the scene behind it. Only the shortcut reference
       // (read-only help) is still offered there.

@@ -26,6 +26,7 @@ import {
 } from '../../utils/geometry/containerMath';
 import { stackingOrder } from '../../utils/layers/stackingOrder';
 import { resolveMarqueeSelection, resolveStageSelectionTarget } from '../../utils/layers/layerGrouping';
+import { getPartWorldBounds } from '../../utils/geometry/bounds';
 import { collectArrangeTargets } from '../../utils/layers/vectorArrange';
 import {
   collectLayerSnapCandidates,
@@ -45,7 +46,7 @@ import {
   stageCropHandleCenters,
   stageSpaceToEditorRect,
 } from '../../utils/geometry/stageCrop';
-import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/geometry/viewportMath';
+import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageFitScale, getTextCreationProps, type StageBox, type StageCameraView } from '../../utils/geometry/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter, type CoordinatePoint } from '../../utils/geometry/projectCoordinates';
 import { REFIT_UNTOUCHED_CAMERA_COMMAND, REMEASURE_STAGE_BOX_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT } from '../../utils/editor/workspaceLayout';
 import { normalizeFreeformPoints } from '../../utils/geometry/freeform';
@@ -56,6 +57,7 @@ import { lockedLayerIds, lockedLayersRefusal } from '../../utils/layers/layerLoc
 import { useFreeformDraw, type FreeformFinishReason } from '../../hooks/useFreeformDraw';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
 import { CanvasCoordinateOverlay } from './overlays/CanvasCoordinateOverlay';
+import { leaveStage, rememberStagePointer } from '../../utils/editor/stagePointer';
 import { CanvasCoordinateReadout } from './overlays/CanvasCoordinateReadout';
 import { FreeformTangentOverlay } from './overlays/FreeformTangentOverlay';
 import { isFreeformTangentOverlayEligible } from '../../utils/geometry/freeformTangentEligibility';
@@ -71,6 +73,7 @@ import { EditTargetStrip } from './overlays/EditTargetStrip';
 import { resolveEditTarget } from '../../utils/layers/editTarget';
 import { Sparkles } from 'lucide-react';
 import './StageCanvas.css';
+import { useLayoutModifiers } from '../../hooks/useLayoutModifiers';
 
 /**
  * A fitted camera centre on WHOLE device pixels. The centre of a stage
@@ -102,6 +105,13 @@ const readEditSurface = (): { width: number; height: number } => ({
 
 /** A right press that travels less than this (CSS px) is a click, not a pan. */
 const RIGHT_CLICK_SLOP_PX = 4;
+/**
+ * How near the outline (in screen pixels) a double-click must land to add a
+ * mask point: half the outline's hit band (`CONTOUR_HIT_WIDTH` 12) plus slack.
+ */
+const MASK_OUTLINE_INSERT_RADIUS = 8;
+/** The smallest text box (stage units, each side) the Text tool creates from a drag. */
+const MIN_TEXT_BOX = 8;
 
 export const StageCanvas: React.FC = () => {
   const {
@@ -146,6 +156,7 @@ export const StageCanvas: React.FC = () => {
     setBooleanOperandEditingGroupId,
     isPlaying,
     maskEditTarget,
+    enterMaskEditing,
     exitMaskEditing,
     registerMaskGestureCancel,
     captureMaskGestureSnapshot,
@@ -168,6 +179,12 @@ export const StageCanvas: React.FC = () => {
   const [maskPenDraft, setMaskPenDraft] = useState<MaskPenDraftState | null>(null);
   /** WP-02/03: a mask is edited or drawn on the canvas — the layer gestures stand down. */
   const maskInteractionActive = Boolean(maskEditTarget || maskDrawSession);
+  /**
+   * The freeform path whose points are being edited. A click selects a path
+   * (its transform frame); a double-click opens its points; a double-click
+   * outside it, Escape or another selection closes them.
+   */
+  const [pathEditPartId, setPathEditPartId] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const { openContextMenu } = useEditorContextMenu();
@@ -767,9 +784,19 @@ export const StageCanvas: React.FC = () => {
   // the latest handler through a ref instead of closing over it (no dependency cycle).
   const handleMouseUpRef = useRef<(commitShape?: boolean) => void>(() => {});
 
+  /** Remembers the pointer over the stage (world units): Paste lands there. */
+  const handleStagePointerMove = useCallback((event: React.MouseEvent) => {
+    const { svgX, svgY } = clientToSVG(event.clientX, event.clientY);
+    rememberStagePointer(svgPointToWorld({ x: svgX, y: svgY }));
+  }, [clientToSVG]);
+
+  /** The last pointer of the drag, so a modifier key can re-solve it without a move. */
+  const lastDragPointerRef = useRef<{ clientX: number; clientY: number; buttons: number } | null>(null);
+
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!isDragging || !dragMode) return;
+      lastDragPointerRef.current = { clientX: e.clientX, clientY: e.clientY, buttons: e.buttons };
 
       if (e.buttons === 0) {
         handleMouseUpRef.current();
@@ -816,14 +843,20 @@ export const StageCanvas: React.FC = () => {
       if (dragMode === 'shape_create' && shapeCreationStart && pendingShapeType) {
         const distance = Math.hypot(e.clientX - shapeCreationStart.clientX, e.clientY - shapeCreationStart.clientY);
         if (distance >= 4) {
-          setShapeCreationPreview({
-            type: pendingShapeType,
-            bounds: getShapeCreationBounds(
-              { x: shapeCreationStart.svgX, y: shapeCreationStart.svgY },
-              { x: svgX, y: svgY },
-              pendingShapeType === 'custom_box',
-            ),
-          });
+          const start = { x: shapeCreationStart.svgX, y: shapeCreationStart.svgY };
+          // Shift draws an equal-sided shape (a square, a circle), as in other editors.
+          // The Square and the Circle tools always keep equal sides.
+          const drawn = getShapeCreationBounds(start, { x: svgX, y: svgY }, pendingShapeType === 'custom_box' || (pendingShapeType === 'custom_circle' && pendingShapeName === 'Circle') || e.shiftKey);
+          // Alt draws from the centre: the press point is the middle of the shape.
+          const bounds = e.altKey
+            ? {
+                minX: start.x - drawn.width, maxX: start.x + drawn.width,
+                minY: start.y - drawn.height, maxY: start.y + drawn.height,
+                width: drawn.width * 2, height: drawn.height * 2,
+                centerX: start.x, centerY: start.y,
+              }
+            : drawn;
+          setShapeCreationPreview({ type: pendingShapeType, bounds });
         }
         return;
       }
@@ -854,6 +887,7 @@ export const StageCanvas: React.FC = () => {
             candidates: snapContext.candidates,
             thresholdWorld: SNAP_THRESHOLD_SCREEN_PX / snapContext.pxPerWorld,
             enabled: snapEnabled,
+            movingAnchor: { x: dragStart.initialTransform.x, y: dragStart.initialTransform.y },
           });
           snappedDx = resolution.delta.x;
           snappedDy = resolution.delta.y;
@@ -880,16 +914,74 @@ export const StageCanvas: React.FC = () => {
         initialLocalY: dragInitialLocalY,
         scaleLocked: isScaleLocked,
         shiftKey: e.shiftKey,
+        altKey: e.altKey,
       });
       if (solved) updateCurrentTransform(solved.patch, solved.targetId);
     },
     // The pointer-up effect owns the current mouse-up callback; adding the later-declared callback here would create a declaration cycle.
-    [isDragging, dragMode, dragStart, clientToSVG, clientToStage, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, updateCurrentTransform, shapeCreationStart, pendingShapeType, isScaleLocked, snapEnabled, setCropRegion, projectResolution]
+    [isDragging, dragMode, dragStart, clientToSVG, clientToStage, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, updateCurrentTransform, shapeCreationStart, pendingShapeType, pendingShapeName, isScaleLocked, snapEnabled, setCropRegion, projectResolution]
   );
+
+  /**
+   * What a marquee box selects: its hits as the CANONICAL selection — a
+   * container when the children it enclosed belong to one (and no child border
+   * is drawn for a normalized group), the layers themselves only when the user
+   * is already working inside the group. The release commits it; while the box
+   * is dragged the same answer is previewed.
+   */
+  const marqueeSelectionOf = useCallback((rect: { x: number; y: number; w: number; h: number }): string[] => {
+    const trackOf = new Map(tracks.map((track) => [track.partId, track]));
+    const hits = getPartsInMarquee(
+      characterParts,
+      (id) => getComputedTransform(id, currentFrame),
+      rect,
+      EDITOR_CAMERA_CENTER.x,
+      EDITOR_CAMERA_CENTER.y,
+      (part) => (
+        trackOf.get(part.id)?.editVisible !== false
+        // A locked layer is not picked by the box (nor by a click).
+        && !trackOf.get(part.id)?.locked
+        && (!part.booleanGroupId || part.booleanGroupId === booleanOperandEditingGroupId)
+        && (!booleanOperandEditingGroupId || !part.booleanOperandIds?.length)
+      ),
+    );
+    return resolveMarqueeSelection(characterParts, hits, marqueeSelectionOriginRef.current);
+  }, [characterParts, tracks, currentFrame, getComputedTransform, booleanOperandEditingGroupId]);
+
+  /** The boxes of the layers the marquee would select now (live preview). */
+  const marqueePreviewBoxes = useMemo(() => {
+    if (!marqueeRect) return [];
+    const partById = new Map(characterParts.map((part) => [part.id, part]));
+    // The marquee origin ref is set when the box starts; the preview reads it during the drag.
+    // oxlint-disable-next-line react/refs
+    return marqueeSelectionOf(marqueeRect).flatMap((id) => {
+      const part = partById.get(id);
+      if (!part) return [];
+      const bounds = getPartWorldBounds(part, getComputedTransform(id, currentFrame), EDITOR_CAMERA_CENTER.x, EDITOR_CAMERA_CENTER.y);
+      return Number.isFinite(bounds.minX) ? [{ id, ...bounds }] : [];
+    });
+  }, [marqueeRect, marqueeSelectionOf, characterParts, getComputedTransform, currentFrame]);
 
   const handleMouseUp = useCallback((commitShape: boolean = true) => {
     if (dragMode === 'shape_create') {
-      if (commitShape && shapeCreationPreview && pendingShapeType && pendingShapeName) {
+      if (pendingShapeType === 'custom_text') {
+        // The Text tool draws its box as the shape tools draw theirs: the drag
+        // sets the size, and a click without a drag places nothing (it used
+        // to drop a text at the default size, QA 2026-11-13). Its style is
+        // picked in the options bar.
+        const box = shapeCreationPreview?.bounds;
+        if (commitShape && pendingShapeName && shapeCreationStart && box && box.width >= MIN_TEXT_BOX && box.height >= MIN_TEXT_BOX) {
+          startBatchInteraction();
+          addCustomPart('custom_text', pendingShapeName, {
+            ...getTextCreationProps(
+              box,
+              { x: shapeCreationStart.svgX, y: shapeCreationStart.svgY },
+              EDITOR_CAMERA_CENTER.x,
+              EDITOR_CAMERA_CENTER.y,
+            ),
+          });
+        }
+      } else if (commitShape && shapeCreationPreview && pendingShapeType && pendingShapeName) {
         const placement = getShapeCreationPlacement(pendingShapeType, shapeCreationPreview.bounds);
         if (placement) {
           startBatchInteraction();
@@ -902,25 +994,7 @@ export const StageCanvas: React.FC = () => {
     }
 
     if (dragMode === 'marquee' && marqueeRect) {
-      const hits = getPartsInMarquee(
-        characterParts,
-        (id) => getComputedTransform(id, currentFrame),
-        marqueeRect,
-        EDITOR_CAMERA_CENTER.x,
-        EDITOR_CAMERA_CENTER.y,
-        (part) => (
-          tracks.find((track) => track.partId === part.id)?.editVisible !== false
-          // A locked layer is not picked by the box (nor by a click).
-          && !tracks.find((track) => track.partId === part.id)?.locked
-          && (!part.booleanGroupId || part.booleanGroupId === booleanOperandEditingGroupId)
-          && (!booleanOperandEditingGroupId || !part.booleanOperandIds?.length)
-        ),
-      );
-      // The box's hits become the CANONICAL selection — a container when
-      // the children it enclosed belong to one (and no child border is drawn for
-      // a normalized group), the layers themselves only when the user is already
-      // working inside the group.
-      const selected = resolveMarqueeSelection(characterParts, hits, marqueeSelectionOriginRef.current);
+      const selected = marqueeSelectionOf(marqueeRect);
       if (selected.length > 0) {
         setSelectedPartIds(selected);
         setSelectedPartId(selected[selected.length - 1]);
@@ -941,9 +1015,10 @@ export const StageCanvas: React.FC = () => {
 
     if (isDragging) endBatchInteraction();
     setIsDragging(false);
+    lastDragPointerRef.current = null;
     setDragMode(null);
     setMarqueeRect(null);
-  }, [dragMode, shapeCreationPreview, pendingShapeType, pendingShapeName, addCustomPart, startBatchInteraction, marqueeRect, characterParts, currentFrame, getComputedTransform, tracks, isDragging, endBatchInteraction, setSelectedPartIds, setSelectedPartId, booleanOperandEditingGroupId]);
+  }, [dragMode, shapeCreationPreview, shapeCreationStart, pendingShapeType, pendingShapeName, addCustomPart, startBatchInteraction, marqueeRect, marqueeSelectionOf, isDragging, endBatchInteraction, setSelectedPartIds, setSelectedPartId]);
   useEffect(() => {
     handleMouseUpRef.current = handleMouseUp;
   }, [handleMouseUp]);
@@ -951,6 +1026,27 @@ export const StageCanvas: React.FC = () => {
   const handlePointerUp = useCallback(() => handleMouseUp(), [handleMouseUp]);
 
   const handlePointerCancel = useCallback(() => handleMouseUp(false), [handleMouseUp]);
+
+  // Shift (equal sides, aspect lock) and Alt (from the centre) apply the moment
+  // they are pressed or released, not on the next pointer move: the drag is
+  // re-solved at the pointer where it rests.
+  useEffect(() => {
+    if (!isDragging) return undefined;
+    const onModifier = (event: KeyboardEvent) => {
+      if (event.key !== 'Shift' && event.key !== 'Alt') return;
+      // Alt alone would focus the browser menu on release.
+      if (event.key === 'Alt') event.preventDefault();
+      const pointer = lastDragPointerRef.current;
+      if (!pointer) return;
+      handleMouseMove({ ...pointer, shiftKey: event.shiftKey, altKey: event.altKey } as MouseEvent);
+    };
+    window.addEventListener('keydown', onModifier);
+    window.addEventListener('keyup', onModifier);
+    return () => {
+      window.removeEventListener('keydown', onModifier);
+      window.removeEventListener('keyup', onModifier);
+    };
+  }, [isDragging, handleMouseMove]);
 
   useEffect(() => {
     if (isDragging) {
@@ -967,24 +1063,50 @@ export const StageCanvas: React.FC = () => {
     };
   }, [isDragging, handleMouseMove, handlePointerUp, handlePointerCancel]);
 
+  /**
+   * Wheel zoom, smooth: the step follows the wheel's own distance (a trackpad
+   * pinch sends many small ones, a mouse notch one larger), and every wheel
+   * event of one animation frame is applied together, so the stage renders
+   * once per frame however fast the events come.
+   */
+  const pendingWheelRef = useRef<{ deltaY: number; clientX: number; clientY: number; frame: number | null }>({ deltaY: 0, clientX: 0, clientY: 0, frame: null });
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
-    const view = cameraViewRef.current;
-    if (!containerRef.current || !view || appMode === 'broadcast') return;
-    const currentZoom = zoomRef.current;
-    const nextZoom = clampZoom(currentZoom * (e.deltaY < 0 ? 1.1 : 0.9));
-    setZoomLevel(nextZoom);
-    setCameraView({
-      baseScale: view.baseScale,
-      center: getCursorAnchoredCameraCenter({
-        view,
-        clientX: e.clientX,
-        clientY: e.clientY,
-        zoom: currentZoom,
-        nextZoom,
-      }),
+    if (!containerRef.current || !cameraViewRef.current || appMode === 'broadcast') return;
+    const pending = pendingWheelRef.current;
+    // Lines and pages count as about 40 and 800 pixels.
+    pending.deltaY += e.deltaY * (e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? 800 : 1);
+    pending.clientX = e.clientX;
+    pending.clientY = e.clientY;
+    if (pending.frame !== null) return;
+    pending.frame = requestAnimationFrame(() => {
+      pending.frame = null;
+      const view = cameraViewRef.current;
+      const deltaY = Math.max(-600, Math.min(600, pending.deltaY));
+      pending.deltaY = 0;
+      if (!view || deltaY === 0) return;
+      const currentZoom = zoomRef.current;
+      // 100 px of wheel (one mouse notch) is a 1.16x step.
+      const nextZoom = clampZoom(currentZoom * Math.exp(-deltaY * 0.0015));
+      if (nextZoom === currentZoom) return;
+      zoomRef.current = nextZoom;
+      setZoomLevel(nextZoom);
+      setCameraView({
+        baseScale: view.baseScale,
+        center: getCursorAnchoredCameraCenter({
+          view,
+          clientX: pending.clientX,
+          clientY: pending.clientY,
+          zoom: currentZoom,
+          nextZoom,
+        }),
+      });
     });
   }, [appMode]);
+  useEffect(() => () => {
+    const frame = pendingWheelRef.current.frame;
+    if (frame !== null) cancelAnimationFrame(frame);
+  }, []);
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -1145,6 +1267,14 @@ export const StageCanvas: React.FC = () => {
   };
 
   const sortedParts = useMemo(() => stackingOrder(characterParts), [characterParts]);
+  // What the stage paints: the layers laid out by their modifiers (text boxes,
+  // auto size, follow, justify, repeated copies). The selection frame outlines
+  // what is painted: the laid-out layer and its laid-out transform.
+  const fittedLayers = useLayoutModifiers(sortedParts, tracks, activeTemplateId || 'Sequence', getComputedTransform);
+  const fittedById = useMemo(() => new Map(fittedLayers.parts.map((part) => [part.id, part])), [fittedLayers.parts]);
+  const getDisplayedTransform = fittedLayers.displayedTransform;
+  /** A repeated copy is picked and dragged as the layer it repeats. */
+  const stagePartIdOf = (id: string): string => fittedById.get(id)?.repeatSourceId ?? id;
 
   const selectPartFromStage = (id: string, event: React.MouseEvent) => {
     // A canvas click does not retarget the selection while
@@ -1180,14 +1310,14 @@ export const StageCanvas: React.FC = () => {
    * (measured: every dock frame re-rendered every part). Their actions are one
    * stable bag that reads the latest handlers at call time.
    */
-  const partLayerLatest = useRef({ selectPartFromStage, drillIntoPart, startTranslateDragForPart });
+  const partLayerLatest = useRef({ selectPartFromStage, drillIntoPart, startTranslateDragForPart, stagePartIdOf });
   useLayoutEffect(() => {
-    partLayerLatest.current = { selectPartFromStage, drillIntoPart, startTranslateDragForPart };
+    partLayerLatest.current = { selectPartFromStage, drillIntoPart, startTranslateDragForPart, stagePartIdOf };
   });
   const partLayerActions = useMemo(() => ({
-    onSelect: (id: string, event: React.MouseEvent) => partLayerLatest.current.selectPartFromStage(id, event),
-    onDrillIn: (id: string) => partLayerLatest.current.drillIntoPart(id),
-    onStartTranslateDrag: (partId: string, event: React.MouseEvent) => partLayerLatest.current.startTranslateDragForPart(partId, event),
+    onSelect: (id: string, event: React.MouseEvent) => partLayerLatest.current.selectPartFromStage(partLayerLatest.current.stagePartIdOf(id), event),
+    onDrillIn: (id: string) => partLayerLatest.current.drillIntoPart(partLayerLatest.current.stagePartIdOf(id)),
+    onStartTranslateDrag: (partId: string, event: React.MouseEvent) => partLayerLatest.current.startTranslateDragForPart(partLayerLatest.current.stagePartIdOf(partId), event),
   }), []);
   const isPanning = activeTool === 'pan' || (isDragging && dragMode === 'pan');
   // A primitive draw tool that is armed (waiting for its drag) owns the stage
@@ -1379,6 +1509,104 @@ export const StageCanvas: React.FC = () => {
    * rendered part node carries `data-part-id`) instead of a second hit-test
    * implementation; no layer under the pointer means the empty-stage menu.
    */
+  // The path's points close when the selection moves to another layer
+  // (adjusted while rendering, React's pattern for state that follows a prop).
+  const [pathEditSelection, setPathEditSelection] = useState(selectedPartId);
+  if (pathEditSelection !== selectedPartId) {
+    setPathEditSelection(selectedPartId);
+    if (pathEditPartId && pathEditPartId !== selectedPartId) setPathEditPartId(null);
+  }
+  useEffect(() => {
+    if (!pathEditPartId) return undefined;
+    // Escape during a point or handle drag cancels the drag (the overlay's
+    // own Escape); only with no button held does it close the points.
+    let pressed = false;
+    const onDown = () => { pressed = true; };
+    const onUp = () => { pressed = false; };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !pressed) setPathEditPartId(null);
+    };
+    window.addEventListener('pointerdown', onDown, true);
+    window.addEventListener('pointerup', onUp, true);
+    window.addEventListener('pointercancel', onUp, true);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('pointerdown', onDown, true);
+      window.removeEventListener('pointerup', onUp, true);
+      window.removeEventListener('pointercancel', onUp, true);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [pathEditPartId]);
+
+  /**
+   * Double-click edit modes, with the Select tool:
+   * - a freeform path opens its points;
+   * - a Boolean result opens its operands (they can be selected and moved);
+   * - a layer with a mask opens the mask on the canvas.
+   * A double-click outside the layer being edited, or on it again, closes the
+   * mode. (Inside an open path or mask, a double-click on its outline still
+   * adds a point: those overlays take the event first.)
+   */
+  const handleStageDoubleClick = (event: React.MouseEvent): boolean => {
+    if (appMode === 'broadcast' || activeTool !== 'select') return false;
+    // The layer under the pointer, through the selection frame and other
+    // chrome drawn over it.
+    const targetId = (typeof document.elementsFromPoint === 'function'
+      ? document.elementsFromPoint(event.clientX, event.clientY)
+      : [event.target as Element])
+      .map((element) => element.closest('[data-part-id]')?.getAttribute('data-part-id'))
+      .find((id): id is string => Boolean(id)) ?? null;
+    const part = targetId ? characterParts.find((candidate) => candidate.id === targetId) : undefined;
+    if (pathEditPartId) {
+      setPathEditPartId(null);
+      return true;
+    }
+    if (maskEditTarget) {
+      exitMaskEditing();
+      return true;
+    }
+    if (booleanOperandEditingGroupId) {
+      setBooleanOperandEditingGroupId(null);
+      if (part?.booleanGroupId === booleanOperandEditingGroupId) handleSelectPart(booleanOperandEditingGroupId);
+      return true;
+    }
+    if (!part) return false;
+    const group = part.booleanOperandIds?.length ? part : part.booleanGroupId ? characterParts.find((candidate) => candidate.id === part.booleanGroupId) : undefined;
+    if (group) {
+      setBooleanOperandEditingGroupId(group.id);
+      handleSelectPart(part.id !== group.id ? part.id : group.booleanOperandIds?.[0] ?? group.id);
+      return true;
+    }
+    if (part.type === 'custom_freeform' && !part.booleanContours) {
+      handleSelectPart(part.id);
+      setPathEditPartId(part.id);
+      return true;
+    }
+    if (part.masks?.length) {
+      handleSelectPart(part.id);
+      const refusal = enterMaskEditing(part.id, part.masks[part.masks.length - 1].id);
+      if (refusal) showToast(refusal, 'error');
+      return true;
+    }
+    return false;
+  };
+
+  /**
+   * The second press of a double-click (the browser's click count): the first
+   * press already selected and may have re-drawn the layer, so the browser's
+   * own dblclick event is not reliable here. A double-click inside an open path
+   * or mask belongs to that overlay (it adds a point or switches its type).
+   */
+  const handleStageMouseDownCapture = (event: React.MouseEvent) => {
+    const inEditOverlay = (event.target as Element).closest('[data-testid="freeform-tangent-overlay"], [data-testid="mask-path-overlay"]');
+    if (event.button === 0 && event.detail === 2 && !inEditOverlay && handleStageDoubleClick(event)) {
+      event.stopPropagation();
+      event.preventDefault();
+      return;
+    }
+    handleToolOwnedMouseDownCapture(event);
+  };
+
   const handleContextMenu = useCallback((event: React.MouseEvent) => {
     event.preventDefault();
     const press = rightPressRef.current;
@@ -1402,10 +1630,13 @@ export const StageCanvas: React.FC = () => {
       data-camera-zoom={zoomLevel}
       style={backdropStyle}
       ref={containerRef}
-      onMouseDownCapture={handleToolOwnedMouseDownCapture}
+      onMouseDownCapture={handleStageMouseDownCapture}
       onClickCapture={handleToolOwnedClickCapture}
       onDoubleClickCapture={handleToolOwnedDoubleClickCapture}
       onMouseDown={handleMouseDown}
+      onMouseMove={handleStagePointerMove}
+      data-edit-mode={pathEditPartId ? 'path' : maskEditTarget ? 'mask' : booleanOperandEditingGroupId ? 'boolean' : undefined}
+      onMouseLeave={leaveStage}
       onContextMenu={handleContextMenu}
       onDragOver={handleDragOverStage}
       onDragLeave={handleDragLeaveStage}
@@ -1444,28 +1675,6 @@ export const StageCanvas: React.FC = () => {
         }}
       >
         <defs>
-          {/* Minor grid: 50px cells anchored at the origin (2 cells = 100px = 1 unit) */}
-          <pattern
-            id="svg-grid-minor"
-            width="50"
-            height="50"
-            patternUnits="userSpaceOnUse"
-            x={EDITOR_CAMERA_CENTER.x}
-            y={EDITOR_CAMERA_CENTER.y}
-          >
-            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
-          </pattern>
-          {/* Major grid: 100px lines anchored at the origin (1 cell = 100px = 1 unit) */}
-          <pattern
-            id="svg-grid-major"
-            width="100"
-            height="100"
-            patternUnits="userSpaceOnUse"
-            x={EDITOR_CAMERA_CENTER.x}
-            y={EDITOR_CAMERA_CENTER.y}
-          >
-            <path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(255, 255, 255, 0.10)" strokeWidth="1" />
-          </pattern>
           <clipPath id="artboard-clip">
             <rect
               x={outputOrigin.x - projectResolution.width / 2}
@@ -1480,7 +1689,7 @@ export const StageCanvas: React.FC = () => {
         </defs>
 
         {(() => {
-          const zScale = 1 / Math.max(0.15, zoomLevel);
+          const zScale = 1 / Math.max(0.05, zoomLevel);
           const artX = outputOrigin.x - projectResolution.width / 2;
           const artY = outputOrigin.y - projectResolution.height / 2;
 
@@ -1511,7 +1720,7 @@ export const StageCanvas: React.FC = () => {
 
               {/* Character Parts Active Render (Clipped in Broadcast mode, unclipped & visible in Edit mode) */}
               <StagePartLayers
-                sortedParts={sortedParts}
+                sortedParts={fittedLayers.parts}
                 appMode={appMode}
                 broadcastState={broadcastState}
                 broadcastSessionActivated={broadcastSessionActivated}
@@ -1519,7 +1728,7 @@ export const StageCanvas: React.FC = () => {
                 activeTemplateId={activeTemplateId}
                 currentFrame={currentFrame}
                 totalFrames={totalFrames}
-                tracks={tracks}
+                tracks={fittedLayers.tracks}
                 selectedPartId={selectedPartId}
                 selectedPartIds={selectedPartIds}
                 booleanOperandEditingGroupId={booleanOperandEditingGroupId}
@@ -1540,7 +1749,6 @@ export const StageCanvas: React.FC = () => {
                   origin={EDITOR_CAMERA_CENTER}
                   zScale={zScale}
                   visibleRect={visibleCameraRect}
-                  selectedTransform={selectedTransform}
                 />
               )}
 
@@ -1597,8 +1805,66 @@ export const StageCanvas: React.FC = () => {
                   type={pendingShapeType}
                   bounds={shapeCreationPreview.bounds}
                   outputOrigin={EDITOR_CAMERA_CENTER}
-                  zoom={zoomLevel}
                 />
+              )}
+
+              {/* Rotation ring: while the rotate handle is dragged, a circle
+                  around the pivot with the start and current angle, so the turn
+                  reads like a dial. Chrome only, never hit-tested. */}
+              {isDragging && dragMode === 'rotate' && dragStart && selectedTransform && (() => {
+                const pivot = { x: dragStart.initialTransform.x + EDITOR_CAMERA_CENTER.x, y: dragStart.initialTransform.y + EDITOR_CAMERA_CENTER.y };
+                const radius = Math.hypot(dragStart.x - pivot.x, dragStart.y - pivot.y);
+                if (!(radius > 0)) return null;
+                const startAngle = Math.atan2(dragStart.y - pivot.y, dragStart.x - pivot.x);
+                const turned = ((selectedTransform.rotation - dragStart.initialTransform.rotation) * Math.PI) / 180;
+                const end = startAngle + turned;
+                const at = (angle: number) => ({ x: pivot.x + radius * Math.cos(angle), y: pivot.y + radius * Math.sin(angle) });
+                const from = at(startAngle);
+                const to = at(end);
+                const sweep = Math.abs(turned) % (2 * Math.PI);
+                return (
+                  <g className="rotation-ring" data-testid="rotation-ring" pointerEvents="none">
+                    <circle cx={pivot.x} cy={pivot.y} r={radius} fill="none" stroke="rgba(255, 177, 59, 0.55)" strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+                    {sweep > 0.001 && (
+                      <path
+                        d={`M ${pivot.x} ${pivot.y} L ${from.x} ${from.y} A ${radius} ${radius} 0 ${sweep > Math.PI ? 1 : 0} ${turned > 0 ? 1 : 0} ${to.x} ${to.y} Z`}
+                        fill="rgba(255, 177, 59, 0.14)"
+                        stroke="none"
+                      />
+                    )}
+                    <line x1={pivot.x} y1={pivot.y} x2={from.x} y2={from.y} stroke="rgba(255, 255, 255, 0.35)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                    <line x1={pivot.x} y1={pivot.y} x2={to.x} y2={to.y} stroke="#ffb13b" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+                  </g>
+                );
+              })()}
+
+              {/* Marquee live preview: the layers the release will select. */}
+              {marqueePreviewBoxes.length > 0 && (
+                <g className="marquee-preview" data-testid="marquee-preview" pointerEvents="none">
+                  {(marqueePreviewBoxes.length > 200
+                    ? [{
+                        id: 'union',
+                        minX: Math.min(...marqueePreviewBoxes.map((box) => box.minX)),
+                        minY: Math.min(...marqueePreviewBoxes.map((box) => box.minY)),
+                        maxX: Math.max(...marqueePreviewBoxes.map((box) => box.maxX)),
+                        maxY: Math.max(...marqueePreviewBoxes.map((box) => box.maxY)),
+                      }]
+                    : marqueePreviewBoxes
+                  ).map((box) => (
+                    <rect
+                      key={box.id}
+                      data-preview-part-id={box.id}
+                      x={box.minX}
+                      y={box.minY}
+                      width={box.maxX - box.minX}
+                      height={box.maxY - box.minY}
+                      fill="none"
+                      stroke="var(--accent-cyan)"
+                      strokeWidth={1.5}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  ))}
+                </g>
               )}
 
               {/* Marquee Tool */}
@@ -1747,11 +2013,11 @@ export const StageCanvas: React.FC = () => {
               {appMode !== 'broadcast' && !maskInteractionActive && (
                 <SelectionGizmo
                   selectedPartIds={selectedPartIds}
-                  characterParts={characterParts}
-                  getComputedTransform={getComputedTransform}
+                  characterParts={fittedLayers.parts}
+                  getComputedTransform={getDisplayedTransform}
                   currentFrame={currentFrame}
-                  selectedPart={selectedPart}
-                  selectedTransform={selectedTransform}
+                  selectedPart={selectedPart ? fittedById.get(selectedPart.id) ?? selectedPart : selectedPart}
+                  selectedTransform={selectedPartId ? getDisplayedTransform(selectedPartId, currentFrame) : selectedTransform}
                   tracks={tracks}
                   zScale={zScale}
                   booleanOperandEditingGroupId={booleanOperandEditingGroupId}
@@ -1759,11 +2025,12 @@ export const StageCanvas: React.FC = () => {
                   onScaleStart={startScale}
                   onTranslateStart={startTranslateDragForPart}
                   outputOrigin={EDITOR_CAMERA_CENTER}
+                  isPlaying={isPlaying}
                 />
               )}
 
               {/* Direct tangent-handle authoring for the selected freeform layer */}
-              {!maskInteractionActive && selectedPart && selectedTransform && isFreeformTangentOverlayEligible({
+              {!maskInteractionActive && selectedPart && selectedTransform && pathEditPartId === selectedPart.id && isFreeformTangentOverlayEligible({
                 appMode,
                 activeTool,
                 selectedPartIds,
@@ -1808,6 +2075,16 @@ export const StageCanvas: React.FC = () => {
                   onInsertVertex={(world) => {
                     const frame = resolveMaskPathFrame(maskEditing.owner, maskEditing.mask.path.coordinateSpace, maskEditing.transform);
                     if (!frame) return;
+                    // A point goes on the outline only: the hit area also fills
+                    // the inside (to drag the mask), and a double-click there
+                    // used to add a point on the nearest edge. Inside, the
+                    // double-click closes the mask, as one on a path's body
+                    // closes its points (the second double-click leaves the mode).
+                    const near = nearestMaskPathSegment(maskEditing.mask.path, frame, world);
+                    if (!near || near.distance > MASK_OUTLINE_INSERT_RADIUS * zScale) {
+                      exitMaskEditing();
+                      return;
+                    }
                     applyMaskTopologyEdit(maskEditing.owner.id, maskEditing.mask.id, (basePath) => {
                       const hit = nearestMaskPathSegment(basePath, frame, world);
                       return hit ? insertMaskVertex(basePath, hit.segmentIndex, hit.t) : null;

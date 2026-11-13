@@ -139,6 +139,23 @@ describe('resolveSnap — stage targets', () => {
   });
 });
 
+describe('resolveSnap — the layer anchor', () => {
+  // A text whose position (the baseline) is not its box centre: box 40..120
+  // (centre 80), anchor y 100. The stage centre lines are at 300 / 240.
+  const stage = collectStageSnapCandidates(STAGE);
+  const text = box(100, 40, 160, 120);
+  const anchor = { x: 130, y: 100 };
+
+  it('the anchor lands on a line the box centre misses', () => {
+    // Raw: anchor at 237; box edges 177 / 257 and centre 217 are all past 8.
+    const result = resolveSnap({ movingBounds: text, delta: { x: 0, y: 137 }, candidates: stage, thresholdWorld: 8, enabled: true, movingAnchor: anchor });
+    expect(result.delta).toEqual({ x: 0, y: 140 });
+    expect(result.snappedY).toBe(true);
+    // Without the anchor nothing is close enough.
+    expect(snap(text, { x: 0, y: 137 }, stage).snappedY).toBe(false);
+  });
+});
+
 describe('resolveSnap — threshold is a screen radius', () => {
   const moving = box(100, 100, 160, 130);
   // A candidate 20 world units from the moving left edge.

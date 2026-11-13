@@ -225,3 +225,62 @@ describe('world bounds follow the derived affine', () => {
     expect(bounds.maxY).toBeCloseTo(expectedHalfH, 9);
   });
 });
+
+describe('freeform bounds follow the drawn curve', () => {
+  /**
+   * QA 2026-11-13: the frame of a Pen shape with a smooth (curved) edge cut
+   * the shape. It boxed the vertices only, while the curve between two
+   * vertices bulged past them.
+   */
+  const bulging = (coordinateSpace: 'local' | 'normalized', scale = 1) => makePart('custom_freeform', {
+    width: 400,
+    height: 200,
+    path: {
+      version: 1,
+      coordinateSpace,
+      closed: true,
+      points: [
+        { id: 'a', x: -100 * scale, y: -50 * scale },
+        // The right edge runs from (100,-50) to (100,50) and bulges to x = 175.
+        { id: 'b', x: 100 * scale, y: -50 * scale, handleOut: { x: 200 * scale, y: -50 * scale } },
+        { id: 'c', x: 100 * scale, y: 50 * scale, handleIn: { x: 200 * scale, y: 50 * scale } },
+        { id: 'd', x: -100 * scale, y: 50 * scale },
+      ],
+    },
+  } as Partial<CharacterPart>);
+
+  it('reaches the bulge of a curved edge, not only its vertices', () => {
+    const bounds = getPartLocalBounds(bulging('local'));
+    expect(bounds.maxX).toBeCloseTo(175);
+    expect(bounds.minX).toBeCloseTo(-100);
+    expect(bounds.minY).toBeCloseTo(-50);
+    expect(bounds.maxY).toBeCloseTo(50);
+  });
+
+  it('a path with straight edges keeps its vertex box', () => {
+    const part = bulging('local');
+    const straight = { ...part, path: { ...part.path!, points: part.path!.points.map(({ id, x, y }) => ({ id, x, y })) } };
+    expect(getPartLocalBounds(straight)).toMatchObject({ minX: -100, maxX: 100, minY: -50, maxY: 50 });
+  });
+
+  it('measures a normalized path in its own size', () => {
+    // Normalized (0..1) coordinates around 0.5 map onto the 400 x 200 box.
+    const part = makePart('custom_freeform', {
+      width: 400,
+      height: 200,
+      path: {
+        version: 1,
+        coordinateSpace: 'normalized',
+        closed: true,
+        points: [
+          { id: 'a', x: 0.25, y: 0.25 },
+          { id: 'b', x: 0.75, y: 0.25, handleOut: { x: 1, y: 0.25 } },
+          { id: 'c', x: 0.75, y: 0.75, handleIn: { x: 1, y: 0.75 } },
+          { id: 'd', x: 0.25, y: 0.75 },
+        ],
+      },
+    } as Partial<CharacterPart>);
+    // x: 0.75 -> 1 -> 1 -> 0.75 peaks at 0.9375, i.e. (0.9375 - 0.5) * 400 = 175.
+    expect(getPartLocalBounds(part).maxX).toBeCloseTo(175);
+  });
+});

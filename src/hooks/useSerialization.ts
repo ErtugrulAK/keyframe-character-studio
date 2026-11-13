@@ -1,6 +1,8 @@
+import { isHomeTransform } from '../utils/layers/resetTransform';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AnimationTrackData, CharacterPart, Track, MotionTemplate, PropertyKeyframe } from '../types/animator';
 import type { PersistedTrackState, SceneCoordinateSystem, SceneData, SceneLayer } from '../types/composition';
+import type { FitToTextSettings } from '../utils/layers/layoutModifiers';
 import { initializeIdCounter } from '../utils/layers/idGenerator';
 import { makeEmptyChannels, DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../utils/animation/defaults';
 import { convertLegacyKeyframesToChannels, fillChannelsFromLegacyKeyframes } from '../utils/animation/legacyKeyframeConversion';
@@ -9,7 +11,7 @@ import { AUTOSAVE_LOCK_NAME, AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } fr
 import { DEFAULT_SCENE_COORDINATE_SYSTEM, isSceneCoordinateSystem, migrateSceneCoordinates } from '../utils/persistence/coordinateMigration';
 import { normalizeMotionTemplates } from '../utils/animation/motionTemplates';
 import { migrateSceneLayerV6 } from '../utils/persistence/v6Migration';
-import { ASSET_REF_PREFIX, createAssetStore, createIndexedDbAssetBackend } from '../utils/persistence/assetStore';
+import { ASSET_REF_PREFIX, createAssetStore, createIndexedDbAssetBackend, startAssetSession, type AssetLockManager } from '../utils/persistence/assetStore';
 
 /**
  * Narrowing helpers for the legacy document's optional fields. The import
@@ -19,6 +21,13 @@ import { ASSET_REF_PREFIX, createAssetStore, createIndexedDbAssetBackend } from 
  */
 const readOptionalNumber = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
 const readOptionalString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
+
+/** An Auto Size setting with its own copy of the extra text list (only the ids that are strings). */
+const cloneFitToText = (settings: FitToTextSettings): FitToTextSettings => {
+  const { extraTextLayerIds, ...rest } = settings;
+  const extra = Array.isArray(extraTextLayerIds) ? extraTextLayerIds.filter((id): id is string => typeof id === 'string') : [];
+  return extra.length > 0 ? { ...rest, extraTextLayerIds: extra } : rest;
+};
 /** A saved ISO timestamp, only when it actually parses to a valid date. */
 const readOptionalDate = (value: unknown): Date | undefined => {
   const text = readOptionalString(value);
@@ -42,6 +51,7 @@ const readMotionTemplates = (value: unknown): MotionTemplate[] | undefined => {
 import { normalizeBezierPath } from '../utils/geometry/bezierPath';
 import { SCENE_VERSION_WITH_EFFECTS, sceneUsesEffectFeatures } from '../utils/layers/colorCorrection';
 import { validateImportedDocument, type ImportResult } from '../utils/persistence/importValidation';
+import { DEFAULT_AUTOSAVE_SECONDS, readAutosaveSeconds, writeAutosaveSeconds } from '../utils/persistence/autosaveInterval';
 const noopSetCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>> = () => undefined;
 // A module-level stable default: a per-render inline default would join the
 // restore effect's dependencies and re-arm the one-shot sync on every render.
@@ -106,6 +116,13 @@ function toSceneData(
     matte: p.matte,
     masks: p.masks,
     trackMatte: p.trackMatte,
+    ...(p.textFit ? { textFit: { ...p.textFit } } : {}),
+    ...(p.fitToText ? { fitToText: cloneFitToText(p.fitToText) } : {}),
+    ...(p.follow ? { follow: { ...p.follow } } : {}),
+    ...(p.lookAt ? { lookAt: { ...p.lookAt } } : {}),
+    ...(p.homeTransform ? { homeTransform: { ...p.homeTransform } } : {}),
+    ...(p.justify ? { justify: { ...p.justify } } : {}),
+    ...(p.repeater ? { repeater: { ...p.repeater } } : {}),
     ...(p.effects?.length ? { effects: p.effects } : {}),
     booleanGroupId: p.booleanGroupId,
     booleanOperation: p.booleanOperation,
@@ -240,6 +257,13 @@ function fromSceneData(
     matte: l.matte,
     masks: l.masks,
     trackMatte: l.trackMatte,
+    ...(l.textFit && typeof l.textFit === 'object' ? { textFit: { ...l.textFit } } : {}),
+    ...(l.fitToText && typeof l.fitToText === 'object' && typeof l.fitToText.textLayerId === 'string' ? { fitToText: cloneFitToText(l.fitToText) } : {}),
+    ...(l.follow && typeof l.follow === 'object' && typeof l.follow.targetLayerId === 'string' ? { follow: { ...l.follow } } : {}),
+    ...(l.lookAt && typeof l.lookAt === 'object' && typeof l.lookAt.targetLayerId === 'string' ? { lookAt: { ...l.lookAt } } : {}),
+    ...(isHomeTransform(l.homeTransform) ? { homeTransform: { ...l.homeTransform } } : {}),
+    ...(l.justify && typeof l.justify === 'object' ? { justify: { ...l.justify } } : {}),
+    ...(l.repeater && typeof l.repeater === 'object' ? { repeater: { ...l.repeater } } : {}),
     ...(l.effects?.length ? { effects: l.effects.map((effect) => ({ ...effect })) } : {}),
     booleanGroupId: l.booleanGroupId,
     booleanOperation: l.booleanOperation,
@@ -417,7 +441,16 @@ interface UseSerializationOptions {
    * the new S0: the restore is initialization, never a user-undoable change.
    */
   requestHistoryBaseline?: () => void;
+  /**
+   * The saved scene could not be restored (its reason). The editor starts
+   * empty, and the refused copy is kept under `AUTOSAVE_REFUSED_STORAGE_KEY`
+   * so the next autosave cannot destroy it.
+   */
+  onRestoreRefused?: (message: string) => void;
 }
+
+/** Where a saved scene the restore refused is kept, so a later autosave cannot overwrite the only copy. */
+export const AUTOSAVE_REFUSED_STORAGE_KEY = `${AUTOSAVE_STORAGE_KEY}_REFUSED`;
 
 /**
  * Bounded wait a manual save gives the shared autosave lock before
@@ -429,9 +462,10 @@ const MANUAL_SAVE_LOCK_WAIT_MS = 1_000;
  * Autosave writes unsaved changes at most this long after the FIRST change
  * that is not yet saved. Further edits never push the deadline back, so
  * continuous editing cannot postpone the save indefinitely; a failed or
- * deferred attempt is retried this long after it.
+ * deferred attempt is retried this long after it. This is the default; the
+ * user sets their own in the header (`autosaveIntervalSeconds`).
  */
-export const AUTOSAVE_DELAY_MS = 10_000;
+export const AUTOSAVE_DELAY_MS = DEFAULT_AUTOSAVE_SECONDS * 1000;
 /** How often the autosave deadline is checked (cheap: refs only). */
 const AUTOSAVE_CHECK_INTERVAL_MS = 1_000;
 
@@ -519,6 +553,10 @@ export interface UseSerializationApi {
   importProject: (jsonStr: string, defaultName?: string) => ImportResult;
   resetProject: () => void;
   migrateLegacyCoordinates: () => boolean;
+  /** The autosave delay in seconds: this browser's editor preference, not scene data. */
+  autosaveIntervalSeconds: number;
+  /** Sets (normalizes and stores) the delay; a pending change is re-timed from its start. */
+  setAutosaveIntervalSeconds: (seconds: number) => void;
 }
 
 export const useSerialization = ({
@@ -547,6 +585,7 @@ export const useSerialization = ({
   setCurrentFrame,
   setIsPlaying,
   requestHistoryBaseline = noopRequestHistoryBaseline,
+  onRestoreRefused,
 }: UseSerializationOptions): UseSerializationApi => {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
@@ -562,6 +601,9 @@ export const useSerialization = ({
   // stored scene names them (`utils/persistence/assetStore`): localStorage holds the scene,
   // not the photos. Everything else keeps the data URLs.
   const [assetStore] = useState(() => createAssetStore(createIndexedDbAssetBackend()));
+  // Media are stored only once the asset session started: a tab that is alone
+  // first deletes the media no saved text names (`startAssetSession`).
+  const [assetSessionReady, setAssetSessionReady] = useState(false);
 
   // Cross-tab write discipline. storageKnownRef holds the exact
   // string this tab last READ at boot (a refused/corrupted value included:
@@ -579,6 +621,11 @@ export const useSerialization = ({
   const autosavePausedRef = useRef<boolean>(false);
   const restoreDecidedRef = useRef<boolean>(false);
   const restoreAppliedRef = useRef<boolean>(false);
+  // The latest callback, read by the one-shot restore without re-running it.
+  const onRestoreRefusedRef = useRef(onRestoreRefused);
+  useEffect(() => {
+    onRestoreRefusedRef.current = onRestoreRefused;
+  }, [onRestoreRefused]);
 
   // The SAFE-01 read-compare-write runs as one critical section
   // inside the Web Lock named after the guarded key. manualPendingRef keeps a
@@ -593,6 +640,17 @@ export const useSerialization = ({
   const unsavedSinceRef = useRef<number | null>(null);
   /** When the next autosave attempt is due. */
   const nextAttemptAtRef = useRef<number>(0);
+  const [autosaveIntervalSeconds, setAutosaveIntervalState] = useState<number>(readAutosaveSeconds);
+  /** The delay the stable autosave clock reads. */
+  const autosaveDelayMsRef = useRef<number>(autosaveIntervalSeconds * 1000);
+  const setAutosaveIntervalSeconds = useCallback((seconds: number) => {
+    const next = writeAutosaveSeconds(seconds);
+    autosaveDelayMsRef.current = next * 1000;
+    // A change waiting to be saved follows the new delay from when it started:
+    // shortening it saves sooner, lengthening it waits longer.
+    if (unsavedSinceRef.current !== null) nextAttemptAtRef.current = unsavedSinceRef.current + next * 1000;
+    setAutosaveIntervalState(next);
+  }, []);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const clearUnsaved = useCallback(() => {
@@ -611,7 +669,16 @@ export const useSerialization = ({
         // instead of being applied, and the defaults stay in place.
         const validation = validateImportedDocument(saved);
         if (!validation.ok) {
-          console.warn('[Storage] Autosave restore refused:', validation.diagnostics[0]?.code, validation.diagnostics[0]?.message);
+          const reason = validation.diagnostics[0];
+          console.warn('[Storage] Autosave restore refused:', reason?.code, reason?.message);
+          let kept = false;
+          try {
+            localStorage.setItem(AUTOSAVE_REFUSED_STORAGE_KEY, saved);
+            kept = true;
+          } catch {
+            kept = false;
+          }
+          onRestoreRefusedRef.current?.(`The saved scene could not be opened: ${reason?.message ?? 'it is not a valid scene'}${kept ? ' A copy was kept in this browser.' : ''}`);
           return;
         }
 
@@ -723,10 +790,27 @@ export const useSerialization = ({
   // Media enter the asset store as soon as they are in the scene, so the save
   // that follows can name them; one still being stored is saved inline.
   useEffect(() => {
-    void assetStore.ingest(characterParts as unknown as Array<Record<string, unknown>>);
-  }, [assetStore, characterParts]);
+    let cancelled = false;
+    const readLiveTexts = (): string[] => {
+      const texts: string[] = [];
+      for (let index = 0; index < localStorage.length; index += 1) texts.push(localStorage.getItem(localStorage.key(index) ?? '') ?? '');
+      return texts;
+    };
+    void startAssetSession(assetStore, autosaveLockManager() as unknown as AssetLockManager | null, readLiveTexts).then((removed) => {
+      if (removed > 0) console.info(`[Assets] ${removed} unused stored medium(s) deleted.`);
+      if (!cancelled) setAssetSessionReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [assetStore]);
 
-  // 2. Auto-Save: SceneData format, at most AUTOSAVE_DELAY_MS after the first unsaved change (SAFE-01 write discipline).
+  useEffect(() => {
+    if (!assetSessionReady) return;
+    void assetStore.ingest(characterParts as unknown as Array<Record<string, unknown>>);
+  }, [assetStore, assetSessionReady, characterParts]);
+
+  // 2. Auto-Save: SceneData format, at most the user's autosave delay after the first unsaved change (SAFE-01 write discipline).
   const buildSceneJson = useCallback((): string => {
     const scene = toSceneData(characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId);
     scene.name = sceneTitle || 'Untitled';
@@ -766,7 +850,7 @@ export const useSerialization = ({
     if (same) return;
     const now = Date.now();
     unsavedSinceRef.current = now;
-    nextAttemptAtRef.current = now + AUTOSAVE_DELAY_MS;
+    nextAttemptAtRef.current = now + autosaveDelayMsRef.current;
     // The document changed: the header must say so (an external, committed edit).
     // oxlint-disable-next-line react/set-state-in-effect
     setHasUnsavedChanges(true);
@@ -859,7 +943,7 @@ export const useSerialization = ({
     // Whatever the outcome, the next attempt is one delay away: a success
     // clears the unsaved state; a failure, a busy lock (SAFE-02: never a queue
     // behind another writer) or a rejected lock call keeps it and retries.
-    nextAttemptAtRef.current = Date.now() + AUTOSAVE_DELAY_MS;
+    nextAttemptAtRef.current = Date.now() + autosaveDelayMsRef.current;
     setIsSaving(true);
     void runWithAutosaveLock(() => casWrite(false), 'try')
       .catch(() => undefined)
@@ -869,7 +953,7 @@ export const useSerialization = ({
   }, [buildSceneJson, casWrite, clearUnsaved, runWithAutosaveLock]);
 
   // One stable clock (it is never re-created by edits, which used to restart a
-  // 10 s interval on every change and postpone the save while the user kept
+  // fixed interval on every change and postpone the save while the user kept
   // editing). It only reads refs; the save runs when the deadline is due.
   const performSaveRef = useRef(performSave);
   useEffect(() => {
@@ -1153,5 +1237,7 @@ export const useSerialization = ({
     importProject,
     resetProject,
     migrateLegacyCoordinates,
+    autosaveIntervalSeconds,
+    setAutosaveIntervalSeconds,
   };
 };

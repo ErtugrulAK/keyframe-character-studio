@@ -1,0 +1,179 @@
+import { test, expect, type Page } from '@playwright/test';
+import { openDetailsTab } from './fixtures/inspectorTabs';
+
+/**
+ * Manual QA (rc.6 round 2, item 7): the Track Matte took over the legacy
+ * matte's soft edge, strength and gradient. The stage draws them through the
+ * same mask pipeline the legacy matte uses.
+ */
+const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
+
+const shape = (id: string, name: string, type: string, extra: Record<string, unknown> = {}) => ({
+  id, name, type, x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1,
+  visible: true, zIndex: 1, fillColor: '#22d3ee', strokeColor: '#101218',
+  fillEnabled: true, strokeEnabled: false, width: 300, height: 200, ...extra,
+});
+
+async function seed(page: Page, trackMatte: Record<string, unknown>) {
+  const layers = [
+    shape('src', 'Circle', 'custom_circle', { zIndex: 2, width: 160, height: 160 }),
+    shape('tgt', 'Box', 'custom_rect', { zIndex: 1, trackMatte: { sourceLayerId: 'src', mode: 'alpha', ...trackMatte } }),
+  ];
+  const scene = {
+    version: 1, coordinateSystem: 'project-unit-center-v1', width: 1920, height: 1080, fps: 30, totalFrames: 60,
+    layers, tracks: layers.map((layer) => ({ partId: layer.id, channels: {} })),
+  };
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+  await page.addInitScript(([key, value]: [string, string]) => localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify(scene)]);
+  await page.goto('/');
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+}
+
+/** The mask the target layer is painted through, with what it is made of. */
+const targetMask = (page: Page) => page.evaluate(() => {
+  const masked = document.querySelector('.stage-canvas-container [data-part-id="tgt"] [mask], .stage-canvas-container [data-part-id="tgt"][mask]');
+  const ref = masked?.getAttribute('mask') ?? '';
+  const id = /url\(#(.+)\)/.exec(ref)?.[1];
+  const mask = id ? document.getElementById(id) : null;
+  const filterRef = mask?.querySelector('[filter]')?.getAttribute('filter') ?? '';
+  const filterId = /url\(#(.+)\)/.exec(filterRef)?.[1];
+  return {
+    id: id ?? null,
+    blur: filterId ? document.getElementById(filterId)?.querySelector('feGaussianBlur')?.getAttribute('stdDeviation') ?? null : null,
+    gradientFill: mask ? [...mask.querySelectorAll('[fill^="url("]')].length > 0 : false,
+  };
+});
+
+test('a Track Matte draws its feather and gradient', async ({ page }) => {
+  await seed(page, { feather: 10, gradient: { angle: 90 } });
+  const mask = await targetMask(page);
+  expect(mask.id).toContain('-f10');
+  expect(mask.blur).toBe('5');
+  expect(mask.gradientFill).toBe(true);
+});
+
+test('a plain Track Matte stays a plain mask', async ({ page }) => {
+  await seed(page, {});
+  const mask = await targetMask(page);
+  expect(mask.id).not.toBeNull();
+  expect(mask.id).not.toContain('-f');
+  expect(mask.blur).toBeNull();
+  expect(mask.gradientFill).toBe(false);
+});
+
+test('Ctrl+Z undoes a matte slider change while the slider still has focus (QA rc6 round 3, item 2)', async ({ page }) => {
+  await seed(page, {});
+  await page.locator('[role="tree"] [data-layer-id="tgt"]').click();
+  await openDetailsTab(page, 'Masks');
+  const expand = page.getByRole('button', { name: 'Expand TRACK MATTE', exact: true });
+  if (await expand.count()) await expand.click();
+  const feather = page.getByRole('slider', { name: 'Feather' });
+  await feather.focus();
+  await feather.press('ArrowRight');
+  await feather.press('ArrowRight');
+  await expect(feather).toHaveValue('2');
+  await expect(feather).toBeFocused();
+  await page.keyboard.press('Control+z');
+  await expect(feather).not.toHaveValue('2');
+  await page.keyboard.press('Control+z');
+  await expect(feather).toHaveValue('0');
+  await page.keyboard.press('Control+y');
+  await expect(feather).not.toHaveValue('0');
+});
+
+/** The playhead on a frame, by the ruler (the default 18 px per frame). */
+async function setFrame(page: Page, frame: number) {
+  const grid = page.locator('.timeline-grid-container');
+  const gridBox = await grid.boundingBox();
+  const rulerBox = await page.locator('.time-ruler').boundingBox();
+  const scrollLeft = await grid.evaluate((node) => node.scrollLeft);
+  await page.mouse.click(gridBox!.x - scrollLeft + frame * 18 + 4, rulerBox!.y + rulerBox!.height / 2);
+  await expect(page.locator('.playhead-frame-label')).toHaveText(String(frame));
+}
+
+test('Feather keys from its keyframe button, animate on the stage and are saved (QA rc6 round 4)', async ({ page }) => {
+  await seed(page, {});
+  await page.locator('[role="tree"] [data-layer-id="tgt"]').click();
+  await openDetailsTab(page, 'Masks');
+  const expand = page.getByRole('button', { name: 'Expand TRACK MATTE', exact: true });
+  if (await expand.count()) await expand.click();
+  const feather = page.getByRole('slider', { name: 'Feather' });
+  const key = page.getByRole('button', { name: 'Feather keyframe' });
+
+  // Frame 0: the button starts the animation with the value shown (0).
+  await expect(key).toHaveAttribute('aria-pressed', 'false');
+  await key.click();
+  await expect(key).toHaveAttribute('aria-pressed', 'true');
+
+  // Frame 20: off a key; moving the slider writes a key here, not the base value.
+  await setFrame(page, 20);
+  await expect(key).toHaveAttribute('aria-pressed', 'false');
+  await feather.focus();
+  for (let step = 0; step < 10; step += 1) await feather.press('ArrowRight');
+  await expect(feather).toHaveValue('10');
+  await expect(key).toHaveAttribute('aria-pressed', 'true');
+  expect((await targetMask(page)).id).toContain('-f10');
+
+  // Back on frame 0 the first key still holds 0, and the stage is sharp.
+  await setFrame(page, 0);
+  await expect(feather).toHaveValue('0');
+  expect((await targetMask(page)).id).not.toContain('-f');
+  // Halfway the stage draws the interpolated soft edge.
+  await setFrame(page, 10);
+  expect((await targetMask(page)).blur).not.toBeNull();
+
+  // The save keeps both keys (the autosave bytes a reload restores from).
+  const before = await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at');
+  await page.locator('.autosave-status-badge').click();
+  await expect
+    .poll(async () => Number((await page.locator('.autosave-status-badge').getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 })
+    .toBeGreaterThan(Number(before || '0'));
+  const saved = await page.evaluate((storageKey) => {
+    const scene = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    const track = (scene.tracks || []).find((candidate: { partId: string }) => candidate.partId === 'tgt');
+    return (track?.channels?.matteFeather || []).map((keyframe: { frame: number; value: number }) => [keyframe.frame, keyframe.value]);
+  }, STORAGE_KEY);
+  expect(saved).toEqual([[0, 0], [20, 10]]);
+  await setFrame(page, 20);
+
+  // The button on a key removes it; the remaining key holds.
+  await expect(key).toHaveAttribute('aria-pressed', 'true');
+  await key.click();
+  await expect(key).toHaveAttribute('aria-pressed', 'false');
+  expect((await targetMask(page)).id).not.toContain('-f');
+});
+
+test('the gradient angle keys from its keyframe button and is saved (QA rc6 round 4)', async ({ page }) => {
+  await seed(page, { gradient: { angle: 0 } });
+  await page.locator('[role="tree"] [data-layer-id="tgt"]').click();
+  await openDetailsTab(page, 'Masks');
+  const expand = page.getByRole('button', { name: 'Expand TRACK MATTE', exact: true });
+  if (await expand.count()) await expand.click();
+  const angle = page.getByRole('slider', { name: 'Gradient angle' });
+  const key = page.getByRole('button', { name: 'Gradient angle keyframe' });
+
+  await key.click();
+  await expect(key).toHaveAttribute('aria-pressed', 'true');
+  await setFrame(page, 20);
+  await angle.focus();
+  for (let step = 0; step < 15; step += 1) await angle.press('ArrowRight');
+  await expect(angle).toHaveValue('15');
+  await expect(key).toHaveAttribute('aria-pressed', 'true');
+  await setFrame(page, 0);
+  await expect(angle).toHaveValue('0');
+
+  const badge = page.locator('.autosave-status-badge');
+  const before = await badge.getAttribute('data-last-saved-at');
+  await badge.click();
+  await expect.poll(async () => Number((await badge.getAttribute('data-last-saved-at')) || '0'), { timeout: 10_000 }).toBeGreaterThan(Number(before || '0'));
+  const saved = await page.evaluate((storageKey) => {
+    const scene = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    const track = (scene.tracks || []).find((candidate: { partId: string }) => candidate.partId === 'tgt');
+    return {
+      keys: (track?.channels?.matteGradientAngle || []).map((keyframe: { frame: number; value: number }) => [keyframe.frame, keyframe.value]),
+      base: (scene.layers || []).find((layer: { id: string }) => layer.id === 'tgt')?.trackMatte?.gradient?.angle,
+    };
+  }, STORAGE_KEY);
+  expect(saved).toEqual({ keys: [[0, 0], [20, 15]], base: 0 });
+});

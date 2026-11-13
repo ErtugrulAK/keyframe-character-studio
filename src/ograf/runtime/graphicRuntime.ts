@@ -19,6 +19,8 @@ import type { Transform } from '../../types/animator';
 import type { createWorldAffineAlgebra, WorldAffine } from '../../utils/geometry/containerMath';
 import type { createShapeAppearance } from '../../utils/layers/shapeAppearance';
 import type { describePaint, describeText } from '../../utils/layers/drawDescriptor';
+import type { createTrackMatteMarkup, TrackMatteGradientInput } from '../trackMatteMarkup';
+import type { createLayoutModifiers, FitToTextSettings, FollowSettings, JustifySettings, LookAtSettings, RepeaterSettings, TextFitSettings } from '../../utils/layers/layoutModifiers';
 
 export interface RuntimePoint {
   x: number;
@@ -65,6 +67,13 @@ export interface RuntimeLayer {
   id: string;
   type: string;
   zIndex: number;
+  textFit?: TextFitSettings;
+  fitToText?: FitToTextSettings;
+  follow?: FollowSettings;
+  lookAt?: LookAtSettings;
+  justify?: JustifySettings;
+  repeater?: RepeaterSettings;
+  isGroup?: boolean;
   x: number;
   y: number;
   rotation: number;
@@ -99,7 +108,15 @@ export interface RuntimeLayer {
   trimPathOffset?: number;
   masks?: RuntimeMask[];
   matte?: { sourcePartId?: string; mode?: string; inverted?: boolean; enabled?: boolean };
-  trackMatte?: { sourceLayerId: string; mode: string; inverted?: boolean; sourceVisible?: boolean; enabled?: boolean };
+  trackMatte?: {
+    sourceLayerId: string;
+    mode: string;
+    inverted?: boolean;
+    sourceVisible?: boolean;
+    enabled?: boolean;
+    /** Soft edge, strength and gradient, normalised when the package is built (`trackMatteRenderParameters`). */
+    render?: { feather: number; strength: number; gradient?: TrackMatteGradientInput };
+  };
   [field: string]: unknown;
 }
 
@@ -174,6 +191,15 @@ export interface GraphicRuntimeEnvironment {
   /** What a layer paints and writes (`utils/layers/drawDescriptor`). */
   describePaint: typeof describePaint;
   describeText: typeof describeText;
+  /** Layout modifiers: text boxes, auto size, follow, justify, repeater (`utils/layers/layoutModifiers`). */
+  layout: ReturnType<typeof createLayoutModifiers>;
+  /** The Track Matte mask, as the editor draws it (`ograf/trackMatteMarkup`). */
+  trackMatteMarkup: ReturnType<typeof createTrackMatteMarkup>;
+  /**
+   * The frame each step ends on (`utils/animation/stepMarkers`): the sequence's
+   * step markers, then its last frame. One entry = one step.
+   */
+  stepEnds?: number[];
 }
 
 export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
@@ -190,7 +216,12 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     resolveShapeAppearance,
     describePaint,
     describeText,
+    layout,
+    trackMatteMarkup,
   } = environment;
+  const STEP_ENDS = environment.stepEnds && environment.stepEnds.length > 0 ? environment.stepEnds : [SCENE.totalFrames];
+  /** The frame a step starts on: 0, then the previous step's end. */
+  const stepStart = (step: number): number => (step <= 0 ? 0 : STEP_ENDS[step - 1]);
   const { affineOfTransform, composeWorldTransform, composeAffine, applyAffine, withWorldAffine, worldAffineOf, affineTrsReading } = environment.affine;
 
   function clamp(value: number, min: number, max: number): number {
@@ -506,24 +537,74 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     const fallback = bounds[layer.type] || [120, 80];
     const width = Number.isFinite(layer.width) ? layer.width! : fallback[0];
     const height = Number.isFinite(layer.height) ? layer.height! : fallback[1];
-    const radians = layer.transform.rotation * Math.PI / 180;
+    return pathD(mask.path, (point) => worldPoint(layer, scene, mask.path.coordinateSpace === 'normalized' ? { x: (point.x - 0.5) * width, y: (point.y - 0.5) * height } : point));
+  }
+
+  /**
+   * A layer-local point in scene pixels. Mask paths are world geometry, so they
+   * follow the layer's own world map: the exact derived affine when the nesting
+   * is not a TRS, and the historical TRS arithmetic (unchanged, byte for byte)
+   * otherwise.
+   */
+  function worldPoint(layer: EvaluatedRuntimeLayer, scene: RuntimeScene, local: RuntimePoint): RuntimePoint {
     const worldAffine = layer.transform.affine;
-    // A mask path is world geometry, so it follows the layer's own world map: the
-    // exact derived affine when the nesting is not a TRS, and the historical TRS
-    // arithmetic (unchanged, byte for byte) otherwise.
-    return pathD(mask.path, (point) => {
-      const local = mask.path.coordinateSpace === 'normalized' ? { x: (point.x - 0.5) * width, y: (point.y - 0.5) * height } : point;
-      if (worldAffine) {
-        const mapped = applyAffine(worldAffine, local);
-        return { x: scene.width / 2 + mapped.x, y: scene.height / 2 + mapped.y };
-      }
-      const x = local.x * layer.transform.scaleX;
-      const y = local.y * layer.transform.scaleY;
-      return {
-        x: scene.width / 2 + layer.transform.x + x * Math.cos(radians) - y * Math.sin(radians),
-        y: scene.height / 2 + layer.transform.y + x * Math.sin(radians) + y * Math.cos(radians),
-      };
+    if (worldAffine) {
+      const mapped = applyAffine(worldAffine, local);
+      return { x: scene.width / 2 + mapped.x, y: scene.height / 2 + mapped.y };
+    }
+    const radians = layer.transform.rotation * Math.PI / 180;
+    const x = local.x * layer.transform.scaleX;
+    const y = local.y * layer.transform.scaleY;
+    return {
+      x: scene.width / 2 + layer.transform.x + x * Math.cos(radians) - y * Math.sin(radians),
+      y: scene.height / 2 + layer.transform.y + x * Math.sin(radians) + y * Math.cos(radians),
+    };
+  }
+
+  /** The local box each fixed primitive of `geometry` is drawn in. */
+  const PRIMITIVE_EXTENTS: Record<string, [number, number]> = {
+    custom_circle: [30, 30], custom_box: [30, 30], custom_rect: [60, 30], custom_capsule: [50, 20],
+    custom_triangle: [35, 35], custom_diamond: [35, 35], custom_star: [35, 35], custom_parallelogram: [85, 30],
+  };
+
+  /**
+   * The local half-box a text or an image paints in. A text's is generous: it
+   * is measured before its packaged face may have loaded, so it allows a wider
+   * face, overhanging glyphs, and the baseline offset.
+   */
+  function contentExtent(layer: EvaluatedRuntimeLayer): [number, number] | null {
+    if (layer.type === 'custom_image') return [(layer.width || 180) / 2, (layer.height || 120) / 2];
+    if (layer.type !== 'custom_text') return null;
+    const size = layer.fontSize || 24;
+    const text = String(layer.textValue || 'TEXT');
+    const measured = layout.measureTextWidth(text, size, layer.fontFamily || 'Outfit');
+    const width = Math.max(measured * 1.25, Array.from(text).length * size * 0.9);
+    return [width / 2 + size, size * 2];
+  }
+
+  /**
+   * Where a layer can paint, in scene pixels: its primitive's (or its text's or
+   * image's) box mapped to the world, padded by the (non-scaling) stroke. Null
+   * when the layer's extent is not known here (a path): no bound.
+   */
+  function layerPaintBounds(layer: EvaluatedRuntimeLayer, scene: RuntimeScene): { minX: number; minY: number; maxX: number; maxY: number } | null {
+    const extent = layer.type === 'custom_text' || layer.type === 'custom_image' ? contentExtent(layer) : PRIMITIVE_EXTENTS[layer.type];
+    if (!extent || layer.path || (layer.points && layer.points.length >= 3)) return null;
+    // The same world map `transform` paints the layer with.
+    const affine = worldAffineOf(layer.transform);
+    const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sy]) => {
+      const mapped = applyAffine(affine, { x: sx * extent[0], y: sy * extent[1] });
+      return { x: scene.width / 2 + mapped.x, y: scene.height / 2 + mapped.y };
     });
+    if (corners.some((corner) => !Number.isFinite(corner.x) || !Number.isFinite(corner.y))) return null;
+    const stroke = Number.isFinite(layer.strokeWidth) ? Math.abs(layer.strokeWidth as number) : 0;
+    const pad = stroke * 2 + 2;
+    return {
+      minX: Math.min(...corners.map((corner) => corner.x)) - pad,
+      minY: Math.min(...corners.map((corner) => corner.y)) - pad,
+      maxX: Math.max(...corners.map((corner) => corner.x)) + pad,
+      maxY: Math.max(...corners.map((corner) => corner.y)) + pad,
+    };
   }
 
   // The same stacking rule the editor stage uses: ascending zIndex paints first.
@@ -577,6 +658,22 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
         trimPathEnd: channelValue(channels.trimPathEnd, frame, layer.trimPathEnd === undefined ? 1 : layer.trimPathEnd),
         trimPathOffset: channelValue(channels.trimPathOffset, frame, layer.trimPathOffset || 0),
       } as EvaluatedRuntimeLayer;
+      // A keyed Track Matte feather / strength / gradient angle, as the editor
+      // evaluates it (`evaluateTrackMatte`): the channel over the packaged value.
+      const render = layer.trackMatte && layer.trackMatte.render;
+      if (render && (channels.matteFeather || channels.matteStrength || channels.matteGradientAngle)) {
+        const gradient = render.gradient;
+        const angle = gradient ? channelValue(channels.matteGradientAngle, frame, gradient.angle) : 0;
+        evaluated.trackMatte = {
+          ...layer.trackMatte!,
+          render: {
+            ...render,
+            feather: Math.max(0, channelValue(channels.matteFeather, frame, render.feather)),
+            strength: clamp(channelValue(channels.matteStrength, frame, render.strength), 0, 1),
+            ...(gradient ? { gradient: { ...gradient, angle: ((angle % 360) + 360) % 360 } } : {}),
+          },
+        };
+      }
       evaluated.masks = (layer.masks || []).map((mask) => {
         const maskTrack = track && track.maskChannels
           ? { opacity: track.maskChannels[mask.id + ':opacity'], feather: track.maskChannels[mask.id + ':feather'], expansion: track.maskChannels[mask.id + ':expansion'] }
@@ -611,8 +708,8 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       : layer.points && layer.points.length >= 3 ? 'M ' + layer.points.map((point) => point.x + ' ' + point.y).join(' L ') + ' Z' : '';
     if (layer.type === 'custom_freeform') return path ? '<path d="' + escapeXml(path) + '" stroke-linejoin="' + (layer.strokeLinejoin === 'miter' ? 'miter' : 'round') + '"' + attrs + ' />' : '';
     if (layer.type === 'custom_circle') return '<circle cx="0" cy="0" r="30"' + attrs + ' />';
-    if (layer.type === 'custom_box') return '<rect x="-30" y="-30" width="60" height="60" rx="0"' + attrs + ' />';
-    if (layer.type === 'custom_rect') return '<rect x="-60" y="-30" width="120" height="60" rx="' + (layer.borderRadius || 0) + '"' + attrs + ' />';
+    if (layer.type === 'custom_box') return '<rect x="-30" y="-30" width="60" height="60" rx="' + (layer.borderRadius ?? 0) + '"' + attrs + ' />';
+    if (layer.type === 'custom_rect') return '<rect x="-60" y="-30" width="120" height="60" rx="' + (layer.borderRadius ?? 0) + '"' + attrs + ' />';
     if (layer.type === 'custom_capsule') return '<rect x="-50" y="-20" width="100" height="40" rx="20"' + attrs + ' />';
     const points: Record<string, string> = {
       custom_triangle: '0,-35 35,25 -35,25',
@@ -632,10 +729,14 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     const glyphs = describeText(layer, layer.textOrigin === 'center' ? (layer.fontSize || 24) * textBoxCentreEm : 0);
     return '<text x="0" y="' + glyphs.y + '" text-anchor="middle"' + attributes({
       fill: silhouette ? silhouette.fill : paint.fill,
-      'fill-opacity': paint.fillOpacity,
+      // A silhouette (matte or clip source) is drawn at full opacity, as in the editor.
+      'fill-opacity': silhouette ? 1 : paint.fillOpacity,
       stroke: silhouette ? silhouette.stroke : paint.stroke,
       'stroke-opacity': paint.strokeOpacity,
       'stroke-width': paint.strokeWidth,
+      // Under the fill, as in the editor: overlapping glyph contours would
+      // otherwise show their inner edges.
+      'paint-order': 'stroke',
       'font-size': glyphs.fontSize,
       'font-weight': glyphs.fontWeight,
       'font-family': glyphs.fontFamily,
@@ -675,7 +776,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
   // The precedence decision is the editor's resolver. Only the clip exclusion
   // stays local: the resolver names the source, it does not decide which SVG
   // mechanism consumes it.
-  function matteRelationship(layer: RuntimeLayer): { sourceLayerId: string; mode: string; inverted: boolean; sourceVisible: boolean } | undefined {
+  function matteRelationship(layer: RuntimeLayer): { sourceLayerId: string; mode: string; inverted: boolean; sourceVisible: boolean; render?: NonNullable<RuntimeLayer['trackMatte']>['render'] } | undefined {
     const ref = resolveMatteSource(layer);
     if (!ref) return undefined;
     // The resolver names a legacy source only from `matte`, a track source only
@@ -686,7 +787,23 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       return { sourceLayerId: ref.sourceId, mode: matte.mode || 'alpha', inverted: matte.inverted === true, sourceVisible: true };
     }
     const v2 = layer.trackMatte!;
-    return { sourceLayerId: v2.sourceLayerId, mode: v2.mode, inverted: v2.inverted === true, sourceVisible: v2.sourceVisible !== false };
+    return { sourceLayerId: v2.sourceLayerId, mode: v2.mode, inverted: v2.inverted === true, sourceVisible: v2.sourceVisible !== false, render: v2.render };
+  }
+
+  /**
+   * The area a world-space mask path can cover: every number in `pathD` output
+   * is an x/y pair (M, L, C, Z only), and a cubic stays inside its control
+   * points, so their box is a safe bound.
+   */
+  function pathBounds(d: string): { minX: number; minY: number; maxX: number; maxY: number } | null {
+    const numbers = d.replace(/[MLCZ,]/g, ' ').split(/\s+/).filter((token) => token !== '').map(Number);
+    if (numbers.length < 2 || numbers.some((value) => !Number.isFinite(value))) return null;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let index = 0; index + 1 < numbers.length; index += 2) {
+      minX = Math.min(minX, numbers[index]); maxX = Math.max(maxX, numbers[index]);
+      minY = Math.min(minY, numbers[index + 1]); maxY = Math.max(maxY, numbers[index + 1]);
+    }
+    return { minX, minY, maxX, maxY };
   }
 
   function maskDefs(scene: RuntimeScene, layer: EvaluatedRuntimeLayer): { defs: string; ids: string[] } {
@@ -696,6 +813,30 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     const region = 'M 0 0 H ' + scene.width + ' V ' + scene.height + ' H 0 Z';
     const box = '" x="0" y="0" width="' + scene.width + '" height="' + scene.height + '"';
     let previousId: string | null = null;
+    // Where the chain can be non-zero so far; null = anywhere. A mask region is
+    // painted offscreen every frame, and a full-scene region per mask halved
+    // the frame rate of a masked scene. Outside this bound every chain mask is
+    // zero, so clipping the region to it changes no pixel.
+    type Bound = { minX: number; minY: number; maxX: number; maxY: number };
+    let bound: Bound | null = null;
+    const union = (a: Bound, b: Bound): Bound => ({ minX: Math.min(a.minX, b.minX), minY: Math.min(a.minY, b.minY), maxX: Math.max(a.maxX, b.maxX), maxY: Math.max(a.maxY, b.maxY) });
+    const intersect = (a: Bound, b: Bound): Bound => {
+      const minX = Math.max(a.minX, b.minX), minY = Math.max(a.minY, b.minY);
+      return { minX, minY, maxX: Math.max(minX, Math.min(a.maxX, b.maxX)), maxY: Math.max(minY, Math.min(a.maxY, b.maxY)) };
+    };
+    // Outside where the layer itself paints the mask value is never seen, so a
+    // hole mask (white everywhere but the path) is bounded by the layer too. A
+    // blur runs inside the region, so the region's own edge would bleed in: the
+    // layer bound keeps the widest blur's reach outside the painted area.
+    const reach = masks.reduce((widest, mask) => (mask.enabled === false ? widest : Math.max(widest, mask.feather * 2 + Math.abs(mask.expansion))), 0);
+    const painted = layerPaintBounds(layer, scene);
+    const paint = painted && { minX: painted.minX - reach, minY: painted.minY - reach, maxX: painted.maxX + reach, maxY: painted.maxY + reach };
+    const regionOf = (value: Bound | null): string => {
+      const limit = value && paint ? intersect(value, paint) : (value || paint);
+      if (!limit) return box;
+      const clipped = intersect(limit, { minX: 0, minY: 0, maxX: scene.width, maxY: scene.height });
+      return '" x="' + clipped.minX + '" y="' + clipped.minY + '" width="' + (clipped.maxX - clipped.minX) + '" height="' + (clipped.maxY - clipped.minY) + '"';
+    };
     const filterMarkup = (id: string, mask: EvaluatedRuntimeMask): string => {
       const filterId = 'kcs-layer-mask-filter-' + id;
       return mask.feather > 0 || mask.expansion !== 0
@@ -712,6 +853,13 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       const filterId = 'kcs-layer-mask-filter-' + id;
       const filterAttribute = mask.feather > 0 || mask.expansion !== 0 ? ' filter="url(#' + filterId + ')"' : '';
       const opacity = mask.opacity === undefined ? 1 : mask.opacity;
+      const raw = pathBounds(d);
+      // A blur is spent within four standard deviations (feather / 2 each); a dilation adds its radius.
+      const pad = mask.feather * 2 + Math.max(0, mask.expansion) + 1;
+      const shape: Bound | null = raw ? { minX: raw.minX - pad, minY: raw.minY - pad, maxX: raw.maxX + pad, maxY: raw.maxY + pad } : null;
+      if (!previousId) bound = mode === 'subtract' || mode === 'difference' || !shape ? null : shape;
+      else if (mode === 'intersect') bound = shape && bound ? intersect(bound, shape) : (shape || bound);
+      else if (mode === 'add' || mode === 'difference') bound = bound && shape ? union(bound, shape) : null;
       const fullRect = '<rect x="0" y="0" width="' + scene.width + '" height="' + scene.height + '"';
       let body: string;
       if (!previousId) {
@@ -724,9 +872,9 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
         const previousInverse = runtimeId(previousId, 'inverse');
         const currentInverse = runtimeId(id, 'inverse');
         defs.push(
-          '<mask id="' + shapeId + box + ' maskUnits="userSpaceOnUse"><path d="' + escapeXml(d) + '" fill="white" /></mask>'
-          + '<mask id="' + previousInverse + box + ' maskUnits="userSpaceOnUse">' + fullRect + ' fill="white" />' + fullRect + ' fill="black" mask="url(#' + previousId + ')" /></mask>'
-          + '<mask id="' + currentInverse + box + ' maskUnits="userSpaceOnUse">' + fullRect + ' fill="white" /><path d="' + escapeXml(d) + '" fill="black" /></mask>',
+          '<mask id="' + shapeId + regionOf(shape) + ' maskUnits="userSpaceOnUse"><path d="' + escapeXml(d) + '" fill="white" /></mask>'
+          + '<mask id="' + previousInverse + regionOf(null) + ' maskUnits="userSpaceOnUse">' + fullRect + ' fill="white" />' + fullRect + ' fill="black" mask="url(#' + previousId + ')" /></mask>'
+          + '<mask id="' + currentInverse + regionOf(null) + ' maskUnits="userSpaceOnUse">' + fullRect + ' fill="white" /><path d="' + escapeXml(d) + '" fill="black" /></mask>',
         );
         body = '<g mask="url(#' + currentInverse + ')">' + fullRect + ' fill="white" mask="url(#' + previousId + ')" /></g>'
           + '<g mask="url(#' + previousInverse + ')">' + fullRect + ' fill="white" mask="url(#' + shapeId + ')" /></g>';
@@ -735,7 +883,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       } else {
         body = fullRect + ' fill="white" mask="url(#' + previousId + ')" /><path d="' + escapeXml(d) + '" fill="black" fill-opacity="' + opacity + '"' + filterAttribute + ' />';
       }
-      defs.push(filter + '<mask id="' + id + box + ' maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="luminance" data-mask-operation="' + mode + '">' + body + '</mask>');
+      defs.push(filter + '<mask id="' + id + regionOf(bound) + ' maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="luminance" data-mask-operation="' + mode + '">' + body + '</mask>');
       previousId = id;
     });
     if (previousId) ids.push(previousId);
@@ -752,13 +900,33 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       const source = evaluated.find((candidate) => candidate.id === relation.sourceLayerId);
       if (!source) throw new Error('Missing track matte source: ' + relation.sourceLayerId);
       const id = runtimeId('kcs-ograf-track-matte', layer.id, source.id, relation.mode, relation.inverted ? 'inverted' : '');
+      ids[layer.id] = id;
+      if (!relation.sourceVisible) hidden[relation.sourceLayerId] = true;
+      if (relation.render) {
+        // A Track Matte: soft edge, strength and gradient as the editor draws them.
+        const affine = worldAffineOf(source.transform);
+        defs.push(trackMatteMarkup.trackMatteMask({
+          id,
+          width: scene.width,
+          height: scene.height,
+          mode: relation.mode === 'luminance' ? 'luminance' : 'alpha',
+          inverted: relation.inverted,
+          feather: relation.render.feather,
+          strength: relation.render.strength,
+          gradient: relation.render.gradient,
+          source: { type: source.type, points: source.points, width: source.width, height: source.height, fontSize: source.fontSize, textValue: source.textValue },
+          transform: transform(scene, source),
+          affine: { a: affine.a, b: affine.b, c: affine.c, d: affine.d, e: affine.e + scene.width / 2, f: affine.f + scene.height / 2 },
+          silhouette: (fill) => silhouette(source, IMAGE_REFERENCES, fill),
+          fillColor: source.fillColor || 'white',
+        }));
+        return;
+      }
       const sourceFill = relation.inverted ? 'black' : (relation.mode === 'luminance' ? escapeXml(source.fillColor || 'white') : 'white');
       const sourceBody = silhouette(source, IMAGE_REFERENCES, sourceFill);
       const sourceShape = '<g transform="' + transform(scene, source) + '">' + sourceBody + '</g>';
       const body = relation.inverted ? '<rect x="0" y="0" width="' + scene.width + '" height="' + scene.height + '" fill="white" />' + sourceShape : sourceShape;
       defs.push('<mask id="' + id + '" x="0" y="0" width="' + scene.width + '" height="' + scene.height + '" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="' + (relation.inverted ? 'luminance' : relation.mode) + '">' + body + '</mask>');
-      ids[layer.id] = id;
-      if (!relation.sourceVisible) hidden[relation.sourceLayerId] = true;
     });
     return { defs: defs.join(''), ids, hidden };
   }
@@ -830,7 +998,14 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     return '<g data-layer-id="' + escapeXml(layer.id) + '" data-z-index="' + layer.zIndex + '" opacity="' + layer.opacity + '"' + clip + '>' + inner + '</g>';
   }
 
-  function renderScene(scene: RuntimeScene, frame: number, stopped: boolean): string {
+  /**
+   * The scene as one SVG. It fills the element the renderer sizes to its output
+   * (the viewBox keeps the authored aspect), so a 1280x720 renderer scales the
+   * graphic instead of cropping it. The graphic element keeps the @font-face
+   * rules in a style of its own (`includeFontStyles: false`), so fonts are not
+   * re-declared every frame.
+   */
+  function renderScene(scene: RuntimeScene, frame: number, stopped: boolean, includeFontStyles = true): string {
     const evaluated = evaluateScene(scene, frame);
     const defs = [clipDefs(scene, evaluated)];
     const maskMap: Record<string, string[]> = Object.create(null);
@@ -841,11 +1016,35 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     });
     const matte = matteDefs(scene, evaluated);
     defs.push(matte.defs);
-    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + scene.width + '" height="' + scene.height + '" viewBox="0 0 ' + scene.width + ' ' + scene.height + '">'
-      + '<style>' + fontStyles() + '</style><defs>' + defs.join('') + '</defs>'
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 ' + scene.width + ' ' + scene.height + '" style="display:block">'
+      + (includeFontStyles ? '<style>' + fontStyles() + '</style>' : '') + '<defs>' + defs.join('') + '</defs>'
       + evaluated.map((layer) => renderLayer(scene, layer, maskMap, matte.ids[layer.id], stopped || matte.hidden[layer.id])).join('')
       + '</svg>';
   }
+
+  /** The OGraf target step of a playAction (spec step model, one step per step end); undefined = the end. */
+  function nextStepOf(current: number | undefined, params: { goto?: number; delta?: number }): number | undefined {
+    const goto = typeof params.goto === 'number' && params.goto >= 0 ? params.goto : undefined;
+    const delta = typeof params.delta === 'number' ? params.delta : 1;
+    const targetStep = goto === undefined ? (current === undefined ? -1 : current) + delta : goto;
+    return targetStep >= STEP_ENDS.length ? undefined : Math.max(0, targetStep);
+  }
+
+  /**
+   * Where a play to `next` starts and ends: from the start (or after a stop)
+   * at frame 0; back to the same or an earlier step at that step's start;
+   * forward from where the graphic is. It ends on the step's end, or the
+   * scene's last frame past the last step.
+   */
+  function stepMotion(current: number | undefined, next: number | undefined, frame: number): { from: number; to: number } {
+    const to = next === undefined ? SCENE.totalFrames : STEP_ENDS[next];
+    if (next === undefined) return { from: frame, to };
+    if (current === undefined) return { from: 0, to };
+    if (next <= current) return { from: stepStart(next), to };
+    return { from: frame, to };
+  }
+
+  type ScheduledAction = { timestamp: number; action: { type: string; params?: Record<string, unknown> } };
 
   /** The OGraf graphic element: the host's load / play / stop / update / dispose contract. */
   class Graphic extends elementBase {
@@ -856,6 +1055,10 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     declare _raf: number | null;
     declare _token: number;
     declare _resolveAction: ((result: RuntimeActionResult) => void) | null;
+    declare _loadData: Record<string, unknown> | undefined;
+    declare _schedule: ScheduledAction[];
+    declare _svg: Element | null;
+    declare _fitted: RuntimeScene | null;
 
     _cancel(): void {
       this._token += 1;
@@ -877,10 +1080,44 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       this._raf = null;
       this._token = 0;
       this._resolveAction = null;
+      this._loadData = undefined;
+      this._schedule = [];
+      this._svg = null;
+      this._fitted = null;
     }
 
+    /** Lays the scene out again (text boxes, auto size, follow, justify, repeater) for the current data and loaded fonts. */
+    _refit(): void {
+      this._fitted = layout.applyLayoutToScene(this._scene);
+    }
+
+    /**
+     * Paints the current frame. The @font-face rules live in a style element of
+     * their own, written once; only the SVG is replaced per frame.
+     */
     _render(): void {
-      this.innerHTML = renderScene(this._scene, this._currentFrame, this._stopped);
+      const markup = renderScene(this._fitted || this._scene, this._currentFrame, this._stopped, false);
+      if (!this._svg || this._svg.parentNode !== this) {
+        this.innerHTML = '<style>' + fontStyles() + '</style>' + markup;
+        this._svg = this.lastElementChild;
+        return;
+      }
+      const holder = document.createElement('template');
+      holder.innerHTML = markup;
+      const next = holder.content.firstElementChild;
+      if (!next) return;
+      this.replaceChild(next, this._svg);
+      this._svg = next;
+    }
+
+    /** Waits (at most 3 s) until the packaged fonts the text uses are loaded, so no frame shows a fallback face. */
+    async _fontsReady(): Promise<void> {
+      const fonts = typeof document === 'object' ? document.fonts : undefined;
+      const families = Object.keys(FONT_REFERENCES);
+      if (!fonts || typeof fonts.load !== 'function' || families.length === 0) return;
+      const sample = this._scene.layers.map((layer) => String(layer.textValue || '')).join('') || ' ';
+      const loads = Promise.all(families.map((family) => fonts.load('bold 16px ' + cssString(family), sample).catch(() => undefined)));
+      await Promise.race([loads, new Promise((resolve) => setTimeout(resolve, 3000))]);
     }
 
     _applyData(data: Record<string, unknown> | undefined): RuntimeActionResult | undefined {
@@ -906,19 +1143,31 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
 
     async load(params?: { renderType?: string; data?: Record<string, unknown> }): Promise<RuntimeActionResult> {
       this._cancel();
-      if (params && params.renderType && params.renderType !== 'realtime') return { statusCode: 400, statusMessage: 'Only realtime rendering is supported' };
+      const renderType = params && params.renderType ? params.renderType : 'realtime';
+      if (renderType !== 'realtime' && renderType !== 'non-realtime') return { statusCode: 400, statusMessage: 'Unknown render type: ' + String(renderType) };
+      this._scene = JSON.parse(JSON.stringify(SCENE));
       const error = this._applyData(params && params.data);
       if (error) return error;
+      this._loadData = params && params.data ? JSON.parse(JSON.stringify(params.data)) : undefined;
+      this._schedule = [];
       this._currentFrame = 0;
       this._currentStep = undefined;
-      this._stopped = false;
+      // OGraf: nothing is painted before the first playAction. A renderer that
+      // loads the next instance while the previous one is still on air would
+      // otherwise show this instance's first frame on top of it.
+      this._stopped = true;
+      this._refit();
       this._render();
+      await this._fontsReady();
+      // Measured again with the packaged faces loaded.
+      this._refit();
       return { statusCode: 200 };
     }
 
     async dispose(): Promise<RuntimeActionResult> {
       this._cancel();
       this._scene = JSON.parse(JSON.stringify(SCENE));
+      this._fitted = null;
       this._stopped = false;
       this.innerHTML = '';
       return { statusCode: 200 };
@@ -959,14 +1208,15 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
 
     async playAction(params: { goto?: number; delta?: number; skipAnimation?: boolean } = {}): Promise<RuntimeActionResult> {
       const current = this._currentStep;
-      const goto = typeof params.goto === 'number' && params.goto >= 0 ? params.goto : undefined;
-      const delta = typeof params.delta === 'number' ? params.delta : 1;
-      const targetStep = goto === undefined ? (current === undefined ? -1 : current) + delta : goto;
-      const stepCount = 1;
-      const nextStep = targetStep >= stepCount ? undefined : Math.max(0, targetStep);
+      const nextStep = nextStepOf(current, params);
+      // From the start (or after a stop) the graphic plays in from its first
+      // frame again, instead of showing the last frame it reached; a step
+      // plays to its own end and holds there.
+      const motion = stepMotion(current, nextStep, this._currentFrame);
+      this._currentFrame = motion.from;
       this._currentStep = nextStep;
       this._stopped = nextStep === undefined;
-      const result = await this._animate(this._scene.totalFrames, params.skipAnimation === true);
+      const result = await this._animate(motion.to, params.skipAnimation === true);
       return Object.assign({}, result, { currentStep: this._currentStep });
     }
 
@@ -984,12 +1234,88 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       this._cancel();
       const error = this._applyData(params && params.data);
       if (error) return error;
+      this._refit();
       this._render();
       return { statusCode: 200 };
     }
 
     async customAction(): Promise<RuntimeActionResult> {
       return { statusCode: 400, statusMessage: 'No custom actions supported' };
+    }
+
+    /** Non-real-time: stores the actions to run at their timestamps (ms); replaces any earlier schedule. */
+    async setActionsSchedule(params?: { schedule?: unknown }): Promise<RuntimeActionResult> {
+      const entries = params && Array.isArray(params.schedule) ? params.schedule as ScheduledAction[] : [];
+      this._schedule = entries
+        .filter((entry) => entry && Number.isFinite(entry.timestamp) && entry.action && typeof entry.action.type === 'string')
+        .map((entry) => ({ timestamp: Number(entry.timestamp), action: { type: entry.action.type, params: entry.action.params } }))
+        .sort((a, b) => a.timestamp - b.timestamp);
+      return { statusCode: 200 };
+    }
+
+    /**
+     * Non-real-time: renders the frame at `timestamp` (ms) by replaying the
+     * schedule from the loaded state with the real-time rules: a play runs the
+     * timeline at the scene's frame rate, a stop finishes it and then hides.
+     */
+    async goToTime(params?: { timestamp?: number }): Promise<RuntimeActionResult> {
+      const time = params ? Number(params.timestamp) : NaN;
+      if (!Number.isFinite(time)) return { statusCode: 400, statusMessage: 'timestamp must be a number of milliseconds' };
+      this._cancel();
+      this._scene = JSON.parse(JSON.stringify(SCENE));
+      this._applyData(this._loadData);
+      const fps = this._scene.fps;
+      const end = this._scene.totalFrames;
+      let frame = 0;
+      let step: number | undefined;
+      let stopped = true;
+      let motion: { from: number; to: number; at: number; hideAtEnd: boolean } | null = null;
+      const advance = (now: number) => {
+        if (!motion) return;
+        const reached = motion.from + (now - motion.at) / 1000 * fps;
+        if (reached < motion.to) {
+          frame = reached;
+          return;
+        }
+        frame = motion.to;
+        if (motion.hideAtEnd) {
+          stopped = true;
+          step = undefined;
+        }
+        motion = null;
+      };
+      for (const entry of this._schedule) {
+        if (entry.timestamp > time) break;
+        advance(entry.timestamp);
+        const actionParams = (entry.action.params || {}) as { goto?: number; delta?: number; skipAnimation?: boolean; data?: Record<string, unknown> };
+        if (entry.action.type === 'playAction') {
+          const next = nextStepOf(step, actionParams);
+          const stepped = stepMotion(step, next, frame);
+          frame = stepped.from;
+          step = next;
+          stopped = next === undefined;
+          motion = stopped || actionParams.skipAnimation === true ? null : { from: frame, to: stepped.to, at: entry.timestamp, hideAtEnd: false };
+          if (!stopped && actionParams.skipAnimation === true) frame = stepped.to;
+        } else if (entry.action.type === 'stopAction') {
+          if (actionParams.skipAnimation === true || stopped) {
+            frame = end;
+            stopped = true;
+            step = undefined;
+            motion = null;
+          } else {
+            motion = { from: frame, to: end, at: entry.timestamp, hideAtEnd: true };
+          }
+        } else if (entry.action.type === 'updateAction') {
+          this._applyData(actionParams.data);
+        }
+      }
+      advance(time);
+      this._refit();
+      this._currentFrame = frame;
+      this._currentStep = step;
+      this._stopped = stopped;
+      this._render();
+      return { statusCode: 200 };
     }
   }
 

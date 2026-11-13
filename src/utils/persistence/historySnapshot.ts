@@ -12,10 +12,10 @@
  * states that differ in one layer costs that layer, not the whole scene.
  *
  * Matches the JSON comparison it replaces: a key holding `undefined` counts as
- * absent.
+ * absent, and `0` equals `-0` (both serialise as `0`).
  */
 export const structurallyEqual = (a: unknown, b: unknown): boolean => {
-  if (Object.is(a, b)) return true;
+  if (a === b || Object.is(a, b)) return true;
   if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
   if (Array.isArray(a) !== Array.isArray(b)) return false;
   if (Array.isArray(a)) {

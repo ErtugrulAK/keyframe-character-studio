@@ -121,7 +121,7 @@ test('the toolbar is a compact strip that drives the shared tool and grid state'
 
   // Grid is the context flag the stage renders from: the grid rects appear and
   // disappear with it.
-  const gridRects = page.locator('.stage-svg rect[fill="url(#svg-grid-minor)"]');
+  const gridRects = page.getByTestId('stage-grid');
   const gridWasVisible = (await gridRects.count()) > 0;
   await toolbarButton(page, 'Toggle grid').click();
   await expect(toolbarButton(page, 'Toggle grid')).toHaveAttribute('aria-pressed', gridWasVisible ? 'false' : 'true');
@@ -297,7 +297,8 @@ test('the Boolean group stays visible and is enabled only for a compatible selec
   await toolbarButton(page, 'Boolean Union').click();
 
   await expect(page.locator('.boolean-operation-badge')).toHaveCount(1);
-  await expect(page.locator('.nested-node.actor-node')).toHaveCount(2);
+  // The result reads as one shape: its operands are not listed until it is opened.
+  await expect(page.locator('.nested-node.actor-node')).toHaveCount(0);
   // The created group is selected, so the toolbar now switches operations.
   await expect(toolbarButton(page, 'Boolean Union')).toHaveAttribute('aria-pressed', 'true');
   await expect(toolbarButton(page, 'Dissolve Boolean')).toBeEnabled();
@@ -361,7 +362,7 @@ test('every control is reachable and operable from the keyboard', async ({ page 
   await expect(pan).toHaveAttribute('aria-pressed', 'true');
 
   const grid = toolbarButton(page, 'Toggle grid');
-  const gridWasVisible = (await page.locator('.stage-svg rect[fill="url(#svg-grid-minor)"]').count()) > 0;
+  const gridWasVisible = (await page.getByTestId('stage-grid').count()) > 0;
   await grid.focus();
   // Enter activates a toolbar button; Space stays the editor's play/pause key.
   await page.keyboard.press('Enter');

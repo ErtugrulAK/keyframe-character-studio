@@ -110,19 +110,20 @@ describe('K3 — Mask group in the outliner', () => {
   });
   afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
-  // C7 — one group per mask, named by the mask, after the layer properties
-  // (and after Trim Paths when the layer uses it), in the layer's mask order.
-  it('lists one group per mask, after the layer properties, and none without masks', () => {
+  // After Effects grouping: one group per mask, named by the mask, inside the
+  // Masks group (after Trim Paths when the layer uses it, before Transform),
+  // in the layer's mask order.
+  it('lists one group per mask in the Masks group, and none without masks', () => {
     const h = renderHarness();
     seedMaskedLayer(h);
 
-    expect(h.headers()).toEqual(['Position', 'Scale', 'M1', 'M2']);
+    expect(h.headers()).toEqual(['Masks', 'M1', 'M2', 'Transform', 'Position', 'Scale']);
 
     const partId = h.ctx().tracks[0].partId;
     act(() => {
       h.ctx().setCharacterParts((prev: CharacterPart[]) => prev.map((p) => (p.id === partId ? { ...p, trimPathEnabled: true } : p)));
     });
-    expect(h.headers()).toEqual(['Position', 'Scale', 'Trim Paths', 'M1', 'M2']);
+    expect(h.headers()).toEqual(['Trim Paths', 'Masks', 'M1', 'M2', 'Transform', 'Position', 'Scale']);
 
     // A maskless layer shows no mask group at all.
     const plain = renderHarness();
@@ -131,7 +132,7 @@ describe('K3 — Mask group in the outliner', () => {
       plain.ctx().setCharacterParts((prev: CharacterPart[]) => prev.map((p) => ({ ...p, masks: [] })));
     });
     expect(plain.rows().filter((key) => key.includes(':'))).toHaveLength(0);
-    expect(plain.headers()).toEqual(['Position', 'Scale']);
+    expect(plain.headers()).toEqual(['Transform', 'Position', 'Scale']);
   });
 
   it('each mask group is collapsed by default and lists Path, Feather, Opacity, Expansion once opened', () => {

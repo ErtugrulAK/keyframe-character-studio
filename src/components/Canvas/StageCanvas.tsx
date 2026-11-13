@@ -61,6 +61,7 @@ import { leaveStage, rememberStagePointer } from '../../utils/editor/stagePointe
 import { CanvasCoordinateReadout } from './overlays/CanvasCoordinateReadout';
 import { StageZoomControl } from './overlays/StageZoomControl';
 import { SafeAreaOverlay } from './overlays/SafeAreaOverlay';
+import { useArtboardBackdrop } from '../../hooks/useArtboardBackdrop';
 import { FreeformTangentOverlay } from './overlays/FreeformTangentOverlay';
 import { isFreeformTangentOverlayEligible } from '../../utils/geometry/freeformTangentEligibility';
 import { ShapeCreationPreview } from './ShapeCreationPreview';
@@ -1172,6 +1173,8 @@ export const StageCanvas: React.FC = () => {
     return () => window.removeEventListener(WORKSPACE_LAYOUT_COMMAND_EVENT, handleViewportCommand);
   }, [applyStageBox, readStageBox]);
 
+  const artboardBackdrop = useArtboardBackdrop();
+
   /** The zoom bar: a zoom level for a screen scale (1 = 100 %), and Fit, which also centres the artboard. */
   const setZoomFromBar = (nextZoom: number) => {
     zoomRef.current = nextZoom;
@@ -1736,9 +1739,33 @@ export const StageCanvas: React.FC = () => {
                 y={artY}
                 width={projectResolution.width}
                 height={projectResolution.height}
-                fill="var(--bg-darkest)"
+                fill={appMode === 'broadcast' || artboardBackdrop.kind === 'dark' || artboardBackdrop.kind === 'image'
+                  ? 'var(--bg-darkest)'
+                  : artboardBackdrop.kind === 'light' ? '#f4f4f4' : 'url(#artboard-checker)'}
                 filter="url(#artboard-shadow)"
+                data-backdrop={appMode === 'broadcast' ? undefined : artboardBackdrop.kind}
               />
+              {appMode !== 'broadcast' && artboardBackdrop.kind === 'checker' && (
+                <defs>
+                  <pattern id="artboard-checker" width={40} height={40} patternUnits="userSpaceOnUse" x={artX} y={artY}>
+                    <rect width={40} height={40} fill="#d9d9d9" />
+                    <rect width={20} height={20} fill="#ffffff" />
+                    <rect x={20} y={20} width={20} height={20} fill="#ffffff" />
+                  </pattern>
+                </defs>
+              )}
+              {appMode !== 'broadcast' && artboardBackdrop.kind === 'image' && artboardBackdrop.imageUrl && (
+                <image
+                  data-testid="artboard-backdrop-image"
+                  href={artboardBackdrop.imageUrl}
+                  x={artX}
+                  y={artY}
+                  width={projectResolution.width}
+                  height={projectResolution.height}
+                  preserveAspectRatio="xMidYMid slice"
+                  pointerEvents="none"
+                />
+              )}
 
               {/* Grid & Origin Axes Overlay */}
               <CanvasGridOverlay
@@ -2256,6 +2283,9 @@ export const StageCanvas: React.FC = () => {
           onFit={fitArtboardInView}
           showSafeAreas={showSafeAreas}
           onToggleSafeAreas={() => setShowSafeAreas(!showSafeAreas)}
+          backdrop={artboardBackdrop.kind}
+          onBackdrop={artboardBackdrop.choose}
+          onBackdropImage={artboardBackdrop.chooseImage}
         />
       )}
 

@@ -381,3 +381,37 @@ test('a countdown text counts down on the timeline and holds at zero', async ({ 
   // The text was given the starting reading, so the layer is laid out at that size.
   expect((await savedLayers(page)).find((layer) => layer.id === 'c')?.textValue).toBe('01:00');
 });
+
+test('the artboard backdrop can be light, a checkerboard or a picture, and is remembered', async ({ page }) => {
+  // Round 6 (OGraf Studio review): judge a graphic on light, checker or real footage.
+  await seed(page);
+  const artboard = page.locator('rect.canvas-bg[filter]');
+  const backdrop = page.getByRole('combobox', { name: 'Artboard backdrop' });
+  await expect(artboard).toHaveAttribute('data-backdrop', 'dark');
+  await backdrop.selectOption('light');
+  await expect(artboard).toHaveAttribute('fill', '#f4f4f4');
+  await backdrop.selectOption('checker');
+  await expect(artboard).toHaveAttribute('fill', 'url(#artboard-checker)');
+  await expect(page.locator('pattern#artboard-checker')).toHaveCount(1);
+
+  const picture = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 18;
+    const context = canvas.getContext('2d')!;
+    context.fillStyle = '#2a6';
+    context.fillRect(0, 0, 32, 18);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  await page.getByTestId('artboard-backdrop-input').setInputFiles({ name: 'footage.png', mimeType: 'image/png', buffer: Buffer.from(picture, 'base64') });
+  await expect(page.getByTestId('artboard-backdrop-image')).toHaveCount(1);
+  await expect(backdrop).toHaveValue('image');
+
+  // A picture is for this session; light or checker is remembered in this browser.
+  await backdrop.selectOption('light');
+  await page.reload();
+  await expect(page.locator('rect.canvas-bg[filter]')).toHaveAttribute('fill', '#f4f4f4');
+  // Never part of the scene.
+  const saved = await page.evaluate((key) => localStorage.getItem(key) ?? '', STORAGE_KEY);
+  expect(saved).not.toContain('backdrop');
+});

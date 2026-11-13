@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { ARTBOARD_BACKDROPS, type ArtboardBackdropKind } from '../../../hooks/useArtboardBackdrop';
 import { Tv } from 'lucide-react';
 
 const ZOOM_PRESETS = [25, 50, 100, 200, 400] as const;
@@ -12,14 +13,19 @@ interface StageZoomControlProps {
   onFit: () => void;
   showSafeAreas: boolean;
   onToggleSafeAreas: () => void;
+  /** What the empty artboard shows while editing (editor only). */
+  backdrop?: ArtboardBackdropKind;
+  onBackdrop?: (kind: ArtboardBackdropKind) => void;
+  onBackdropImage?: (file: File) => void;
 }
 
 /**
  * The stage's view bar (bottom right): the zoom as a typed percentage, Fit,
- * 1:1, preset sizes and the safe-area guides. 100 % shows one project pixel as
+ * 1:1, preset sizes, the safe-area guides and the artboard backdrop. 100 % shows one project pixel as
  * one screen pixel. Zoom in and out stay on the toolbar (their one home).
  */
-export const StageZoomControl: React.FC<StageZoomControlProps> = ({ scale, onZoomTo, onFit, showSafeAreas, onToggleSafeAreas }) => {
+export const StageZoomControl: React.FC<StageZoomControlProps> = ({ scale, onZoomTo, onFit, showSafeAreas, onToggleSafeAreas, backdrop = 'dark', onBackdrop, onBackdropImage }) => {
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const percent = Math.round(scale * 1000) / 10;
   const [draft, setDraft] = useState<string | null>(null);
   const commit = () => {
@@ -76,6 +82,35 @@ export const StageZoomControl: React.FC<StageZoomControlProps> = ({ scale, onZoo
       >
         <Tv size={13} aria-hidden="true" />
       </button>
+      {onBackdrop && (
+        <>
+          <select
+            className="stage-zoom-presets"
+            aria-label="Artboard backdrop"
+            title="What the empty artboard shows while editing (not exported)"
+            value={backdrop}
+            onChange={(event) => {
+              const kind = event.target.value as ArtboardBackdropKind;
+              if (kind === 'image') imageInputRef.current?.click();
+              else onBackdrop(kind);
+            }}
+          >
+            {ARTBOARD_BACKDROPS.map((option) => <option key={option.kind} value={option.kind}>{option.label}</option>)}
+          </select>
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            hidden
+            data-testid="artboard-backdrop-input"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) onBackdropImage?.(file);
+              event.target.value = '';
+            }}
+          />
+        </>
+      )}
     </div>
   );
 };

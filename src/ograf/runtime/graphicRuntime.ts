@@ -666,8 +666,8 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
         trimPathEnd: channelValue(channels.trimPathEnd, frame, layer.trimPathEnd === undefined ? 1 : layer.trimPathEnd),
         trimPathOffset: channelValue(channels.trimPathOffset, frame, layer.trimPathOffset || 0),
       } as EvaluatedRuntimeLayer;
-      if (layer.textEffect && layer.textValue) {
-        evaluated.displayedText = textEffects.resolveDisplayedText(layer.textValue, layer.textEffect, frame);
+      if (layer.textEffect && (layer.textValue || layer.textEffect.kind === 'clock')) {
+        evaluated.displayedText = textEffects.resolveDisplayedText(layer.textValue || '', layer.textEffect, frame, scene.fps);
       }
       // A keyed Track Matte feather / strength / gradient angle, as the editor
       // evaluates it (`evaluateTrackMatte`): the channel over the packaged value.

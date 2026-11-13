@@ -361,3 +361,23 @@ test('a text types itself out, set in the Inspector and kept after a reload', as
   await expect(page.locator('.stage-canvas-container [data-part-id="t"] [data-text-effect-hidden]')).toHaveText(' WORLD');
 
 });
+
+test('a countdown text counts down on the timeline and holds at zero', async ({ page }) => {
+  await seed(page, [{ id: 'c', name: 'Clock', type: 'custom_text', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, textValue: 'Text', fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' }]);
+  await page.locator('[role="tree"] [data-layer-id="c"]').click();
+  const expand = page.getByRole('button', { name: 'Expand TEXT EFFECTS' });
+  if (await expand.count()) await expand.click();
+  await page.getByLabel('ANIMATE TEXT').selectOption('countdown');
+  const drawn = page.locator('.stage-canvas-container [data-part-id="c"] text').first();
+  const seek = async (time: string) => {
+    const field = page.getByRole('textbox', { name: 'Current time' });
+    await field.fill(time);
+    await field.press('Enter');
+  };
+  await seek('0');
+  await expect(drawn).toHaveText('01:00');
+  await seek('1s');
+  await expect(drawn).toHaveText('00:59');
+  // The text was given the starting reading, so the layer is laid out at that size.
+  expect((await savedLayers(page)).find((layer) => layer.id === 'c')?.textValue).toBe('01:00');
+});

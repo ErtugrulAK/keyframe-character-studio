@@ -71,3 +71,24 @@ describe('reading the number', () => {
 it('a text without an effect is shown as written', () => {
   expect(at('Hello', undefined, 5)).toEqual({ shown: 'Hello', hidden: '' });
 });
+
+describe('clock', () => {
+  const stopwatch = (format: 'mm:ss' | 'hh:mm:ss' | 'ss' | 'mm:ss.t'): TextEffect => ({ kind: 'clock', mode: 'stopwatch', startFrame: 10, format });
+  const countdown: TextEffect = { kind: 'clock', mode: 'countdown', startFrame: 0, seconds: 90, format: 'mm:ss' };
+
+  it('a stopwatch counts the seconds since its start at the timeline rate, holding zero before it', () => {
+    expect(at('', stopwatch('mm:ss'), 0).shown).toBe('00:00');
+    expect(resolveDisplayedText('', stopwatch('mm:ss'), 10 + 25 * 75, 25).shown).toBe('01:15');
+    expect(resolveDisplayedText('', stopwatch('hh:mm:ss'), 10 + 30 * 3725, 30).shown).toBe('01:02:05');
+    expect(resolveDisplayedText('', stopwatch('ss'), 10 + 50 * 7, 50).shown).toBe('7');
+    expect(resolveDisplayedText('', stopwatch('mm:ss.t'), 10 + 15, 30).shown).toBe('00:00.5');
+  });
+
+  it('a countdown shows its full length until a second has passed and stops at zero', () => {
+    expect(resolveDisplayedText('', countdown, 0, 30).shown).toBe('01:30');
+    expect(resolveDisplayedText('', countdown, 1, 30).shown).toBe('01:30');
+    expect(resolveDisplayedText('', countdown, 30, 30).shown).toBe('01:29');
+    expect(resolveDisplayedText('', countdown, 30 * 90, 30).shown).toBe('00:00');
+    expect(resolveDisplayedText('', countdown, 30 * 200, 30).shown).toBe('00:00');
+  });
+});

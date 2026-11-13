@@ -54,6 +54,8 @@ export function evaluateFrame(
   customPresets: CustomMotionPreset[],
   frameOverrides?: Record<string, number>,
   sequenceId: string = 'Sequence',
+  /** The timeline's frame rate: a clock text turns frames into seconds with it. */
+  fps = 30,
 ): EvaluatedFrame {
   // ── Stage 1 & 2: Animation + Hierarchy ────────────────────────────
   // evaluateTransform handles keyframe interpolation + parent-child.
@@ -127,7 +129,7 @@ export function evaluateFrame(
       },
       opacity: finalOpacity,
       visible,
-      content: extractContent(layer, trim, masks, evaluateTrackMatte(layer.trackMatte, track, layerFrame, sequenceId || 'Sequence'), layerFrame),
+      content: extractContent(layer, trim, masks, evaluateTrackMatte(layer.trackMatte, track, layerFrame, sequenceId || 'Sequence'), layerFrame, fps),
       zIndex: layer.zIndex,
     });
   }
@@ -145,6 +147,7 @@ function extractContent(
   masks?: LayerMask[],
   trackMatte: CharacterPart['trackMatte'] = layer.trackMatte,
   frame = 0,
+  fps = 30,
 ): LayerContent {
   return {
     fillColor: layer.fillColor,
@@ -161,7 +164,7 @@ function extractContent(
     effects: layer.effects,
     textValue: layer.textValue,
     // The one text-over-time authority; renderers draw this and keep no clock.
-    ...(layer.textEffect && layer.textValue ? { displayedText: resolveDisplayedText(layer.textValue, layer.textEffect, frame) } : {}),
+    ...(layer.textEffect && (layer.textValue || layer.textEffect.kind === 'clock') ? { displayedText: resolveDisplayedText(layer.textValue ?? '', layer.textEffect, frame, fps) } : {}),
     fontSize: layer.fontSize,
     fontFamily: layer.fontFamily,
     ...(layer.textOrigin !== undefined ? { textOrigin: layer.textOrigin } : {}),

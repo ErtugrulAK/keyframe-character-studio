@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { CharacterPart } from '../types/animator';
 
-vi.mock('../context/useAnimator', () => ({ useAnimatorSlice: () => ({ fps: 30 }) }));
+const batch: string[] = [];
+vi.mock('../context/useAnimator', () => ({
+  useAnimatorSlice: () => ({ fps: 30, startBatchInteraction: () => batch.push('start'), endBatchInteraction: () => batch.push('end') }),
+}));
 import { TextEffectControls } from '../components/Inspector/sections/style/TextEffectControls';
 
 const text = (extra: Partial<CharacterPart> = {}): CharacterPart => ({
@@ -37,5 +40,15 @@ describe('text effect controls', () => {
     fireEvent.change(from, { target: { value: '50' } });
     fireEvent.keyDown(from, { key: 'Enter' });
     expect(change).toHaveBeenLastCalledWith('textEffect', { kind: 'count', startFrame: 15, durationFrames: 45, from: 50 });
+  });
+
+  it('a countdown writes its effect and its starting reading as one undo step', () => {
+    batch.length = 0;
+    const change = vi.fn((key: string) => batch.push(key));
+    render(<TextEffectControls selectedPart={text()} onPartPropChange={change} />);
+    fireEvent.change(screen.getByLabelText('ANIMATE TEXT'), { target: { value: 'countdown' } });
+    expect(change).toHaveBeenCalledWith('textEffect', { kind: 'clock', mode: 'countdown', startFrame: 0, format: 'mm:ss', seconds: 60 });
+    expect(change).toHaveBeenCalledWith('textValue', '01:00');
+    expect(batch).toEqual(['start', 'textEffect', 'textValue', 'end']);
   });
 });

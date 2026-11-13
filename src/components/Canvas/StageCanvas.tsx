@@ -140,6 +140,7 @@ export const StageCanvas: React.FC = () => {
     cropRegion,
     setCropRegion,
     totalFrames,
+    fps,
     projectResolution,
     coordinateSystem,
     appMode,
@@ -1761,6 +1762,7 @@ export const StageCanvas: React.FC = () => {
                 activeTemplateId={activeTemplateId}
                 currentFrame={currentFrame}
                 totalFrames={totalFrames}
+                fps={fps}
                 tracks={fittedLayers.tracks}
                 selectedPartId={selectedPartId}
                 selectedPartIds={selectedPartIds}

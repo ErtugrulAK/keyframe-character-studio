@@ -121,6 +121,7 @@ export function evaluateSceneFrame(
     [],
     undefined,
     activeSequenceId,
+    sceneData.fps,
   );
   const evaluatedLayers = evaluated.layers.map((layer) => {
     const source = sceneData.layers.find((candidate) => candidate.id === layer.id);

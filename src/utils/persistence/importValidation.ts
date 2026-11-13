@@ -1,4 +1,5 @@
 import type { CharacterPart, Track } from '../../types/animator';
+import { CLOCK_FORMATS } from '../animation/textEffects';
 import type { SceneData } from '../../types/composition';
 import { isPrototypeSensitiveKey } from './pathSafety';
 import { isSceneCoordinateSystem } from './coordinateMigration';
@@ -343,12 +344,18 @@ const sharedLayerValueProblem = (record: Record<string, unknown>, path: string, 
   if (record.textEffect !== undefined) {
     const effect = asRecord(record.textEffect);
     const count = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
-    const valid = effect
+    const timed = effect
       && (effect.kind === 'typewriter' || effect.kind === 'count')
       && count(effect.startFrame) && count(effect.durationFrames)
       && (effect.from === undefined || (typeof effect.from === 'number' && Number.isFinite(effect.from)));
-    if (!valid) {
-      return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.textEffect`, `${owner} declares a text effect that is not a typewriter or a count with a start and a length in frames.`);
+    const clock = effect
+      && effect.kind === 'clock'
+      && (effect.mode === 'stopwatch' || effect.mode === 'countdown')
+      && count(effect.startFrame)
+      && (effect.seconds === undefined || count(effect.seconds))
+      && typeof effect.format === 'string' && (CLOCK_FORMATS as readonly string[]).includes(effect.format);
+    if (!timed && !clock) {
+      return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.textEffect`, `${owner} declares a text effect that is not a typewriter, a count or a clock with a valid start, length and format.`);
     }
   }
   for (const field of ['matte', 'trackMatte', 'textFit', 'fitToText', 'follow', 'justify', 'repeater'] as const) {

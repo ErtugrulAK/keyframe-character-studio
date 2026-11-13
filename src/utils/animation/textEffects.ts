@@ -14,12 +14,21 @@
  *   keeping what surrounds it ("87 %", "€3,50", "1.250 votes"), its decimal
  *   places, thousands separator and leading zeros. A text with no number, or
  *   with more than one (12:34), is shown as written.
+ * - Clock: a stopwatch counting up from its start, or a countdown from a number
+ *   of seconds to zero, in a chosen format. It runs on the timeline's own time
+ *   (frames and the frame rate), so the stage, a scrub and a non-real-time
+ *   render agree; it holds its first value before the start.
  *
  * Layout (bounds, Text Box, Auto Size, mattes) always measures the full text.
  */
 export type TextEffect =
   | { kind: 'typewriter'; startFrame: number; durationFrames: number }
-  | { kind: 'count'; startFrame: number; durationFrames: number; from?: number };
+  | { kind: 'count'; startFrame: number; durationFrames: number; from?: number }
+  | { kind: 'clock'; mode: 'stopwatch' | 'countdown'; startFrame: number; seconds?: number; format: ClockFormat };
+
+export type ClockFormat = 'mm:ss' | 'hh:mm:ss' | 'ss' | 'mm:ss.t';
+
+export const CLOCK_FORMATS: readonly ClockFormat[] = ['mm:ss', 'hh:mm:ss', 'ss', 'mm:ss.t'];
 
 export interface DisplayedText {
   /** The characters drawn normally. */
@@ -128,8 +137,26 @@ export function createTextEffects() {
     return `${negative ? '-' : ''}${grouped}${like.decimals > 0 ? `${like.decimalSeparator}${fraction}` : ''}`;
   };
 
-  /** What a text with this effect shows at `frame`. No effect: the text as written. */
-  const resolveDisplayedText = (text: string, effect: TextEffect | undefined, frame: number): DisplayedText => {
+  /** A number of seconds in a clock format; whole seconds round down (a stopwatch) unless `roundUp` (a countdown shows 5:00 until it has run a full second). */
+  const formatClock = (totalSeconds: number, format: ClockFormat, roundUp: boolean): string => {
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const tenths = format === 'mm:ss.t';
+    const units = tenths ? Math.floor(totalSeconds * 10 + 1e-9) : (roundUp ? Math.ceil(totalSeconds - 1e-9) : Math.floor(totalSeconds + 1e-9));
+    const whole = tenths ? Math.floor(units / 10) : units;
+    if (format === 'ss') return String(whole);
+    const seconds = whole % 60;
+    const minutes = Math.floor(whole / 60);
+    if (format === 'hh:mm:ss') return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}:${pad(seconds)}`;
+    return `${pad(minutes)}:${pad(seconds)}${tenths ? `.${units % 10}` : ''}`;
+  };
+
+  /** What a text with this effect shows at `frame` (`fps`: the timeline's frame rate, for a clock). No effect: the text as written. */
+  const resolveDisplayedText = (text: string, effect: TextEffect | undefined, frame: number, fps = 30): DisplayedText => {
+    if (effect && effect.kind === 'clock') {
+      const elapsed = Math.max(0, frame - effect.startFrame) / (fps > 0 ? fps : 30);
+      const value = effect.mode === 'countdown' ? Math.max(0, (effect.seconds ?? 0) - elapsed) : elapsed;
+      return { shown: formatClock(value, effect.format, effect.mode === 'countdown'), hidden: '' };
+    }
     if (!effect || !text) return { shown: text, hidden: '' };
     const t = progressAt(frame, effect.startFrame, effect.durationFrames);
     if (effect.kind === 'typewriter') {
@@ -147,7 +174,7 @@ export function createTextEffects() {
     return { shown: `${parsed.prefix}${formatLike(rounded, parsed)}${parsed.suffix}`, hidden: '' };
   };
 
-  return { graphemes, parseSingleNumber, resolveDisplayedText };
+  return { graphemes, parseSingleNumber, resolveDisplayedText, formatClock };
 }
 
-export const { graphemes, parseSingleNumber, resolveDisplayedText } = createTextEffects();
+export const { graphemes, parseSingleNumber, resolveDisplayedText, formatClock } = createTextEffects();

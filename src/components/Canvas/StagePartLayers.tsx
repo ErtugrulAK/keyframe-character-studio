@@ -58,6 +58,8 @@ interface StagePartLayersProps {
   selectedPartIds?: string[];
   booleanOperandEditingGroupId?: string | null;
   totalFrames: number;
+  /** The timeline's frame rate (a clock text counts seconds with it). */
+  fps?: number;
   onSelect: (id: string, event: React.MouseEvent) => void;
   onStartTranslateDrag: (partId: string, e: React.MouseEvent) => void;
   /**
@@ -119,6 +121,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
   selectedPartIds = [],
   booleanOperandEditingGroupId = null,
   totalFrames,
+  fps = 30,
   onSelect,
   onStartTranslateDrag,
   onDrillIn,
@@ -192,6 +195,7 @@ const StagePartLayersView: React.FC<StagePartLayersProps> = ({
     customPresets,
     activeNamedSequence ? undefined : frameOverrides,
     appMode === 'edit' ? activeTemplateId : activeNamedSequence?.sequenceId ?? 'Sequence',
+    fps,
   );
   perfCount('partEvaluations', evaluatedFrame.layers.length);
   // One lookup per id: a list scan per layer made a large scene quadratic.

@@ -48,12 +48,13 @@ describe('text effects agree in every path', () => {
   const cases: Array<[string, TextEffect]> = [
     ['HELLO WORLD', { kind: 'typewriter', startFrame: 0, durationFrames: 22 }],
     ['Score 1.250', { kind: 'count', startFrame: 5, durationFrames: 20, from: 900 }],
+    ['00:10', { kind: 'clock', mode: 'countdown', startFrame: 0, seconds: 10, format: 'mm:ss.t' }],
   ];
   for (const [text, effect] of cases) {
     it(`${effect.kind}: editor evaluation, static SVG and runtime draw the same characters`, () => {
       const authored = scene(textLayer(text, effect));
       for (const frame of [0, 4, 11, 17, 30]) {
-        const expected = resolveDisplayedText(text, effect, frame);
+        const expected = resolveDisplayedText(text, effect, frame, 30);
         const evaluated = evaluateOGrafScene(authored, frame).layers[0];
         expect(evaluated.content.displayedText, `evaluation @${frame}`).toEqual(expected);
         expect(textOf(renderOGrafSvg(evaluateOGrafScene(authored, frame))), `static @${frame}`).toEqual(expected);
@@ -84,8 +85,14 @@ describe('the scene file keeps a text effect, and refuses a broken one', () => {
     }
   });
 
-  it('refuses an unknown kind or a negative length', () => {
-    for (const effect of [{ kind: 'spin', startFrame: 0, durationFrames: 10 }, { kind: 'count', startFrame: 0, durationFrames: -1 }, { kind: 'count', startFrame: 0, durationFrames: 5, from: 'x' }]) {
+  it('accepts a stopwatch and a countdown', () => {
+    for (const effect of [{ kind: 'clock', mode: 'stopwatch', startFrame: 0, format: 'hh:mm:ss' }, { kind: 'clock', mode: 'countdown', startFrame: 5, seconds: 300, format: 'mm:ss' }]) {
+      expect(validateImportedDocument(JSON.stringify(scene(textLayer('00:00', effect as TextEffect)))).ok).toBe(true);
+    }
+  });
+
+  it('refuses an unknown kind, a negative length or an unknown clock format', () => {
+    for (const effect of [{ kind: 'spin', startFrame: 0, durationFrames: 10 }, { kind: 'count', startFrame: 0, durationFrames: -1 }, { kind: 'count', startFrame: 0, durationFrames: 5, from: 'x' }, { kind: 'clock', mode: 'stopwatch', startFrame: 0, format: 'yy' }, { kind: 'clock', mode: 'lap', startFrame: 0, format: 'mm:ss' }]) {
       const result = validateImportedDocument(JSON.stringify(scene(textLayer('7', effect as unknown as TextEffect))));
       expect(result.ok).toBe(false);
     }

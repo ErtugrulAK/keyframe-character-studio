@@ -2,7 +2,6 @@ import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CharacterPart, Track } from '../types/animator';
-import { HEADER_COMMAND_EVENT } from '../utils/editor/headerCommands';
 
 /**
  * The menu bar: each row runs an existing command, disabled rows run
@@ -26,7 +25,7 @@ const ctx = {
   setSelectedPartId: vi.fn(), setSelectedPartIds: vi.fn(),
   characterParts: [] as CharacterPart[], tracks: [] as Track[],
   convertToEditablePath: vi.fn(), resetSelectedTransforms: vi.fn(), setLayersLocked: vi.fn(), toggleTrackEditVisibility: vi.fn(),
-  openShortcutReference: vi.fn(), reorderParts: vi.fn(), setAppMode: vi.fn(),
+  openShortcutReference: vi.fn(), reorderParts: vi.fn(),
 };
 const contextMenu = { selectAll: vi.fn(), deleteSelection: vi.fn() };
 
@@ -78,15 +77,17 @@ describe('MenuBar', () => {
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
-  it('File rows go to the header as commands', () => {
-    const heard: string[] = [];
-    const listener = (event: Event) => heard.push((event as CustomEvent<{ command: string }>).detail.command);
-    window.addEventListener(HEADER_COMMAND_EVENT, listener);
+  it('File holds only what the header and toolbar do not: the library and project settings', () => {
+    // QA 2026-11-13: File repeated the header's new template, Import, the four
+    // Export rows and Reset, and the toolbar's media button.
     render(<MenuBar />);
-    fireEvent.click(within(openMenu('File')).getByRole('menuitem', { name: 'Import…' }));
-    fireEvent.click(within(openMenu('File')).getByRole('menuitem', { name: 'Export OGraf Package' }));
-    window.removeEventListener(HEADER_COMMAND_EVENT, listener);
-    expect(heard).toEqual(['import', 'export-ograf']);
+    const rows = within(openMenu('File')).getAllByRole('menuitem').map((row) => row.textContent?.trim());
+    expect(rows).toEqual(['Library…', 'Project Settings…']);
+  });
+
+  it('View has no Broadcast row (the header switch owns it)', () => {
+    render(<MenuBar />);
+    expect(within(openMenu('View')).queryByRole('menuitem', { name: /Broadcast/ })).toBeNull();
   });
 
   it('Project Settings opens its dialog', () => {
@@ -128,11 +129,16 @@ describe('MenuBar', () => {
     fireEvent.keyDown(bar(), { key: 'ArrowLeft' });
     expect(screen.getByRole('menu', { name: 'View' })).toBeInTheDocument();
     expect(activeRow()).toContain('Inspector');
+    // ArrowUp from the first row wraps to the last one.
     fireEvent.keyDown(bar(), { key: 'ArrowUp' });
-    expect(activeRow()).toContain('Broadcast');
+    expect(activeRow()).toContain('Timeline');
+    // Enter runs the active row and closes the menu.
+    openMenu('File');
+    fireEvent.keyDown(bar(), { key: 'ArrowDown' });
+    expect(activeRow()).toContain('Project Settings');
     fireEvent.keyDown(bar(), { key: 'Enter' });
-    expect(ctx.setAppMode).toHaveBeenCalledWith('broadcast');
     expect(screen.queryByRole('menu')).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Project Settings' })).toBeInTheDocument();
 
     openMenu('Help');
     fireEvent.keyDown(bar(), { key: 'Escape' });

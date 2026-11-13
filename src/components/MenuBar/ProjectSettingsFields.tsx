@@ -1,67 +1,13 @@
-import React, { lazy, Suspense, useState } from 'react';
-import { ChunkLoadBoundary } from '../Shared/ChunkLoadBoundary';
-import { Library } from 'lucide-react';
+import React from 'react';
 import { NumberField } from '../Inspector/inputs/NumberField';
 import { useAnimatorSlice } from '../../context/useAnimator';
 import { MAX_AUTOSAVE_SECONDS, MIN_AUTOSAVE_SECONDS } from '../../utils/persistence/autosaveInterval';
-import { validateImportedDocument } from '../../utils/persistence/importValidation';
-import { createIndexedDbBackend, createProjectLibrary, type ProjectLibrary } from '../../utils/persistence/projectLibrary';
-
-// The library dialog opens on demand, so it loads then.
-const GraphicLibraryDialog = lazy(() => import('../Header/GraphicLibraryDialog').then((module) => ({ default: module.GraphicLibraryDialog })));
 
 export const ProjectSettingsFields: React.FC = () => {
-  const { projectResolution, setProjectResolution, sceneTitle, exportProject, importProject, addProjectTemplate, showToast, autosaveIntervalSeconds, setAutosaveIntervalSeconds } = useAnimatorSlice('projectResolution', 'setProjectResolution', 'sceneTitle', 'exportProject', 'importProject', 'addProjectTemplate', 'showToast', 'autosaveIntervalSeconds', 'setAutosaveIntervalSeconds');
-  /** The graphic library, created on first use (IndexedDB is opened only then). */
-  const [library, setLibrary] = useState<ProjectLibrary | null>(null);
-  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
-  const openLibrary = () => {
-    setLibrary((current) => current ?? createProjectLibrary(createIndexedDbBackend()));
-    setIsLibraryOpen(true);
-  };
-  /**
-   * Opens a saved graphic in a NEW template tab: importing a scene replaces the
-   * active template's content, so a fresh tab is made first, and only for a
-   * document the import boundary accepts (no empty tab is left behind).
-   */
-  const openLibraryGraphic = (name: string, scene: string): boolean => {
-    if (!validateImportedDocument(scene).ok) return false;
-    addProjectTemplate(name);
-    const result = importProject(scene, name);
-    if (!result.ok) return false;
-    const [notice] = result.diagnostics;
-    if (notice) showToast(notice.message, 'info', { title: notice.code, action: notice.action });
-    return true;
-  };
+  const { projectResolution, setProjectResolution, autosaveIntervalSeconds, setAutosaveIntervalSeconds } = useAnimatorSlice('projectResolution', 'setProjectResolution', 'autosaveIntervalSeconds', 'setAutosaveIntervalSeconds');
 
   return (
     <div className="drawer-content project-drawer-content">
-      <div className="project-section">
-        <label className="form-label project-field-label">Library</label>
-        <button type="button" className="btn-secondary project-library-open" onClick={openLibrary} title="Graphics saved in this browser: save, open, duplicate, delete">
-          <Library size={14} aria-hidden="true" />
-          <span>Open Library…</span>
-        </button>
-        {library && isLibraryOpen && (
-          <ChunkLoadBoundary
-            onError={() => {
-              setIsLibraryOpen(false);
-              showToast('The library could not be opened. Reload the editor to try again; your project is unchanged.', 'error');
-            }}
-          >
-          <Suspense fallback={null}>
-            <GraphicLibraryDialog
-              isOpen={isLibraryOpen}
-              library={library}
-              currentName={sceneTitle}
-              exportCurrent={exportProject}
-              openGraphic={openLibraryGraphic}
-              onClose={() => setIsLibraryOpen(false)}
-            />
-          </Suspense>
-          </ChunkLoadBoundary>
-        )}
-      </div>
       <div className="project-section">
         <label className="form-label project-field-label">
           Resolution Presets

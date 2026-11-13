@@ -2,10 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAnimatorSlice } from '../../context/useAnimator';
 import { useEditorContextMenu } from '../../context/editorContextMenu';
 import { detectShortcutPlatform, formatShortcutHint, type ShortcutCommandId } from '../../utils/editor/shortcuts';
-import { dispatchHeaderCommand } from '../../utils/editor/headerCommands';
 import { isConvertibleShapeType, shapeToPathBlockReason } from '../../utils/geometry/shapeToPath';
 import { ProjectSettingsDialog } from './ProjectSettingsDialog';
-import { useMediaImport } from '../../hooks/useMediaImport';
+import { useGraphicLibrary } from './useGraphicLibrary';
 import './MenuBar.css';
 
 interface MenuItem {
@@ -26,11 +25,11 @@ interface Menu {
 
 /**
  * The editor's menu bar (File, Edit, Object, View, Help), as in Photopea and
- * Boxy SVG. It holds what the toolbar does not: files and export, the
- * clipboard (Paste in Place, Paste Animation), selection, layer state
- * (lock, hide, front/back, mirrored copies) and the panels. Every row runs a
- * command that already exists, so the menus add no second implementation.
- * Project settings, which lived in the left panel, open from File.
+ * Boxy SVG. It holds what the toolbar and the header do not: the graphic
+ * library and project settings, the clipboard (Paste in Place, Paste
+ * Animation), selection, layer state (lock, hide, front/back, mirrored
+ * copies) and the panels. Every row runs a command that already exists, so
+ * the menus add no second implementation.
  *
  * Mouse: click a title to open its menu; while one is open, hovering another
  * title switches to it. Keyboard: ArrowLeft/Right move between menus,
@@ -41,21 +40,19 @@ export const MenuBar: React.FC = () => {
     undo, redo, canUndo, canRedo, copySelectedPart, pasteCopiedPart, duplicateSelectedPart, duplicateMirrored, clipboardData,
     pasteAnimationOntoSelected, selectedPartId, selectedPartIds, setSelectedPartId, setSelectedPartIds, characterParts, tracks,
     convertToEditablePath, resetSelectedTransforms, setLayersLocked, toggleTrackEditVisibility, openShortcutReference,
-    reorderParts, setAppMode,
+    reorderParts,
   } = useAnimatorSlice(
     'undo', 'redo', 'canUndo', 'canRedo', 'copySelectedPart', 'pasteCopiedPart', 'duplicateSelectedPart', 'duplicateMirrored', 'clipboardData',
     'pasteAnimationOntoSelected', 'selectedPartId', 'selectedPartIds', 'setSelectedPartId', 'setSelectedPartIds', 'characterParts', 'tracks',
     'convertToEditablePath', 'resetSelectedTransforms', 'setLayersLocked', 'toggleTrackEditVisibility', 'openShortcutReference',
-    'reorderParts', 'setAppMode',
+    'reorderParts',
   );
   const { selectAll, deleteSelection } = useEditorContextMenu();
   const [openId, setOpenId] = useState<string | null>(null);
   const [activeRow, setActiveRow] = useState(0);
   const [projectSettingsOpen, setProjectSettingsOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
-  // The hidden file input, held in state (a callback ref) so the menu row can open it.
-  const [mediaInput, setMediaInput] = useState<HTMLInputElement | null>(null);
-  const importMedia = useMediaImport();
+  const { openLibrary, dialog: libraryDialog } = useGraphicLibrary();
 
   const platform = detectShortcutPlatform();
   const hint = (id: ShortcutCommandId) => formatShortcutHint(id, platform);
@@ -71,26 +68,18 @@ export const MenuBar: React.FC = () => {
   /** The docked panels keep their own toggles; the menu presses them. */
   const pressChrome = (selector: string) => document.querySelector<HTMLButtonElement>(selector)?.click();
 
-  // Only what the toolbar does not already offer: the toolbar keeps the
-  // tools, grouping, Boolean, align, rotate/flip, crop and the view controls.
+  // One home per command: the menus hold only what no toolbar or header
+  // control already offers. The toolbar keeps the tools, media, grouping,
+  // Boolean, align, rotate/flip, crop and view controls; the header keeps new
+  // template (+), Import, Export (JSON, OGraf, GIF, check), reset and the
+  // Edit/Broadcast switch (QA 2026-11-13: the File menu repeated them all).
   const menus: Menu[] = [
     {
       id: 'file',
       label: 'File',
       groups: [
-        [
-          { id: 'new-template', label: 'New Template', run: () => dispatchHeaderCommand('new-template') },
-          { id: 'import', label: 'Import…', run: () => dispatchHeaderCommand('import') },
-          { id: 'add-media', label: 'Add Image or Video…', run: () => mediaInput?.click() },
-        ],
+        [{ id: 'library', label: 'Library…', run: () => openLibrary() }],
         [{ id: 'project-settings', label: 'Project Settings…', run: () => setProjectSettingsOpen(true) }],
-        [
-          { id: 'export-json', label: 'Export Project (JSON)', run: () => dispatchHeaderCommand('export-json') },
-          { id: 'export-ograf', label: 'Export OGraf Package', run: () => dispatchHeaderCommand('export-ograf') },
-          { id: 'export-gif', label: 'Export Animated GIF…', run: () => dispatchHeaderCommand('export-gif') },
-          { id: 'check-ograf', label: 'Check OGraf Export…', run: () => dispatchHeaderCommand('check-ograf') },
-        ],
-        [{ id: 'reset-project', label: 'Reset Project…', run: () => dispatchHeaderCommand('reset-project') }],
       ],
     },
     {
@@ -149,7 +138,6 @@ export const MenuBar: React.FC = () => {
           { id: 'inspector', label: 'Show / Hide Inspector', run: () => pressChrome('.inspector-dock-toggle') },
           { id: 'timeline', label: 'Show / Hide Timeline', run: () => pressChrome('[data-testid="timeline-collapse-toggle"]') },
         ],
-        [{ id: 'broadcast', label: 'Broadcast Mode', run: () => setAppMode('broadcast') }],
       ],
     },
     {
@@ -244,18 +232,7 @@ export const MenuBar: React.FC = () => {
           )}
         </div>
       ))}
-      <input
-        ref={setMediaInput}
-        type="file"
-        accept="image/*,video/*,.mp4,.webm,.mov"
-        multiple
-        aria-label="Choose images or videos to add from the File menu"
-        style={{ display: 'none' }}
-        onChange={(event) => {
-          if (event.target.files?.length) importMedia(event.target.files);
-          event.target.value = '';
-        }}
-      />
+      {libraryDialog}
       <ProjectSettingsDialog isOpen={projectSettingsOpen} onClose={() => setProjectSettingsOpen(false)} />
     </div>
   );

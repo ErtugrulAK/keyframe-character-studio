@@ -30,6 +30,8 @@ export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, 
 
   const [editingValue, setEditingValue] = React.useState<string>(String(displayVal));
   const [isFocused, setIsFocused] = React.useState<boolean>(false);
+  /** True between the mouse-down that focuses the field and its mouse-up. */
+  const selectOnMouseUpRef = React.useRef<boolean>(false);
 
   React.useEffect(() => {
     if (!isFocused) {
@@ -94,7 +96,23 @@ export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, 
       min={min !== undefined ? min * scale : undefined}
       max={max !== undefined ? max * scale : undefined}
       step={displayStep}
-      onFocus={() => setIsFocused(true)}
+      // Focusing selects the whole value, so typing replaces it: a click on
+      // "0" then "30" used to give "030" (QA 2026-11-13). The mouse-up that
+      // ends the focusing click would place the caret and drop the selection,
+      // so that one mouse-up is skipped.
+      onFocus={(event) => {
+        setIsFocused(true);
+        event.currentTarget.select();
+      }}
+      onMouseUp={(event) => {
+        if (selectOnMouseUpRef.current) {
+          selectOnMouseUpRef.current = false;
+          event.preventDefault();
+        }
+      }}
+      onMouseDown={(event) => {
+        selectOnMouseUpRef.current = document.activeElement !== event.currentTarget;
+      }}
       onChange={handleChange}
       onBlur={handleBlur}
       onKeyDown={(e) => {

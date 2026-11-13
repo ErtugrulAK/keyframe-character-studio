@@ -4,8 +4,8 @@ import type { OGrafExportDiagnostic } from '../ograf/types';
 import type { ToastOptions } from './useToast';
 import { renderGif, type GifExportResult } from '../export/gifExport';
 import { validateGifScene } from '../export/gifPlan';
-import { downloadBlob } from '../utils/fileDownload';
-import { sanitizeFilenameComponent } from '../utils/pathSafety';
+import { downloadBlob } from '../utils/persistence/fileDownload';
+import { sanitizeFilenameComponent } from '../utils/persistence/pathSafety';
 
 type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
 

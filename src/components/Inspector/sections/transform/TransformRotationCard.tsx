@@ -8,7 +8,7 @@ interface TransformRotationCardProps {
 }
 
 /**
- * R5-14 — Rotation as one cell of the compact transform trio. The labelled
+ * Rotation as one cell of the compact transform trio. The labelled
  * "Reset 0°" action is gone: it was a second control writing the same field the
  * input already writes.
  */

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mirrorTransform, mirrorChannelValue } from '../utils/mirror';
+import { mirrorTransform, mirrorChannelValue, mirrorChannelValues } from '../utils/animation/mirror';
 import type { Transform } from '../types/animator';
 
 const base: Transform = { x: 30, y: -40, rotation: 25, scaleX: 1.2, scaleY: 0.8, opacity: 1 };
@@ -66,5 +66,29 @@ describe('mirrorChannelValue', () => {
     expect(mirrorChannelValue('rotation', 0, 'origin')).toBe(180);
     expect(mirrorChannelValue('rotation', 170, 'origin')).toBe(-10);
     expect(mirrorChannelValue('maskRotation', 45, 'origin')).toBe(-135);
+  });
+});
+
+describe('mirrorChannelValues', () => {
+  it('matches the per-value mirror for every non-origin or non-angle case', () => {
+    expect(mirrorChannelValues('x', [10, -20], 'y')).toEqual([-10, 20]);
+    expect(mirrorChannelValues('rotation', [10, 250], 'y')).toEqual([-10, -250]);
+    expect(mirrorChannelValues('x', [10, -20], 'origin')).toEqual([-10, 20]);
+    expect(mirrorChannelValues('opacity', [0.5], 'origin')).toEqual([0.5]);
+  });
+
+  it('turns an angle channel by 180° through the origin and keeps every step between keys', () => {
+    expect(mirrorChannelValues('rotation', [0, 200], 'origin')).toEqual([180, 380]);
+    expect(mirrorChannelValues('rotation', [0, 360, 720], 'origin')).toEqual([180, 540, 900]);
+    expect(mirrorChannelValues('maskRotation', [170, 190], 'origin')).toEqual([-10, 10]);
+  });
+
+  it('starts the channel where a still value would land', () => {
+    expect(mirrorChannelValues('rotation', [45, 90], 'origin')[0]).toBe(mirrorChannelValue('rotation', 45, 'origin'));
+    expect(mirrorChannelValues('rotation', [-100, 500], 'origin')).toEqual([80, 680]);
+  });
+
+  it('returns an empty list for no keys', () => {
+    expect(mirrorChannelValues('rotation', [], 'origin')).toEqual([]);
   });
 });

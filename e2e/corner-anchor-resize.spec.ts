@@ -801,8 +801,6 @@ test.describe('corner resize with a moved camera and a changed layout', () => {
 
     await page.getByRole('button', { name: 'Hide Inspector' }).click();
     await settle(page);
-    await page.getByRole('button', { name: 'Hide Left Toolbar' }).click();
-    await settle(page);
 
     const bar = page.locator('.timeline-resizer-bar');
     const barBox = await bar.boundingBox();

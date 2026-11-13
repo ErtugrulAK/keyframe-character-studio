@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Combine,
   AlignCenterHorizontal,
@@ -13,6 +13,7 @@ import {
   ArrowUp,
   Check,
   Circle,
+  CircleDot,
   Compass,
   Crop,
   Crosshair,
@@ -21,6 +22,7 @@ import {
   Grid,
   Group,
   Hand,
+  ImagePlus,
   Magnet,
   Maximize,
   MousePointer2,
@@ -44,15 +46,54 @@ import { useLayerGrouping } from '../../hooks/useLayerGrouping';
 import { useVectorArrangeAuthoring } from '../../hooks/useVectorArrangeAuthoring';
 import { BooleanOperationIcon } from '../Inspector/BooleanOperationIcon';
 import { ToolbarMenu, type ToolbarMenuItem } from './ToolbarMenu';
-import type { BooleanOperation } from '../../utils/booleanGeometry';
-import type { AlignEdge } from '../../utils/vectorArrange';
+import { ToolFlyout, type ToolFlyoutItem } from './ToolFlyout';
+import { useMediaImport } from '../../hooks/useMediaImport';
+import { SHAPE_ICON_MAP } from '../../utils/editor/shapeIconMap';
+import type { BodyPartType } from '../../types/animator';
+import type { BooleanOperation } from '../../utils/geometry/booleanGeometry';
+import type { AlignEdge } from '../../utils/layers/vectorArrange';
 import {
   ariaKeyshortcuts,
   detectShortcutPlatform,
   formatShortcutHint,
   type ShortcutCommandId,
-} from '../../utils/shortcuts';
+} from '../../utils/editor/shortcuts';
 import './AuthoringToolbar.css';
+
+/** The shapes of the shape tool's flyout (the circle has its own button). */
+const SHAPE_TOOLS: Array<{ type: BodyPartType; label: string }> = [
+  { type: 'custom_rect', label: 'Rectangle' },
+  { type: 'custom_box', label: 'Square' },
+  { type: 'custom_triangle', label: 'Triangle' },
+  { type: 'custom_diamond', label: 'Rhombus' },
+  { type: 'custom_parallelogram', label: 'Parallelogram' },
+  { type: 'custom_star', label: 'Star' },
+];
+
+/**
+ * A tool choice the toolbar remembers in this browser (the last shape or text
+ * style picked), so the button keeps showing it. Storage may be unavailable;
+ * the default is used then.
+ */
+const useRememberedTool = <T extends string>(key: string, fallback: T, isValid: (value: string) => boolean): [T, (value: T) => void] => {
+  const [value, setValue] = useState<T>(() => {
+    try {
+      const stored = window.localStorage.getItem(key);
+      return stored && isValid(stored) ? stored as T : fallback;
+    } catch {
+      return fallback;
+    }
+  });
+  const remember = useCallback((next: T) => {
+    setValue(next);
+    try {
+      window.localStorage.setItem(key, next);
+    } catch {
+      // A private window may refuse storage; the choice still holds this session.
+    }
+  }, [key]);
+  return [value, remember];
+};
 
 /** The four Boolean operations, in the order the Inspector presents them. */
 const BOOLEAN_OPERATIONS: BooleanOperation[] = ['union', 'subtract', 'intersect', 'exclude'];
@@ -159,7 +200,7 @@ const dispatchViewportCommand = (type: 'zoom-in' | 'zoom-out' | 'reset-view') =>
  * Layer bonding (Bind/Unbind) is deliberately NOT here either: the strip no
  * longer offers it. The bond model itself is untouched — a document that
  * carries `boundPartIds` still loads, still moves the bonded layers together,
- * and still round-trips on export (`utils/partBinding` remains the one bond
+ * and still round-trips on export (`utils/layers/partBinding` remains the one bond
  * authority and `usePartBindingAuthoring` remains its authoring surface).
  *
  * State-dependent actions (Boolean, grouping, arrange, align, distribute,
@@ -190,11 +231,9 @@ export const AuthoringToolbar: React.FC = () => {
     selectedPartId,
     characterParts,
     armShapeCreation,
-    clearShapeCreation,
     pendingShapeType,
-    addCustomPart,
     reorderParts,
-  } = useAnimatorSlice('activeTool', 'setActiveTool', 'showGrid', 'setShowGrid', 'showCoordinateOverlay', 'setShowCoordinateOverlay', 'snapEnabled', 'setSnapEnabled', 'cropMode', 'setCropMode', 'cropRegion', 'applyStageCrop', 'clearStageCropRegion', 'cropStageToSelection', 'cropStageToVisibleContent', 'stageCropBlockReason', 'canCropStageToSelection', 'canCropStageToVisibleContent', 'selectedPartId', 'characterParts', 'armShapeCreation', 'clearShapeCreation', 'pendingShapeType', 'addCustomPart', 'reorderParts');
+  } = useAnimatorSlice('activeTool', 'setActiveTool', 'showGrid', 'setShowGrid', 'showCoordinateOverlay', 'setShowCoordinateOverlay', 'snapEnabled', 'setSnapEnabled', 'cropMode', 'setCropMode', 'cropRegion', 'applyStageCrop', 'clearStageCropRegion', 'cropStageToSelection', 'cropStageToVisibleContent', 'stageCropBlockReason', 'canCropStageToSelection', 'canCropStageToVisibleContent', 'selectedPartId', 'characterParts', 'armShapeCreation', 'pendingShapeType', 'reorderParts');
   const {
     booleanEligibleParts,
     selectedBooleanGroup,
@@ -228,13 +267,28 @@ export const AuthoringToolbar: React.FC = () => {
   // actions carry the availability.
   const booleanReady = Boolean(selectedBooleanGroup) || booleanEligibleParts.length >= 2;
   const penActive = activeTool === 'freeform_draw';
-  // C2: a creation button shows the mode the stage is really in, and a second
-  // press disarms it (back to Select) — the toolbar never disagrees with the stage.
-  const rectangleArmed = activeTool === 'shape_create' && pendingShapeType === 'custom_rect';
+  // A creation button shows the mode the stage is really in. A second press
+  // keeps the tool (it never drops back to Select); Escape or Select leaves it.
   const circleArmed = activeTool === 'shape_create' && pendingShapeType === 'custom_circle';
+  const textArmed = activeTool === 'shape_create' && pendingShapeType === 'custom_text';
+  const [shapeToolType, setShapeToolType] = useRememberedTool<BodyPartType>('kcs.toolbar.shape', 'custom_rect', (value) => SHAPE_TOOLS.some((tool) => tool.type === value));
+  const shapeTool = SHAPE_TOOLS.find((tool) => tool.type === shapeToolType) ?? SHAPE_TOOLS[0];
+  const shapeArmed = activeTool === 'shape_create' && SHAPE_TOOLS.some((tool) => tool.type === pendingShapeType);
+  const shapeItems: ToolFlyoutItem[] = SHAPE_TOOLS.map((tool) => {
+    const Icon = SHAPE_ICON_MAP[tool.type] ?? Square;
+    return { id: tool.type, label: tool.label, icon: <Icon />, ...(tool.type === 'custom_rect' ? { shortcut: hint('create-rectangle') } : {}) };
+  });
+  // The round tool: an ellipse, or a circle that always keeps equal sides.
+  const [ellipseTool, setEllipseTool] = useRememberedTool<string>('kcs.toolbar.ellipse', 'Ellipse', (value) => value === 'Ellipse' || value === 'Circle');
+  const ellipseItems: ToolFlyoutItem[] = [
+    { id: 'Ellipse', label: 'Ellipse', icon: <Circle />, shortcut: hint('create-circle') },
+    { id: 'Circle', label: 'Circle', icon: <CircleDot /> },
+  ];
+  const mediaInputRef = useRef<HTMLInputElement>(null);
+  const importMedia = useMediaImport();
   const activeCanvasToolIndex = CANVAS_TOOLS.indexOf(activeTool as 'select' | 'pan');
 
-  // C3 — the narrow strip's two menus: the same commands as the wide bands.
+  // The narrow strip's two menus: the same commands as the wide bands.
   const alignMenuItems: ToolbarMenuItem[] = [
     ...[...ALIGN_EDGE_ITEMS, ...CENTER_ITEMS].map(({ id, label, note, icon }) => ({
       id: `align-${id}`,
@@ -316,39 +370,42 @@ export const AuthoringToolbar: React.FC = () => {
       <span className="authoring-toolbar-divider" aria-hidden="true" />
 
       <div className="authoring-toolbar-group" role="group" aria-label="Create">
+        <ToolFlyout
+          label={`Add ${shapeTool.label.toLowerCase()}`}
+          title={`${shapeTool.label}: drag on the stage to draw it (hold the button for more shapes)`}
+          current={shapeItems.find((item) => item.id === shapeTool.type) ?? shapeItems[0]}
+          items={shapeItems}
+          active={shapeArmed}
+          keyshortcuts={shapeTool.type === 'custom_rect' ? ariaKeyshortcuts('create-rectangle', platform) : undefined}
+          onRun={() => armShapeCreation(shapeTool.type, shapeTool.label)}
+          onPick={(id) => {
+            const picked = SHAPE_TOOLS.find((tool) => tool.type === id);
+            if (!picked) return;
+            setShapeToolType(picked.type);
+            armShapeCreation(picked.type, picked.label);
+          }}
+        />
+        <ToolFlyout
+          label={`Add ${ellipseTool.toLowerCase()}`}
+          title={`${ellipseTool} (${hint('create-circle')}): drag on the stage to draw it; Shift for a perfect circle (hold the button for Ellipse / Circle)`}
+          current={ellipseItems.find((item) => item.id === ellipseTool) ?? ellipseItems[0]}
+          items={ellipseItems}
+          active={circleArmed}
+          keyshortcuts={ariaKeyshortcuts('create-circle', platform)}
+          onRun={() => armShapeCreation('custom_circle', ellipseTool)}
+          onPick={(id) => {
+            setEllipseTool(id);
+            armShapeCreation('custom_circle', id);
+          }}
+        />
         <button
           type="button"
-          className={`authoring-toolbar-button${rectangleArmed ? ' active' : ''}`}
-          aria-label="Add rectangle"
-          aria-keyshortcuts={ariaKeyshortcuts('create-rectangle', platform)}
-          aria-pressed={rectangleArmed}
-          title={rectangleArmed
-            ? 'Rectangle armed: drag on the stage to place it (press again or Esc to stop)'
-            : `Add a rectangle (${hint('create-rectangle')}), then drag on the stage to place it`}
-          onClick={() => (rectangleArmed ? clearShapeCreation() : armShapeCreation('custom_rect', 'Rectangle'))}
-        >
-          <Square />
-        </button>
-        <button
-          type="button"
-          className={`authoring-toolbar-button${circleArmed ? ' active' : ''}`}
-          aria-label="Add circle"
-          aria-keyshortcuts={ariaKeyshortcuts('create-circle', platform)}
-          aria-pressed={circleArmed}
-          title={circleArmed
-            ? 'Circle armed: drag on the stage to place it (press again or Esc to stop)'
-            : `Add a circle (${hint('create-circle')}), then drag on the stage to place it`}
-          onClick={() => (circleArmed ? clearShapeCreation() : armShapeCreation('custom_circle', 'Circle'))}
-        >
-          <Circle />
-        </button>
-        <button
-          type="button"
-          className="authoring-toolbar-button"
+          className={`authoring-toolbar-button${textArmed ? ' active' : ''}`}
           aria-label="Add text"
           aria-keyshortcuts={ariaKeyshortcuts('create-text', platform)}
-          title={`Add a text layer (${hint('create-text')})`}
-          onClick={() => addCustomPart('custom_text', 'Text')}
+          aria-pressed={textArmed}
+          title={`Text (${hint('create-text')}): click on the stage to place it, or drag to draw its box`}
+          onClick={() => armShapeCreation('custom_text', 'Text')}
         >
           <Type />
         </button>
@@ -358,13 +415,33 @@ export const AuthoringToolbar: React.FC = () => {
           aria-label="Pen"
           aria-keyshortcuts={ariaKeyshortcuts('tool-pen', platform)}
           aria-pressed={penActive}
-          title={penActive
-            ? 'Leave the Pen (press again). A drawing with 3+ points is kept as a shape; Esc discards it instead'
-            : `Draw a freeform path (${hint('tool-pen')}). Click the first point, double-click or press Enter to finish`}
-          onClick={() => setActiveTool(penActive ? 'select' : 'freeform_draw')}
+          title={`Draw a path (${hint('tool-pen')}). Click the first point, double-click or press Enter to finish`}
+          onClick={() => setActiveTool('freeform_draw')}
         >
           <PenTool />
         </button>
+        <button
+          type="button"
+          className="authoring-toolbar-button authoring-toolbar-media"
+          aria-label="Add media"
+          title="Add an image or a video (or drop the file on the stage)"
+          onClick={() => mediaInputRef.current?.click()}
+        >
+          <ImagePlus />
+        </button>
+        <input
+          ref={mediaInputRef}
+          type="file"
+          accept="image/*,video/*,.mp4,.webm,.mov"
+          multiple
+          aria-label="Choose images or videos to add"
+          style={{ display: 'none' }}
+          onChange={(event) => {
+            if (event.target.files?.length) importMedia(event.target.files);
+            // The same file may be picked again.
+            event.target.value = '';
+          }}
+        />
       </div>
 
       <span className="authoring-toolbar-divider" aria-hidden="true" />

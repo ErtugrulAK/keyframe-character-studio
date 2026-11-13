@@ -3,7 +3,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, expect, it, vi, type Mock } from 'vitest';
 import { ShortcutReferenceDialog } from '../components/Shortcuts/ShortcutReferenceDialog';
 import { useKeyboardShortcuts, type EditorShortcutCommands } from '../hooks/useKeyboardShortcuts';
-import { SHORTCUT_COMMANDS, SHORTCUT_CATEGORY_LABELS, detectShortcutPlatform } from '../utils/shortcuts';
+import { SHORTCUT_COMMANDS, SHORTCUT_CATEGORY_LABELS, detectShortcutPlatform } from '../utils/editor/shortcuts';
 
 /** The commands this test needs to observe; the hook's own contract types them. */
 interface EditorShortcutSpies extends EditorShortcutCommands {

@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useState } from 'react';
 
 /**
- * C2-G — panel-local UI state (a collapsed tree row, an open Inspector card,
+ * Panel-local UI state (a collapsed tree row, an open Inspector card,
  * a pane height) that survives its panel being unmounted, e.g. by an
  * Edit → Broadcast → Edit round trip, for the rest of the browser session.
  *
@@ -27,7 +27,7 @@ export const useRetainedUiState = <T,>(key: string | null, initial: T | (() => T
 };
 
 /**
- * C4 — a scroll container's vertical offset, kept the same way (session-only
+ * A scroll container's vertical offset, kept the same way (session-only
  * UI memory) without ever re-rendering: written on scroll, restored when the
  * container mounts — before the first paint, and before any layout effect
  * declared AFTER this call in the same component reads the offset (e.g. the

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SmartNumberInput } from '../components/Inspector/inputs/SmartNumberInput';
-import { computeProceduralDelta } from '../utils/proceduralAnimation';
+import { computeProceduralDelta } from '../utils/animation/proceduralAnimation';
 import type { CharacterPart, Track } from '../types/animator';
 
 function makePart(id: string, name: string, overrides: Partial<CharacterPart> = {}): CharacterPart {

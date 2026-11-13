@@ -9,12 +9,12 @@ export interface ToolbarMenuItem {
   label: string;
   icon: LucideIcon;
   run: () => void;
-  /** C3 — an item the current selection cannot use stays listed, disabled, with its reason. */
+  /** An item the current selection cannot use stays listed, disabled, with its reason. */
   disabled?: boolean;
   title?: string;
   /** The item's `aria-keyshortcuts`, when the command has a key. */
   keyshortcuts?: string;
-  /** C4 — an on/off command (grid, snapping, crop mode…): a menuitemcheckbox showing its state. */
+  /** An on/off command (grid, snapping, crop mode…): a menuitemcheckbox showing its state. */
   checked?: boolean;
 }
 
@@ -27,7 +27,7 @@ interface ToolbarMenuProps {
   /** What the trigger says when it is unavailable (and why). */
   title: string;
   items: ToolbarMenuItem[];
-  /** C4 — something behind the trigger is on (e.g. crop mode): the trigger shows it like a pressed button. */
+  /** Something behind the trigger is on (e.g. crop mode): the trigger shows it like a pressed button. */
   active?: boolean;
 }
 

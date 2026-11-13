@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { placeFloatingPanel, type FloatingPanelPlacement, type PanelAnchorRect } from '../utils/floatingPanel';
+import { placeFloatingPanel, type FloatingPanelPlacement, type PanelAnchorRect } from '../utils/editor/floatingPanel';
 
 interface UseFloatingPanelOptions {
   isOpen: boolean;

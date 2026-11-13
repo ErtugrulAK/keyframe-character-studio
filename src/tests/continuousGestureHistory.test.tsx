@@ -19,8 +19,7 @@ import { SequencerTimeline } from '../components/Timeline/SequencerTimeline';
 import { resolveOpeningTimelineHeight } from '../components/Timeline/timelineConstants';
 import { InteractiveCubicBezierEditor } from '../components/Inspector/InteractiveCubicBezierEditor';
 import { TemporalGraphPanel } from '../components/Inspector/TemporalGraphPanel';
-import { BezierPathEditor } from '../components/Inspector/BezierPathEditor';
-import { makeEmptyChannels } from '../utils/defaults';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 import type { PropertyKeyframe } from '../types/animator';
 
 const Consumer = ({ onCtx }: { onCtx: (ctx: AnimatorContextType) => void }) => {
@@ -289,38 +288,6 @@ describe('R4-14 — the curve and path editors own one transaction per drag', ()
     fireEvent.mouseDown(point, { clientY: 60 });
     expect(onInteractionStart).toHaveBeenCalledTimes(1);
     [70, 80, 90].forEach((clientY) => fireEvent.mouseMove(svg, { clientY }));
-    expect(onInteractionStart).toHaveBeenCalledTimes(1);
-    expect(onInteractionEnd).not.toHaveBeenCalled();
-
-    fireEvent.mouseUp(svg, {});
-    expect(onInteractionEnd).toHaveBeenCalledTimes(1);
-  });
-
-  it('opens the mask-path gesture on the press and closes it when the vertex is released', () => {
-    const onInteractionStart = vi.fn();
-    const onInteractionEnd = vi.fn();
-    const { container } = render(
-      <BezierPathEditor
-        path={{
-          version: 1,
-          coordinateSpace: 'normalized',
-          closed: true,
-          points: [
-            { id: 'a', x: 0.1, y: 0.1, kind: 'corner' },
-            { id: 'b', x: 0.9, y: 0.9, kind: 'corner' },
-          ],
-        }}
-        onChange={vi.fn()}
-        onInteractionStart={onInteractionStart}
-        onInteractionEnd={onInteractionEnd}
-      />
-    );
-    const vertex = container.querySelector('[aria-label="Vertex 1"]') as Element;
-    const svg = container.querySelector('svg') as Element;
-
-    fireEvent.mouseDown(vertex, { clientX: 10, clientY: 10 });
-    expect(onInteractionStart).toHaveBeenCalledTimes(1);
-    [20, 30, 40].forEach((clientX) => fireEvent.mouseMove(svg, { clientX, clientY: 10 }));
     expect(onInteractionStart).toHaveBeenCalledTimes(1);
     expect(onInteractionEnd).not.toHaveBeenCalled();
 

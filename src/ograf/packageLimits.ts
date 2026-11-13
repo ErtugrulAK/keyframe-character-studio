@@ -1,4 +1,4 @@
-import { MAX_IMPORT_CHARACTERS } from '../utils/importValidation';
+import { MAX_IMPORT_CHARACTERS } from '../utils/persistence/importValidation';
 
 /**
  * Bounds for an imported package; reported, never silently truncated.

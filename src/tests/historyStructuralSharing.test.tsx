@@ -8,7 +8,7 @@ import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AnimatorProvider, type AnimatorContextType } from '../context/AnimatorContext';
 import { useAnimator } from '../context/useAnimator';
-import { deepFreeze, structurallyEqual } from '../utils/historySnapshot';
+import { deepFreeze, structurallyEqual } from '../utils/persistence/historySnapshot';
 
 const Consumer = ({ onCtx }: { onCtx: (ctx: AnimatorContextType) => void }) => {
   const ctx = useAnimator();
@@ -30,6 +30,14 @@ describe('structurallyEqual', () => {
     expect(structurallyEqual([1, 2], [1, 2, 3])).toBe(false);
     expect(structurallyEqual([1], { 0: 1 })).toBe(false);
     expect(structurallyEqual({ a: null }, { a: {} })).toBe(false);
+  });
+
+  it('treats 0 and -0 as the same value, as the JSON comparison it replaced did', () => {
+    // A rotation or offset computed as `-x * 0` yields -0; it serialises as 0,
+    // so a snapshot that differs only there is not a new undo step.
+    expect(structurallyEqual({ rotation: -0 }, { rotation: 0 })).toBe(true);
+    expect(structurallyEqual([0, -0], [-0, 0])).toBe(true);
+    expect(structurallyEqual(Number.NaN, Number.NaN)).toBe(true);
   });
 
   it('does not walk a shared subtree', () => {

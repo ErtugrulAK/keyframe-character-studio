@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { channelVelocityAt, sampleChannelVelocity } from '../utils/velocityMath';
+import { channelVelocityAt, sampleChannelVelocity } from '../utils/animation/velocityMath';
 import type { PropertyKeyframe } from '../types/animator';
 
 const kf = (

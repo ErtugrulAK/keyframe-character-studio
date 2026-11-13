@@ -1,7 +1,7 @@
 import React from 'react';
 import type { BodyPartType } from '../../types/animator';
 import { getShapeGeometry, polygonPointsToString } from '../../utils/geometry/shapeGeometry';
-import { getShapeCreationPlacement, type ShapeCreationBounds } from '../../utils/geometry/viewportMath';
+import { getShapeCreationPlacement, MAX_TEXT_FONT_SIZE, MIN_TEXT_FONT_SIZE, type ShapeCreationBounds } from '../../utils/geometry/viewportMath';
 import type { CoordinatePoint } from '../../utils/geometry/projectCoordinates';
 import { getTextInkBox, getTextMetrics } from '../../utils/geometry/bounds';
 
@@ -20,7 +20,7 @@ export const ShapeCreationPreview: React.FC<ShapeCreationPreviewProps> = ({ type
     // hold at the size it will have: the font follows the box height (as
     // `getTextCreationProps` sizes it), and a box too narrow for it shrinks it.
     const NEW_TEXT = 'NEW TEXT';
-    const byHeight = Math.min(400, Math.max(8, bounds.height / 1.2));
+    const byHeight = Math.min(MAX_TEXT_FONT_SIZE, Math.max(MIN_TEXT_FONT_SIZE, bounds.height / 1.2));
     // The text's real width per font unit, measured in the font the new text
     // gets (bold Outfit, as the stage draws it). A fixed average glyph width
     // underestimated bold capitals, so the preview ran out of its box.

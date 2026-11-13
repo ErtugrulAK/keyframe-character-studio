@@ -8,6 +8,7 @@ import { KCS_TEXT_FONT_FAMILIES } from '../../utils/layers/textFonts';
 import { defaultStrokeWidth } from '../../utils/layers/shapeAppearance';
 import { TEXT_PRESETS } from '../../utils/editor/textPresets';
 import type { HorizontalAlign } from '../../utils/layers/layoutModifiers';
+import { MAX_TEXT_FONT_SIZE, MIN_TEXT_FONT_SIZE } from '../../utils/geometry/viewportMath';
 import './ToolOptionsBar.css';
 
 /** A family without its CSS quotes: older layers stored multi-word families bare. */
@@ -82,7 +83,7 @@ export const ToolOptionsBar: React.FC = () => {
         ))}
       </select>
       <div className="tool-options-field tool-options-size">
-        <SmartNumberInput ariaLabel="Font size" value={part.fontSize ?? 20} min={8} max={400} onChange={(value) => handlePartPropChange('fontSize', value)} />
+        <SmartNumberInput ariaLabel="Font size" value={part.fontSize ?? 20} min={MIN_TEXT_FONT_SIZE} max={MAX_TEXT_FONT_SIZE} onChange={(value) => handlePartPropChange('fontSize', value)} />
       </div>
       <div className="tool-options-color" title="Text colour">
         <ColorPickerPopover

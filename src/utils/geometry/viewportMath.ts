@@ -192,6 +192,14 @@ export const getShapeCreationPlacement = (
  * the box height and limits its width to the box (the text box shrinks a
  * longer text to fit). Stage (SVG) units in, layer props out.
  */
+/**
+ * The font sizes a text layer is authored at. 1000 lets a text drawn over a
+ * whole 4K stage fill its box: at 400 a tall box stopped growing the text
+ * (QA 2026-11-13). The Text tool, its preview and the options bar share it.
+ */
+export const MIN_TEXT_FONT_SIZE = 8;
+export const MAX_TEXT_FONT_SIZE = 1000;
+
 export const getTextCreationProps = (
   bounds: ShapeCreationBounds | null,
   click: { x: number; y: number },
@@ -202,7 +210,7 @@ export const getTextCreationProps = (
   const baseTransform = { x: centre.x - canvasCenterX, y: centre.y - canvasCenterY, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
   if (!bounds || bounds.height < 8) return { baseTransform };
   // A line of text is about 1.2 font sizes tall.
-  const fontSize = Math.round(Math.min(400, Math.max(8, bounds.height / 1.2)));
+  const fontSize = Math.round(Math.min(MAX_TEXT_FONT_SIZE, Math.max(MIN_TEXT_FONT_SIZE, bounds.height / 1.2)));
   return { baseTransform, fontSize, ...(bounds.width >= 20 ? { textFit: { maxWidth: Math.round(bounds.width) } } : {}) };
 };
 

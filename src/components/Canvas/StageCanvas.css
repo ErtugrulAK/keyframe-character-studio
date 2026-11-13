@@ -487,3 +487,67 @@
   top: 0;
   flex: none;
 }
+
+/* The zoom bar, bottom right; it rides the edge of a sliding right dock like the readout. */
+.stage-zoom-control {
+  position: absolute;
+  bottom: 12px;
+  right: calc(14px + var(--kcs-dock-right-overlap, 0px));
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--kcs-border-default);
+  border-radius: var(--kcs-radius-panel);
+  background: var(--kcs-bg-shell);
+  color: var(--kcs-text-secondary);
+  font-size: 11px;
+}
+.stage-zoom-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border: none;
+  border-radius: var(--kcs-radius-control);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.stage-zoom-button:hover {
+  background: var(--kcs-bg-active-muted);
+  color: var(--kcs-text-primary);
+}
+.stage-zoom-input {
+  width: 52px;
+  height: 22px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: var(--kcs-radius-control);
+  background: transparent;
+  color: var(--kcs-text-primary);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.stage-zoom-input:focus {
+  outline: none;
+  border-color: var(--kcs-accent);
+}
+.stage-zoom-presets {
+  height: 22px;
+  border: none;
+  border-radius: var(--kcs-radius-control);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.stage-zoom-presets option {
+  background: var(--kcs-bg-shell);
+  color: var(--kcs-text-primary);
+}

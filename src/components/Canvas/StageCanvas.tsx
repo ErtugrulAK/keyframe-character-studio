@@ -46,7 +46,7 @@ import {
   stageCropHandleCenters,
   stageSpaceToEditorRect,
 } from '../../utils/geometry/stageCrop';
-import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageFitScale, getTextCreationProps, type StageBox, type StageCameraView } from '../../utils/geometry/viewportMath';
+import { clampZoom, clientToCameraPoint, fitArtboardZoomLevel, zoomLevelForScale, getCursorAnchoredCameraCenter, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageFitScale, getTextCreationProps, type StageBox, type StageCameraView } from '../../utils/geometry/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter, type CoordinatePoint } from '../../utils/geometry/projectCoordinates';
 import { REFIT_UNTOUCHED_CAMERA_COMMAND, REMEASURE_STAGE_BOX_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT } from '../../utils/editor/workspaceLayout';
 import { normalizeFreeformPoints } from '../../utils/geometry/freeform';
@@ -59,6 +59,7 @@ import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
 import { CanvasCoordinateOverlay } from './overlays/CanvasCoordinateOverlay';
 import { leaveStage, rememberStagePointer } from '../../utils/editor/stagePointer';
 import { CanvasCoordinateReadout } from './overlays/CanvasCoordinateReadout';
+import { StageZoomControl } from './overlays/StageZoomControl';
 import { FreeformTangentOverlay } from './overlays/FreeformTangentOverlay';
 import { isFreeformTangentOverlayEligible } from '../../utils/geometry/freeformTangentEligibility';
 import { ShapeCreationPreview } from './ShapeCreationPreview';
@@ -1163,6 +1164,25 @@ export const StageCanvas: React.FC = () => {
     return () => window.removeEventListener(WORKSPACE_LAYOUT_COMMAND_EVENT, handleViewportCommand);
   }, [applyStageBox, readStageBox]);
 
+  /** The zoom bar: a zoom level for a screen scale (1 = 100 %), and Fit, which also centres the artboard. */
+  const setZoomFromBar = (nextZoom: number) => {
+    zoomRef.current = nextZoom;
+    setZoomLevel(nextZoom);
+  };
+  const zoomToScale = (scale: number) => {
+    const view = cameraViewRef.current;
+    if (view) setZoomFromBar(zoomLevelForScale(scale, view.baseScale));
+  };
+  const fitArtboardInView = () => {
+    const view = cameraViewRef.current;
+    const box = readStageBox() ?? stageBoxRef.current;
+    if (!view || !box) return;
+    setZoomFromBar(fitArtboardZoomLevel(box, projectResolution, view.baseScale));
+    setCameraView((current) => (current
+      ? { ...current, center: snapToDevicePixel({ x: box.left + box.width / 2, y: box.top + box.height / 2 }) }
+      : current));
+  };
+
   const [isDropTargetHover, setIsDropTargetHover] = useState<boolean>(false);
   const handleDragOverStage = (e: React.DragEvent) => {
     e.preventDefault();
@@ -2209,6 +2229,16 @@ export const StageCanvas: React.FC = () => {
         }
         return <EditTargetStrip target={editTarget} testId="edit-target-strip" />;
       })()}
+
+      {appMode !== 'broadcast' && cameraScale > 0 && (
+        <StageZoomControl
+          scale={cameraScale}
+          onZoomIn={() => setZoomFromBar(clampZoom(zoomRef.current * 1.1))}
+          onZoomOut={() => setZoomFromBar(clampZoom(zoomRef.current * 0.9))}
+          onZoomTo={zoomToScale}
+          onFit={fitArtboardInView}
+        />
+      )}
 
       {appMode !== 'broadcast' && showCoordinateOverlay && selectedTransform && (
         <CanvasCoordinateReadout

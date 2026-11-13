@@ -226,3 +226,26 @@ test('K keys the transform of every selected layer as one undo step', async ({ p
   await page.keyboard.press('Control+z');
   expect(await keyed()).toEqual([['a', []], ['b', []]]);
 });
+
+test('the zoom bar shows and sets the real zoom, 1:1 and Fit', async ({ page }) => {
+  // Round 6 (OGraf Studio review): a zoom bar; 100 % is one project pixel per screen pixel.
+  await seed(page);
+  const artboard = page.locator('rect.canvas-bg[filter]');
+  const width = async () => (await artboard.boundingBox())!.width;
+  await page.getByRole('combobox', { name: 'Zoom presets' }).selectOption('25');
+  await expect.poll(width).toBeCloseTo(1920 * 0.25, 0);
+  await expect(page.getByRole('textbox', { name: 'Zoom percentage' })).toHaveValue('25%');
+  await page.getByRole('group', { name: 'Zoom' }).getByRole('button', { name: 'Actual size (1:1)' }).click();
+  await expect.poll(width).toBeCloseTo(1920, 0);
+  const field = page.getByRole('textbox', { name: 'Zoom percentage' });
+  await field.fill('40');
+  await field.press('Enter');
+  await expect.poll(width).toBeCloseTo(1920 * 0.4, 0);
+  await page.getByRole('group', { name: 'Zoom' }).getByRole('button', { name: 'Fit the artboard' }).click();
+  const stage = await stageBox(page);
+  await expect.poll(async () => {
+    const box = (await artboard.boundingBox())!;
+    return box.x >= stage.x && box.y >= stage.y && box.x + box.width <= stage.x + stage.width && box.y + box.height <= stage.y + stage.height
+      && Math.abs(box.x + box.width / 2 - (stage.x + stage.width / 2)) < 2;
+  }).toBe(true);
+});

@@ -305,3 +305,19 @@ export const getPartsInMarquee = (
   });
   return selected;
 };
+
+/**
+ * The zoom level that shows the stage at `scale` screen pixels per project
+ * pixel (1 = 100 %, the 1:1 view). The camera's magnification is
+ * `zoom * baseScale`, so the level is the ratio, kept inside the zoom range.
+ */
+export const zoomLevelForScale = (scale: number, baseScale: number): number =>
+  clampZoom(baseScale > 0 ? scale / baseScale : 1);
+
+/** The zoom level that fits the whole artboard in the stage box, with a margin on each side. */
+export const fitArtboardZoomLevel = (
+  stage: { width: number; height: number },
+  artboard: { width: number; height: number },
+  baseScale: number,
+  margin = 0.9,
+): number => zoomLevelForScale(Math.min(stage.width / artboard.width, stage.height / artboard.height) * margin, baseScale);

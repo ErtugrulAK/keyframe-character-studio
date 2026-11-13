@@ -110,6 +110,8 @@ const RIGHT_CLICK_SLOP_PX = 4;
  * mask point: half the outline's hit band (`CONTOUR_HIT_WIDTH` 12) plus slack.
  */
 const MASK_OUTLINE_INSERT_RADIUS = 8;
+/** The smallest text box (stage units, each side) the Text tool creates from a drag. */
+const MIN_TEXT_BOX = 8;
 
 export const StageCanvas: React.FC = () => {
   const {
@@ -962,18 +964,23 @@ export const StageCanvas: React.FC = () => {
 
   const handleMouseUp = useCallback((commitShape: boolean = true) => {
     if (dragMode === 'shape_create') {
-      if (commitShape && pendingShapeType === 'custom_text' && pendingShapeName && shapeCreationStart) {
-        // The Text tool: a click places a text, a drag draws its box (and a
-        // drawn box sets its size). Its style is picked in the options bar.
-        startBatchInteraction();
-        addCustomPart('custom_text', pendingShapeName, {
-          ...getTextCreationProps(
-            shapeCreationPreview?.bounds ?? null,
-            { x: shapeCreationStart.svgX, y: shapeCreationStart.svgY },
-            EDITOR_CAMERA_CENTER.x,
-            EDITOR_CAMERA_CENTER.y,
-          ),
-        });
+      if (pendingShapeType === 'custom_text') {
+        // The Text tool draws its box as the shape tools draw theirs: the drag
+        // sets the size, and a click without a drag places nothing (it used
+        // to drop a text at the default size, QA 2026-11-13). Its style is
+        // picked in the options bar.
+        const box = shapeCreationPreview?.bounds;
+        if (commitShape && pendingShapeName && shapeCreationStart && box && box.width >= MIN_TEXT_BOX && box.height >= MIN_TEXT_BOX) {
+          startBatchInteraction();
+          addCustomPart('custom_text', pendingShapeName, {
+            ...getTextCreationProps(
+              box,
+              { x: shapeCreationStart.svgX, y: shapeCreationStart.svgY },
+              EDITOR_CAMERA_CENTER.x,
+              EDITOR_CAMERA_CENTER.y,
+            ),
+          });
+        }
       } else if (commitShape && shapeCreationPreview && pendingShapeType && pendingShapeName) {
         const placement = getShapeCreationPlacement(pendingShapeType, shapeCreationPreview.bounds);
         if (placement) {

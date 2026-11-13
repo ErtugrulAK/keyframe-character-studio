@@ -105,6 +105,28 @@ test('the Text tool draws a text box: its size from the drag, its centre in the 
   expect((text.textFit as unknown as { maxWidth: number }).maxWidth).toBeGreaterThan(390);
 });
 
+test('the Text tool places nothing on a plain click, and its preview fits the box', async ({ page }) => {
+  // QA 2026-11-13: a click without a drag dropped a text at the default size,
+  // and the preview text ran past the box being drawn.
+  await seed(page);
+  await page.getByRole('button', { name: 'Add text' }).click();
+  const at = await screenOf(page, 0, 0);
+  await page.mouse.click(at.x, at.y);
+  await expect(page.locator('.actor-node', { hasText: 'Text' })).toHaveCount(0);
+
+  const from = await screenOf(page, -150, -60);
+  const to = await screenOf(page, 150, 60);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 6 });
+  const frame = (await page.getByTestId('shape-creation-preview').locator('rect').boundingBox())!;
+  const ink = (await page.getByTestId('text-creation-preview').boundingBox())!;
+  expect(ink.x).toBeGreaterThanOrEqual(frame.x - 1);
+  expect(ink.x + ink.width).toBeLessThanOrEqual(frame.x + frame.width + 1);
+  await page.mouse.up();
+  await expect(page.locator('.actor-node', { hasText: 'Text' })).toHaveCount(1);
+});
+
 test('Ctrl+V pastes where the mouse is', async ({ page }) => {
   await seed(page, [rect('a', 'Alpha', -300, -200)]);
   await page.locator('[role="tree"] [data-layer-id="a"]').click();

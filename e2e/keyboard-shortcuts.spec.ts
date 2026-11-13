@@ -121,13 +121,16 @@ test('creation keys arm the same flow the toolbar does, and Escape cancels it', 
   await page.keyboard.press('Escape');
   await expect(stage).not.toHaveClass(/drawing-tool/);
 
-  // `T` arms the Text tool, like the toolbar's text button: a click on the
-  // stage then places a text layer.
+  // `T` arms the Text tool, like the toolbar's text button: a drag on the
+  // stage then draws a text layer (a click alone places none).
   await page.keyboard.press('t');
   await expect(stage).toHaveClass(/drawing-tool/);
   const box = await stage.boundingBox();
   if (!box) throw new Error('stage has no box');
-  await page.mouse.click(box.x + box.width * 0.7, box.y + box.height * 0.3);
+  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.25);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.35, { steps: 5 });
+  await page.mouse.up();
   await expect(page.locator('.actor-node', { hasText: 'Text' })).toHaveCount(1);
   await expect.poll(() => rowCount(page)).toBe(3);
 });

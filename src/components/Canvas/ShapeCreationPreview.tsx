@@ -3,6 +3,10 @@ import type { BodyPartType } from '../../types/animator';
 import { getShapeGeometry, polygonPointsToString } from '../../utils/geometry/shapeGeometry';
 import { getShapeCreationPlacement, type ShapeCreationBounds } from '../../utils/geometry/viewportMath';
 import type { CoordinatePoint } from '../../utils/geometry/projectCoordinates';
+import { getTextMetrics } from '../../utils/geometry/bounds';
+
+/** The font a new text layer is drawn in (`PartRenderer`'s default). */
+const NEW_TEXT_FONT = 'Outfit';
 
 interface ShapeCreationPreviewProps {
   type: BodyPartType;
@@ -17,8 +21,11 @@ export const ShapeCreationPreview: React.FC<ShapeCreationPreviewProps> = ({ type
     // `getTextCreationProps` sizes it), and a box too narrow for it shrinks it.
     const NEW_TEXT = 'NEW TEXT';
     const byHeight = Math.min(400, Math.max(8, bounds.height / 1.2));
-    // Average glyph width of a bold sans text, about 0.62 em.
-    const fontSize = Math.max(4, Math.min(byHeight, bounds.width / (NEW_TEXT.length * 0.62)));
+    // The text's real width per font unit, measured in the font the new text
+    // gets (bold Outfit, as the stage draws it). A fixed average glyph width
+    // underestimated bold capitals, so the preview ran out of its box.
+    const widthPerFontUnit = (getTextMetrics(NEW_TEXT, 100, NEW_TEXT_FONT).halfW * 2) / 100;
+    const fontSize = Math.max(4, Math.min(byHeight, bounds.width / Math.max(0.1, widthPerFontUnit)));
     return (
       <g data-testid="shape-creation-preview" pointerEvents="none">
         <rect
@@ -40,7 +47,7 @@ export const ShapeCreationPreview: React.FC<ShapeCreationPreviewProps> = ({ type
           dominantBaseline="central"
           fontSize={fontSize}
           fontWeight={700}
-          fontFamily="Inter, sans-serif"
+          fontFamily={NEW_TEXT_FONT}
           fill="rgba(255, 255, 255, 0.55)"
         >
           {NEW_TEXT}

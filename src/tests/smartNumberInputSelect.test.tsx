@@ -29,4 +29,18 @@ describe('SmartNumberInput selects its value on focus', () => {
     fireEvent.mouseDown(input);
     expect(fireEvent.mouseUp(input)).toBe(true);
   });
+  it('shows the committed number after Enter, not what was typed ("030" becomes "30")', () => {
+    // QA 2026-11-13: a number input keeps "030" on screen after Enter, as the
+    // browser treats it as equal to 30 and React leaves the field alone.
+    const Field = () => {
+      const [value, setValue] = React.useState(0);
+      return <SmartNumberInput ariaLabel="Rotation" value={value} onChange={setValue} />;
+    };
+    render(<Field />);
+    const input = screen.getByLabelText('Rotation') as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '030' } });
+    fireEvent.blur(input);
+    expect(input.value).toBe('30');
+  });
 });

@@ -58,8 +58,9 @@ export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, 
     }
   };
 
-  const handleBlur = () => {
+  const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
     setIsFocused(false);
+    const field = event.currentTarget;
     let parsed = parseFloat(editingValue);
     if (isNaN(parsed)) {
       setEditingValue(String(displayVal));
@@ -76,6 +77,7 @@ export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, 
       if (max !== undefined) clamped = Math.min(max, clamped);
       const rounded = Math.round(clamped * Math.pow(10, decimals)) / Math.pow(10, decimals);
       setEditingValue(String(rounded));
+      if (field.value !== String(rounded)) field.value = String(rounded);
       if (rounded / scale !== value) {
         onChange(rounded / scale);
       }
@@ -83,6 +85,10 @@ export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, 
     }
     const rounded = Math.round(parsed * Math.pow(10, decimals)) / Math.pow(10, decimals);
     setEditingValue(String(rounded));
+    // React leaves a number field alone when its text parses to the same
+    // number, so "030" stayed on screen after Enter (QA 2026-11-13). The
+    // field shows the committed value once it is left.
+    if (field.value !== String(rounded)) field.value = String(rounded);
   };
 
   const displayStep = step !== undefined ? step * Math.abs(scale) : undefined;

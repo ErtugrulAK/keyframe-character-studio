@@ -415,3 +415,19 @@ test('the artboard backdrop can be light, a checkerboard or a picture, and is re
   const saved = await page.evaluate((key) => localStorage.getItem(key) ?? '', STORAGE_KEY);
   expect(saved).not.toContain('backdrop');
 });
+
+test('Filter properties keeps only the matching Inspector cards, opened', async ({ page }) => {
+  // Round 6 (OGraf Studio review): find a property without opening every card.
+  await seed(page, [rect('a', 'Alpha', 0, 0)]);
+  await page.locator('[role="tree"] [data-layer-id="a"]').click();
+  const filter = page.getByRole('searchbox', { name: 'Filter properties' });
+  const titles = page.locator('.details-container .inspector-section-title');
+  await expect(titles.filter({ hasText: /^TRANSFORM$/ })).toHaveCount(1);
+  await filter.fill('glow');
+  await expect(titles.filter({ hasText: /^TRANSFORM$/ })).toHaveCount(0);
+  // The glow lives under the appearance's effects: shown, open.
+  await expect(page.getByLabel('Glow Enabled')).toBeVisible();
+  await filter.press('Escape');
+  await expect(filter).toHaveValue('');
+  await expect(titles.filter({ hasText: /^TRANSFORM$/ })).toHaveCount(1);
+});

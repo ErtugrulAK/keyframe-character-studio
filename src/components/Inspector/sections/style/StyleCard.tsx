@@ -1,5 +1,6 @@
 import React, { useId } from 'react';
 import { useRetainedUiState } from '../../../../hooks/useRetainedUiState';
+import { cardMatchesFilter, useInspectorFilter } from '../../inspectorFilter';
 
 interface StyleCardProps {
   title: string;
@@ -33,7 +34,12 @@ export const StyleCard: React.FC<StyleCardProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useRetainedUiState(retainKey ? `inspector-card:${retainKey}` : null, false);
   const contentId = useId();
-  const visible = !collapsible || isOpen;
+  // "Filter properties…": a card that does not match is left out; one that
+  // matches a typed query shows its content (its stored open state is kept).
+  const filter = useInspectorFilter();
+  const filtering = filter.trim().length > 0;
+  if (filtering && !cardMatchesFilter(title, filter)) return null;
+  const visible = !collapsible || isOpen || filtering;
 
   return (
     <section

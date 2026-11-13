@@ -1799,3 +1799,10 @@ html:not([data-input-modality="keyboard"]) .kcs-inline-rename:focus {
 .layer-effects-row {
   margin-top: 8px;
 }
+
+/* Inspector: Filter properties… under the layer name. */
+.details-filter-input {
+  width: 100%;
+  margin-top: 6px;
+  height: 26px;
+}

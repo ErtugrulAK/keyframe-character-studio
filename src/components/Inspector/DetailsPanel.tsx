@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { InspectorFilterContext } from './inspectorFilter';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useAnimator } from '../../context/useAnimator';
 import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
@@ -106,6 +107,7 @@ export const DetailsPanel: React.FC = () => {
    */
   const [detailsTab, setDetailsTab] = useRetainedUiState<DetailsTab>('inspector.details-tab', 'properties');
   const [tabPointer, setTabPointer] = useState(false);
+  const [propertyFilter, setPropertyFilter] = useState('');
   // An effect-only mask (drawing it, or editing it after the draw) belongs to
   // Color Correction, so it keeps the Properties tab.
   const editsEffectMask = sessionTarget?.kind === 'drawing-mask'
@@ -248,6 +250,8 @@ export const DetailsPanel: React.FC = () => {
   };
 
   return (
+    // "Filter properties…" reaches every card of the open tab (`inspectorFilter`).
+    <InspectorFilterContext.Provider value={propertyFilter}>
     <div className="details-container">
       {/* 1. Header Bar */}
       <div className="details-header">
@@ -264,7 +268,15 @@ export const DetailsPanel: React.FC = () => {
             <span className="actor-main-name" title={selectedPart.name}>{selectedPart.name}</span>
             <span className="actor-type-label">{layerTypeLabel(selectedPart)}</span>
           </div>
-
+          <input
+            type="search"
+            className="input-control details-filter-input"
+            aria-label="Filter properties"
+            placeholder="Filter properties…"
+            value={propertyFilter}
+            onChange={(event) => setPropertyFilter(event.target.value)}
+            onKeyDown={(event) => { if (event.key === 'Escape' && propertyFilter) { event.stopPropagation(); setPropertyFilter(''); } }}
+          />
         </div>
       ) : (
         <div className="details-empty-state">
@@ -477,5 +489,6 @@ export const DetailsPanel: React.FC = () => {
         }}
       />
     </div>
+    </InspectorFilterContext.Provider>
   );
 };

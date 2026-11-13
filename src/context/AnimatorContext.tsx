@@ -122,6 +122,9 @@ export interface AnimatorContextType {
   setTimelineZoom: (zoom: number | ((prev: number) => number)) => void;
   showGrid: boolean;
   setShowGrid: (show: boolean) => void;
+  /** The broadcast safe-area guides on the stage (editor only, never exported). */
+  showSafeAreas: boolean;
+  setShowSafeAreas: (show: boolean) => void;
   showCoordinateOverlay: boolean;
   setShowCoordinateOverlay: (show: boolean) => void;
 
@@ -561,6 +564,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setTimelineZoom,
     showGrid,
     setShowGrid,
+    showSafeAreas,
+    setShowSafeAreas,
     showCoordinateOverlay,
     setShowCoordinateOverlay,
     deletePart,
@@ -1250,6 +1255,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setTimelineZoom,
     showGrid,
     setShowGrid,
+    showSafeAreas,
+    setShowSafeAreas,
     showCoordinateOverlay,
     setShowCoordinateOverlay,
     lastSavedAt,

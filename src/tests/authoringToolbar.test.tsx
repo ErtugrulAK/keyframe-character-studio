@@ -23,6 +23,8 @@ const animatorCtx = {
   setActiveTool: vi.fn(),
   showGrid: false,
   setShowGrid: vi.fn(),
+  showSafeAreas: false,
+  setShowSafeAreas: vi.fn(),
   showCoordinateOverlay: true,
   setShowCoordinateOverlay: vi.fn(),
   snapEnabled: true,
@@ -110,6 +112,14 @@ describe('AuthoringToolbar', () => {
 
     fireEvent.click(grid);
     expect(animatorCtx.setShowGrid).toHaveBeenCalledWith(false);
+  });
+
+  it('toggles the broadcast safe areas through the context flag the stage reads', () => {
+    renderToolbar();
+    const safe = within(screen.getByRole('group', { name: 'View controls' })).getByRole('button', { name: 'Toggle safe areas' });
+    expect(safe).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(safe);
+    expect(animatorCtx.setShowSafeAreas).toHaveBeenCalledWith(true);
   });
 
   it('toggles the coordinate overlay through the shared presentation flag', () => {

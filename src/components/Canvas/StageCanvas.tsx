@@ -60,6 +60,7 @@ import { CanvasCoordinateOverlay } from './overlays/CanvasCoordinateOverlay';
 import { leaveStage, rememberStagePointer } from '../../utils/editor/stagePointer';
 import { CanvasCoordinateReadout } from './overlays/CanvasCoordinateReadout';
 import { StageZoomControl } from './overlays/StageZoomControl';
+import { SafeAreaOverlay } from './overlays/SafeAreaOverlay';
 import { FreeformTangentOverlay } from './overlays/FreeformTangentOverlay';
 import { isFreeformTangentOverlayEligible } from '../../utils/geometry/freeformTangentEligibility';
 import { ShapeCreationPreview } from './ShapeCreationPreview';
@@ -131,6 +132,7 @@ export const StageCanvas: React.FC = () => {
     addCustomPart,
     updatePartMedia,
     showGrid,
+    showSafeAreas,
     showCoordinateOverlay,
     snapEnabled,
     cropMode,
@@ -1911,6 +1913,10 @@ export const StageCanvas: React.FC = () => {
                 fillRule="evenodd"
                 pointerEvents="none"
               />
+
+              {appMode !== 'broadcast' && showSafeAreas && (
+                <SafeAreaOverlay artX={artX} artY={artY} width={projectResolution.width} height={projectResolution.height} />
+              )}
 
               {/* Artboard Border Outline */}
               <rect

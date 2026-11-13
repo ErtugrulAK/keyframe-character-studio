@@ -89,6 +89,8 @@ export const useTimeline = ({
 }: UseTimelineOptions) => {
   const [timelineZoom, setTimelineZoom] = useState<number>(18); // px per frame
   const [showGrid, setShowGrid] = useState<boolean>(true);
+  // Broadcast safe areas (EBU R95), an editor guide like the grid; off by default.
+  const [showSafeAreas, setShowSafeAreas] = useState<boolean>(false);
   // Canvas presentation state only: never serialized with the scene.
   const [showCoordinateOverlay, setShowCoordinateOverlay] = useState<boolean>(true);
 
@@ -621,6 +623,8 @@ export const useTimeline = ({
     setTimelineZoom,
     showGrid,
     setShowGrid,
+    showSafeAreas,
+    setShowSafeAreas,
     showCoordinateOverlay,
     setShowCoordinateOverlay,
     deletePart,

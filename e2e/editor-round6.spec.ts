@@ -249,3 +249,16 @@ test('the zoom bar shows and sets the real zoom, 1:1 and Fit', async ({ page }) 
       && Math.abs(box.x + box.width / 2 - (stage.x + stage.width / 2)) < 2;
   }).toBe(true);
 });
+
+test('the safe-area guides frame 93 % and 90 % of the artboard, and are off by default', async ({ page }) => {
+  // Round 6 (OGraf Studio review): EBU R95 action-safe and title-safe guides.
+  await seed(page);
+  await expect(page.getByTestId('stage-safe-areas')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Toggle safe areas' }).first().click();
+  const artboard = (await page.locator('rect.canvas-bg[filter]').boundingBox())!;
+  const action = (await page.getByTestId('safe-area-action').boundingBox())!;
+  const title = (await page.getByTestId('safe-area-title').boundingBox())!;
+  expect(action.width / artboard.width).toBeCloseTo(0.93, 2);
+  expect(title.height / artboard.height).toBeCloseTo(0.9, 2);
+  expect(action.x + action.width / 2).toBeCloseTo(artboard.x + artboard.width / 2, 0);
+});

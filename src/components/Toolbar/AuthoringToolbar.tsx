@@ -32,6 +32,7 @@ import {
   RotateCw,
   Square,
   SquareDashed,
+  Tv,
   Type,
   Ungroup,
   Unlink,
@@ -214,6 +215,8 @@ export const AuthoringToolbar: React.FC = () => {
     setActiveTool,
     showGrid,
     setShowGrid,
+    showSafeAreas,
+    setShowSafeAreas,
     showCoordinateOverlay,
     setShowCoordinateOverlay,
     snapEnabled,
@@ -233,7 +236,7 @@ export const AuthoringToolbar: React.FC = () => {
     armShapeCreation,
     pendingShapeType,
     reorderParts,
-  } = useAnimatorSlice('activeTool', 'setActiveTool', 'showGrid', 'setShowGrid', 'showCoordinateOverlay', 'setShowCoordinateOverlay', 'snapEnabled', 'setSnapEnabled', 'cropMode', 'setCropMode', 'cropRegion', 'applyStageCrop', 'clearStageCropRegion', 'cropStageToSelection', 'cropStageToVisibleContent', 'stageCropBlockReason', 'canCropStageToSelection', 'canCropStageToVisibleContent', 'selectedPartId', 'characterParts', 'armShapeCreation', 'pendingShapeType', 'reorderParts');
+  } = useAnimatorSlice('activeTool', 'setActiveTool', 'showGrid', 'setShowGrid', 'showSafeAreas', 'setShowSafeAreas', 'showCoordinateOverlay', 'setShowCoordinateOverlay', 'snapEnabled', 'setSnapEnabled', 'cropMode', 'setCropMode', 'cropRegion', 'applyStageCrop', 'clearStageCropRegion', 'cropStageToSelection', 'cropStageToVisibleContent', 'stageCropBlockReason', 'canCropStageToSelection', 'canCropStageToVisibleContent', 'selectedPartId', 'characterParts', 'armShapeCreation', 'pendingShapeType', 'reorderParts');
   const {
     booleanEligibleParts,
     selectedBooleanGroup,
@@ -803,6 +806,16 @@ export const AuthoringToolbar: React.FC = () => {
         </button>
         <button
           type="button"
+          className={`authoring-toolbar-button${showSafeAreas ? ' active' : ''}`}
+          aria-label="Toggle safe areas"
+          aria-pressed={showSafeAreas}
+          title={showSafeAreas ? 'Hide the action-safe and title-safe guides' : 'Show the action-safe (93 %) and title-safe (90 %) guides'}
+          onClick={() => setShowSafeAreas(!showSafeAreas)}
+        >
+          <Tv />
+        </button>
+        <button
+          type="button"
           className={`authoring-toolbar-button${showCoordinateOverlay ? ' active' : ''}`}
           aria-label="Toggle coordinate overlay"
           aria-pressed={showCoordinateOverlay}
@@ -881,6 +894,7 @@ export const AuthoringToolbar: React.FC = () => {
             title="Grid, snapping and zoom"
             items={[
               { id: 'view-grid', label: 'Toggle grid', icon: Grid, checked: showGrid, run: () => setShowGrid(!showGrid) },
+              { id: 'view-safe-areas', label: 'Toggle safe areas', icon: Tv, checked: showSafeAreas, run: () => setShowSafeAreas(!showSafeAreas) },
               { id: 'view-coordinates', label: 'Toggle coordinate overlay', icon: Crosshair, checked: showCoordinateOverlay, run: () => setShowCoordinateOverlay(!showCoordinateOverlay) },
               { id: 'view-snap', label: 'Toggle snapping', icon: Magnet, checked: snapEnabled, run: () => setSnapEnabled(!snapEnabled) },
               { id: 'view-zoom-out', label: 'Zoom out', icon: ZoomOut, keyshortcuts: ariaKeyshortcuts('zoom-out', platform), run: () => dispatchViewportCommand('zoom-out') },

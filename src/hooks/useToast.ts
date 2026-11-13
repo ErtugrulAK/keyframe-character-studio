@@ -29,7 +29,11 @@ export const useToast = () => {
     options: ToastOptions = {},
   ) => {
     const id = `toast_${Date.now()}_${Math.random()}`;
-    setToasts((prev) => [...prev, {
+    // The same message shown again replaces the one on screen (and restarts
+    // its time) instead of stacking a copy: a refused command pressed three
+    // times showed three identical toasts. The old entry's timer then removes
+    // nothing, as its id is gone.
+    setToasts((prev) => [...prev.filter((toast) => toast.message !== message || toast.type !== type), {
       id,
       message,
       type,

@@ -4,9 +4,9 @@
   --inspector-control-sm: 88px;
   --inspector-control-md: 112px;
   position: relative;
-  width: min(var(--right-inspector-width), max(250px, 34vw));
-  min-width: min(var(--right-inspector-width), max(250px, 34vw));
-  flex: 0 0 min(var(--right-inspector-width), max(250px, 34vw));
+  width: min(var(--right-inspector-width), max(250px, 44vw));
+  min-width: min(var(--right-inspector-width), max(250px, 44vw));
+  flex: 0 0 min(var(--right-inspector-width), max(250px, 44vw));
   background: var(--bg-darkest);
   border-left: 1px solid var(--border-color);
   display: flex;
@@ -48,7 +48,7 @@
    without changing its workspace-row vertical anchor or overlay layer. */
 .app-container:not(.inspector-hidden) .inspector-dock-toggle {
   top: var(--kcs-panel-handle-top);
-  right: calc(min(var(--right-inspector-width), max(250px, 34vw)) - 10px);
+  right: calc(min(var(--right-inspector-width), max(250px, 44vw)) - 10px);
 }
 
 .app-container.inspector-hidden .inspector-dock-toggle {
@@ -1169,27 +1169,6 @@
   grid-column: 1 / -1;
 }
 
-.effects-color-field {
-  min-width: 0;
-  margin-bottom: var(--space-xs);
-}
-
-.effects-color-row {
-  min-width: 0;
-}
-
-.effects-color-controls {
-  flex: 1;
-  min-width: 0;
-}
-
-.effects-clear-button {
-  flex: 0 0 auto;
-  height: 26px;
-  padding: 0 var(--space-xs);
-  font-size: var(--font-size-caption);
-}
-
 .effects-property-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1218,17 +1197,6 @@
 }
 
 @container (max-width: 300px) {
-  .effects-color-row {
-    align-items: stretch;
-    flex-direction: column;
-    gap: var(--space-2xs);
-  }
-
-  .effects-color-controls {
-    flex: 0 0 auto;
-    width: 100%;
-  }
-
   .effects-property-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1312,10 +1280,9 @@
   opacity: 0.55;
 }
 
-.appearance-group-stroke {
-  border-top: 1px solid var(--border-color);
-  padding-top: var(--space-xs);
-  margin-top: var(--space-2xs);
+/* The shadow sits under the fill/stroke row, as one more paint group. */
+.appearance-group-shadow {
+  margin-top: var(--space-sm, 8px);
 }
 
 .appearance-group-header {
@@ -1629,7 +1596,8 @@
 
 .rgba-picker-alpha-fill {
   position: absolute;
-  inset: 0 auto 0 0;
+  inset: 0;
+  border-radius: inherit;
   pointer-events: none;
 }
 
@@ -2334,56 +2302,6 @@
 }
 
 
-/* C2 — the mask path editor: full Inspector width, the owner's proportions,
-   an expandable view, and control rows that wrap instead of squeezing. */
-.bezier-path-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-}
-
-.bezier-path-editor__header,
-.bezier-path-editor__row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.bezier-path-editor__header {
-  justify-content: space-between;
-}
-
-.bezier-path-editor__status {
-  color: var(--text-secondary, #d6d6d6);
-  font-size: 11px;
-}
-
-.bezier-path-editor__canvas {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: 220px;
-  border-radius: 4px;
-  touch-action: none;
-}
-
-/* C5 — the focused vertex is also the selected one (white fill), so its ring
-   uses the focus token, not white. */
-.bezier-path-editor__canvas circle[role="button"]:focus-visible {
-  outline: none;
-  stroke: var(--kcs-border-focus);
-  stroke-width: 3;
-}
-
-.bezier-path-editor__note {
-  margin: 0;
-  color: var(--accent-gold);
-  font-size: 11px;
-  line-height: 1.4;
-}
-
 /* C2-E — layer tree drop affordance: a line for Before/After, a box for Nest. */
 .tree-node:focus-visible {
   outline: 2px solid var(--accent-teal);
@@ -2447,6 +2365,32 @@
 .outliner-drop-label.is-blocked {
   background: rgba(239, 68, 68, 0.24);
 }
+
+/*
+ * Each drop intent has its own colour, so a parent link never reads like a
+ * reorder: orange = becomes a child (Parent to), green = moves into a group,
+ * violet = reorders and changes the parent, blue = order only. Red (above)
+ * stays the refusal.
+ */
+.tree-node.drop-kind-parent { --drop-colour: #ff9f43; }
+.tree-node.drop-kind-group { --drop-colour: #34d399; }
+.tree-node.drop-kind-reparent { --drop-colour: #a78bfa; }
+.tree-node.drop-kind-reorder { --drop-colour: #4a8fe7; }
+
+.tree-node.drop-before[class*='drop-kind-'] { box-shadow: inset 0 2px 0 0 var(--drop-colour); }
+.tree-node.drop-after[class*='drop-kind-'] { box-shadow: inset 0 -2px 0 0 var(--drop-colour); }
+.tree-node.drop-nest[class*='drop-kind-'] {
+  outline-color: var(--drop-colour);
+  background: color-mix(in srgb, var(--drop-colour) 14%, transparent);
+}
+.tree-node[class*='drop-kind-'] .outliner-drop-label {
+  background: color-mix(in srgb, var(--drop-colour) 28%, transparent);
+}
+
+.outliner-drop-hint.drop-kind-parent { color: #ff9f43; }
+.outliner-drop-hint.drop-kind-group { color: #34d399; }
+.outliner-drop-hint.drop-kind-reparent { color: #a78bfa; }
+.outliner-drop-hint.drop-kind-reorder { color: #4a8fe7; }
 
 .tree-node .outliner-rename-input {
   flex: 1;
@@ -2831,25 +2775,6 @@
   min-width: 56px;
 }
 
-/* C6 — shape geometry: parametric shape vs editable path. */
-.path-geometry-note {
-  margin: 0 0 8px;
-  color: var(--kcs-text-secondary, var(--text-secondary));
-  font-size: var(--font-size-caption);
-  line-height: 1.4;
-}
-
-.path-geometry-convert {
-  width: 100%;
-}
-
-.path-geometry-reason {
-  margin: 6px 0 0;
-  color: var(--kcs-text-muted, var(--text-muted));
-  font-size: var(--font-size-caption);
-  line-height: 1.35;
-}
-
 /* C6 — a card's status next to its title, and the quiet look of a
    compatibility card that this layer does not use. */
 .inspector-section-title {
@@ -3088,9 +3013,6 @@
   min-width: 0;
 }
 
-.modifier-group + .modifier-group {
-  border-top: 1px solid var(--border-color);
-}
 
 .modifier-group-header {
   display: flex;
@@ -3196,4 +3118,39 @@
     grid-template-columns: minmax(0, 1fr);
     padding-left: 0;
   }
+}
+
+/* Appearance: fill and stroke side by side, each a compact swatch and its hex. */
+.appearance-paint-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-sm, 8px);
+}
+
+.appearance-color-compact {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The swatch keeps its own size so the hex beside it stays visible (the
+   generic picker field is full-width and pushed the hex to zero width). */
+.appearance-color-compact .color-picker-field {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.appearance-color-compact .color-swatch-button {
+  width: 36px;
+  height: 22px;
+}
+
+.appearance-color-hex {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--kcs-text-secondary, #cfcfcf);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }

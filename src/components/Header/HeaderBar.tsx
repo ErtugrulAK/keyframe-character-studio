@@ -17,7 +17,6 @@ import {
   AlertTriangle,
   Plus,
   ChevronDown,
-  Keyboard,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
@@ -121,12 +120,11 @@ export const HeaderBar: React.FC = () => {
     deleteProjectTemplate,
     fps,
     setFps,
-    openShortcutReference,
     characterParts,
     tracks,
     coordinateSystem,
     isPlaying,
-  } = useAnimatorSlice('exportProject', 'importProject', 'resetProject', 'lastSavedAt', 'restoredFromLocalStorage', 'autosaveConflict', 'manualSaveRejectedAt', 'autosaveError', 'hasUnsavedChanges', 'isSaving', 'triggerManualSave', 'autosaveIntervalSeconds', 'getPersistenceSafety', 'forceSaveNow', 'showToast', 'appMode', 'setAppMode', 'sceneTitle', 'projectTemplates', 'activeProjectTemplateId', 'setActiveProjectTemplateId', 'addProjectTemplate', 'renameProjectTemplate', 'deleteProjectTemplate', 'fps', 'setFps', 'openShortcutReference', 'characterParts', 'tracks', 'coordinateSystem', 'isPlaying');
+  } = useAnimatorSlice('exportProject', 'importProject', 'resetProject', 'lastSavedAt', 'restoredFromLocalStorage', 'autosaveConflict', 'manualSaveRejectedAt', 'autosaveError', 'hasUnsavedChanges', 'isSaving', 'triggerManualSave', 'autosaveIntervalSeconds', 'getPersistenceSafety', 'forceSaveNow', 'showToast', 'appMode', 'setAppMode', 'sceneTitle', 'projectTemplates', 'activeProjectTemplateId', 'setActiveProjectTemplateId', 'addProjectTemplate', 'renameProjectTemplate', 'deleteProjectTemplate', 'fps', 'setFps', 'characterParts', 'tracks', 'coordinateSystem', 'isPlaying');
   const readAnimator = useAnimatorReader();
 
   const [editingTmplId, setEditingTmplId] = useState<string | null>(null);
@@ -365,6 +363,7 @@ export const HeaderBar: React.FC = () => {
       setOgrafStage(null);
     }
   };
+
   /**
    * The one import entry: it decides what the file is from its **content** and
    * routes it to the importer that owns that kind. Only a Lottie document opens
@@ -751,14 +750,7 @@ export const HeaderBar: React.FC = () => {
           <button className="btn-icon reset-btn" onClick={requestResetProject} title="Reset Canvas Project">
             <RotateCcw size={15} />
           </button>
-          <button
-            className="btn-icon"
-            onClick={openShortcutReference}
-            title="Keyboard shortcuts (?)"
-            aria-label="Keyboard shortcuts"
-          >
-            <Keyboard size={15} />
-          </button>
+          {/* Keyboard shortcuts open from Help > Keyboard Shortcuts (or ?). */}
         </div>
       </header>
       <ImportReportDialog

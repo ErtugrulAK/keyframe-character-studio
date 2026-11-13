@@ -1,3 +1,7 @@
+import { flattenBooleanGroup } from '../utils/geometry/booleanFlatten';
+import { deriveBooleanGeometry } from '../utils/geometry/booleanGeometry';
+import { resetTransforms } from '../utils/layers/resetTransform';
+import { stagePointer } from '../utils/editor/stagePointer';
 import { AnimatorContext, AnimatorStoreContext, createAnimatorStore } from './useAnimator';
 import React, { useState, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import { ToastPortal } from '../components/Toast/ToastPortal';
@@ -186,6 +190,8 @@ export interface AnimatorContextType {
   setLayersLocked: (partIds: readonly string[], locked: boolean) => void;
   /** Turns a basic shape into an editable path layer in place (one undo step); false when refused (toast says why). */
   convertToEditablePath: (partId: string) => boolean;
+  /** Reset Transform: the selected layers return to the pose they were made with (one undo step). */
+  resetSelectedTransforms: () => void;
   /** Writes a path layer's path (one undo step, or part of an open batch). */
   setPartPath: (partId: string, path: BezierPath) => void;
   /** The selected point of the selected path layer, shared by the canvas and the Inspector. */
@@ -220,7 +226,8 @@ export interface AnimatorContextType {
   reorderParts: (dragIndex: number, hoverIndex: number) => void;
   deletePart: (partId: string) => void;
   copySelectedPart: () => void;
-  pasteCopiedPart: () => void;
+  /** Paste the copied layers at the mouse (or, `inPlace`, over the originals). */
+  pasteCopiedPart: (options?: { inPlace?: boolean }) => void;
   duplicateSelectedPart: () => void;
   duplicateMirrored: (axis: 'y' | 'x' | 'origin') => void;
   // Copy/paste ANIMATION onto an existing selected part (26A data layer)
@@ -467,6 +474,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
 
+  const [projectResolution, setProjectResolution] = useState<{ width: number; height: number }>({ width: 1920, height: 1080 });
+  const templateSwitchedRef = useRef<() => void>(() => undefined);
   const {
     setTemplateCanvasStore,
     projectTemplates,
@@ -496,6 +505,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     tracks,
     setTracks,
     setFps,
+    fps,
+    projectResolution,
+    setProjectResolution,
     setTotalFrames,
     setCurrentFrame,
     setIsPlaying,
@@ -505,9 +517,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     showToast,
     onSequenceDeleted: stopNamedSequence,
     onSequenceDurationChanged: updateNamedSequenceDuration,
+    // The history hook is created below; the ref hands its baseline reset over.
+    onProjectTemplateSwitched: () => templateSwitchedRef.current(),
   });
 
-  const [projectResolution, setProjectResolution] = useState<{ width: number; height: number }>({ width: 1920, height: 1080 });
   const {
     selectedPartId,
     setSelectedPartId,
@@ -616,6 +629,13 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setActiveTemplateIdState(state.activeTemplateId);
   }, [setFps, setTotalFrames, setSceneTitleState, setActiveTemplateIdState]);
 
+  const historySelection = useMemo(() => ({ primary: selectedPartId, ids: selectedPartIds }), [selectedPartId, selectedPartIds]);
+  /** Undo/redo put back the selection an edit started from (only layers that exist then). */
+  const restoreHistorySelection = useCallback((selection: { primary: string | null; ids: string[] }) => {
+    setSelectedPartIds(selection.ids);
+    setSelectedPartId(selection.primary);
+  }, [setSelectedPartIds, setSelectedPartId]);
+
   // Recomputed every render so a snapshot always carries the values on screen;
   // `useHistory` compares its content, not its identity.
   const historyDocumentState: HistoryDocumentState = {
@@ -646,7 +666,21 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setMotionTemplates,
     documentState: historyDocumentState,
     restoreDocumentState,
+    selection: historySelection,
+    restoreSelection: restoreHistorySelection,
   });
+  // What a template tab switch resets (the tabs hook is created above): the
+  // undo baseline, and every selection and edit mode, which name layers of
+  // the tab being left — an imported tab can reuse those ids for other layers.
+  // oxlint-disable-next-line react/refs
+  templateSwitchedRef.current = () => {
+    requestBaselineReset();
+    setSelectedPartId(null);
+    setSelectedPartIds([]);
+    setSelectedKeyframeId(null);
+    setBooleanOperandEditingGroupId(null);
+    setFocusModeNodeId(null);
+  };
 
 
 
@@ -662,6 +696,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setCharacterParts: editSetCharacterParts,
     setSelectedPartId,
     setSelectedPartIds,
+    pastePoint: stagePointer,
+    activeTemplateId,
+    currentFrame,
   });
 
 
@@ -789,13 +826,54 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     redo();
   }, [draftHistory, redo]);
 
-  const { pathVertex, selectPathVertex, convertToEditablePath, setPartPath, deleteSelectedPathVertex } = usePathEditing({
+  const { pathVertex, selectPathVertex, convertToEditablePath: convertShapeToPath, setPartPath, deleteSelectedPathVertex } = usePathEditing({
     characterParts,
     tracks,
     setCharacterParts: editSetCharacterParts,
     selectedPartId,
     showToast,
   });
+
+  /**
+   * Shape to Path: a basic shape becomes an editable path; a Boolean result is
+   * flattened into its own shape (one region: an editable path), and its
+   * operands go. One undo step either way.
+   */
+  const convertToEditablePath = useCallback((partId: string): boolean => {
+    const group = characterParts.find((part) => part.id === partId);
+    if (!group?.booleanOperandIds?.length || !group.booleanOperation) return convertShapeToPath(partId);
+    const operands = group.booleanOperandIds
+      .map((id) => characterParts.find((part) => part.id === id))
+      .filter((part): part is CharacterPart => Boolean(part));
+    const derived = deriveBooleanGeometry(
+      group.booleanOperation,
+      operands,
+      Object.fromEntries(operands.map((operand) => [operand.id, getComputedTransform(operand.id, currentFrame)])),
+      getComputedTransform(group.id, currentFrame),
+    );
+    const flattened = flattenBooleanGroup(characterParts, tracks, group.id, derived.localContours);
+    if (!flattened) {
+      showToast('This Boolean result is empty; there is no shape to keep.', 'error');
+      return false;
+    }
+    editSetCharacterParts(flattened.parts);
+    editSetTracks(flattened.tracks);
+    setBooleanOperandEditingGroupId(null);
+    return true;
+  }, [characterParts, tracks, currentFrame, getComputedTransform, convertShapeToPath, editSetCharacterParts, editSetTracks, setBooleanOperandEditingGroupId, showToast]);
+
+  const resetSelectedTransforms = useCallback(() => {
+    const ids = selectedPartIds.length > 0 ? selectedPartIds : selectedPartId ? [selectedPartId] : [];
+    const locked = ids.filter((id) => tracks.find((track) => track.partId === id)?.locked);
+    if (locked.length > 0) {
+      showToast('A selected layer is locked. Unlock it to reset its transform.', 'error');
+      return;
+    }
+    const result = resetTransforms(characterParts, tracks, ids, activeTemplateId);
+    if (!result) return;
+    editSetCharacterParts(result.parts);
+    editSetTracks(result.tracks);
+  }, [selectedPartIds, selectedPartId, tracks, characterParts, activeTemplateId, editSetCharacterParts, editSetTracks, showToast]);
 
   const { matteReturnTargetId, selectMatteSource, backToMatteTarget } = useMatteNavigation({
     characterParts,
@@ -1194,6 +1272,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     toggleTrackLock,
     setLayersLocked,
     convertToEditablePath,
+    resetSelectedTransforms,
     setPartPath,
     pathVertex,
     selectPathVertex,

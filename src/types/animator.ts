@@ -182,6 +182,16 @@ export interface MaskData {
   path?: BezierPath;
 }
 
+/** A layer's own pose when it was made: what Reset Transform returns to. */
+export interface HomeTransform {
+  x: number;
+  y: number;
+  rotation: number;
+  scaleX: number;
+  scaleY: number;
+  opacity: number;
+}
+
 export interface Transform {
   x: number;
   y: number;
@@ -423,6 +433,8 @@ export interface CharacterPart {
   follow?: FollowSettings;
   /** Look At: turns to face another layer (`utils/layers/layoutModifiers`). */
   lookAt?: LookAtSettings;
+  /** Where the layer was made (position, turn, size, opacity); Reset Transform returns it there. */
+  homeTransform?: HomeTransform;
   /** Group: Justify, where its children's combined bounds sit (`utils/layers/layoutModifiers`). */
   justify?: JustifySettings;
   /** Repeater: copies in a line, grid or ring (`utils/layers/layoutModifiers`). */

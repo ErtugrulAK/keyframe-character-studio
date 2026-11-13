@@ -77,6 +77,10 @@ export const createCustomPart = (
     ...extraProps,
   };
 
+  // Reset Transform returns the layer to the pose it was made with.
+  const { x, y, rotation, scaleX, scaleY, opacity } = newPart.baseTransform;
+  newPart.homeTransform = { x, y, rotation, scaleX, scaleY, opacity };
+
   const newTrack: Track = {
     id: generateId('track'),
     partId,

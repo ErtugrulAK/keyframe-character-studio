@@ -75,15 +75,16 @@ test('a follower stays put when bound, then moves with the text it follows, acro
   const gap = before.left - (await boxOf(page, 'title'))!.right;
 
   await setTitle(page, 'A longer headline');
-  // The text grew: the box keeps its gap to the text's right edge.
-  await expect.poll(async () => Math.round((await boxOf(page, 'tag'))!.left - (await boxOf(page, 'title'))!.right)).toBe(Math.round(gap));
+  // The text grew: the box keeps its gap to the text's right edge (to a screen
+  // pixel: rounding both sides of a fractional gap could differ by one).
+  await expect.poll(async () => Math.abs((await boxOf(page, 'tag'))!.left - (await boxOf(page, 'title'))!.right - gap)).toBeLessThanOrEqual(1);
   expect((await boxOf(page, 'tag'))!.centre).toBeGreaterThan(before.centre + 20);
 
   await expect(page.locator('.autosave-status-badge')).toHaveAttribute('data-save-state', 'saved', { timeout: 15000 });
   await page.reload();
   await expect(page.locator('[data-part-id="title"]').first()).toBeVisible({ timeout: 30000 });
   await page.evaluate(() => document.fonts.ready);
-  await expect.poll(async () => Math.round((await boxOf(page, 'tag'))!.left - (await boxOf(page, 'title'))!.right)).toBe(Math.round(gap));
+  await expect.poll(async () => Math.abs((await boxOf(page, 'tag'))!.left - (await boxOf(page, 'title'))!.right - gap)).toBeLessThanOrEqual(1);
 });
 
 test('an emptied text with Hide When Empty hides itself and the bar sized to it', async ({ page }) => {

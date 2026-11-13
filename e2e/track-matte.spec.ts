@@ -193,6 +193,12 @@ async function hideCoordinateOverlay(page: Page): Promise<void> {
   const overlayToggle = page.getByRole('button', { name: 'Toggle coordinate overlay' });
   if (await overlayToggle.getAttribute('aria-pressed') === 'true') await overlayToggle.click();
   await expect(page.locator('.canvas-coordinate-overlay')).toHaveCount(0);
+  // The editor grid is the same kind of chrome: a grid line under a probe
+  // reads as layer pixels (a 0.1-alpha line lifted a "hidden" probe to 48
+  // once the grid fitted the artboard, QA 2026-11-13), so it is off as well.
+  const gridToggle = page.getByRole('button', { name: 'Toggle grid' });
+  if (await gridToggle.getAttribute('aria-pressed') === 'true') await gridToggle.click();
+  await expect(page.getByTestId('stage-grid')).toHaveCount(0);
 }
 
 async function seed(page: Page, layers: Record<string, unknown>[], tracks: Record<string, unknown>[] = []): Promise<void> {

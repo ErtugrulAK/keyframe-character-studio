@@ -32,6 +32,14 @@ describe('structurallyEqual', () => {
     expect(structurallyEqual({ a: null }, { a: {} })).toBe(false);
   });
 
+  it('treats 0 and -0 as the same value, as the JSON comparison it replaced did', () => {
+    // A rotation or offset computed as `-x * 0` yields -0; it serialises as 0,
+    // so a snapshot that differs only there is not a new undo step.
+    expect(structurallyEqual({ rotation: -0 }, { rotation: 0 })).toBe(true);
+    expect(structurallyEqual([0, -0], [-0, 0])).toBe(true);
+    expect(structurallyEqual(Number.NaN, Number.NaN)).toBe(true);
+  });
+
   it('does not walk a shared subtree', () => {
     let reads = 0;
     const shared = new Proxy({ x: 1 }, { ownKeys: (target) => { reads += 1; return Reflect.ownKeys(target); } });

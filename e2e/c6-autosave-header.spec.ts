@@ -9,6 +9,7 @@
  *   any other header control, at desktop and narrow widths.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openProjectSettings } from './fixtures/toolbarTools';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const emptyChannels = () => ({
@@ -65,8 +66,8 @@ const headerControlBoxes = (page: Page) => page.evaluate(() => {
   return out;
 });
 
-/** The autosave delay lives in the Project panel of the left toolbar. */
-const openProjectPanel = (page: Page) => page.getByRole('button', { name: 'Project Workspace' }).click();
+/** The autosave delay lives in File > Project Settings. */
+const openProjectPanel = (page: Page) => openProjectSettings(page);
 
 test('the autosave delay is set in the Project panel, applies at once and is remembered', async ({ page }) => {
   test.setTimeout(60000);
@@ -81,6 +82,7 @@ test('the autosave delay is set in the Project panel, applies at once and is rem
   await field.press('Enter');
   await expect(field).toHaveValue('3');
   await expect(badge).toHaveAttribute('title', /within 3 seconds/);
+  await page.keyboard.press('Escape');
 
   await page.locator('[role="tree"] [data-layer-id="box"]').click();
   const savedBefore = Number((await badge.getAttribute('data-last-saved-at')) || '0');
@@ -94,6 +96,7 @@ test('the autosave delay is set in the Project panel, applies at once and is rem
   expect(savedAt - editAt).toBeGreaterThan(1500);
 
   // Out-of-range input is kept within 1-600, and the choice survives a reload.
+  await openProjectPanel(page);
   await field.fill('9999');
   await field.press('Enter');
   await expect(field).toHaveValue('600');

@@ -26,8 +26,8 @@ Draw, mask and animate vector scenes, then export them as broadcast graphics (OG
 
 | | | |
 |:---:|:---:|:---:|
-| 🎞️ **Keyframe animation**<br><sub>Position, rotation, scale, opacity, Trim Path; bezier easing per segment</sub> | 🎭 **Masks & Track Matte**<br><sub>Draw masks on the canvas, cut holes, use any layer as a matte</sub> | ✏️ **Vector paths**<br><sub>Pen tool, editable paths, corner ↔ smooth points with handles</sub> |
-| 📈 **Motion curves**<br><sub>Curve editor, value and speed graphs, presets, paste CSS easing</sub> | 🧩 **Layers & groups**<br><sub>Parenting, locks, Boolean operations, bonds between layers</sub> | 📡 **Broadcast mode**<br><sub>A live director panel that plays sequences with IN/OUT motion</sub> |
+| 🎞️ **Keyframe animation**<br><sub>Position, rotation, scale, opacity, Trim Path; bezier easing per segment; an After Effects-style property tree</sub> | 🎭 **Masks & Track Matte**<br><sub>Draw masks on the canvas, cut holes, use any layer as a matte</sub> | ✏️ **Vector paths**<br><sub>Pen tool, editable paths, corner ↔ smooth points with handles</sub> |
+| 📈 **Motion curves**<br><sub>Curve editor, value and speed graphs, presets, paste CSS easing</sub> | 🧩 **Layers & groups**<br><sub>Parenting (a child moves in its parent's space), locks, Boolean operations, Shape to Path</sub> | 📡 **Broadcast mode**<br><sub>A live director panel that plays sequences with IN/OUT motion</sub> |
 | 📦 **OGraf export**<br><sub>Web-standard broadcast graphics packages, checked per layer first; multi-step graphics from timeline step markers</sub> | 🖼️ **Animated GIF**<br><sub>Frame-exact export with a built-in encoder</sub> | 📱 **Any screen**<br><sub>Desktop, half-screen windows, tablets and phones</sub> |
 | 🧲 **Layout modifiers**<br><sub>Auto Size, Text Box, Auto Follow, Look At, Justify, Repeater: lower thirds that fit their text, live in OGraf too</sub> | 🎚️ **Keyed mattes**<br><sub>Track Matte feather, strength and gradient angle keyframed like any property</sub> | 🗂️ **Big scenes**<br><sub>Thousands of layers; only what changes re-renders</sub> |
 

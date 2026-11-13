@@ -2,6 +2,7 @@ import type { CharacterPart, Transform } from '../../types/animator';
 import { textBaselineOffset } from './textOrigin';
 import { applyAffine, worldAffineOf, type WorldAffine } from './containerMath';
 import { getShapeGeometry } from './shapeGeometry';
+import { bezierPathExtremePoints } from './bezierPath';
 import { resolveShapeAppearance } from '../layers/shapeAppearance';
 
 type TextMetrics = {
@@ -78,7 +79,7 @@ export const getTextMetrics = (text: string, fontSize: number, fontFamily?: stri
 };
 
 /** A box around the drawn glyphs, relative to the text's anchor on its baseline. */
-type TextInkBox = { minX: number; maxX: number; minY: number; maxY: number };
+export type TextInkBox = { minX: number; maxX: number; minY: number; maxY: number };
 
 /**
  * The box the glyphs actually cover (the ink), as the stage draws them: bold,
@@ -86,7 +87,7 @@ type TextInkBox = { minX: number; maxX: number; minY: number; maxY: number };
  * measure it (no DOM, no ink metrics, nothing visible) — callers then use the
  * em box from `getTextMetrics`.
  */
-const getTextInkBox = (text: string, fontSize: number, fontFamily?: string): TextInkBox | null => {
+export const getTextInkBox = (text: string, fontSize: number, fontFamily?: string): TextInkBox | null => {
   if (typeof document === 'undefined') return null;
   try {
     const context = document.createElement('canvas').getContext('2d');
@@ -220,9 +221,13 @@ export const getPartLocalBounds = (
     if (part.path?.points?.length) {
       const width = part.width ?? 200;
       const height = part.height ?? 120;
+      // The box covers the drawn curve: a smooth edge can bulge past its
+      // vertices. The normalized mapping is affine per axis, so the extremes
+      // found in the path's own space stay the extremes once mapped.
+      const extremes = bezierPathExtremePoints(part.path);
       const pathPoints = part.path.coordinateSpace === 'normalized'
-        ? part.path.points.map((point) => ({ x: (point.x - 0.5) * width, y: (point.y - 0.5) * height }))
-        : part.path.points;
+        ? extremes.map((point) => ({ x: (point.x - 0.5) * width, y: (point.y - 0.5) * height }))
+        : extremes;
       bounds = boundsFromPoints(pathPoints);
     }
   }

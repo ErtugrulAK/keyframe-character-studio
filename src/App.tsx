@@ -2,16 +2,18 @@ import React, { useCallback, useEffect, useLayoutEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnimatorProvider } from './context/AnimatorContext';
 import { EditorContextMenuProvider } from './context/EditorContextMenuContext';
+import { EditorCrashBoundary } from './components/Shared/EditorCrashBoundary';
 import { useAnimator } from './context/useAnimator';
 import { HeaderBar } from './components/Header/HeaderBar';
 import { AuthoringToolbar } from './components/Toolbar/AuthoringToolbar';
-import { LeftToolbar } from './components/Toolbar/LeftToolbar';
+import { MenuBar } from './components/MenuBar/MenuBar';
+import { ToolOptionsBar } from './components/Toolbar/ToolOptionsBar';
 import { StageCanvas } from './components/Canvas/StageCanvas';
 import { PropertyInspector } from './components/Inspector/PropertyInspector';
 import { SequencerTimeline } from './components/Timeline/SequencerTimeline';
 import { LiveDirectorPanel } from './components/Broadcast/LiveDirectorPanel';
 import { useDockedPanelEdge } from './hooks/useDockedPanelEdge';
-import { REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, closeDocksForNarrowStage, isPhoneLayout } from './utils/editor/workspaceLayout';
+import { REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, isPhoneLayout } from './utils/editor/workspaceLayout';
 
 import './kcsEditorTheme.css';
 
@@ -44,7 +46,6 @@ const MainAppContent: React.FC = () => {
   const handleModeSwapAnimationEnd = useCallback((event: React.AnimationEvent<HTMLDivElement>) => {
     if (event.animationName === 'kcs-mode-enter') finishModeSwap();
   }, [finishModeSwap]);
-  const leftToolbar = useDockedPanelEdge(true, 'left');
   const inspector = useDockedPanelEdge(true, 'right');
 
   // A narrow (or browser-zoomed) window opens with the left dock closed
@@ -57,22 +58,17 @@ const MainAppContent: React.FC = () => {
   // On a phone-width window the docks open OVER the stage
   // (kcsEditorTheme.css), so they never squeeze it to nothing, and the
   // inspector opens closed too — open, it would cover the whole stage.
-  const snapLeftDock = leftToolbar.snap;
   const snapInspector = inspector.snap;
   const closeDocksIfStageNarrow = useCallback((): boolean => {
     const stage = document.querySelector('.stage-canvas-container');
     if (!stage) return false;
     if (isPhoneLayout()) {
-      // The docks would cover the stage: both start (or become) closed.
-      snapLeftDock(false);
+      // The inspector would cover the stage: it starts (or becomes) closed.
       snapInspector(false);
       return true;
     }
-    return closeDocksForNarrowStage(
-      () => stage.getBoundingClientRect().width,
-      [() => snapLeftDock(false)],
-    );
-  }, [snapLeftDock, snapInspector]);
+    return false;
+  }, [snapInspector]);
   useLayoutEffect(() => {
     if (appMode !== 'edit') return;
     let cancelled = false;
@@ -137,19 +133,14 @@ const MainAppContent: React.FC = () => {
      * read, and the panel geometry tokens they measure.
      */
     <div
-      className={`app-container ${leftToolbar.visible ? '' : 'left-toolbar-hidden'} ${inspector.visible ? '' : 'inspector-hidden'} ${modeSwapActive ? 'kcs-mode-swap' : ''}`}
+      className={`app-container ${inspector.visible ? '' : 'inspector-hidden'} ${modeSwapActive ? 'kcs-mode-swap' : ''}`}
       onAnimationEnd={handleModeSwapAnimationEnd}
     >
       <MemoHeaderBar />
+      {appMode === 'edit' && <MenuBar />}
       {appMode === 'edit' && <MemoAuthoringToolbar />}
+      {appMode === 'edit' && <ToolOptionsBar />}
       <div className="main-layout">
-        {appMode === 'edit' && (
-          <LeftToolbar
-            isHidden={!leftToolbar.visible}
-            edgeStyle={leftToolbar.edgeStyle}
-            panelRef={leftToolbar.panelRef}
-          />
-        )}
         <MemoStageCanvas />
         {appMode === 'edit' && (
           <PropertyInspector
@@ -157,19 +148,6 @@ const MainAppContent: React.FC = () => {
             edgeStyle={inspector.edgeStyle}
             panelRef={inspector.panelRef}
           />
-        )}
-        {appMode === 'edit' && (
-          <button
-            type="button"
-            ref={leftToolbar.handleRef as React.RefObject<HTMLButtonElement>}
-            className="sidebar-handle left-toolbar-toggle"
-            aria-label={leftToolbar.visible ? 'Hide Left Toolbar' : 'Show Left Toolbar'}
-            aria-expanded={leftToolbar.visible}
-            aria-controls="left-toolbar-panel"
-            onClick={leftToolbar.toggle}
-          >
-            {leftToolbar.visible ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-          </button>
         )}
         {appMode === 'edit' && (
           <button
@@ -193,9 +171,12 @@ const MainAppContent: React.FC = () => {
 export function App() {
   return (
     <AnimatorProvider>
-      <EditorContextMenuProvider>
-        <MainAppContent />
-      </EditorContextMenuProvider>
+      {/* Inside the provider: a crash keeps the document in memory to save. */}
+      <EditorCrashBoundary>
+        <EditorContextMenuProvider>
+          <MainAppContent />
+        </EditorContextMenuProvider>
+      </EditorCrashBoundary>
     </AnimatorProvider>
   );
 }

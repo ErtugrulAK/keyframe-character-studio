@@ -21,8 +21,35 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 - Step markers (the flag button on the timeline, at the playhead) split a sequence into OGraf steps: each Next in a playout plays to the next marker and holds.
 - Crop ends the sequence at the playhead, and DURATION shows the new length (two decimals: 60 frames at 120 fps read 0.5 s).
 - The autosave delay is set in the Project panel.
+- A menu bar (File, Edit, Object, View, Help) above the toolbar runs the editor's commands; File > Project Settings holds the resolution, autosave delay and Library.
+- Tool flyouts: hold (or right-click) the shape button for Rectangle, Square, Triangle, Rhombus, Parallelogram and Star, or the ellipse button for Ellipse and Circle (always round); the picked tool stays on the button.
+- An options row under the toolbar edits the selected text: style, text, font, size, colour, outline and alignment.
+- Double-click edit modes: a path's points, a layer's mask or a Boolean result's operands open on a double-click on the layer and close on a double-click on empty stage (or Escape).
+- A Boolean result is one shape in the layer tree, and it can join another Boolean or become a path with Shape to Path.
+- Edit > Paste in Place puts the copy exactly over the original.
+- The Text tool draws a text box: a drag sets its width and font size, a click places a text.
+- A Media button (and File > Add Image or Video…) opens the file picker directly.
+- Ctrl+V pastes at the mouse; animated copies carry their motion.
+- Alt on a corner or edge handle scales about the centre; Alt while drawing draws from the centre.
+- Reset Transform returns layers to the pose they were made with; the conversion is named Shape to Path.
+- The marquee outlines the layers it will select while it is dragged; undo and redo restore the selection.
+- A rotation ring shows the turn while the rotate handle is dragged.
+- Freeform paths get a transform frame (corners and rotation) beside their points.
+- The timeline groups properties like After Effects (Trim Paths, Masks, Track Matte, Transform) and U shows only animated properties.
 
 ### Changed
+- The left panel is gone: the menu bar, the toolbar flyouts and the Media button replace it. The header is 42 px tall instead of 79 px.
+- The coordinate axes are faint white with small edge markers pointing at the origin; the X/Y badges, the origin mark and the selection centre mark are gone.
+- Zoom reaches 4000 %; transform handles keep one small size at every zoom.
+- Shift and Alt apply the moment they are pressed during a drag.
+- A tool stays on when its button is pressed again; the active tool has no underline; a draw tool keeps the crosshair over layers.
+- The mask path pad and its commands left the Inspector, and so did the Path Points card: masks and paths are shaped on the canvas.
+- The menu bar keeps only what the toolbar does not offer, and the header's shortcuts button moved to Help > Keyboard Shortcuts.
+- The Inspector is 30 % wider, and Appearance shows fill and stroke side by side as a swatch and a hex code.
+- The timeline lists layers in the layer tree's order, children indented under their parent.
+- The ruler markers follow the mouse over the stage; zoom is smooth on a wheel or trackpad, and the grid stays one pixel thin at any zoom.
+- Focus rings show only while moving with Tab, not after a click.
+- The colour picker's alpha bar fades from transparent to the colour; layer tree drops are coloured by what they do.
 - A dragged layer also snaps by its own position, so a text lands on X/Y = 0.
 - New shapes drawn one after another differ in colour; a new text is 72 px.
 - Inspector cards (Text, Modifiers, Track Matte) start closed on each layer.
@@ -32,6 +59,10 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 - A scene of more than 2,500 layers was refused on reload (the limit counted layers and their tracks), so the editor opened empty and the next autosave overwrote the work. The limit now counts layers (5,000), and a saved scene the editor cannot open is kept in its own storage key, with a message.
 - Ctrl+Z / Ctrl+Y work while a slider, checkbox or list still has focus.
 - Select All on a large scene took seconds.
+- The Display Title and Cinematic Title text styles left the Font list blank: they stored their family without the quotes the list uses.
+- A shape or ellipse toolbar button activated without a pointer (a screen reader, a switch device) did nothing.
+- An SVG image stored as a percent-encoded data URL lost its non-ASCII text in the OGraf package ("Işık" became "I_1k"), and one with a bare `%` (`width="100%"`) or a `;charset=utf-8` parameter was refused by the export and the Lottie import.
+- Unlocking a layer re-enabled an Inspector control that had become disabled for its own reason while the layer was locked.
 
 ## [1.1.0-rc.6] - 2026-10-30
 

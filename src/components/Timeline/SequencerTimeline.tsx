@@ -8,7 +8,6 @@ import { type TrackChannel, type AnimationChannel } from '../../types/animator';
 import { resolveChannelAnimationState, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/editor/timelineMetrics';
 import { channelArmValue, resolveAuthoredLocalTransform, resolveAuthoredBasePose } from '../../utils/animation/channelKeyframeGroups';
 import { evaluateTrackMatte } from '../../utils/layers/matte';
-import { partIndexOf } from '../../utils/layers/partBinding';
 import { locateKeyframe } from '../../utils/animation/trackMutations';
 import { duplicateKeyframeGroup as previewKeyframeDuplicate } from '../../utils/animation/keyframeDuplicate';
 import {
@@ -29,7 +28,11 @@ import {
   TrendingUp,
   ChevronDown,
   ChevronUp,
+  Diamond,
 } from 'lucide-react';
+import { isEditableElement } from '../../utils/editor/keyboardFocus';
+import { orderTracksByLayerTree } from '../../utils/layers/layerTreeOrder';
+import { isBlockingModalOpen } from '../../utils/editor/modalBoundary';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { addStepMarker, normalizeStepMarkers, removeStepMarker } from '../../utils/animation/stepMarkers';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
@@ -41,6 +44,7 @@ import { TrackOutlinerRow } from './TrackOutlinerRow';
 import { projectLayerOrdinals } from '../../utils/layers/layerOrdinal';
 import { frameToSeconds, secondsToFrame } from '../../utils/animation/timebase';
 import { InlineRename } from '../Shared/InlineRename';
+import { ChunkLoadBoundary } from '../Shared/ChunkLoadBoundary';
 import { useRowWindow, type RowViewport } from '../../hooks/useRowWindow';
 import { useRetainedScrollTop, useRetainedUiState } from '../../hooks/useRetainedUiState';
 import { rowOffsets, type RowWindowSegment } from '../../utils/editor/rowWindow';
@@ -116,7 +120,7 @@ export const SequencerTimeline: React.FC = () => {
     totalFrames,
     setTotalFrames,
     fps,
-    tracks,
+    tracks: sceneTracks,
     characterParts,
     selectedPartId,
     selectedPartIds,
@@ -170,10 +174,25 @@ export const SequencerTimeline: React.FC = () => {
     updateMotionTemplateDuration,
     setMotionTemplateStepMarkers,
   } = useAnimator();
+  // The rows follow the Layers panel: a parent, then its children under it.
+  const layerTree = useMemo(() => orderTracksByLayerTree(characterParts, sceneTracks), [characterParts, sceneTracks]);
+  const tracks = layerTree.ordered;
   // The derived display ordinal, the same projection the Outliner shows.
   const layerOrdinals = useMemo(() => projectLayerOrdinals(characterParts), [characterParts]);
   // Sequencer Tree Modal Toggle State & Inline Sequence Rename
   const [isSeqTreeOpen, setIsSeqTreeOpen] = useState<boolean>(false);
+  /** Show only keyed properties in the property tree (After Effects' U). */
+  const [animatedOnly, setAnimatedOnly] = useState<boolean>(false);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'u' && event.key !== 'U') return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (isEditableElement(document.activeElement) || isBlockingModalOpen()) return;
+      setAnimatedOnly((on) => !on);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const [isAddSeqModalOpen, setIsAddSeqModalOpen] = useState<boolean>(false);
   const [editingSeqId, setEditingSeqId] = useState<string | null>(null);
   const [editingSeqName, setEditingSeqName] = useState<string>('');
@@ -1195,8 +1214,8 @@ export const SequencerTimeline: React.FC = () => {
   );
   /** Which property groups each layer has (masks, Trim Paths): one source for tree, lanes and marquee. */
   const laneContextByPart = useMemo(
-    () => new Map<string, LaneContext>(characterParts.map((part) => [part.id, laneContextOf(part)])),
-    [characterParts],
+    () => new Map<string, LaneContext>(characterParts.map((part) => [part.id, laneContextOf(part, animatedOnly)])),
+    [characterParts, animatedOnly],
   );
 
   /*
@@ -1532,12 +1551,22 @@ export const SequencerTimeline: React.FC = () => {
           {/* Sticky ruler-height spacer to align with grid ruler */}
           <div className="ue-outliner-ruler-spacer">
             <span>LAYERS ({tracks.length})</span>
+            {/* After Effects' U: the property tree shows only keyed properties. */}
+            <button
+              type="button"
+              className={`btn-icon timeline-animated-only-btn${animatedOnly ? ' active' : ''}`}
+              aria-pressed={animatedOnly}
+              aria-label="Show only animated properties"
+              title={animatedOnly ? 'Showing only animated properties (U): show all' : 'Show only animated properties (U)'}
+              onClick={() => setAnimatedOnly((on) => !on)}
+            >
+              <Diamond size={12} />
+            </button>
           </div>
 
           <div className="ue-outliner-list" ref={outlinerRef} onScroll={handleOutlinerScroll} onFocus={handleTrackFocus}>
             {renderTrackWindow((track) => {
-              const partItem = partIndexOf(characterParts).get(track.partId);
-              const isChildLayer = Boolean(partItem?.parentId);
+              const depth = layerTree.depth.get(track.partId) ?? 0;
 
               return (
                 <TrackOutlinerRow
@@ -1546,7 +1575,7 @@ export const SequencerTimeline: React.FC = () => {
                   ordinal={layerOrdinals.get(track.partId)}
                   layerCount={characterParts.length}
                   parts={characterParts}
-                  isChildLayer={isChildLayer}
+                  depth={depth}
                   isSelected={selectedPartIds?.includes(track.partId)}
                   editingPartId={editingPartId}
                   editingNameValue={editingNameValue}
@@ -1571,6 +1600,7 @@ export const SequencerTimeline: React.FC = () => {
                   onToggleChannelAnimation={rowActions.onToggleChannelAnimation}
                   isGroupExpanded={isGroupExpanded}
                   onToggleSubGroup={rowActions.onToggleSubGroup}
+                  animatedOnly={animatedOnly}
                   // The layer row's keyframe navigation moves the playhead
                   // and nothing else: the callback writes the frame cursor only.
                   onJumpToFrame={rowActions.onJumpToFrame}
@@ -1679,6 +1709,12 @@ export const SequencerTimeline: React.FC = () => {
 
       {/* Expanded Pro Cubic Bezier Curve Studio Modal */}
       {isCurveModalOpen && (
+        <ChunkLoadBoundary
+          onError={() => {
+            setIsCurveModalOpen(false);
+            showToast('The curve editor could not be opened. Reload the editor to try again; your project is unchanged.', 'error');
+          }}
+        >
         <Suspense fallback={null}>
           <InteractiveCubicBezierEditor
             controlPoints={curveSegment?.from.bezierControlPoints ?? [0.42, 0, 0.58, 1]}
@@ -1708,6 +1744,7 @@ export const SequencerTimeline: React.FC = () => {
             onCloseModal={() => setIsCurveModalOpen(false)}
           />
         </Suspense>
+        </ChunkLoadBoundary>
       )}
 
       {/* New Sequence Modal */}

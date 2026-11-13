@@ -58,13 +58,12 @@ interface TextLeaf extends Omit<Box, 'width' | 'height'> {
 
 /** The dock geometry of one layout state: the handles, the panels, the row. */
 export interface DockBoundaryReport {
+  /** The retired left dock's handle; asserted absent. */
   leftHandle: Box | null;
   rightHandle: Box | null;
-  drawer: Box | null;
   inspector: Box | null;
   row: Box | null;
   timeline: Box | null;
-  drawerText: TextLeaf[];
   inspectorText: TextLeaf[];
 }
 
@@ -103,11 +102,9 @@ async function dockBoundaryReport(page: Page): Promise<DockBoundaryReport> {
     return {
       leftHandle: box('.left-toolbar-toggle'),
       rightHandle: box('.inspector-dock-toggle'),
-      drawer: box('.left-drawer-panel'),
       inspector: box('.motion-design-right-sidebar'),
       row: box('.main-layout'),
       timeline: box('.sequencer-timeline'),
-      drawerText: textLeaves('#left-toolbar-panel'),
       inspectorText: textLeaves('.motion-design-right-sidebar'),
     };
   });
@@ -120,53 +117,45 @@ async function dockBoundaryReport(page: Page): Promise<DockBoundaryReport> {
 function expectHandleBoundary(
   label: string,
   report: DockBoundaryReport,
-  side: 'left' | 'right',
   panelOpen: boolean,
 ) {
-  const handle = side === 'left' ? report.leftHandle : report.rightHandle;
-  const panel = side === 'left' ? report.drawer : report.inspector;
-  expect(handle, `${label}: the ${side} handle is missing`).not.toBeNull();
-  expect(panel, `${label}: the ${side} panel is missing`).not.toBeNull();
+  const handle = report.rightHandle;
+  const panel = report.inspector;
+  expect(handle, `${label}: the inspector handle is missing`).not.toBeNull();
+  expect(panel, `${label}: the inspector is missing`).not.toBeNull();
   expect(report.row, `${label}: the workspace row is missing`).not.toBeNull();
   expect(report.timeline, `${label}: the timeline is missing`).not.toBeNull();
 
   if (panelOpen) {
-    expect(panel!.width, `${label}: the ${side} panel should be open`).toBeGreaterThan(0);
-    if (side === 'left') {
-      expect(Math.abs(handle!.x + handle!.width / 2 - panel!.right), `${label}: the left handle lost the drawer boundary`).toBeLessThanOrEqual(TOLERANCE);
-    } else {
-      expect(Math.abs(handle!.x + handle!.width / 2 - panel!.x), `${label}: the right handle lost the inspector boundary`).toBeLessThanOrEqual(TOLERANCE);
-    }
-  } else if (side === 'left') {
-    expect(Math.abs(handle!.x), `${label}: the hidden-drawer handle left the edge`).toBeLessThanOrEqual(TOLERANCE);
+    expect(panel!.width, `${label}: the inspector should be open`).toBeGreaterThan(0);
+    expect(Math.abs(handle!.x + handle!.width / 2 - panel!.x), `${label}: the handle lost the inspector boundary`).toBeLessThanOrEqual(TOLERANCE);
   } else {
     expect(Math.abs(handle!.right - report.row!.right), `${label}: the hidden-inspector handle left the edge`).toBeLessThanOrEqual(TOLERANCE);
   }
 
   // It rides the workspace row (the box a timeline resize shortens from below),
   // so it never paints over the timeline and never leaves the workspace.
-  expect(handle!.y, `${label}: the ${side} handle left the workspace row`).toBeGreaterThanOrEqual(report.row!.y - TOLERANCE);
-  expect(handle!.bottom, `${label}: the ${side} handle left the workspace row`).toBeLessThanOrEqual(report.row!.bottom + TOLERANCE);
-  expect(handle!.bottom, `${label}: the ${side} handle paints over the timeline`).toBeLessThanOrEqual(report.timeline!.y + TOLERANCE);
+  expect(handle!.y, `${label}: the handle left the workspace row`).toBeGreaterThanOrEqual(report.row!.y - TOLERANCE);
+  expect(handle!.bottom, `${label}: the handle left the workspace row`).toBeLessThanOrEqual(report.row!.bottom + TOLERANCE);
+  expect(handle!.bottom, `${label}: the handle paints over the timeline`).toBeLessThanOrEqual(report.timeline!.y + TOLERANCE);
 
   // No text-bearing leaf inside the panel is underneath either handle.
-  const panelText = panelOpen ? (side === 'left' ? report.drawerText : report.inspectorText) : [];
+  const panelText = panelOpen ? report.inspectorText : [];
   for (const leaf of panelText) {
     const intersected = handle!.x < leaf.right && handle!.right > leaf.x && handle!.y < leaf.bottom && handle!.bottom > leaf.y;
-    expect(intersected, `${label}: the ${side} handle covers "${leaf.text}" (${leaf.cls})`).toBe(false);
+    expect(intersected, `${label}: the handle covers "${leaf.text}" (${leaf.cls})`).toBe(false);
   }
 }
 
-test('R5-01 — both dock handles are anchored to the panel boundary, never to panel content', async ({ page }) => {
+test('R5-01 — the dock handle is anchored to the panel boundary, never to panel content', async ({ page }) => {
   await seed(page);
   await page.setViewportSize({ width: 1440, height: 900 });
 
   // Default layout.
   const atDefault = await dockBoundaryReport(page);
-  expectHandleBoundary('default', atDefault, 'left', true);
-  expectHandleBoundary('default', atDefault, 'right', true);
-  // Symmetric vertical anchor: both handles ride the same inset.
-  expect(Math.abs(atDefault.leftHandle!.y - atDefault.rightHandle!.y)).toBeLessThanOrEqual(TOLERANCE);
+  expectHandleBoundary('default', atDefault, true);
+  // The left dock is gone (menu bar and toolbar replaced it).
+  expect(atDefault.leftHandle).toBeNull();
 
   const resizer = page.getByTestId('timeline-height-resizer');
   const timelineHeight = () => page.evaluate(() => document.querySelector('[data-testid="sequencer-timeline"]')!.getBoundingClientRect().height);
@@ -184,8 +173,7 @@ test('R5-01 — both dock handles are anchored to the panel boundary, never to p
   const atMinimum = await timelineHeight();
   expect(atMinimum).toBeLessThan(200);
   const minReport = await dockBoundaryReport(page);
-  expectHandleBoundary('timeline minimum', minReport, 'left', true);
-  expectHandleBoundary('timeline minimum', minReport, 'right', true);
+  expectHandleBoundary('timeline minimum', minReport, true);
 
   // Maximum timeline height.
   let atMaximum = atMinimum;
@@ -197,38 +185,16 @@ test('R5-01 — both dock handles are anchored to the panel boundary, never to p
   }
   expect(atMaximum, 'the drag never resized the panel').toBeGreaterThan(atMinimum + 40);
   const maxReport = await dockBoundaryReport(page);
-  expectHandleBoundary('timeline maximum', maxReport, 'left', true);
-  expectHandleBoundary('timeline maximum', maxReport, 'right', true);
+  expectHandleBoundary('timeline maximum', maxReport, true);
 
   // Short viewport (the compact QA window).
   await drag(2000);
   await page.setViewportSize({ width: 1120, height: 620 });
   await expect.poll(timelineHeight).toBeGreaterThan(0);
-  // C11: shrinking to 1120 px left a 388 px stage, so the left dock closed
-  // itself (the narrow-window rule); the user reopens it and the handle
-  // contract is checked with both docks open, as before.
-  await expect(page.locator('.left-toolbar-toggle')).toHaveAttribute('aria-expanded', 'false');
-  await page.getByRole('button', { name: 'Show Left Toolbar' }).click();
-  await expect.poll(() => page.locator('#left-toolbar-panel').evaluate((node) => (node as HTMLElement).style.width)).toBe('');
   const shortReport = await dockBoundaryReport(page);
-  expectHandleBoundary('short viewport', shortReport, 'left', true);
-  expectHandleBoundary('short viewport', shortReport, 'right', true);
+  expectHandleBoundary('short viewport', shortReport, true);
 
-  // Left panel closed: the handle retires to the viewport edge and stays
-  // reachable, with its accessible name flipped to the restore action.
   await page.setViewportSize({ width: 1440, height: 900 });
-  const leftToggle = page.getByRole('button', { name: 'Hide Left Toolbar' });
-  await expect(leftToggle).toHaveAttribute('aria-controls', 'left-toolbar-panel');
-  expect(await page.locator('#left-toolbar-panel').count()).toBe(1);
-  await leftToggle.click();
-  await expect(page.getByRole('button', { name: 'Show Left Toolbar' })).toBeVisible();
-  // The handle rides the collapsing edge, so let that 240ms ride settle.
-  await expect.poll(async () => Math.round((await dockBoundaryReport(page)).leftHandle!.x)).toBeLessThanOrEqual(TOLERANCE);
-  const drawerClosed = await dockBoundaryReport(page);
-  expectHandleBoundary('left panel closed', drawerClosed, 'left', false);
-  expectHandleBoundary('left panel closed', drawerClosed, 'right', true);
-  await page.getByRole('button', { name: 'Show Left Toolbar' }).click();
-  await expect(page.locator('.left-drawer-panel')).toBeVisible();
 
   // Right panel closed: the same contract on the other side.
   const inspectorToggle = page.getByRole('button', { name: 'Hide Inspector' });
@@ -241,21 +207,20 @@ test('R5-01 — both dock handles are anchored to the panel boundary, never to p
     return Math.round(report.row!.right - report.rightHandle!.right);
   }).toBeLessThanOrEqual(TOLERANCE);
   const inspectorClosed = await dockBoundaryReport(page);
-  expectHandleBoundary('right panel closed', inspectorClosed, 'left', true);
-  expectHandleBoundary('right panel closed', inspectorClosed, 'right', false);
+  expectHandleBoundary('right panel closed', inspectorClosed, false);
   await page.getByRole('button', { name: 'Show Inspector' }).click();
   await expect(page.locator('.motion-design-right-sidebar')).toBeVisible();
 });
 
-test('R5-01 — the dock handles keep their accessible names and a visible keyboard focus ring', async ({ page }) => {
+test('R5-01 — the dock handle keeps its accessible name and a visible keyboard focus ring', async ({ page }) => {
   await seed(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   // C2: the seed's mouse click now focuses the (focusable) layer-tree row, so the
   // browser's last input modality is "pointer". A keyboard user reaches these
   // handles with the keyboard: establish that modality before focusing them.
-  await page.keyboard.press('Shift');
+  await page.keyboard.press('Tab');
 
-  for (const selector of ['.left-toolbar-toggle', '.inspector-dock-toggle']) {
+  for (const selector of ['.inspector-dock-toggle']) {
     const state = await page.evaluate((sel) => {
       const node = document.querySelector(sel) as HTMLElement;
       node.focus();
@@ -298,11 +263,15 @@ test('R5-02 — an open overlay paints over the dock handles, never under them',
       const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2) as HTMLElement | null;
       return Boolean(hit) && (hit === node || node.contains(hit));
     };
-    return { left: owns('.left-toolbar-toggle'), right: owns('.inspector-dock-toggle') };
+    return { right: owns('.inspector-dock-toggle') };
   });
-  expect(withMenu.left, 'the export dropdown covers the left handle').toBe(true);
   expect(withMenu.right, 'the export dropdown covers the right handle').toBe(true);
 
+  // The GIF panel (360 px, hanging from the Export button on the right) and
+  // the handle overlap on a narrower window, where the Inspector is narrower too.
+  await page.keyboard.press('Escape');
+  await page.setViewportSize({ width: 780, height: 900 });
+  await page.locator('.export-btn').click();
   // GIF panel open: it really overlaps the right handle, and it wins the hit
   // test there — the handle is below the overlay.
   await page.locator('[role="menuitem"]', { hasText: 'Animated GIF' }).click();

@@ -61,8 +61,6 @@ test('a clicked point turns Smooth with C, back to Corner with a double-click; o
   await seed(page);
   const before = await savedScene(page);
   await page.getByTestId('mask-vertex').nth(1).click();
-  const editor = page.getByTestId('bezier-path-editor');
-  await expect(editor).toContainText('Point 2 of 4');
   await page.keyboard.press('c');
   // The canvas shows the new tangent handles of that point.
   await expect(page.getByTestId('mask-tangent-handle-out')).toHaveCount(1);
@@ -79,7 +77,6 @@ test('a clicked point turns Smooth with C, back to Corner with a double-click; o
   await page.getByTestId('mask-vertex').nth(1).dblclick();
   await expect(page.getByTestId('mask-vertex').nth(1)).toHaveAttribute('aria-label', /corner/);
   expect((await savedScene(page)).layers[0].masks[0].path.points[1].kind).toBe('corner');
-  await expect(editor.getByRole('radio', { name: 'Smooth' })).toHaveCount(0);
 });
 
 test('Alt-drag moves one handle of a smooth point alone; a plain drag keeps the pair aligned', async ({ page }) => {
@@ -107,19 +104,14 @@ test('Alt-drag moves one handle of a smooth point alone; a plain drag keeps the 
   expect(point.kind).toBe('corner');
 });
 
-test('an animated mask path refuses topology edits with the reason; a Smooth change becomes a key at the playhead keeping metadata', async ({ page }) => {
+test('on an animated mask path, a Smooth change becomes a key at the playhead keeping metadata', async ({ page }) => {
   await seed(page, {
     maskPathChannels: { 'm1:path': [
       { id: 'k0', frame: 0, value: rect, easing: 'easeIn', templateId: 'Sequence' },
       { id: 'k20', frame: 20, value: rect, easing: 'linear', templateId: 'Sequence' },
     ] },
   });
-  const editor = page.getByTestId('bezier-path-editor');
-  for (const name of ['Add vertex', 'Delete vertex']) await expect(editor.getByRole('button', { name })).toBeDisabled();
-  // C4 — opening/closing and the point order are applied to every keyframe at
-  // once (one point identity order), so they stay available on an animated path.
-  await expect(editor.getByRole('switch', { name: 'Closed path' })).toBeEnabled();
-  await expect(editor).toContainText('The mask path is animated');
+  // (The Inspector's path commands are gone: a mask is shaped on the canvas.)
   await page.getByTestId('mask-vertex').nth(2).click();
   await page.keyboard.press('c');
   const keys = (await savedScene(page)).tracks[0].maskPathChannels['m1:path'];

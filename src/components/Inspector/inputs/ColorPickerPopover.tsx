@@ -397,7 +397,9 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
                 onPointerUp={(event) => handleSliderPointerUp('alpha', event)}
                 onPointerCancel={(event) => handleSliderPointerUp('alpha', event)}
               >
-                <span className="rgba-picker-alpha-fill" style={{ width: `${normalizedAlpha * 100}%`, backgroundColor: normalizedColor }} />
+                {/* The whole bar fades from transparent to the colour, over the
+                    checkerboard, so every alpha reads as the colour it gives. */}
+                <span className="rgba-picker-alpha-fill" style={{ backgroundImage: `linear-gradient(to right, ${normalizedColor.slice(0, 7)}00, ${normalizedColor.slice(0, 7)})` }} />
                 <span className="rgba-picker-slider-indicator" style={{ left: `${normalizedAlpha * 100}%` }} />
               </div>
             )}

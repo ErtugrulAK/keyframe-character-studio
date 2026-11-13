@@ -1,3 +1,4 @@
+import { normalizeStepMarkers } from '../utils/animation/stepMarkers';
 import { useState, useCallback } from 'react';
 import type { CharacterPart, Track, MotionTemplate, ProjectTemplate, AppMode } from '../types/animator';
 import type { SceneCoordinateSystem } from '../types/composition';
@@ -17,7 +18,21 @@ interface TemplateCanvas {
   motionTemplates: MotionTemplate[];
   activeTemplateId: string;
   coordinateSystem: SceneCoordinateSystem;
+  /**
+   * The template's frame rate. A scene's fps is its own (SceneData.fps), so a
+   * tab keeps it: absent on entries written before tabs kept their rate.
+   */
+  fps?: number;
+  /** The template's canvas size (SceneData.width/height), kept with it like its rate. */
+  projectResolution?: { width: number; height: number };
 }
+
+/** The canvas size a new template opens at (the editor's initial size). */
+const DEFAULT_TEMPLATE_RESOLUTION = { width: 1920, height: 1080 } as const;
+
+/** The frame count a template opens at: its active sequence's duration. */
+const activeSequenceDuration = (templates: MotionTemplate[], activeId: string): number | undefined =>
+  (templates.find((template) => template.id === activeId) ?? templates[0])?.durationFrames;
 
 interface UseTemplatesOptions {
   characterParts: CharacterPart[];
@@ -25,6 +40,11 @@ interface UseTemplatesOptions {
   tracks: Track[];
   setTracks: React.Dispatch<React.SetStateAction<Track[]>>;
   setFps: React.Dispatch<React.SetStateAction<number>>;
+  /** The open template's frame rate, stored with it when another tab opens. */
+  fps?: number;
+  /** The open template's canvas size, stored and restored the same way. */
+  projectResolution?: { width: number; height: number };
+  setProjectResolution?: (resolution: { width: number; height: number }) => void;
   setTotalFrames?: React.Dispatch<React.SetStateAction<number>>;
   setCurrentFrame: (frame: number | ((prev: number) => number)) => void;
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
@@ -37,6 +57,13 @@ interface UseTemplatesOptions {
   showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
   onSequenceDeleted?: (sequenceId: string) => void;
   onSequenceDurationChanged?: (sequenceId: string, durationFrames: number) => void;
+  /**
+   * Called whenever another template tab becomes the one on screen (switch,
+   * new tab, deleting the open tab). The editor resets the undo baseline
+   * there: one undo stack spans the scene arrays only, so without it Ctrl+Z
+   * right after a switch wrote the previous tab's layers into this one.
+   */
+  onProjectTemplateSwitched?: () => void;
 }
 
 export const useTemplates = ({
@@ -45,6 +72,9 @@ export const useTemplates = ({
   tracks,
   setTracks,
   setFps,
+  fps,
+  projectResolution,
+  setProjectResolution,
   setTotalFrames,
   setCurrentFrame,
   setIsPlaying,
@@ -54,6 +84,7 @@ export const useTemplates = ({
   showToast,
   onSequenceDeleted,
   onSequenceDurationChanged,
+  onProjectTemplateSwitched,
 }: UseTemplatesOptions) => {
   const [templateCanvasStore, setTemplateCanvasStore] = useState<Record<string, TemplateCanvas>>({
     tmpl_1: {
@@ -97,7 +128,14 @@ export const useTemplates = ({
     const newTmpl = createMotionTemplate(name, motionTemplates, type);
     setMotionTemplates((prev) => [...prev, newTmpl]);
     setActiveTemplateIdState(newTmpl.id);
-  }, [motionTemplates]);
+    // The new sequence opens as a selected one does: its length, frame 0,
+    // stopped (edit mode only — broadcast selection stays isolated).
+    if (appMode !== 'broadcast') {
+      setTotalFrames?.(newTmpl.durationFrames);
+      setCurrentFrame(0);
+      setIsPlaying(false);
+    }
+  }, [appMode, motionTemplates, setTotalFrames, setCurrentFrame, setIsPlaying]);
 
   const renameMotionTemplate = useCallback((oldId: string, newName: string) => {
     const cleanName = newName.trim();
@@ -147,10 +185,30 @@ export const useTemplates = ({
       }),
     );
     if (activeTemplateId === idToDelete) {
+      // The sequence that takes over sets the edit timeline, as selecting it
+      // does: its length, frame 0, stopped. Without this the timeline kept the
+      // deleted sequence's length and the playhead could sit past the end.
+      // Broadcast selection stays isolated from edit playback.
+      const next = motionTemplates.find((candidate) => candidate.id !== idToDelete);
+      if (next && appMode !== 'broadcast') {
+        setTotalFrames?.(next.durationFrames);
+        setCurrentFrame(0);
+        setIsPlaying(false);
+      }
       onSequenceDeleted?.(idToDelete);
     }
-  }, [activeTemplateId, motionTemplates, onSequenceDeleted, setTracks]);
+  }, [activeTemplateId, appMode, motionTemplates, onSequenceDeleted, setTracks, setTotalFrames, setCurrentFrame, setIsPlaying]);
 
+
+  /** The sequence's OGraf step markers (frames inside it), stored normalized. */
+  const setMotionTemplateStepMarkers = useCallback((id: string, markers: number[]) => {
+    setMotionTemplates((prev) => prev.map((template) => {
+      if (template.id !== id) return template;
+      const stepMarkers = normalizeStepMarkers(markers, template.durationFrames);
+      const { stepMarkers: _previous, ...rest } = template;
+      return stepMarkers.length > 0 ? { ...rest, stepMarkers } : rest;
+    }));
+  }, []);
 
   const updateMotionTemplateDuration = useCallback((id: string, durationFrames: number) => {
     const duration = normalizeSequenceDuration(durationFrames);
@@ -172,6 +230,8 @@ export const useTemplates = ({
         motionTemplates,
         activeTemplateId,
         coordinateSystem,
+        ...(fps !== undefined ? { fps } : {}),
+        ...(projectResolution ? { projectResolution } : {}),
       },
     }));
 
@@ -184,16 +244,25 @@ export const useTemplates = ({
       coordinateSystem: DEFAULT_SCENE_COORDINATE_SYSTEM,
     };
 
+    const targetTemplates = normalizeMotionTemplates(targetData.motionTemplates);
     setCharacterParts(targetData.characterParts);
     setTracks(targetData.tracks);
-    setMotionTemplates(normalizeMotionTemplates(targetData.motionTemplates));
+    setMotionTemplates(targetTemplates);
     setActiveTemplateIdState(targetData.activeTemplateId);
     setCoordinateSystem(targetData.coordinateSystem ?? DEFAULT_SCENE_COORDINATE_SYSTEM);
+    // The tab opens at its own rate and its active sequence's length: the
+    // rate is the scene's time mapping, so carrying another tab's rate over
+    // would change how fast this one plays.
+    if (targetData.fps !== undefined) setFps(targetData.fps);
+    if (targetData.projectResolution) setProjectResolution?.(targetData.projectResolution);
+    const duration = activeSequenceDuration(targetTemplates, targetData.activeTemplateId);
+    if (duration !== undefined) setTotalFrames?.(duration);
     setActiveProjectTemplateIdState(targetId);
+    onProjectTemplateSwitched?.();
 
     const tmpl = projectTemplates.find((t) => t.id === targetId);
     if (tmpl) setSceneTitleState(tmpl.name);
-  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, templateCanvasStore, projectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setCoordinateSystem]);
+  }, [onProjectTemplateSwitched, fps, setFps, projectResolution, setProjectResolution, setTotalFrames, activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, templateCanvasStore, projectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setCoordinateSystem]);
 
   const addProjectTemplate = useCallback((name: string) => {
     const cleanName = name.trim() || 'New Template';
@@ -212,6 +281,8 @@ export const useTemplates = ({
         motionTemplates,
         activeTemplateId,
         coordinateSystem,
+        ...(fps !== undefined ? { fps } : {}),
+        ...(projectResolution ? { projectResolution } : {}),
       },
       [newId]: {
         characterParts: [],
@@ -231,7 +302,13 @@ export const useTemplates = ({
     setActiveProjectTemplateIdState(newId);
     setSceneTitleState(cleanName);
     setFps(60); // Strictly default to 60 FPS for new templates
-  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setTemplateCanvasStore, setProjectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setFps, setCoordinateSystem]);
+    // A new template opens at the default canvas size as it opens at the
+    // default rate: it used to keep the size of the tab it was made from.
+    setProjectResolution?.(DEFAULT_TEMPLATE_RESOLUTION);
+    const freshDuration = activeSequenceDuration(normalizeMotionTemplates(DEFAULT_MOTION_TEMPLATES), 'Sequence');
+    if (freshDuration !== undefined) setTotalFrames?.(freshDuration);
+    onProjectTemplateSwitched?.();
+  }, [onProjectTemplateSwitched, fps, projectResolution, setProjectResolution, setTotalFrames, activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setTemplateCanvasStore, setProjectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setFps, setCoordinateSystem]);
 
   const renameProjectTemplate = useCallback((id: string, newName: string) => {
     const cleanName = newName.trim();
@@ -247,6 +324,7 @@ export const useTemplates = ({
   }, [activeProjectTemplateId]);
 
   const deleteProjectTemplate = useCallback((idToDelete: string) => {
+    if (activeProjectTemplateId === idToDelete && projectTemplates.length > 1) onProjectTemplateSwitched?.();
     setProjectTemplates((prev) => {
       if (prev.length <= 1) return prev;
       const filtered = prev.filter((t) => t.id !== idToDelete);
@@ -260,11 +338,16 @@ export const useTemplates = ({
           activeTemplateId: 'Sequence',
           coordinateSystem: DEFAULT_SCENE_COORDINATE_SYSTEM,
         };
+        const nextTemplates = normalizeMotionTemplates(targetData.motionTemplates);
         setCharacterParts(targetData.characterParts);
         setTracks(targetData.tracks);
-        setMotionTemplates(normalizeMotionTemplates(targetData.motionTemplates));
+        setMotionTemplates(nextTemplates);
         setActiveTemplateIdState(targetData.activeTemplateId);
         setCoordinateSystem(targetData.coordinateSystem ?? DEFAULT_SCENE_COORDINATE_SYSTEM);
+        if (targetData.fps !== undefined) setFps(targetData.fps);
+        if (targetData.projectResolution) setProjectResolution?.(targetData.projectResolution);
+        const duration = activeSequenceDuration(nextTemplates, targetData.activeTemplateId);
+        if (duration !== undefined) setTotalFrames?.(duration);
         setSceneTitleState(filtered[0].name);
       }
       return filtered;
@@ -275,7 +358,7 @@ export const useTemplates = ({
       delete nextStore[idToDelete];
       return nextStore;
     });
-  }, [activeProjectTemplateId, templateCanvasStore, setProjectTemplates, setActiveProjectTemplateIdState, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setSceneTitleState, setTemplateCanvasStore, setCoordinateSystem]);
+  }, [onProjectTemplateSwitched, setFps, setProjectResolution, setTotalFrames, projectTemplates, activeProjectTemplateId, templateCanvasStore, setProjectTemplates, setActiveProjectTemplateIdState, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setSceneTitleState, setTemplateCanvasStore, setCoordinateSystem]);
 
   return {
     templateCanvasStore,
@@ -296,6 +379,7 @@ export const useTemplates = ({
     renameMotionTemplate,
     deleteMotionTemplate,
     updateMotionTemplateDuration,
+    setMotionTemplateStepMarkers,
     setActiveProjectTemplateId,
     addProjectTemplate,
     renameProjectTemplate,

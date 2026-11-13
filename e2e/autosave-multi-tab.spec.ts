@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { armTool } from './fixtures/toolbarTools';
 
 /**
  * SAFE-01 — cross-tab autosave data safety, real Chromium, multiple pages of
@@ -69,8 +70,7 @@ function paintedParts(page: Page): () => Promise<number> {
 }
 
 async function addRectangle(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).first().click({ timeout: 5000 });
-  await page.getByRole('button', { name: 'Rectangle', exact: true }).first().click({ timeout: 5000 });
+  await armTool(page, 'Rectangle');
   const stage = await page.locator('.stage-canvas-container').boundingBox() /* C7b: the visible stage; the drawing surface is window-sized */;
   if (!stage) throw new Error('stage svg is not visible');
   await page.mouse.move(stage.x + stage.width - 140, stage.y + stage.height - 110);

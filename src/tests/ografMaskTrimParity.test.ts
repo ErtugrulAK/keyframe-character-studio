@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { describe, expect, test } from 'vitest';
 import type { SceneData } from '../types/composition';
+import { onAir } from './helpers/ografOnAir';
 
 const runtimePath = fileURLToPath(new URL('../ograf/runtimeTemplate.ts', import.meta.url)).replaceAll('\\', '/');
 
@@ -56,6 +57,7 @@ async function open(scene: SceneData): Promise<Graphic> {
     .replaceAll('import.meta.url', JSON.stringify('https://example.test/graphic.mjs'));
   const graphic = new (new Function('HTMLElement', source)(HostElement) as new () => Graphic)();
   expect((await graphic.load({ renderType: 'realtime' })).statusCode).toBe(200);
+  await onAir(graphic);
   return graphic;
 }
 

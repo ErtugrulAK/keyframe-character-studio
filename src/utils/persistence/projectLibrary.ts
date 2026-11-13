@@ -51,11 +51,27 @@ export const createIndexedDbBackend = (factory: IDBFactory = indexedDB): Library
     return opened;
   };
   const store = async (mode: IDBTransactionMode) => (await db()).transaction(STORE, mode).objectStore(STORE);
+  /**
+   * A write is done when its TRANSACTION commits, not when its request
+   * succeeds: a transaction can still abort after that (a full disk raises
+   * QuotaExceededError at commit), and resolving early reported "Saved" for
+   * a graphic that was never stored.
+   */
+  const write = async (operate: (objectStore: IDBObjectStore) => void): Promise<void> => {
+    const transaction = (await db()).transaction(STORE, 'readwrite');
+    const committed = new Promise<void>((resolve, reject) => {
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error ?? new Error('The library write failed'));
+      transaction.onabort = () => reject(transaction.error ?? new Error('The library write was aborted'));
+    });
+    operate(transaction.objectStore(STORE));
+    await committed;
+  };
   return {
     all: async () => request((await store('readonly')).getAll() as IDBRequest<LibraryEntry[]>),
     get: async (id) => request((await store('readonly')).get(id) as IDBRequest<LibraryEntry | undefined>),
-    put: async (entry) => { await request((await store('readwrite')).put(entry)); },
-    remove: async (id) => { await request((await store('readwrite')).delete(id)); },
+    put: (entry) => write((objectStore) => { objectStore.put(entry); }),
+    remove: (id) => write((objectStore) => { objectStore.delete(id); }),
   };
 };
 

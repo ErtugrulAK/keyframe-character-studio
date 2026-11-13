@@ -1,4 +1,5 @@
 import type { MatteGradientStop } from '../utils/layers/matte';
+import type { FitToTextSettings, FollowSettings, JustifySettings, LookAtSettings, RepeaterSettings, TextFitSettings } from '../utils/layers/layoutModifiers';
 
 export type EasingType =
   | 'linear'
@@ -114,6 +115,11 @@ export interface TrackMatteV2 {
   inverted?: boolean;
   enabled?: boolean;
   sourceVisible?: boolean;
+  /** Soft edge, strength and gradient: the same render parameters, with the
+   *  same meaning and defaults, as the legacy matte's (see `PartMatte`). */
+  feather?: number;
+  strength?: number;
+  gradient?: PartMatte['gradient'];
 }
 
 export interface ProjectTemplate {
@@ -176,6 +182,16 @@ export interface MaskData {
   path?: BezierPath;
 }
 
+/** A layer's own pose when it was made: what Reset Transform returns to. */
+export interface HomeTransform {
+  x: number;
+  y: number;
+  rotation: number;
+  scaleX: number;
+  scaleY: number;
+  opacity: number;
+}
+
 export interface Transform {
   x: number;
   y: number;
@@ -226,13 +242,13 @@ export interface PathKeyframe {
 }
 
 // Channel keys match Transform property names
-export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity' | 'maskOffsetX' | 'maskOffsetY' | 'maskScale' | 'maskRotation' | 'trimPathStart' | 'trimPathEnd' | 'trimPathOffset';
+export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity' | 'maskOffsetX' | 'maskOffsetY' | 'maskScale' | 'maskRotation' | 'trimPathStart' | 'trimPathEnd' | 'trimPathOffset' | 'matteFeather' | 'matteStrength' | 'matteGradientAngle';
 
 export type LayerMaskChannelProperty = 'opacity' | 'feather' | 'expansion';
 export type LayerMaskChannel = `${string}:${LayerMaskChannelProperty}`;
 export type LayerMaskPathChannel = `${string}:path`;
 export type AnimationChannel = TrackChannel | LayerMaskChannel | LayerMaskPathChannel;
-export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation', 'trimPathStart', 'trimPathEnd', 'trimPathOffset'];
+export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation', 'trimPathStart', 'trimPathEnd', 'trimPathOffset', 'matteFeather', 'matteStrength', 'matteGradientAngle'];
 
 export const layerMaskChannel = (maskId: string, property: LayerMaskChannelProperty): LayerMaskChannel =>
   `${maskId}:${property}`;
@@ -409,6 +425,22 @@ export interface CharacterPart {
   baseTransform: Transform;
   textValue?: string;
   fontSize?: number;
+  /** Text: its box, alignment and hiding (`utils/layers/layoutModifiers`). */
+  textFit?: TextFitSettings;
+  /** Box-like shape: Auto Size, the text layer whose width it follows (`utils/layers/layoutModifiers`). */
+  fitToText?: FitToTextSettings;
+  /** Auto Follow: sits next to another layer's edge; x is the gap (`utils/layers/layoutModifiers`). */
+  follow?: FollowSettings;
+  /** Look At: turns to face another layer (`utils/layers/layoutModifiers`). */
+  lookAt?: LookAtSettings;
+  /** Where the layer was made (position, turn, size, opacity); Reset Transform returns it there. */
+  homeTransform?: HomeTransform;
+  /** Group: Justify, where its children's combined bounds sit (`utils/layers/layoutModifiers`). */
+  justify?: JustifySettings;
+  /** Repeater: copies in a line, grid or ring (`utils/layers/layoutModifiers`). */
+  repeater?: RepeaterSettings;
+  /** Render-only: the layer a repeated copy was made from. Never stored. */
+  repeatSourceId?: string;
   cardCategory?: string;
   cardTitle?: string;
   cardButtonText?: string;
@@ -590,4 +622,6 @@ export interface MotionTemplate {
   type: 'in' | 'out' | 'stunt';
   durationFrames: number;
   description?: string;
+  /** Frames that split the sequence into OGraf steps (`utils/animation/stepMarkers`); absent = one step. */
+  stepMarkers?: number[];
 }

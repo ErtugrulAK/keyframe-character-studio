@@ -17,7 +17,6 @@ import {
   AlertTriangle,
   Plus,
   ChevronDown,
-  Keyboard,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
@@ -43,7 +42,7 @@ import { classifyImport } from '../../utils/persistence/importDispatch';
 import type { OGrafPackageReadResult } from '../../ograf/packageImport';
 import type { LottieImportResult } from '../../interop/lottie/mapDocument';
 import type { SceneData } from '../../types/composition';
-import { describeSaveStatus } from '../../utils/persistence/saveStatus';
+import { describeSaveStatus, formatAutosaveDelay } from '../../utils/persistence/saveStatus';
 import './HeaderBar.css';
 
 type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
@@ -106,6 +105,7 @@ export const HeaderBar: React.FC = () => {
     hasUnsavedChanges,
     isSaving,
     triggerManualSave,
+    autosaveIntervalSeconds,
     getPersistenceSafety,
     forceSaveNow,
     showToast,
@@ -120,12 +120,11 @@ export const HeaderBar: React.FC = () => {
     deleteProjectTemplate,
     fps,
     setFps,
-    openShortcutReference,
     characterParts,
     tracks,
     coordinateSystem,
     isPlaying,
-  } = useAnimatorSlice('exportProject', 'importProject', 'resetProject', 'lastSavedAt', 'restoredFromLocalStorage', 'autosaveConflict', 'manualSaveRejectedAt', 'autosaveError', 'hasUnsavedChanges', 'isSaving', 'triggerManualSave', 'getPersistenceSafety', 'forceSaveNow', 'showToast', 'appMode', 'setAppMode', 'sceneTitle', 'projectTemplates', 'activeProjectTemplateId', 'setActiveProjectTemplateId', 'addProjectTemplate', 'renameProjectTemplate', 'deleteProjectTemplate', 'fps', 'setFps', 'openShortcutReference', 'characterParts', 'tracks', 'coordinateSystem', 'isPlaying');
+  } = useAnimatorSlice('exportProject', 'importProject', 'resetProject', 'lastSavedAt', 'restoredFromLocalStorage', 'autosaveConflict', 'manualSaveRejectedAt', 'autosaveError', 'hasUnsavedChanges', 'isSaving', 'triggerManualSave', 'autosaveIntervalSeconds', 'getPersistenceSafety', 'forceSaveNow', 'showToast', 'appMode', 'setAppMode', 'sceneTitle', 'projectTemplates', 'activeProjectTemplateId', 'setActiveProjectTemplateId', 'addProjectTemplate', 'renameProjectTemplate', 'deleteProjectTemplate', 'fps', 'setFps', 'characterParts', 'tracks', 'coordinateSystem', 'isPlaying');
   const readAnimator = useAnimatorReader();
 
   const [editingTmplId, setEditingTmplId] = useState<string | null>(null);
@@ -261,6 +260,7 @@ export const HeaderBar: React.FC = () => {
     unsaved: hasUnsavedChanges,
     lastSavedAt: lastSavedAt?.getTime() ?? null,
     now: clockNow,
+    intervalSeconds: autosaveIntervalSeconds,
   });
 
   /**
@@ -307,9 +307,9 @@ export const HeaderBar: React.FC = () => {
   useEffect(() => {
     if (autosaveError && autosaveErrorAnnouncedRef.current !== autosaveError.at) {
       autosaveErrorAnnouncedRef.current = autosaveError.at;
-      showToast(`Auto-save failed: browser storage ${autosaveError.kind === 'quota' ? 'is full' : 'is unavailable'}. Your changes are kept in memory — ${autosaveError.kind === 'quota' ? 'save the graphic to the Library (Project panel; it has far more room) or export it' : 'export the project'} to keep them. Autosave retries every 10 seconds.`, 'error', { title: 'Save failed' });
+      showToast(`Auto-save failed: browser storage ${autosaveError.kind === 'quota' ? 'is full' : 'is unavailable'}. Your changes are kept in memory — ${autosaveError.kind === 'quota' ? 'save the graphic to the Library (Project panel; it has far more room) or export it' : 'export the project'} to keep them. Autosave retries every ${formatAutosaveDelay(autosaveIntervalSeconds)}.`, 'error', { title: 'Save failed' });
     }
-  }, [autosaveError, showToast]);
+  }, [autosaveError, autosaveIntervalSeconds, showToast]);
   /**
    * Opens the GIF panel on a SNAPSHOT of the current scene: the summary the user
    * reads and the frames that are written come from the same document, so an edit
@@ -334,8 +334,14 @@ export const HeaderBar: React.FC = () => {
       if (notifyOGrafDiagnostics(showToast, plan.diagnostics)) return;
 
       setOgrafStage('package');
-      const { createOGrafBrowserZip } = await import('../../ograf/browserZip');
-      const archive = await createOGrafBrowserZip(plan);
+      const [{ createOGrafBrowserZip }, { renderOGrafThumbnail }] = await Promise.all([
+        import('../../ograf/browserZip'),
+        import('../../export/ografThumbnail'),
+      ]);
+      // A thumbnail lets renderers list the graphic with a preview; a package
+      // without one is still complete, so a failed render never blocks it.
+      const thumbnail = await renderOGrafThumbnail(plan).catch(() => undefined);
+      const archive = await createOGrafBrowserZip(plan, { thumbnail });
       downloadBlob(archive.bytes, archive.fileName, 'application/zip');
     } catch (error) {
       const remediation = describeOGrafPackageWriteFailure(error);
@@ -357,6 +363,7 @@ export const HeaderBar: React.FC = () => {
       setOgrafStage(null);
     }
   };
+
   /**
    * The one import entry: it decides what the file is from its **content** and
    * routes it to the importer that owns that kind. Only a Lottie document opens
@@ -411,7 +418,8 @@ export const HeaderBar: React.FC = () => {
         showToast('The selected file could not be read as text.', 'error');
         return;
       }
-      switch (classifyImport(file.name, text)) {
+      const kind = classifyImport(file.name, text);
+      switch (kind) {
         case 'ograf-package':
         case 'ograf-manifest':
           showToast('This is an OGraf graphic manifest. Import the .zip/.ograf package it belongs to, or export the KCS project again.', 'error');
@@ -426,6 +434,9 @@ export const HeaderBar: React.FC = () => {
         default: {
           const result = importProject(text, fileNameWithoutExt);
           if (result.ok) {
+            // A scene replaces the ACTIVE tab, which takes the file's name (a
+            // legacy project already opens in a new tab named after it).
+            if (kind === 'kcs-scene' && fileNameWithoutExt) renameProjectTemplate(activeProjectTemplateId, fileNameWithoutExt);
             // A successful import replaces the active template's content (a
             // legacy project document opens as a new tab); it can still carry
             // warnings (for example the legacy migration notice), and those
@@ -739,14 +750,7 @@ export const HeaderBar: React.FC = () => {
           <button className="btn-icon reset-btn" onClick={requestResetProject} title="Reset Canvas Project">
             <RotateCcw size={15} />
           </button>
-          <button
-            className="btn-icon"
-            onClick={openShortcutReference}
-            title="Keyboard shortcuts (?)"
-            aria-label="Keyboard shortcuts"
-          >
-            <Keyboard size={15} />
-          </button>
+          {/* Keyboard shortcuts open from Help > Keyboard Shortcuts (or ?). */}
         </div>
       </header>
       <ImportReportDialog

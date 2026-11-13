@@ -66,7 +66,8 @@ export const usePathEditing = ({ characterParts, tracks, setCharacterParts, sele
 
   /**
    * Delete on a selected path point removes that point (not the layer). True
-   * when the key was used for the path; a path keeps at least three points.
+   * when the key was used for the path; a closed path keeps at least three
+   * points and an open one at least two.
    */
   const deleteSelectedPathVertex = useCallback((): boolean => {
     if (!pathVertex || pathVertex.partId !== selectedPartId) return false;
@@ -75,7 +76,7 @@ export const usePathEditing = ({ characterParts, tracks, setCharacterParts, sele
     if (!part || !path || !path.points[pathVertex.index]) return false;
     const next = deleteMaskVertex(path, pathVertex.index);
     if (!next) {
-      showToast('A closed path keeps at least three points.', 'info');
+      showToast(path.closed ? 'A closed path keeps at least three points.' : 'An open path keeps at least two points.', 'error');
       return true;
     }
     setPartPath(part.id, next);

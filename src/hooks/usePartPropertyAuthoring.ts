@@ -1,11 +1,12 @@
 import { useAnimator } from '../context/useAnimator';
 import { layerMaskChannel } from '../types/animator';
-import type { CharacterPart, LayerMask, LayerMaskChannel } from '../types/animator';
+import type { CharacterPart, LayerMask, LayerMaskChannel, TrackChannel, TrackMatteV2 } from '../types/animator';
 import { evaluateLayerMasks } from '../utils/animation/evaluateLayerMasks';
 import { authorPropertyValueAtFrameMutator } from '../utils/animation/trackMutations';
 import { isShapeAppearanceEligible, updateShapeAppearance, type ShapeAppearancePatch } from '../utils/layers/shapeAppearance';
 import { isTrimPathEligible } from '../utils/geometry/trimPath';
 import { updateTrimPath, type TrimPathAuthoringPatch } from '../utils/geometry/trimPathAuthoring';
+import { evaluateTrackMatte } from '../utils/layers/matte';
 
 /**
  * The one authored-property write path for the selected part.
@@ -98,6 +99,40 @@ export const usePartPropertyAuthoring = (): PartPropertyAuthoring => {
       }
       handlePartPropChange(key, nextMasks);
       return;
+    }
+    // The Track Matte's feather and strength display the active sequence's
+    // evaluated values the same way: a changed one that is keyed writes the
+    // current frame's key; the record keeps its base values.
+    if (key === 'trackMatte' && value && typeof value === 'object') {
+      const selectedPart = characterParts.find((part) => part.id === selectedPartId);
+      const base = selectedPart?.trackMatte;
+      if (base) {
+        const scope = activeTemplateId || 'Sequence';
+        const displayed = evaluateTrackMatte(base, selectedTrack, currentFrame, scope) ?? base;
+        const next: TrackMatteV2 = { ...(value as TrackMatteV2) };
+        const keyedWrites: { channel: TrackChannel; value: number }[] = [];
+        for (const [property, channel] of [['feather', 'matteFeather'], ['strength', 'matteStrength']] as const) {
+          const animated = selectedTrack?.channels?.[channel]?.some((keyframe) => (keyframe.templateId || 'Sequence') === scope);
+          if (!animated) continue;
+          if (next[property] !== displayed[property]) keyedWrites.push({ channel, value: Number(next[property]) });
+          if (property in base) next[property] = base[property];
+          else delete next[property];
+        }
+        // The gradient angle the same way, when the gradient stays on.
+        const angleKeyed = selectedTrack?.channels?.matteGradientAngle?.some((keyframe) => (keyframe.templateId || 'Sequence') === scope);
+        if (angleKeyed && next.gradient && base.gradient) {
+          if (next.gradient.angle !== displayed.gradient?.angle) keyedWrites.push({ channel: 'matteGradientAngle', value: Number(next.gradient.angle) });
+          next.gradient = { ...next.gradient, angle: base.gradient.angle };
+        }
+        if (selectedTrack && keyedWrites.length > 0) {
+          setTracks((prev) => keyedWrites.reduce(
+            (tracksSoFar, write) => authorPropertyValueAtFrameMutator(tracksSoFar, selectedTrack.id, write.channel, currentFrame, write.value, scope),
+            prev,
+          ));
+        }
+        handlePartPropChange(key, next);
+        return;
+      }
     }
     handlePartPropChange(key, value);
   };

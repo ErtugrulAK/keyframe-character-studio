@@ -8,7 +8,10 @@ import type { CoordinatePoint } from './projectCoordinates';
 const CANVAS_CENTER_X = 300;
 const CANVAS_CENTER_Y = 240;
 
-export const clampZoom = (zoom: number): number => Math.min(3, Math.max(0.3, zoom));
+/** 10 % to 4000 %: close enough for pixel work, far enough for a whole big stage. */
+export const MIN_ZOOM = 0.1;
+export const MAX_ZOOM = 40;
+export const clampZoom = (zoom: number): number => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
 
 export interface StageBox {
   left: number;
@@ -181,6 +184,34 @@ export const getShapeCreationPlacement = (
     scaleX,
     scaleY,
   };
+};
+
+/**
+ * A text drawn with the Text tool: a click places a text of the default size
+ * at the point; a dragged box places it at the box centre, sizes the font to
+ * the box height and limits its width to the box (the text box shrinks a
+ * longer text to fit). Stage (SVG) units in, layer props out.
+ */
+/**
+ * The font sizes a text layer is authored at. 1000 lets a text drawn over a
+ * whole 4K stage fill its box: at 400 a tall box stopped growing the text
+ * (QA 2026-11-13). The Text tool, its preview and the options bar share it.
+ */
+export const MIN_TEXT_FONT_SIZE = 8;
+export const MAX_TEXT_FONT_SIZE = 1000;
+
+export const getTextCreationProps = (
+  bounds: ShapeCreationBounds | null,
+  click: { x: number; y: number },
+  canvasCenterX: number = CANVAS_CENTER_X,
+  canvasCenterY: number = CANVAS_CENTER_Y,
+): { baseTransform: { x: number; y: number; rotation: number; scaleX: number; scaleY: number; opacity: number }; fontSize?: number; textFit?: { maxWidth: number } } => {
+  const centre = bounds ? { x: bounds.centerX, y: bounds.centerY } : click;
+  const baseTransform = { x: centre.x - canvasCenterX, y: centre.y - canvasCenterY, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+  if (!bounds || bounds.height < 8) return { baseTransform };
+  // A line of text is about 1.2 font sizes tall.
+  const fontSize = Math.round(Math.min(MAX_TEXT_FONT_SIZE, Math.max(MIN_TEXT_FONT_SIZE, bounds.height / 1.2)));
+  return { baseTransform, fontSize, ...(bounds.width >= 20 ? { textFit: { maxWidth: Math.round(bounds.width) } } : {}) };
 };
 
 interface CursorAnchoredCameraInput {

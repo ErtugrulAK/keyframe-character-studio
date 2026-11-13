@@ -32,10 +32,16 @@ export const useLockedRegion = (ref: React.RefObject<HTMLElement | null>, active
     const observer = typeof MutationObserver === 'function'
       ? new MutationObserver((records) => {
         for (const record of records) {
-          // React may re-enable a control it re-renders; a new card mounts new ones.
+          // The owner (React) wrote `disabled` on a control; a new card mounts new ones.
           if (record.type === 'attributes' && record.target instanceof Element && record.target.matches(CONTROLS)) {
             const control = record.target as HTMLInputElement;
-            if (!control.disabled && !control.matches(EXEMPT)) lock(control);
+            if (!control.disabled) {
+              // Re-enabled by its owner while locked: lock it again.
+              if (!control.matches(EXEMPT)) lock(control);
+            } else if (disabledHere.has(control)) {
+              // Disabled by its owner for its own reason: the lift must leave it so.
+              disabledHere.delete(control);
+            }
           }
           record.addedNodes.forEach((node) => {
             if (!(node instanceof Element)) return;
@@ -43,6 +49,8 @@ export const useLockedRegion = (ref: React.RefObject<HTMLElement | null>, active
             node.querySelectorAll(CONTROLS).forEach(lock);
           });
         }
+        // Drop the records of this callback's own writes: they are not the owner's.
+        observer?.takeRecords();
       })
       : null;
     observer?.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['disabled'] });

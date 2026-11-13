@@ -96,6 +96,15 @@ describe('text sits on its baseline in every renderer', () => {
     expect(textTag(stageText({}))).toContain('font-weight="bold"');
     expect(textTag(renderOGrafSvg(evaluateOGrafScene(scene, 0)))).toContain('font-weight="bold"');
   });
+
+  it('the stage, the static renderer and the runtime paint the outline under the fill', () => {
+    // Variable fonts overlap their contours; an outline on top drew lines inside the letters.
+    const outlined = { strokeEnabled: true, strokeWidth: 4 };
+    const outlinedScene: SceneData = { ...scene, layers: [{ ...textLayer, ...outlined }] };
+    expect(textTag(stageText(outlined))).toContain('paint-order="stroke"');
+    expect(textTag(renderOGrafSvg(evaluateOGrafScene(outlinedScene, 0)))).toContain('paint-order="stroke"');
+    expect(textTag(runtimeMarkup(outlinedScene, 'x-ograf-text-paint-order'))).toContain('paint-order="stroke"');
+  });
 });
 
 describe('a centre-origin text draws its baseline the same distance below the origin everywhere', () => {

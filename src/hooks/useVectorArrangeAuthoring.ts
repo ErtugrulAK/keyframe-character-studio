@@ -11,6 +11,7 @@ import {
   planTranslate,
   type AlignEdge,
   type ArrangePlan,
+  type ArrangeTarget,
   type DistributeAxis,
   type FlipAxis,
   type RotateDirection,
@@ -90,11 +91,17 @@ export const createVectorArrangeActions = ({
   const selectionIds = selectedPartId && !selectedPartIds.includes(selectedPartId)
     ? [...selectedPartIds, selectedPartId]
     : selectedPartIds;
-  const targets = collectArrangeTargets(
-    characterParts,
-    selectionIds,
-    (partId) => getComputedTransform(partId, currentFrame),
-  );
+  // Measured on first use: the provider builds these commands on every render
+  // (every playback frame) and only runs them on a key press.
+  let measured: ArrangeTarget[] | undefined;
+  const targetsNow = (): ArrangeTarget[] => {
+    measured ??= collectArrangeTargets(
+      characterParts,
+      selectionIds,
+      (partId) => getComputedTransform(partId, currentFrame),
+    );
+    return measured;
+  };
 
   /** One command: write the plan as ONE batch interaction, or explain why not. */
   const commit = (plan: ArrangePlan | null, unavailable: string) => {
@@ -119,24 +126,25 @@ export const createVectorArrangeActions = ({
   };
 
   return {
-    targetCount: targets.length,
-    canAlign: targets.length >= 2,
-    canDistribute: targets.length >= 3,
-    canTransform: targets.length >= 1,
-    align: (edge) => commit(planAlign(targets, edge), 'Align needs two measurable layers.'),
+    get targetCount() { return targetsNow().length; },
+    get canAlign() { return targetsNow().length >= 2; },
+    get canDistribute() { return targetsNow().length >= 3; },
+    get canTransform() { return targetsNow().length >= 1; },
+    align: (edge) => commit(planAlign(targetsNow(), edge), 'Align needs two measurable layers.'),
     distributeGap: (axis) => commit(
-      planDistributeByGap(targets, axis),
+      planDistributeByGap(targetsNow(), axis),
       'Distribution needs three measurable layers.',
     ),
     rotate: (direction) => commit(
-      planRotate(targets, direction),
+      planRotate(targetsNow(), direction),
       'Select a layer to rotate.',
     ),
     flip: (axis) => commit(
-      planFlip(targets, axis),
+      planFlip(targetsNow(), axis),
       'Select a layer to flip.',
     ),
     beginNudge: () => {
+      const targets = targetsNow();
       if (targets.length === 0) return null;
       const lockRefusal = lockedLayersRefusal(characterParts, tracks, targets.map((target) => target.id));
       if (lockRefusal) {

@@ -21,17 +21,26 @@ export const resizeCursorFor = (dx: number, dy: number): string => {
 
 const clampGizmoValue =(value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 
-export const getTransformGizmoMetrics = (boundsWidth: number, boundsHeight: number, zScale: number): TransformGizmoMetrics => {
-  const safeZScale = clampGizmoValue(Number.isFinite(zScale) && zScale > 0 ? zScale : 1, 0.25, 4);
-  const visibleObjectSize = Math.max(0, Math.min(Math.abs(boundsWidth), Math.abs(boundsHeight))) / safeZScale;
-  const visualScreenSize = clampGizmoValue(visibleObjectSize * 0.12, 3, 9);
-  const visualUnit = visualScreenSize * safeZScale;
+/**
+ * The handle sizes, in screen pixels: constant at every zoom and for every
+ * object size, like the handles of a vector editor. (They used to grow with the
+ * object's on-screen size up to 9 px; a fixed small handle reads cleaner.) The
+ * grab area (`hitRadius`) stays larger than the drawn handle.
+ */
+const CORNER_PX = 4.5;
+const EDGE_RADIUS_PX = 2.25;
+const ROTATION_RADIUS_PX = 3.5;
+const ROTATION_OFFSET_PX = 18;
+const HIT_RADIUS_PX = 8;
 
+/** Sizes in stage units: screen pixels times `zScale` (stage units per pixel). */
+export const getTransformGizmoMetrics = (_boundsWidth: number, _boundsHeight: number, zScale: number): TransformGizmoMetrics => {
+  const safeZScale = clampGizmoValue(Number.isFinite(zScale) && zScale > 0 ? zScale : 1, 0.01, 10);
   return {
-    cornerSize: visualUnit,
-    edgeRadius: clampGizmoValue(visualScreenSize * 0.42, 2.2, 3.8) * safeZScale,
-    rotationRadius: clampGizmoValue(visualScreenSize * 0.65, 3.2, 5.5) * safeZScale,
-    rotationOffset: clampGizmoValue(Math.max(visualScreenSize * 2.2, visibleObjectSize * 0.16), 8, 28) * safeZScale,
-    hitRadius: 8 * safeZScale,
+    cornerSize: CORNER_PX * safeZScale,
+    edgeRadius: EDGE_RADIUS_PX * safeZScale,
+    rotationRadius: ROTATION_RADIUS_PX * safeZScale,
+    rotationOffset: ROTATION_OFFSET_PX * safeZScale,
+    hitRadius: HIT_RADIUS_PX * safeZScale,
   };
 };

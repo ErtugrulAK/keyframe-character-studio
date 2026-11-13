@@ -21,7 +21,7 @@ fix after a candidate is the next candidate.
 
 ## Flow
 
-1. **Work on a branch**, never on `main` (`.agents/BRANCH_STRATEGY.md`).
+1. **Work on a branch**, never on `main`.
 2. **Prepare the version on the branch**, in one commit
    `chore(release): prepare X.Y.Z[-rc.N]`:
    - set the version in `package.json` and `package-lock.json` (both `version`

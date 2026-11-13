@@ -1,6 +1,6 @@
 import { renderHook as renderHookBase, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useSerialization } from '../hooks/useSerialization';
+import { AUTOSAVE_REFUSED_STORAGE_KEY, useSerialization } from '../hooks/useSerialization';
 import type { UseSerializationApi } from '../hooks/useSerialization';
 import type { ImportResult } from '../utils/persistence/importValidation';
 import { AnimationProject, CharacterPart, Keyframe, Track, Transform, TrackChannel, PropertyKeyframe } from '../types/animator';
@@ -91,6 +91,35 @@ describe('useSerialization Hook', () => {
     expect(warn).toHaveBeenCalledWith('[Storage] Autosave restore refused:', 'KCS_IMPORT_UNSAFE_KEY', expect.any(String));
     expect(mockSetTracks).not.toHaveBeenCalled();
     expect(mockSetCharacterParts).not.toHaveBeenCalled();
+  });
+
+  it('keeps a refused autosave under its own key and says so, so a later save cannot destroy it', () => {
+    const refused = '{"__proto__":{"polluted":true}}';
+    vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(refused);
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const onRestoreRefused = vi.fn();
+
+    renderHook(() => useSerialization({
+      fps: 30, setFps: mockSetFps,
+      totalFrames: 100, setTotalFrames: mockSetTotalFrames,
+      projectResolution: { width: 800, height: 600 }, setProjectResolution: mockSetProjectResolution,
+      tracks: [], setTracks: mockSetTracks,
+      characterParts: [], setCharacterParts: mockSetCharacterParts,
+      activeProjectTemplateId: 'default', setActiveProjectTemplateIdState: mockSetActiveProjectTemplateIdState,
+      motionTemplates: [], setMotionTemplates: mockSetMotionTemplates,
+      activeTemplateId: 'Sequence', setActiveTemplateIdState: mockSetActiveTemplateIdState,
+      sceneTitle: 'My Scene', setSceneTitleState: mockSetSceneTitleState,
+      projectTemplates: [], setProjectTemplates: mockSetProjectTemplates,
+      setTemplateCanvasStore: mockSetTemplateCanvasStore,
+      setCurrentFrame: mockSetCurrentFrame,
+      setIsPlaying: mockSetIsPlaying,
+      onRestoreRefused,
+    }));
+
+    expect(setItem).toHaveBeenCalledWith(AUTOSAVE_REFUSED_STORAGE_KEY, refused);
+    expect(onRestoreRefused).toHaveBeenCalledTimes(1);
+    expect(onRestoreRefused.mock.calls[0][0]).toContain('A copy was kept');
   });
 
   it('triggers manual save to localStorage', () => {

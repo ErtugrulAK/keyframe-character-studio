@@ -56,7 +56,7 @@ test.describe('200 % zoom (720 × 450 CSS px at 2× pixels)', () => {
     await seed(page);
     // Cards start closed: open the one that holds the tab's last control, then
     // start from the top of the pane again.
-    await openInspectorCard(page, 'SHAPE GEOMETRY');
+    await openInspectorCard(page, 'MODIFIERS');
     await page.evaluate(() => { (document.querySelector('.details-container') as HTMLElement).scrollTop = 0; });
     const before = await scrollState(page);
     expect(before.pane).toBeLessThan(180);
@@ -69,9 +69,9 @@ test.describe('200 % zoom (720 × 450 CSS px at 2× pixels)', () => {
     await expect.poll(async () => (await scrollState(page)).containerTop).toBeGreaterThan(0);
 
     // The last control of the Properties tab is now on screen, inside the pane.
-    const convert = page.getByRole('button', { name: 'Convert to editable path' });
-    await expect(convert).toBeInViewport();
-    const button = await convert.boundingBox();
+    const lastControl = page.locator('.details-container input[type="checkbox"]').last();
+    await expect(lastControl).toBeInViewport();
+    const button = await lastControl.boundingBox();
     expect(button!.y + button!.height).toBeLessThanOrEqual(pane.y + pane.height + 1);
   });
 });

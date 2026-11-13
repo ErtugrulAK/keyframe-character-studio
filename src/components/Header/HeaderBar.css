@@ -207,27 +207,6 @@
 }
 
 /* Autosave delay (seconds), beside the status it governs */
-.autosave-interval-field {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  flex-shrink: 0;
-  font-size: var(--font-size-mono);
-  color: var(--text-muted);
-}
-
-.autosave-interval-field input {
-  width: 46px;
-  height: 26px;
-  padding: 0 4px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  color: var(--text-primary, #fff);
-  font-size: 11px;
-  text-align: right;
-}
-
 .autosave-status-badge:hover {
   background: rgba(16, 185, 129, 0.18);
   border-color: rgba(16, 185, 129, 0.5);
@@ -600,11 +579,6 @@
     padding: 0 6px;
   }
 
-  /* No room for the autosave delay in a window this narrow: the setting
-     keeps applying, and a wider window shows the field again. */
-  .autosave-interval-field {
-    display: none;
-  }
 }
 
 /*

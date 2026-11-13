@@ -1,10 +1,12 @@
 import { useState, useCallback } from 'react';
-import type { CharacterPart, Track, TrackChannel } from '../types/animator';
+import type { CharacterPart, Keyframe, Track, TrackChannel } from '../types/animator';
 import { generateId } from '../utils/layers/idGenerator';
 import { makeEmptyChannels } from '../utils/animation/defaults';
-import { mirrorChannelValue, mirrorTransform, type MirrorAxis } from '../utils/animation/mirror';
+import { mirrorChannelValues, mirrorTransform, type MirrorAxis } from '../utils/animation/mirror';
 import { cloneAnimationOntoTarget } from '../utils/animation/animationTransfer';
 import { getGroupDescendants } from '../utils/layers/layerGrouping';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { invertAffine, worldAffineOf } from '../utils/geometry/containerMath';
 
 interface UseClipboardOptions {
   characterParts: CharacterPart[];
@@ -17,6 +19,14 @@ interface UseClipboardOptions {
   setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>;
   setSelectedPartId: (id: string | null) => void;
   setSelectedPartIds?: (ids: string[]) => void;
+  /**
+   * Where a paste lands, in world units (the pointer over the stage), or null
+   * for the old small offset. The copies' centre is placed there.
+   */
+  pastePoint?: () => { x: number; y: number } | null;
+  /** The frame and sequence the pasted layers are measured at. */
+  activeTemplateId?: string;
+  currentFrame?: number;
 }
 
 interface ClipboardEntry {
@@ -64,6 +74,60 @@ const cloneTrackOnto = (source: Track | undefined, cloneId: string, name: string
   };
 };
 
+/**
+ * Points every layer reference of a clone (parent, matte sources, Boolean
+ * links, Fit to Text, Follow, Look At) at the copy of its target when that
+ * target was copied too; a reference to a layer outside the copied set is
+ * kept. One rule for Paste and Duplicate, so the two never disagree.
+ */
+const remapClonedReferences = (clone: CharacterPart, source: CharacterPart, remap: (id: string) => string): void => {
+  if (source.parentId) clone.parentId = remap(source.parentId);
+  if (clone.matte?.sourcePartId) clone.matte = { ...clone.matte, sourcePartId: remap(clone.matte.sourcePartId) };
+  if (clone.trackMatte?.sourceLayerId) clone.trackMatte = { ...clone.trackMatte, sourceLayerId: remap(clone.trackMatte.sourceLayerId) };
+  if (source.booleanGroupId) clone.booleanGroupId = remap(source.booleanGroupId);
+  if (source.booleanOperandIds) clone.booleanOperandIds = source.booleanOperandIds.map(remap);
+  if (clone.fitToText) {
+    clone.fitToText = {
+      ...clone.fitToText,
+      textLayerId: remap(clone.fitToText.textLayerId),
+      ...(clone.fitToText.extraTextLayerIds ? { extraTextLayerIds: clone.fitToText.extraTextLayerIds.map(remap) } : {}),
+    };
+  }
+  if (clone.follow) clone.follow = { ...clone.follow, targetLayerId: remap(clone.follow.targetLayerId) };
+  if (clone.lookAt) clone.lookAt = { ...clone.lookAt, targetLayerId: remap(clone.lookAt.targetLayerId) };
+};
+
+/**
+ * Legacy composite keyframes mirrored with fresh ids. Each transform mirrors as
+ * a still value would, then the rotations are re-set together so an origin
+ * mirror keeps every step between keys (see `mirrorChannelValues`).
+ */
+const mirrorLegacyKeyframes = (keyframes: readonly Keyframe[], axis: MirrorAxis): Keyframe[] => {
+  const rotations = mirrorChannelValues('rotation', keyframes.map((k) => k.transform.rotation), axis);
+  return keyframes.map((k, index) => ({
+    ...k,
+    id: generateId('kf'),
+    transform: { ...mirrorTransform(k.transform, axis), rotation: rotations[index] },
+  }));
+};
+
+/**
+ * The same track moved by `offset`: every x/y key (and legacy composite key)
+ * shifts with the base, so an animated copy plays its motion at the new place.
+ */
+const shiftTrackPosition = (track: Track, offset: { x: number; y: number }): Track => ({
+  ...track,
+  channels: {
+    ...track.channels,
+    x: (track.channels.x ?? []).map((key) => ({ ...key, value: key.value + offset.x })),
+    y: (track.channels.y ?? []).map((key) => ({ ...key, value: key.value + offset.y })),
+  },
+  keyframes: (track.keyframes ?? []).map((key) => ({
+    ...key,
+    transform: { ...key.transform, x: key.transform.x + offset.x, y: key.transform.y + offset.y },
+  })),
+});
+
 export const useClipboard = ({
   characterParts,
   tracks,
@@ -74,6 +138,9 @@ export const useClipboard = ({
   setCharacterParts,
   setSelectedPartId,
   setSelectedPartIds,
+  pastePoint,
+  activeTemplateId = 'Sequence',
+  currentFrame = 0,
 }: UseClipboardOptions) => {
   const [clipboardData, setClipboardData] = useState<ClipboardData | null>(null);
 
@@ -107,7 +174,35 @@ export const useClipboard = ({
    * single-layer paste always did. The copies keep their stacking order above
    * the scene, and the outermost ones move by the usual paste offset.
    */
-  const pasteCopiedPart = useCallback(() => {
+  const pasteCopiedPart = useCallback((options: { inPlace?: boolean } = {}) => {
+    /**
+     * The move each outermost copy gets, in its own parent's space. With a
+     * paste point, the centre of the copies' world positions lands on it (a
+     * parented copy converts that world move into its parent's frame);
+     * without one, every copy moves 20 units right and down, as before.
+     */
+    const pasteOffsets = (outermost: CharacterPart[], target: { x: number; y: number } | null) => {
+      if (!target || outermost.length === 0) return () => ({ x: 20, y: 20 });
+      const worldOf = (id: string) => evaluateTransform(characterParts, tracks, activeTemplateId, id, currentFrame);
+      const known = outermost.filter((part) => characterParts.some((scenePart) => scenePart.id === part.id));
+      // Copies of layers deleted since the copy: fall back to their stored pose.
+      const positions = outermost.map((part) => (known.includes(part) ? worldOf(part.id) : part.baseTransform));
+      const xs = positions.map((p) => p.x);
+      const ys = positions.map((p) => p.y);
+      const worldDelta = {
+        x: target.x - (Math.min(...xs) + Math.max(...xs)) / 2,
+        y: target.y - (Math.min(...ys) + Math.max(...ys)) / 2,
+      };
+      return (part: CharacterPart) => {
+        if (!part.parentId || !characterParts.some((scenePart) => scenePart.id === part.parentId)) return worldDelta;
+        const inverse = invertAffine(worldAffineOf(worldOf(part.parentId)));
+        if (!inverse) return worldDelta;
+        return {
+          x: inverse.a * worldDelta.x + inverse.c * worldDelta.y,
+          y: inverse.b * worldDelta.x + inverse.d * worldDelta.y,
+        };
+      };
+    };
     if (!clipboardData) {
       showToast('Clipboard is empty', 'error');
       return;
@@ -121,9 +216,14 @@ export const useClipboard = ({
     const newParts: CharacterPart[] = [];
     const newTracks: Track[] = [];
     const outermostIds: string[] = [];
+    const isOutermost = (part: CharacterPart) => !part.parentId || !idMap.has(part.parentId);
+    // Paste in Place keeps the copies exactly over the originals.
+    const target = options.inPlace ? null : pastePoint?.() ?? null;
+    const localOffset = options.inPlace ? () => ({ x: 0, y: 0 }) : pasteOffsets(entries.map((entry) => entry.part).filter(isOutermost), target);
     entries.forEach(({ part, track }) => {
       const cloneId = idMap.get(part.id)!;
-      const outermost = !part.parentId || !idMap.has(part.parentId);
+      const outermost = isOutermost(part);
+      const offset = outermost ? localOffset(part) : null;
       const clone: CharacterPart = {
         ...structuredClone(part),
         id: cloneId,
@@ -131,19 +231,14 @@ export const useClipboard = ({
         zIndex: zIndexOf.get(part.id)!,
         // A copy is not bonded to the original's partners.
         boundPartIds: undefined,
-        baseTransform: outermost
-          ? { ...part.baseTransform, x: part.baseTransform.x + 20, y: part.baseTransform.y + 20 }
+        baseTransform: offset
+          ? { ...part.baseTransform, x: part.baseTransform.x + offset.x, y: part.baseTransform.y + offset.y }
           : { ...part.baseTransform },
       };
-      if (part.parentId) clone.parentId = remap(part.parentId);
-      if (clone.matte?.sourcePartId) clone.matte = { ...clone.matte, sourcePartId: remap(clone.matte.sourcePartId) };
-      if (clone.trackMatte?.sourceLayerId) clone.trackMatte = { ...clone.trackMatte, sourceLayerId: remap(clone.trackMatte.sourceLayerId) };
-      if (part.booleanGroupId) clone.booleanGroupId = remap(part.booleanGroupId);
-      if (part.booleanOperandIds) clone.booleanOperandIds = part.booleanOperandIds.map(remap);
-      if (clone.fitToText) clone.fitToText = { ...clone.fitToText, textLayerId: remap(clone.fitToText.textLayerId) };
+      remapClonedReferences(clone, part, remap);
       if (outermost) outermostIds.push(cloneId);
       newParts.push(clone);
-      newTracks.push(cloneTrackOnto(track, cloneId, clone.name));
+      newTracks.push(offset && target ? shiftTrackPosition(cloneTrackOnto(track, cloneId, clone.name), offset) : cloneTrackOnto(track, cloneId, clone.name));
     });
 
     const primaryCloneId = idMap.get(clipboardData.part.id) ?? newParts[0].id;
@@ -151,7 +246,7 @@ export const useClipboard = ({
     setCharacterParts((prevParts) => [...newParts, ...prevParts]);
     if (outermostIds.length > 1) setSelectedPartIds?.(outermostIds);
     setSelectedPartId(outermostIds.includes(primaryCloneId) ? primaryCloneId : outermostIds[outermostIds.length - 1] ?? primaryCloneId);
-  }, [clipboardData, characterParts, setTracks, setCharacterParts, setSelectedPartId, setSelectedPartIds, showToast]);
+  }, [clipboardData, characterParts, tracks, activeTemplateId, currentFrame, pastePoint, setTracks, setCharacterParts, setSelectedPartId, setSelectedPartIds, showToast]);
 
   const duplicateSelectedPart = useCallback(() => {
     if (!selectedPartId) return;
@@ -169,6 +264,12 @@ export const useClipboard = ({
 
     const cloneTrackFor = (sourceId: string, cloneId: string, name: string): Track => cloneTrackOnto(tracks.find((t) => t.partId === sourceId), cloneId, name);
 
+    // The copies stack above the scene in the originals' own order, as Paste
+    // does: numbering them in the group's walk order drew a text listed before
+    // its bar, but stacked above it, behind the copied bar.
+    const stacking = [...sources].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
+    const zIndexOf = new Map(stacking.map((source, rank) => [source.id, characterParts.length + 1 + rank]));
+
     const newParts: CharacterPart[] = [];
     const newTracks: Track[] = [];
     sources.forEach((source, index) => {
@@ -178,14 +279,16 @@ export const useClipboard = ({
         ...structuredClone(source),
         id: cloneId,
         name,
-        zIndex: characterParts.length + 1 + index,
+        zIndex: zIndexOf.get(source.id)!,
         boundPartIds: undefined,
         baseTransform: index === 0
           ? { ...source.baseTransform, x: source.baseTransform.x + 20, y: source.baseTransform.y + 20 }
           : { ...source.baseTransform },
       };
-      const cloneParentId = source.parentId ? idMap.get(source.parentId) : undefined;
-      if (cloneParentId) clone.parentId = cloneParentId;
+      // Every reference into the duplicated set points at its copy, exactly as
+      // Paste does: a duplicated group's bar fits the duplicated text, its
+      // matte uses the duplicated source. References outside it are kept.
+      remapClonedReferences(clone, source, (id) => idMap.get(id) ?? id);
       newParts.push(clone);
       newTracks.push(cloneTrackFor(source.id, cloneId, name));
     });
@@ -237,21 +340,17 @@ export const useClipboard = ({
         if (clonedTrack.channels) {
           (Object.keys(clonedTrack.channels) as TrackChannel[]).forEach((ch) => {
             if (clonedTrack.channels[ch]) {
-              newChannels[ch] = clonedTrack.channels[ch].map((pk) => {
-                const value = mirrorChannelValue(ch, pk.value, axis);
-                let bezierControlPoints = pk.bezierControlPoints ? ([...pk.bezierControlPoints] as [number, number, number, number]) : undefined;
-                // Mirror the curve handles (y1/y2) too so the easing shape is preserved
-                if (bezierControlPoints && value !== pk.value) {
-                  bezierControlPoints[1] = -bezierControlPoints[1];
-                  bezierControlPoints[3] = -bezierControlPoints[3];
-                }
-                return {
-                  ...pk,
-                  id: generateId(`pkf_${ch}`),
-                  value,
-                  ...(bezierControlPoints ? { bezierControlPoints } : {}),
-                };
-              });
+              const keys = clonedTrack.channels[ch];
+              const values = mirrorChannelValues(ch, keys.map((pk) => pk.value), axis);
+              // The easing curve stays as it is: its control points live in
+              // normalised progress space (value = a + (b - a)·E(t)), so
+              // negating both ends of a segment already mirrors the motion.
+              newChannels[ch] = keys.map((pk, index) => ({
+                ...pk,
+                id: generateId(`pkf_${ch}`),
+                value: values[index],
+                ...(pk.bezierControlPoints ? { bezierControlPoints: [...pk.bezierControlPoints] as [number, number, number, number] } : {}),
+              }));
             }
           });
         }
@@ -260,11 +359,7 @@ export const useClipboard = ({
           id: generateId('track'),
           partId: newPartId,
           name: newPart.name,
-          keyframes: (clonedTrack.keyframes || []).map((k) => ({
-            ...k,
-            id: generateId('kf'),
-            transform: mirrorTransform(k.transform, axis),
-          })),
+          keyframes: mirrorLegacyKeyframes(clonedTrack.keyframes || [], axis),
           channels: newChannels,
         };
       }

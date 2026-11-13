@@ -11,6 +11,7 @@
  *   matte source, new shape), and the strip never takes a stage press.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { armTool } from './fixtures/toolbarTools';
 import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
@@ -199,8 +200,7 @@ test('the strip and the Inspector name the same target; the strip never takes a 
   // A new-shape tool armed: the strip says so; Esc leaves the tool.
   await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
-  await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+  await armTool(page, 'Rectangle');
   await expect(strip).toHaveAttribute('data-edit-target', 'new-shape');
   await expect(strip).toContainText('Rectangle');
 });

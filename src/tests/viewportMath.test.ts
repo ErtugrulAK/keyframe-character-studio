@@ -171,3 +171,12 @@ describe('Canvas Interaction V1 viewport math', () => {
     expect(before.y).toBeCloseTo(view.center.y + (point.y - viewBox.height / 2) * view.baseScale * zoom, 10);
   });
 });
+
+describe('text box sizing', () => {
+  it('a tall drawn box grows the text past 400 (QA 2026-11-13), up to the shared maximum', async () => {
+    const { getTextCreationProps, MAX_TEXT_FONT_SIZE } = await import('../utils/geometry/viewportMath');
+    const box = (height: number) => ({ minX: 0, minY: 0, maxX: 2000, maxY: height, width: 2000, height, centerX: 1000, centerY: height / 2 });
+    expect(getTextCreationProps(box(720), { x: 0, y: 0 }).fontSize).toBe(600);
+    expect(getTextCreationProps(box(5000), { x: 0, y: 0 }).fontSize).toBe(MAX_TEXT_FONT_SIZE);
+  });
+});

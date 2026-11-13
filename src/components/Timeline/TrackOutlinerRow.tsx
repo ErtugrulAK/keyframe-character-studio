@@ -6,6 +6,7 @@ import { laneContextOf, resolveLaneRows } from './timelineLaneLayout';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { resolveAdjacentKeyframeFrame, resolveChannelAnimationState, resolveChannelKeyframeFrames, resolveLayerKeyframeFrames } from '../../utils/editor/timelineMetrics';
 import { resolveAuthoredBasePose } from '../../utils/animation/channelKeyframeGroups';
+import { partIndexOf } from '../../utils/layers/partBinding';
 import { InlineRename } from '../Shared/InlineRename';
 
 interface TrackOutlinerRowProps {
@@ -18,7 +19,8 @@ interface TrackOutlinerRowProps {
    *  partId (track.name may be a generated "Track part_x" placeholder after
    *  import, since the name field is not serialized). */
   parts: CharacterPart[];
-  isChildLayer: boolean;
+  /** How deep the layer sits under parents (0 = top level), as in the Layers panel. */
+  depth: number;
   isSelected: boolean;
   editingPartId: string | null;
   editingNameValue: string;
@@ -40,6 +42,8 @@ interface TrackOutlinerRowProps {
   onJumpToFrame: (frame: number) => void;
   isGroupExpanded: (key: string, defaultVal?: boolean) => boolean;
   onToggleSubGroup: (key: string, defaultVal?: boolean) => void;
+  /** Show only keyed properties (After Effects' U). */
+  animatedOnly?: boolean;
 }
 
 /**
@@ -57,6 +61,9 @@ const TREE_LABEL: Partial<Record<TrackChannel, string>> = {
   trimPathStart: 'Start',
   trimPathEnd: 'End',
   trimPathOffset: 'Offset',
+  matteFeather: 'Feather',
+  matteStrength: 'Strength',
+  matteGradientAngle: 'Gradient Angle',
 };
 
 /** A mask property row reads like other motion tools: Path, Feather, Opacity, Expansion. */
@@ -95,7 +102,7 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
   ordinal,
   layerCount,
   parts,
-  isChildLayer,
+  depth,
   isSelected,
   editingPartId,
   editingNameValue,
@@ -115,6 +122,7 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
   onJumpToFrame,
   isGroupExpanded,
   onToggleSubGroup,
+  animatedOnly = false,
 }) => {
   // BUGFIX: the timeline label must reflect the REAL element name. The track
   // only carries partId (track.name is not serialized — after import it is a
@@ -144,7 +152,7 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
     };
   }, [channelMenu]);
   // The layer's masks name their property groups.
-  const owningPart = parts.find((p) => p.id === track.partId);
+  const owningPart = partIndexOf(parts).get(track.partId);
   const partMasks = owningPart?.masks ?? [];
 
   /**
@@ -152,7 +160,7 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
    * the SAME projection the lane diamonds are painted from, so the navigation can
    * neither skip a visible keyframe nor stop on a frame the layer does not animate.
    */
-  const keyframeFrames = resolveLayerKeyframeFrames(track, activeTemplateId || 'Sequence', basePose);
+  const keyframeFrames = layerKeyframeFrames({ track, activeTemplateId, parts });
   const previousKeyframeFrame = resolveAdjacentKeyframeFrame(keyframeFrames, currentFrame, 'previous');
   const nextKeyframeFrame = resolveAdjacentKeyframeFrame(keyframeFrames, currentFrame, 'next');
 
@@ -307,12 +315,9 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
       {/* ── LAYER ROW ── */}
       <div
         className={`ue-track-row ${isSelected ? 'selected' : ''}`}
-        style={{ height: TRACK_ROW_HEIGHT, paddingLeft: isChildLayer ? 22 : 8 }}
+        style={{ height: TRACK_ROW_HEIGHT, paddingLeft: 8 + depth * 16 }}
         onClick={(e) => onSelect(track.partId, e.shiftKey)}
       >
-        {isChildLayer && (
-          <span style={{ fontSize: 10, color: 'var(--accent-cyan)', fontWeight: 600, marginRight: -2 }}>└─</span>
-        )}
 
         <button
           className="ue-expand-btn"
@@ -450,13 +455,13 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
               tools: Position, Scale, Rotation, Opacity; Trim Paths only when
               the layer uses it; then one group per mask (Path, Feather,
               Opacity, Expansion). */}
-          {resolveLaneRows(track, isGroupExpanded, laneContextOf(owningPart)).map((row) => {
+          {resolveLaneRows(track, isGroupExpanded, laneContextOf(owningPart, animatedOnly)).map((row) => {
             if (row.kind === 'track') return null;
             if (row.kind === 'header') {
               const key = `${track.id}_${row.group}`;
-              return <React.Fragment key={key}>{renderGroupHeader(key, row.label, isGroupExpanded(key, row.defaultExpanded), row.defaultExpanded)}</React.Fragment>;
+              return <React.Fragment key={key}>{renderGroupHeader(key, row.label, isGroupExpanded(key, row.defaultExpanded), row.defaultExpanded, row.depth === 2 ? 'ue-header-indent' : 'ue-header-indent-top')}</React.Fragment>;
             }
-            return renderChannelRow(row.channel, row.depth === 2 ? 'ue-channel-indent-deep' : 'ue-channel-indent', true);
+            return renderChannelRow(row.channel, row.depth === 3 ? 'ue-channel-indent-deeper' : row.depth === 2 ? 'ue-channel-indent-deep' : 'ue-channel-indent', true);
           })}
         </div>
       )}
@@ -490,8 +495,20 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
 };
 
 /** The previous/next keyframe a collapsed row offers at `frame` — all it shows of the playhead. */
+/** A track's keyframe frames, kept while the track, its layer and the sequence are the same (every playhead frame asks again). */
+const keyframeFramesCache = new WeakMap<TrackOutlinerRowProps['track'], { part: unknown; templateId: string; frames: number[] }>();
+const layerKeyframeFrames = (props: Pick<TrackOutlinerRowProps, 'track' | 'activeTemplateId' | 'parts'>): number[] => {
+  const templateId = props.activeTemplateId || 'Sequence';
+  const part = partIndexOf(props.parts).get(props.track.partId);
+  const cached = keyframeFramesCache.get(props.track);
+  if (cached && cached.part === part && cached.templateId === templateId) return cached.frames;
+  const frames = resolveLayerKeyframeFrames(props.track, templateId, resolveAuthoredBasePose(props.parts, props.track.partId));
+  keyframeFramesCache.set(props.track, { part, templateId, frames });
+  return frames;
+};
+
 const collapsedRowNavigation = (props: TrackOutlinerRowProps): string => {
-  const frames = resolveLayerKeyframeFrames(props.track, props.activeTemplateId || 'Sequence', resolveAuthoredBasePose(props.parts, props.track.partId));
+  const frames = layerKeyframeFrames(props);
   return `${resolveAdjacentKeyframeFrame(frames, props.currentFrame, 'previous')}:${resolveAdjacentKeyframeFrame(frames, props.currentFrame, 'next')}`;
 };
 

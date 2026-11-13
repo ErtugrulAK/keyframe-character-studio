@@ -42,6 +42,7 @@ const createEmptyChannels = (): Record<TrackChannel, PropertyKeyframe[]> => ({
   x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [],
   maskOffsetX: [], maskOffsetY: [], maskScale: [], maskRotation: [],
   trimPathStart: [], trimPathEnd: [], trimPathOffset: [],
+  matteFeather: [], matteStrength: [], matteGradientAngle: [],
 });
 
 /**
@@ -245,6 +246,11 @@ export function fillChannelsFromLegacyKeyframes(
       ? canonicalKeyframes
       : [...canonicalKeyframes, ...fallback].sort((a, b) => a.frame - b.frame);
   }
+  // Legacy keyframes never carry the Track Matte's feather/strength/angle: their
+  // canonical keys are kept as they are.
+  filled.matteFeather = canonical?.matteFeather ?? [];
+  filled.matteStrength = canonical?.matteStrength ?? [];
+  filled.matteGradientAngle = canonical?.matteGradientAngle ?? [];
 
   return filled;
 }

@@ -66,10 +66,11 @@ describe('Track Matte soft edge, strength and gradient', () => {
     .filter((diagnostic) => diagnostic.severity === 'ERROR' && diagnostic.feature === 'track-matte')
     .map((diagnostic) => diagnostic.code);
 
-  test('block the export instead of silently exporting a hard matte', () => {
-    expect(codes(scene([layer('a', { trackMatte: { sourceLayerId: 'b', mode: 'alpha', feather: 8 } }), layer('b')]))).toContain('OGRAF_UNSUPPORTED_FEATHER_MATTE');
-    expect(codes(scene([layer('a', { trackMatte: { sourceLayerId: 'b', mode: 'alpha', strength: 0.5 } }), layer('b')]))).toContain('OGRAF_UNSUPPORTED_ALPHA_MATTE');
-    expect(codes(scene([layer('a', { trackMatte: { sourceLayerId: 'b', mode: 'alpha', gradient: { angle: 0 } } }), layer('b')]))).toContain('OGRAF_UNSUPPORTED_GRADIENT_MATTE');
+  // Exported as the editor draws them (pixels: e2e/track-matte-export-parity.spec.ts).
+  test('export, no longer refused', () => {
+    expect(codes(scene([layer('a', { trackMatte: { sourceLayerId: 'b', mode: 'alpha', feather: 8 } }), layer('b')]))).toEqual([]);
+    expect(codes(scene([layer('a', { trackMatte: { sourceLayerId: 'b', mode: 'alpha', strength: 0.5 } }), layer('b')]))).toEqual([]);
+    expect(codes(scene([layer('a', { trackMatte: { sourceLayerId: 'b', mode: 'alpha', gradient: { angle: 0 } } }), layer('b')]))).toEqual([]);
   });
 
   test('neutral values and a disabled Track Matte export as before', () => {

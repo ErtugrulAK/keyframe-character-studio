@@ -41,8 +41,8 @@ const scene = (layers: SceneLayer[]): SceneData => ({
 type Region = { x: number; y: number; width: number; height: number };
 
 /** The rendered region of each layer mask, keyed by mask id. */
-async function maskRegions(data: SceneData): Promise<Record<string, Region>> {
-  const plan = compileOGrafPackage(data);
+async function maskRegions(data: SceneData, options?: Parameters<typeof compileOGrafPackage>[1]): Promise<Record<string, Region>> {
+  const plan = compileOGrafPackage(data, options);
   expect(plan.status).toBe('ready-to-materialize');
   const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
   const Graphic = new Function('HTMLElement', `${source.replace('export default class Graphic', 'return class Graphic').replaceAll('import.meta.url', 'location.href')}`)(HTMLElement) as new () => HTMLElement & { load: (params: { renderType: 'realtime' }) => Promise<unknown> };
@@ -85,8 +85,21 @@ describe('OGraf layer mask regions', () => {
     expect(region).toEqual({ x: 960 - 62, y: 540 - 62, width: 124, height: 124 });
   });
 
+  test('a hole in a text or an image is bounded by where it paints', async () => {
+    // "Hi" at 40 px: 2 x 0.9 x 40 = 72 px wide at most, plus a font size each side; 2 font sizes up and
+    // down; padded by 2 px for anti-aliasing.
+    const text = only(await maskRegions(scene([layer({ type: 'custom_text', textValue: 'Hi', fontSize: 40, masks: [mask('m', 'subtract')] } as Partial<SceneLayer>)])));
+    expect(text).toEqual({ x: 960 - 76 - 2, y: 540 - 80 - 2, width: 2 * (76 + 2), height: 2 * (80 + 2) });
+    const image = only(await maskRegions(
+      scene([layer({ type: 'custom_image', imageUrl: 'source/logo.png', width: 100, height: 50, masks: [mask('m', 'subtract')] } as Partial<SceneLayer>)]),
+      { assetCatalog: { 'source/logo.png': { kind: 'local', packagedPath: 'assets/images/logo.png', binaryContent: new Uint8Array([1]) } } },
+    ));
+    expect(image).toEqual({ x: 960 - 50 - 2, y: 540 - 25 - 2, width: 104, height: 54 });
+  });
+
   test('a layer whose extent is unknown here keeps the scene region for a hole', async () => {
-    const region = only(await maskRegions(scene([layer({ type: 'custom_text', textValue: 'Hi', fontSize: 40, masks: [mask('m', 'subtract')] } as Partial<SceneLayer>)])));
+    const path = { version: 1 as const, coordinateSpace: 'local' as const, closed: true, points: [{ x: -10, y: -10 }, { x: 10, y: -10 }, { x: 0, y: 10 }] };
+    const region = only(await maskRegions(scene([layer({ type: 'custom_freeform', path, masks: [mask('m', 'subtract')] } as Partial<SceneLayer>)])));
     expect(region).toEqual(FULL);
   });
 

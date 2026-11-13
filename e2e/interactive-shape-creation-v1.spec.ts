@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { armTool } from './fixtures/toolbarTools';
 
 async function openElements(page: import('@playwright/test').Page): Promise<void> {
   await page.goto('/');
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
-  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
 }
 
 test('rectangle click arms creation and drag commits one selected shape', async ({ page }) => {
@@ -12,7 +12,7 @@ test('rectangle click arms creation and drag commits one selected shape', async 
   const box = await canvas.boundingBox();
   expect(box).not.toBeNull();
 
-  await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+  await armTool(page, 'Rectangle');
   await expect(page.locator('.actor-node', { hasText: 'Rectangle' })).toHaveCount(0);
 
   const start = { x: box!.x + box!.width * 0.68, y: box!.y + box!.height * 0.68 };
@@ -39,7 +39,7 @@ test('reverse circle drag normalizes bounds and Escape cancels the next tool', a
   const box = await canvas.boundingBox();
   expect(box).not.toBeNull();
 
-  await page.getByRole('button', { name: 'Circle', exact: true }).click();
+  await armTool(page, 'Circle');
   const start = { x: box!.x + box!.width * 0.72, y: box!.y + box!.height * 0.7 };
   const end = { x: box!.x + box!.width * 0.48, y: box!.y + box!.height * 0.48 };
   await page.mouse.move(start.x, start.y);
@@ -49,7 +49,7 @@ test('reverse circle drag normalizes bounds and Escape cancels the next tool', a
   await expect(page.locator('.actor-node', { hasText: 'Circle' })).toHaveCount(1);
   await expect(page.locator('[data-testid="shape-creation-preview"]')).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Triangle', exact: true }).click();
+  await armTool(page, 'Triangle');
   await expect(page.locator('.actor-node', { hasText: 'Triangle' })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(page.locator('.actor-node', { hasText: 'Triangle' })).toHaveCount(0);
@@ -61,8 +61,9 @@ test('square creation keeps active feedback and equal authored scales', async ({
   const box = await canvas.boundingBox();
   expect(box).not.toBeNull();
 
-  const squareTool = page.getByRole('button', { name: 'Square', exact: true });
-  await squareTool.click();
+  await armTool(page, 'Square');
+  // The shape button now shows the Square and reads as the active tool.
+  const squareTool = page.getByRole('button', { name: 'Add square', exact: true });
   await expect(squareTool).toHaveClass(/active/);
 
   await page.mouse.move(box!.x + box!.width * 0.7, box!.y + box!.height * 0.65);
@@ -94,8 +95,8 @@ test('primitive creation stays armed for consecutive shapes, with one undo per s
   const canvas = page.locator('.stage-canvas-container');
   const box = await canvas.boundingBox();
   expect(box).not.toBeNull();
-  const rectangle = page.getByRole('button', { name: 'Rectangle', exact: true });
-  await rectangle.click();
+  await armTool(page, 'Rectangle');
+  const rectangle = page.getByRole('button', { name: 'Add rectangle', exact: true });
   for (let index = 0; index < 3; index += 1) {
     const x = box!.x + box!.width * (0.25 + index * 0.2);
     const y = box!.y + box!.height * 0.35;
@@ -117,6 +118,10 @@ test('primitive creation stays armed for consecutive shapes, with one undo per s
   await page.mouse.up();
   await expect(page.locator('.actor-node', { hasText: 'Rectangle' })).toHaveCount(1);
   await rectangle.click();
+  await expect(rectangle).toHaveClass(/active/);
+  // A second press keeps the tool armed (no toggle back to Select).
+  await rectangle.click();
+  await expect(rectangle).toHaveClass(/active/);
   await page.getByRole('button', { name: 'Pan', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pan', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(rectangle).not.toHaveClass(/active/);
@@ -128,7 +133,7 @@ test('Shift while drawing a rectangle draws a square', async ({ page }) => {
   const box = await canvas.boundingBox();
   expect(box).not.toBeNull();
 
-  await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+  await armTool(page, 'Rectangle');
   // A wide, short drag: without Shift this is a flat rectangle.
   await page.mouse.move(box!.x + box!.width * 0.3, box!.y + box!.height * 0.4);
   await page.mouse.down();

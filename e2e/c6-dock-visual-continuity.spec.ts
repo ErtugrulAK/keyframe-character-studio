@@ -25,10 +25,11 @@ const clickHandleNow = async (page: Page, side: Side) => {
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 };
 
-type Side = 'left' | 'right';
-const PANEL: Record<Side, string> = { left: '.left-toolbar-container', right: '.motion-design-right-sidebar' };
-const HANDLE: Record<Side, string> = { left: '.left-toolbar-toggle', right: '.inspector-dock-toggle' };
-const LABEL: Record<Side, string> = { left: 'Left Toolbar', right: 'Inspector' };
+// Only the right dock is left: the menu bar and the toolbar replaced the left one.
+type Side = 'right';
+const PANEL: Record<Side, string> = { right: '.motion-design-right-sidebar' };
+const HANDLE: Record<Side, string> = { right: '.inspector-dock-toggle' };
+const LABEL: Record<Side, string> = { right: 'Inspector' };
 
 async function open(page: Page, reducedMotion = false): Promise<void> {
   await page.emulateMedia({ reducedMotion: reducedMotion ? 'reduce' : 'no-preference' });
@@ -83,8 +84,8 @@ const slide = async (page: Page, side: Side, action: 'Hide' | 'Show', count = 32
   return frames;
 };
 
-/** The panel's moving edge: the right edge of the left dock, the left edge of the right dock. */
-const edgeOf = (side: Side, f: Frame) => (side === 'left' ? f.right : f.left);
+/** The panel's moving edge: the left edge of the right dock. */
+const edgeOf = (f: Frame) => f.left;
 
 const expectOneCleanSlide = (side: Side, action: 'Hide' | 'Show', frames: Frame[], before: Frame) => {
   const sliding = frames.filter((f) => f.visible);
@@ -94,8 +95,9 @@ const expectOneCleanSlide = (side: Side, action: 'Hide' | 'Show', frames: Frame[
     expect(Math.round(f.width), 'width while sliding').toBeGreaterThan(200);
   }
   // The edge moves one way only.
-  const edges = sliding.map((f) => edgeOf(side, f));
-  const outward = (side === 'left') === (action === 'Hide') ? -1 : 1;
+  const edges = sliding.map(edgeOf);
+  // Hiding moves the right dock's edge right (outward), showing moves it left.
+  const outward = action === 'Hide' ? 1 : -1;
   for (let index = 1; index < edges.length; index += 1) {
     expect((edges[index] - edges[index - 1]) * outward, `edge step ${index}`).toBeGreaterThanOrEqual(-0.5);
   }
@@ -103,7 +105,7 @@ const expectOneCleanSlide = (side: Side, action: 'Hide' | 'Show', frames: Frame[
   // flush with the window side when closed, so between those two rests it is
   // never more than half its own width (10 px) off the moving edge, and it
   // moves the same way as the edge.
-  for (const f of sliding) expect(Math.abs(f.handleCentre - edgeOf(side, f)), 'handle off the edge').toBeLessThanOrEqual(10.5);
+  for (const f of sliding) expect(Math.abs(f.handleCentre - edgeOf(f)), 'handle off the edge').toBeLessThanOrEqual(10.5);
   const handles = frames.map((f) => f.handleCentre);
   for (let index = 1; index < handles.length; index += 1) {
     expect((handles[index] - handles[index - 1]) * outward, `handle step ${index}`).toBeGreaterThanOrEqual(-0.5);
@@ -122,7 +124,8 @@ const expectOneCleanSlide = (side: Side, action: 'Hide' | 'Show', frames: Frame[
   if (action === 'Hide') expect(tail[0].visible, 'nothing of the panel shows after it left').toBe(false);
 };
 
-for (const side of ['right', 'left'] as const) {
+// (The left dock is gone: the menu bar and the toolbar replaced it.)
+for (const side of ['right'] as const) {
   test(`${side} dock: hide and show are each one clean slide with the handle on the edge`, async ({ page }) => {
     await open(page);
     const before = await frame(page, side);
@@ -143,7 +146,8 @@ test('a reversal mid-slide continues from where the panel is (no jump) and settl
   const midway = await frame(page, 'right');
   // One frame of the slide in flight: the most a reversal may still travel.
   const frameStep = Math.abs(midway.left - previous.left);
-  expect(midway.left).toBeGreaterThan(1080);
+  // Past the docked edge (1440 - 484 = 956) and short of the window edge.
+  expect(midway.left).toBeGreaterThan(970);
   expect(midway.left).toBeLessThan(1430);
   // A user clicks the handle WHILE it moves: no wait for it to stop.
   await expect(page.getByRole('button', { name: 'Show Inspector' })).toBeVisible();
@@ -225,21 +229,20 @@ test('C7 — stage-edge chrome rides the sliding dock edge instead of jumping', 
   }
 });
 
-test('C7b — the timeline collapse handle stays put and off both docks while they slide', async ({ page }) => {
+test('C7b — the timeline collapse handle stays put and off the dock while it slides', async ({ page }) => {
   await open(page);
   const geometry = () => page.evaluate(() => {
     const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
     const handle = box('[data-testid="timeline-collapse-toggle"]');
     const right = box('.motion-design-right-sidebar');
-    const left = box('.left-toolbar-container');
     const timeline = box('[data-testid="sequencer-timeline"]');
-    return { x: handle.left, y: handle.top, handleLeft: handle.left, handleRight: handle.right, handleCentreX: handle.left + handle.width / 2, handleCentreY: handle.top + handle.height / 2, rightLeft: Math.min(right.left, window.innerWidth), leftRight: Math.max(left.right, 0), timelineTop: timeline.top, timelineCentreX: timeline.left + timeline.width / 2 };
+    return { x: handle.left, y: handle.top, handleLeft: handle.left, handleRight: handle.right, handleCentreX: handle.left + handle.width / 2, handleCentreY: handle.top + handle.height / 2, rightLeft: Math.min(right.left, window.innerWidth), timelineTop: timeline.top, timelineCentreX: timeline.left + timeline.width / 2 };
   });
   const atRest = await geometry();
   // Still the timeline's top-edge handle (R3-01), now at the centre of that edge (C8).
   expect(Math.abs(atRest.handleCentreY - atRest.timelineTop)).toBeLessThanOrEqual(2);
   expect(Math.abs(atRest.handleCentreX - atRest.timelineCentreX)).toBeLessThanOrEqual(1);
-  for (const [action, label] of [['Hide', 'Inspector'], ['Show', 'Inspector'], ['Hide', 'Left Toolbar'], ['Show', 'Left Toolbar']] as const) {
+  for (const [action, label] of [['Hide', 'Inspector'], ['Show', 'Inspector']] as const) {
     await page.getByRole('button', { name: `${action} ${label}` }).click();
     for (let index = 0; index < 24; index += 1) {
       const now = await geometry();
@@ -248,7 +251,7 @@ test('C7b — the timeline collapse handle stays put and off both docks while th
       expect(now.y).toBe(atRest.y);
       // … and never sits over either dock, on any frame.
       expect(now.handleRight).toBeLessThanOrEqual(now.rightLeft);
-      expect(now.handleLeft).toBeGreaterThanOrEqual(now.leftRight);
+      expect(now.handleLeft).toBeGreaterThanOrEqual(0);
       await page.clock.runFor(FRAME_MS);
     }
   }
@@ -271,8 +274,6 @@ test('C7b — dock and timeline changes never resize or re-frame the stage drawi
   const actions = [
     () => page.getByRole('button', { name: 'Hide Inspector' }).click(),
     () => page.getByRole('button', { name: 'Show Inspector' }).click(),
-    () => page.getByRole('button', { name: 'Hide Left Toolbar' }).click(),
-    () => page.getByRole('button', { name: 'Show Left Toolbar' }).click(),
     () => page.getByRole('button', { name: 'Collapse timeline' }).click(),
     () => page.getByRole('button', { name: 'Expand timeline' }).click(),
   ];

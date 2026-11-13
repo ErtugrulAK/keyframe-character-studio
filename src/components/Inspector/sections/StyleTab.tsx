@@ -1,19 +1,17 @@
 import React from 'react';
-import type { PathOrderCommand } from '../../../utils/geometry/maskPathOrder';
 import type { BezierPath, CharacterPart, Track, Transform } from '../../../types/animator';
 import { StyleColorSection } from './style/StyleColorSection';
 import { StyleAppearanceSection } from './style/StyleAppearanceSection';
 import { isShapeAppearanceEligible } from '../../../utils/layers/shapeAppearance';
 import { StyleTextFields } from './style/StyleTextFields';
-import { FitToTextCard, TextBoxCard } from './style/StyleTextFitSection';
 import { StyleClonerSection } from './style/StyleClonerSection';
 import { StyleParticleSection } from './style/StyleParticleSection';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
-import { PathGeometryCard } from './style/PathGeometryCard';
 import { ColorCorrectionCard } from './style/ColorCorrectionCard';
 import type { ColorCorrectionEffect, LayerMask } from '../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../types/composition';
 import { StyleMatteSection } from './style/StyleMatteSection';
+import type { MatteChannelKeys } from './style/MatteRenderControls';
 import type { MaskDrawShape } from '../../../hooks/useMaskEditing';
 import { TrimPathSection, type TrimPathChannel } from './style/TrimPathSection';
 import { isTrimPathEligible } from '../../../utils/geometry/trimPath';
@@ -25,7 +23,6 @@ interface StyleTabProps {
   handlePartColorChange: (key: 'fillColor' | 'strokeColor', color: string) => void;
   transform?: Transform;
   coordinateSystem?: SceneCoordinateSystem;
-  onChangeMaskPath?: (maskId: string, path: BezierPath) => void;
   /** Canvas mask editing of this layer. */
   maskEditTargetId?: string | null;
   onEditMaskOnCanvas?: (maskId: string) => void;
@@ -37,15 +34,13 @@ interface StyleTabProps {
   matteReturnTargetId?: string | null;
   onSelectMatteSource?: (targetId: string, sourceId: string) => void;
   onBackToMatteTarget?: () => void;
-  onMaskPathOrder?: (maskId: string, command: PathOrderCommand, selectedIndex: number | null) => number | null | undefined;
   onPickRefused?: (reason: string) => void;
   onSelectMatteTarget?: (targetId: string) => void;
-  maskPathChannels?: Track['maskPathChannels'];
-  maskVertexIndex?: number | null;
-  onSelectMaskVertex?: (index: number | null) => void;
   /** Evaluated Trim Path at the current frame; the fields must show what the stage draws. */
   evaluatedTrim?: { start: number; end: number; offset: number };
   onUpdateTrimChannel?: (channel: TrimPathChannel, value: number) => void;
+  /** The keyframe buttons of the Track Matte's FEATHER and STRENGTH. */
+  matteChannelKeys?: MatteChannelKeys;
   /** Opens/closes ONE undo entry around a completed color pointer gesture. */
   onColorInteractionStart?: () => void;
   onColorInteractionEnd?: () => void;
@@ -81,7 +76,6 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   handlePartColorChange,
   transform,
   coordinateSystem,
-  onChangeMaskPath,
   maskEditTargetId,
   onEditMaskOnCanvas,
   onExitMaskEditing,
@@ -90,18 +84,15 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   matteReturnTargetId,
   onSelectMatteSource,
   onBackToMatteTarget,
-  onMaskPathOrder,
   onPickRefused,
   onSelectMatteTarget,
-  maskPathChannels,
-  maskVertexIndex,
-  onSelectMaskVertex,
   evaluatedTrim,
   onUpdateTrimChannel,
+  matteChannelKeys,
   onColorInteractionStart,
   onColorInteractionEnd,
-  pathEditing,
   colorCorrection,
+  pathEditing,
   section,
 }) => {
   const showProperties = section !== 'masks';
@@ -146,8 +137,6 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         onColorInteractionStart={onColorInteractionStart}
         onColorInteractionEnd={onColorInteractionEnd}
       />
-      <TextBoxCard selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
-      <FitToTextCard selectedPart={selectedPart} characterParts={characterParts} onPartPropChange={handlePartPropChange} />
       {colorCorrection && selectedPart.type === 'custom_image' && (
         <ColorCorrectionCard
           part={selectedPart}
@@ -156,19 +145,6 @@ export const StyleTab: React.FC<StyleTabProps> = ({
           onDrawEffectMask={colorCorrection.onDrawEffectMask}
           drawingEffectMask={colorCorrection.drawingEffectMask}
           readOnlyReason={colorCorrection.readOnlyReason}
-          onInteractionStart={onColorInteractionStart}
-          onInteractionEnd={onColorInteractionEnd}
-        />
-      )}
-      {pathEditing && (
-        <PathGeometryCard
-          selectedPart={selectedPart}
-          tracks={pathEditing.tracks}
-          readOnlyReason={pathEditing.readOnlyReason}
-          onConvert={pathEditing.onConvert}
-          onChangePath={pathEditing.onChangePath}
-          selectedIndex={pathEditing.selectedIndex}
-          onSelectIndex={pathEditing.onSelectIndex}
           onInteractionStart={onColorInteractionStart}
           onInteractionEnd={onColorInteractionEnd}
         />
@@ -190,11 +166,11 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   const masks = (
     <StyleMatteSection
       selectedPart={selectedPart}
+      matteChannelKeys={matteChannelKeys}
       characterParts={characterParts}
       onPartPropChange={handlePartPropChange}
       onInteractionStart={onColorInteractionStart}
       onInteractionEnd={onColorInteractionEnd}
-      onChangeMaskPath={onChangeMaskPath}
       maskEditTargetId={maskEditTargetId}
       onEditMaskOnCanvas={onEditMaskOnCanvas}
       onExitMaskEditing={onExitMaskEditing}
@@ -203,12 +179,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
       matteReturnTargetId={matteReturnTargetId}
       onSelectMatteSource={onSelectMatteSource}
       onBackToMatteTarget={onBackToMatteTarget}
-      onMaskPathOrder={onMaskPathOrder}
       onPickRefused={onPickRefused}
       onSelectMatteTarget={onSelectMatteTarget}
-      maskPathChannels={maskPathChannels}
-      maskVertexIndex={maskVertexIndex}
-      onSelectMaskVertex={onSelectMaskVertex}
     />
   );
 

@@ -97,22 +97,18 @@ test('a window resize while the Inspector slides ends like the same steps taken 
   expectSamePose(await run(page, true, ['toggle-mid', 'resize']), resizeThenShow, 'resize mid-slide (show)');
 });
 
-test('a burst of rapid clicks on both docks ends in the state of the last click, with the world unmoved', async ({ page }) => {
+test('a burst of rapid clicks on the dock ends in the state of the last click, with the world unmoved', async ({ page }) => {
   await open(page);
   const start = await pose(page);
-  const left = page.locator('.left-toolbar-toggle');
-  // Five clicks each, faster than the slide: odd → both end hidden.
+  // Five clicks, faster than the slide: odd → it ends hidden. (The left dock is gone.)
   for (let index = 0; index < 5; index += 1) {
     await inspectorToggle(page).click({ delay: 0 });
-    await left.click({ delay: 0 });
   }
   await settled(page);
   await expect(inspectorToggle(page)).toHaveAttribute('aria-expanded', 'false');
-  await expect(left).toHaveAttribute('aria-expanded', 'false');
   expectSamePose(await pose(page), start, 'rapid clicks');
-  // One more each brings both back, still without moving the world.
+  // One more brings it back, still without moving the world.
   await inspectorToggle(page).click();
-  await left.click();
   await settled(page);
   expectSamePose(await pose(page), start, 'rapid clicks, back');
   await expect(page.locator('#right-inspector-panel')).toBeVisible();

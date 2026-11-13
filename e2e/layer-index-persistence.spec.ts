@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { armTool } from './fixtures/toolbarTools';
 
 /**
  * The authored layer index survives new layers, template switching, autosave and
@@ -13,7 +14,7 @@ import { test, expect, type Page } from '@playwright/test';
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
 async function createShapeByDrag(page: Page, name: string, offsetX = 0): Promise<void> {
-  await page.getByRole('button', { name, exact: true }).click();
+  await armTool(page, name);
   const box = await page.locator('.stage-canvas-container').boundingBox();
   if (!box) throw new Error('Canvas bounds unavailable');
   // Measured from the stage centre, so the docked authoring strip's layout
@@ -46,7 +47,6 @@ test('authored layer index survives new layers, template switching, autosave, an
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 
-  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
   for (const [index, shape] of ['Rectangle', 'Circle', 'Triangle'].entries()) {
     await createShapeByDrag(page, shape, (index - 1) * 80);
   }

@@ -53,6 +53,8 @@ export interface OutlinerRowActions {
   dragEnd: () => void;
 }
 
+export type OutlinerDropKind = 'parent' | 'group' | 'reparent' | 'reorder';
+
 interface OutlinerRowProps {
   part: CharacterPart;
   depth: number;
@@ -78,6 +80,13 @@ interface OutlinerRowProps {
    * to …" / "Move into group …") or over a refused target (the reason).
    */
   dropLabel?: string;
+  /**
+   * What the drop would do, so each intent has its own colour: `parent`
+   * (orange) links a transform parent, `group` (green) moves into a group,
+   * `reparent` (violet) reorders and changes the parent, `reorder` (blue)
+   * only changes the order.
+   */
+  dropKind?: OutlinerDropKind;
   /** While the layer search is active: true on a match, false on an ancestor shown for context. */
   searchMatch?: boolean;
   /** The resolved matte source layer, when the row has a matte relationship. */
@@ -118,12 +127,12 @@ const stackButtonStyle = (disabled: boolean): React.CSSProperties => ({
 
 export const OutlinerRow: React.FC<OutlinerRowProps> = React.memo(({
   part, depth, hasChildren, isExpanded, stackIndex, stackSize, ordinal, isVisible, isLocked, hasTrack, selected, primary,
-  focusable, renaming, dragging, dropPosition, dropBlocked, dropLabel, searchMatch, matteSource, posInSet, setSize, actions,
+  focusable, renaming, dragging, dropPosition, dropBlocked, dropLabel, dropKind, searchMatch, matteSource, posInSet, setSize, actions,
 }) => {
   const matteRelationship = resolveMatteSource(part);
   const isTrackMatte = matteRelationship?.kind === 'track';
   const suppressed = matteRelationship ? isMatteSourceSuppressed(part) : false;
-  const dropClass = dropPosition ? ` drop-${dropPosition}${dropBlocked ? ' drop-blocked' : ''}` : '';
+  const dropClass = dropPosition ? ` drop-${dropPosition}${dropBlocked ? ' drop-blocked' : dropKind ? ` drop-kind-${dropKind}` : ''}` : '';
   return (
     <div
       role="treeitem"

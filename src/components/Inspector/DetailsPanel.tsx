@@ -10,7 +10,12 @@ import { TransformTab } from './sections/TransformTab';
 import { LayerParentField } from './LayerParentField';
 import { editTargetText, layerTypeLabel, resolveEditTarget } from '../../utils/layers/editTarget';
 import { StyleTab } from './sections/StyleTab';
+import { ModifiersCard } from './sections/style/ModifiersCard';
+import { useModifierEditing } from '../../hooks/useModifierEditing';
 import { evaluateTrimPath } from '../../utils/geometry/trimPath';
+import { evaluateTrackMatte, normalizeFeather, normalizeGradientAngle, normalizeStrength } from '../../utils/layers/matte';
+import { applyChannelStaticValue } from '../../utils/animation/channelKeyframeGroups';
+import type { MatteChannelKeys } from './sections/style/MatteRenderControls';
 import { AnimationDataCard } from './sections/AnimationDataCard';
 import { StyleCard } from './sections/style/StyleCard';
 import { useRetainedUiState } from '../../hooks/useRetainedUiState';
@@ -40,7 +45,6 @@ export const DetailsPanel: React.FC = () => {
     getComputedTransform,
     updateCurrentTransform,
     updateCurrentPropertyChannel,
-    authorMaskPath,
     customPresets,
     savePreset,
     updatePreset,
@@ -54,6 +58,8 @@ export const DetailsPanel: React.FC = () => {
     showToast,
     tracks,
     activeTemplateId,
+    addPropertyKeyframe,
+    deletePropertyKeyframe,
       coordinateSystem,
     maskEditTarget,
     enterMaskEditing,
@@ -64,10 +70,7 @@ export const DetailsPanel: React.FC = () => {
     selectMatteSource,
     backToMatteTarget,
     handleSelectPart,
-    maskVertexIndex,
-    setMaskVertexIndex,
     setLayersLocked,
-    applyMaskPathOrder,
     convertToEditablePath,
     setPartPath,
     pathVertex,
@@ -115,12 +118,56 @@ export const DetailsPanel: React.FC = () => {
   }, [opensMasksTab, selectedPartId, setDetailsTab]);
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
+  const changeModifiers = useModifierEditing({ characterParts, tracks, setCharacterParts, setTracks, startBatchInteraction, endBatchInteraction });
   const selectedTrack = selectedPartId ? tracks.find((track) => track.partId === selectedPartId) : undefined;
   // The Inspector shows the ACTIVE sequence's mask, as the renderer does.
   const evaluatedMasks = selectedPart && selectedTrack
     ? evaluateLayerMasks(selectedPart, selectedTrack, currentFrame, activeTemplateId || 'Sequence')
     : undefined;
-  const inspectorPart = selectedPart && evaluatedMasks ? { ...selectedPart, masks: evaluatedMasks } : selectedPart;
+  // The Track Matte's keyed feather/strength read at this frame, like the masks.
+  const evaluatedTrackMatte = selectedPart?.trackMatte
+    ? evaluateTrackMatte(selectedPart.trackMatte, selectedTrack, currentFrame, activeTemplateId || 'Sequence')
+    : undefined;
+  const inspectorPart = selectedPart && (evaluatedMasks || evaluatedTrackMatte !== selectedPart.trackMatte)
+    ? { ...selectedPart, ...(evaluatedMasks ? { masks: evaluatedMasks } : {}), trackMatte: evaluatedTrackMatte }
+    : selectedPart;
+  /**
+   * The keyframe button beside FEATHER and STRENGTH (After Effects' keyframe
+   * navigator): it adds a key at the playhead with the value shown, or removes
+   * the key there. Removing the last key leaves its value as the static one,
+   * as stopping the stopwatch does on the timeline.
+   */
+  const matteChannelKeys: MatteChannelKeys | undefined = selectedPart?.trackMatte && selectedTrack && evaluatedTrackMatte
+    ? (() => {
+      const scope = activeTemplateId || 'Sequence';
+      const control = (channel: 'matteFeather' | 'matteStrength' | 'matteGradientAngle', shown: number) => {
+        const keys = (selectedTrack.channels?.[channel] ?? []).filter((key) => (key.templateId || 'Sequence') === scope);
+        const atFrame = keys.find((key) => key.frame === currentFrame);
+        return {
+          state: atFrame ? 'key' as const : keys.length > 0 ? 'animated' as const : 'off' as const,
+          onToggle: () => {
+            if (!atFrame) {
+              addPropertyKeyframe(selectedTrack.id, channel, currentFrame, shown);
+              return;
+            }
+            if (keys.length > 1) {
+              deletePropertyKeyframe(selectedTrack.id, channel, atFrame.id);
+              return;
+            }
+            startBatchInteraction();
+            setCharacterParts((prev) => prev.map((part) => (part.id === selectedPart.id ? applyChannelStaticValue(part, channel, atFrame.value) : part)));
+            deletePropertyKeyframe(selectedTrack.id, channel, atFrame.id);
+            endBatchInteraction();
+          },
+        };
+      };
+      return {
+        feather: control('matteFeather', normalizeFeather(evaluatedTrackMatte.feather)),
+        strength: control('matteStrength', normalizeStrength(evaluatedTrackMatte.strength)),
+        ...(evaluatedTrackMatte.gradient ? { angle: control('matteGradientAngle', normalizeGradientAngle(evaluatedTrackMatte.gradient.angle) ?? 0) } : {}),
+      };
+    })()
+    : undefined;
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
   // A locked layer is inspected, not edited: its controls are disabled
   // (disclosure and navigation stay), and the banner offers the unlock.
@@ -302,9 +349,6 @@ export const DetailsPanel: React.FC = () => {
               handlePartColorChange={handlePartColorChange}
               evaluatedTrim={evaluatedTrim}
               onUpdateTrimChannel={updateCurrentPropertyChannel}
-              onChangeMaskPath={(maskId, path) => {
-                if (selectedPartId) authorMaskPath(selectedPartId, maskId, path);
-              }}
               maskEditTargetId={maskEditTarget?.ownerPartId === selectedPart.id ? maskEditTarget.maskId : null}
               onEditMaskOnCanvas={(maskId) => {
                 const refusal = enterMaskEditing(selectedPart.id, maskId);
@@ -316,19 +360,10 @@ export const DetailsPanel: React.FC = () => {
                 const refusal = startMaskDraw(selectedPart.id, shape);
                 if (refusal) showToast(refusal, 'error');
               }}
-              maskPathChannels={selectedTrack?.maskPathChannels}
-              maskVertexIndex={maskVertexIndex}
-              onSelectMaskVertex={setMaskVertexIndex}
               matteReturnTargetId={matteReturnTargetId}
               onSelectMatteSource={selectMatteSource}
               onBackToMatteTarget={backToMatteTarget}
               onPickRefused={(reason) => showToast(reason, 'info')}
-              onMaskPathOrder={(maskId, command, index) => {
-                const outcome = applyMaskPathOrder(selectedPart.id, maskId, command, index);
-                if (!outcome.applied) return undefined;
-                if (maskEditTarget?.maskId === maskId) setMaskVertexIndex(outcome.selectedIndex);
-                return outcome.selectedIndex;
-              }}
               onSelectMatteTarget={(targetId) => handleSelectPart(targetId)}
               onColorInteractionStart={startBatchInteraction}
               onColorInteractionEnd={endBatchInteraction}
@@ -352,12 +387,19 @@ export const DetailsPanel: React.FC = () => {
               }}
                 />
               )}
+              <ModifiersCard
+                selectedPart={selectedPart}
+                characterParts={characterParts}
+                onChangeModifiers={changeModifiers}
+                readOnly={isLocked}
+              />
             </Tabs.Content>
 
             {hasMasksTab && (
               <Tabs.Content className="details-tab-panel" value="masks">
                 <StyleTab
                   section="masks"
+              matteChannelKeys={matteChannelKeys}
               selectedPart={inspectorPart ?? selectedPart}
               characterParts={characterParts}
               transform={transform}
@@ -366,9 +408,6 @@ export const DetailsPanel: React.FC = () => {
               handlePartColorChange={handlePartColorChange}
               evaluatedTrim={evaluatedTrim}
               onUpdateTrimChannel={updateCurrentPropertyChannel}
-              onChangeMaskPath={(maskId, path) => {
-                if (selectedPartId) authorMaskPath(selectedPartId, maskId, path);
-              }}
               maskEditTargetId={maskEditTarget?.ownerPartId === selectedPart.id ? maskEditTarget.maskId : null}
               onEditMaskOnCanvas={(maskId) => {
                 const refusal = enterMaskEditing(selectedPart.id, maskId);
@@ -380,19 +419,10 @@ export const DetailsPanel: React.FC = () => {
                 const refusal = startMaskDraw(selectedPart.id, shape);
                 if (refusal) showToast(refusal, 'error');
               }}
-              maskPathChannels={selectedTrack?.maskPathChannels}
-              maskVertexIndex={maskVertexIndex}
-              onSelectMaskVertex={setMaskVertexIndex}
               matteReturnTargetId={matteReturnTargetId}
               onSelectMatteSource={selectMatteSource}
               onBackToMatteTarget={backToMatteTarget}
               onPickRefused={(reason) => showToast(reason, 'info')}
-              onMaskPathOrder={(maskId, command, index) => {
-                const outcome = applyMaskPathOrder(selectedPart.id, maskId, command, index);
-                if (!outcome.applied) return undefined;
-                if (maskEditTarget?.maskId === maskId) setMaskVertexIndex(outcome.selectedIndex);
-                return outcome.selectedIndex;
-              }}
               onSelectMatteTarget={(targetId) => handleSelectPart(targetId)}
               onColorInteractionStart={startBatchInteraction}
               onColorInteractionEnd={endBatchInteraction}

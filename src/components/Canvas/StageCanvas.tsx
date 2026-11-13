@@ -105,6 +105,11 @@ const readEditSurface = (): { width: number; height: number } => ({
 
 /** A right press that travels less than this (CSS px) is a click, not a pan. */
 const RIGHT_CLICK_SLOP_PX = 4;
+/**
+ * How near the outline (in screen pixels) a double-click must land to add a
+ * mask point: half the outline's hit band (`CONTOUR_HIT_WIDTH` 12) plus slack.
+ */
+const MASK_OUTLINE_INSERT_RADIUS = 8;
 
 export const StageCanvas: React.FC = () => {
   const {
@@ -2088,6 +2093,11 @@ export const StageCanvas: React.FC = () => {
                   onInsertVertex={(world) => {
                     const frame = resolveMaskPathFrame(maskEditing.owner, maskEditing.mask.path.coordinateSpace, maskEditing.transform);
                     if (!frame) return;
+                    // A point goes on the outline only: the hit area also fills
+                    // the inside (to drag the mask), and a double-click there
+                    // used to add a point on the nearest edge.
+                    const near = nearestMaskPathSegment(maskEditing.mask.path, frame, world);
+                    if (!near || near.distance > MASK_OUTLINE_INSERT_RADIUS * zScale) return;
                     applyMaskTopologyEdit(maskEditing.owner.id, maskEditing.mask.id, (basePath) => {
                       const hit = nearestMaskPathSegment(basePath, frame, world);
                       return hit ? insertMaskVertex(basePath, hit.segmentIndex, hit.t) : null;

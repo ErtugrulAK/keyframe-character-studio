@@ -131,6 +131,12 @@ test.describe('WP-03 — mask creation and path edits', () => {
     expect(scene.layers).toHaveLength(1);
     expect(scene.layers[0].masks[0].path.points).toHaveLength(4);
 
+    // QA 2026-11-13: a double-click INSIDE the mask (the drag area, away from
+    // the outline) added a point on the nearest edge. It adds nothing.
+    await page.mouse.dblclick(c.x, c.y);
+    await expect(page.getByTestId('mask-path-overlay')).toBeVisible();
+    await expect(page.getByTestId('mask-vertex')).toHaveCount(4);
+
     // Double-click on the outline adds a point exactly on the edge.
     const top = { x: c.x, y: c.y - 40 };
     const outlineBefore = (await contours(page, 'mask-1')).overlay;

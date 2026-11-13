@@ -361,6 +361,7 @@ export const DetailsPanel: React.FC = () => {
               handlePartColorChange={handlePartColorChange}
               evaluatedTrim={evaluatedTrim}
               onUpdateTrimChannel={updateCurrentPropertyChannel}
+              onUpdateMotionPathProgress={(value) => updateCurrentPropertyChannel('motionPathProgress', value)}
               maskEditTargetId={maskEditTarget?.ownerPartId === selectedPart.id ? maskEditTarget.maskId : null}
               onEditMaskOnCanvas={(maskId) => {
                 const refusal = enterMaskEditing(selectedPart.id, maskId);
@@ -420,6 +421,7 @@ export const DetailsPanel: React.FC = () => {
               handlePartColorChange={handlePartColorChange}
               evaluatedTrim={evaluatedTrim}
               onUpdateTrimChannel={updateCurrentPropertyChannel}
+              onUpdateMotionPathProgress={(value) => updateCurrentPropertyChannel('motionPathProgress', value)}
               maskEditTargetId={maskEditTarget?.ownerPartId === selectedPart.id ? maskEditTarget.maskId : null}
               onEditMaskOnCanvas={(maskId) => {
                 const refusal = enterMaskEditing(selectedPart.id, maskId);

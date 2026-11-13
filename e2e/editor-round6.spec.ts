@@ -431,3 +431,43 @@ test('Filter properties keeps only the matching Inspector cards, opened', async 
   await expect(filter).toHaveValue('');
   await expect(titles.filter({ hasText: /^TRANSFORM$/ })).toHaveCount(1);
 });
+
+test('a layer follows a drawn path: linked in the Inspector, walking it on the timeline, kept after a reload', async ({ page }) => {
+  // Round 6: motion path. A straight 400-unit path from (-200, 0) to (200, 0).
+  const road = {
+    id: 'road', name: 'Road', type: 'custom_freeform', x: -200, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1,
+    fillColor: '#000000', fillEnabled: false, strokeColor: '#ffffff', strokeEnabled: true, strokeWidth: 4,
+    path: { version: 1, coordinateSpace: 'local', closed: false, points: [{ id: 'p0', x: 0, y: 0, kind: 'corner' }, { id: 'p1', x: 400, y: 0, kind: 'corner' }] },
+  };
+  const ball = { id: 'ball', name: 'Ball', type: 'custom_circle', x: 300, y: 300, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 2, fillColor: '#22d3ee', strokeColor: '#000000', width: 40, height: 40 };
+  await seed(page, [road, ball]);
+  await page.locator('[role="tree"] [data-layer-id="ball"]').click();
+  await page.getByRole('button', { name: 'Expand MOTION PATH' }).click();
+  await page.getByLabel('Follow path').selectOption('road');
+
+  const centre = async () => {
+    const box = await page.locator('.stage-canvas-container [data-part-id="ball"]').first().boundingBox();
+    if (!box) throw new Error('no ball');
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+  const seek = async (time: string) => {
+    const field = page.getByRole('textbox', { name: 'Current time' });
+    await field.fill(time);
+    await field.press('Enter');
+  };
+  const expectAt = async (x: number, y: number) => {
+    const want = await screenOf(page, x, y);
+    await expect.poll(async () => Math.abs((await centre()).x - want.x)).toBeLessThan(1.5);
+    expect(Math.abs((await centre()).y - want.y)).toBeLessThan(1.5);
+  };
+  await seek('0');
+  await expectAt(-200, 0);
+  await seek('2s');
+  await expectAt(200, 0);
+  // The link is saved with the scene and walks the same after a reload.
+  expect((await savedLayers(page)).find((layer) => layer.id === 'ball')?.motionPath).toMatchObject({ sourcePartId: 'road' });
+  await page.reload();
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  await seek('2s');
+  await expectAt(200, 0);
+});

@@ -21,6 +21,7 @@ const CARD_KEYWORDS: Record<string, string> = {
   'LAYER MASKS': 'mask hole cut feather expansion',
   'LEGACY CLIP MATTE': 'matte clip',
   CROP: 'crop trim cut',
+  'MOTION PATH': 'motion path follow orient progress travel',
   IMAGE: 'replace picture photo',
   'COLOR CORRECTION': 'brightness contrast saturation colour color',
   'TRIM PATH': 'trim start end offset stroke draw',

@@ -291,6 +291,10 @@ export const useInspector = ({
           : null;
     if (partField) {
       setCharacterParts((prev) => prev.map((part) => part.id === targetPartId ? { ...part, [partField]: value } : part));
+    } else if (channel === 'motionPathProgress') {
+      setCharacterParts((prev) => prev.map((part) => (
+        part.id === targetPartId && part.motionPath ? { ...part, motionPath: { ...part.motionPath, progress: value } } : part
+      )));
     }
   };
 

@@ -119,7 +119,7 @@ test.describe('WP-02 — canvas mask editing', () => {
 
     // Whole-path move: every marker follows the pointer exactly.
     const markers0 = await markerCenters(page);
-    await drag(page, await centerOf(page, 'mask-path-move-handle'), { x: 60, y: 30 });
+    await drag(page, await centerOf(page, 'mask-path-hit-area'), { x: 60, y: 30 });
     expectMovedBy(await markerCenters(page), markers0, { x: 60, y: 30 }, [0, 1, 2, 3]);
     lines = await contours(page, 'landscape');
     expect(lines.overlay).toBe(lines.clip);
@@ -139,7 +139,7 @@ test.describe('WP-02 — canvas mask editing', () => {
 
     // Escape during a drag rolls it back without a history entry; redo survives.
     const markers1 = await markerCenters(page);
-    const handle = await centerOf(page, 'mask-path-move-handle');
+    const handle = await centerOf(page, 'mask-path-hit-area');
     await page.mouse.move(handle.x, handle.y);
     await page.mouse.down();
     await page.mouse.move(handle.x + 50, handle.y + 10, { steps: 5 });
@@ -197,7 +197,7 @@ test.describe('WP-02 — canvas mask editing', () => {
 
     const before = await savedScene(page);
     const markers = await markerCenters(page);
-    await drag(page, await centerOf(page, 'mask-path-move-handle'), { x: -40, y: 20 });
+    await drag(page, await centerOf(page, 'mask-path-hit-area'), { x: -40, y: 20 });
     expectMovedBy(await markerCenters(page), markers, { x: -40, y: 20 }, [0, 1, 2, 3]);
     const lines = await contours(page, 'landscape');
     expect(lines.overlay).toBe(lines.clip);
@@ -232,7 +232,7 @@ test.describe('WP-02 — canvas mask editing', () => {
       const lines = await contours(page, 'landscape');
       expect(lines.overlay).toBe(lines.clip);
       const markers = await markerCenters(page);
-      await drag(page, await centerOf(page, 'mask-path-move-handle'), { x: 30, y: -20 });
+      await drag(page, await centerOf(page, 'mask-path-hit-area'), { x: 30, y: -20 });
       expectMovedBy(await markerCenters(page), markers, { x: 30, y: -20 }, [0, 1, 2, 3]);
       const after = await contours(page, 'landscape');
       expect(after.overlay).toBe(after.clip);

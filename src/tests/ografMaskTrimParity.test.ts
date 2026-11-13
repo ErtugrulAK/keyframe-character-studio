@@ -1,7 +1,7 @@
 // A2 — Mask/Trim RUNTIME-ONLY normalization parity (RED first).
 //
-// Authority: the editor's `evaluateTrimPath` (utils/trimPath.ts) and
-// `buildLayerMaskDefinition` (utils/layerMasks.ts). The emitted OGraf runtime
+// Authority: the editor's `evaluateTrimPath` (utils/geometry/trimPath.ts) and
+// `buildLayerMaskDefinition` (utils/layers/layerMasks.ts). The emitted OGraf runtime
 // must reach the SAME effective numbers from the SAME authored data —
 // normalization happens at runtime evaluation only; stored scene data is
 // never rewritten.
@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { describe, expect, test } from 'vitest';
 import type { SceneData } from '../types/composition';
+import { onAir } from './helpers/ografOnAir';
 
 const runtimePath = fileURLToPath(new URL('../ograf/runtimeTemplate.ts', import.meta.url)).replaceAll('\\', '/');
 
@@ -56,6 +57,7 @@ async function open(scene: SceneData): Promise<Graphic> {
     .replaceAll('import.meta.url', JSON.stringify('https://example.test/graphic.mjs'));
   const graphic = new (new Function('HTMLElement', source)(HostElement) as new () => Graphic)();
   expect((await graphic.load({ renderType: 'realtime' })).statusCode).toBe(200);
+  await onAir(graphic);
   return graphic;
 }
 

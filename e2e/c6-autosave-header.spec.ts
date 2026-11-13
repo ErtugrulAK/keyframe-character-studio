@@ -9,6 +9,7 @@
  *   any other header control, at desktop and narrow widths.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { openProjectSettings } from './fixtures/toolbarTools';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const emptyChannels = () => ({
@@ -63,6 +64,46 @@ const headerControlBoxes = (page: Page) => page.evaluate(() => {
     out[`${index}:${element.classList.contains('autosave-status-badge') ? 'badge' : name}`] = `${Math.round(rect.x)},${Math.round(rect.y)},${Math.round(rect.width)},${Math.round(rect.height)}`;
   });
   return out;
+});
+
+/** The autosave delay lives in File > Project Settings. */
+const openProjectPanel = (page: Page) => openProjectSettings(page);
+
+test('the autosave delay is set in the Project panel, applies at once and is remembered', async ({ page }) => {
+  test.setTimeout(60000);
+  await seed(page);
+  const badge = page.locator('.autosave-status-badge');
+  // It is not a header control any more.
+  await expect(page.locator('.header-bar').getByLabel('Autosave interval in seconds')).toHaveCount(0);
+  await openProjectPanel(page);
+  const field = page.getByLabel('Autosave interval in seconds');
+  await expect(field).toHaveValue('10');
+  await field.fill('3');
+  await field.press('Enter');
+  await expect(field).toHaveValue('3');
+  await expect(badge).toHaveAttribute('title', /within 3 seconds/);
+  await page.keyboard.press('Escape');
+
+  await page.locator('[role="tree"] [data-layer-id="box"]').click();
+  const savedBefore = Number((await badge.getAttribute('data-last-saved-at')) || '0');
+  await nudgeBox(page, 30);
+  const editAt = Date.now();
+  await expect(badge).toHaveAttribute('data-save-state', 'saved', { timeout: 8000 });
+  const savedAt = Number((await badge.getAttribute('data-last-saved-at')) || '0');
+  expect(savedAt).toBeGreaterThan(savedBefore);
+  // Due 3 s after the change, checked every second (+ input latency) — far before 10 s.
+  expect(savedAt - editAt).toBeLessThan(5500);
+  expect(savedAt - editAt).toBeGreaterThan(1500);
+
+  // Out-of-range input is kept within 1-600, and the choice survives a reload.
+  await openProjectPanel(page);
+  await field.fill('9999');
+  await field.press('Enter');
+  await expect(field).toHaveValue('600');
+  await page.reload();
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  await openProjectPanel(page);
+  await expect(page.getByLabel('Autosave interval in seconds')).toHaveValue('600');
 });
 
 test('continuous editing still autosaves about 10 s after the first change, and a reload restores it', async ({ page }) => {

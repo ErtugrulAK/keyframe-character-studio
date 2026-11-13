@@ -9,11 +9,11 @@
  */
 import type { Transform } from '../../types/animator';
 import type { WorldTransform } from '../../types/composition';
-import { applyAffine, composeWorldTransform, type WorldAffine } from '../../utils/containerMath';
-import { resolveCornerResize, resolveEdgeResize, type CornerBounds, type CornerId, type EdgeId } from '../../utils/cornerResize';
-import { EDITOR_CAMERA_CENTER } from '../../utils/projectCoordinates';
-import { resizeStageCropRect, stageCropRectFromDrag, translateStageCropRect, type StageCropHandle, type StageCropRect } from '../../utils/stageCrop';
-import { getLocalDelta } from '../../utils/viewportMath';
+import { applyAffine, composeWorldTransform, type WorldAffine } from '../../utils/geometry/containerMath';
+import { resolveCornerResize, resolveEdgeResize, type CornerBounds, type CornerId, type EdgeId } from '../../utils/geometry/cornerResize';
+import { EDITOR_CAMERA_CENTER } from '../../utils/geometry/projectCoordinates';
+import { resizeStageCropRect, stageCropRectFromDrag, translateStageCropRect, type StageCropHandle, type StageCropRect } from '../../utils/geometry/stageCrop';
+import { getLocalDelta } from '../../utils/geometry/viewportMath';
 
 export type CornerScaleMode = 'scale_corner_tl' | 'scale_corner_tr' | 'scale_corner_bl' | 'scale_corner_br';
 export type EdgeScaleMode = 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom';
@@ -170,6 +170,8 @@ export interface TransformGestureInput {
   /** The Inspector's aspect lock, toggled for one drag by Shift. */
   scaleLocked: boolean;
   shiftKey: boolean;
+  /** Alt: a corner or edge drag scales about the box centre. */
+  altKey?: boolean;
 }
 
 /** A transform patch (WORLD values) and, for a child-frame gesture, the layer it targets. */
@@ -231,6 +233,7 @@ export const resolveTransformGesture = (mode: StageGestureMode, input: Transform
         startPointer: pointInSolveFrame(svgPointToWorld({ x: start.x, y: start.y }), frame),
         pointer: pointInSolveFrame(svgPointToWorld(pointer), frame),
         uniform: input.scaleLocked !== input.shiftKey,
+        fromCenter: input.altKey === true,
       }), frame),
     };
   }
@@ -246,6 +249,7 @@ export const resolveTransformGesture = (mode: StageGestureMode, input: Transform
         edge,
         startPointer: pointInSolveFrame({ x: start.x, y: start.y }, frame),
         pointer: pointInSolveFrame(pointer, frame),
+        fromCenter: input.altKey === true,
       }), frame),
     };
   }

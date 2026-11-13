@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { copyKeyframeGroupData, pasteKeyframeGroupData, type KeyframeCopyPayload } from '../utils/keyframeCopyPaste';
+import { copyKeyframeGroupData, pasteKeyframeGroupData, type KeyframeCopyPayload } from '../utils/animation/keyframeCopyPaste';
 import type { Track } from '../types/animator';
-import { makeEmptyChannels } from '../utils/defaults';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 
 /**
  * M28 28A — TIMELINE KEYFRAME COPY / PASTE (pure data layer).
@@ -236,7 +236,7 @@ describe('M28 28A — immutability / schema / determinism', () => {
     const payload = copyKeyframeGroupData(makeTrack('t', 'p', { channels: ch }), 20);
     const res = pasteKeyframeGroupData(makeTrack('t', 'p', { channels: ch }), 30, payload);
     expect(Object.keys(res.track.channels).sort()).toEqual(
-      ['maskOffsetX', 'maskOffsetY', 'maskRotation', 'maskScale', 'opacity', 'rotation', 'scaleX', 'scaleY', 'trimPathEnd', 'trimPathOffset', 'trimPathStart', 'x', 'y'],
+      ['maskOffsetX', 'maskOffsetY', 'maskRotation', 'maskScale', 'matteFeather', 'matteGradientAngle', 'matteStrength', 'opacity', 'rotation', 'scaleX', 'scaleY', 'trimPathEnd', 'trimPathOffset', 'trimPathStart', 'x', 'y'],
     );
     expect(res.track.channels.y).toEqual([]);
   });

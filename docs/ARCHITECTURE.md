@@ -101,7 +101,7 @@ KCS has no server; everything is stored in the browser.
   (`SEQUENCER_STUDIO_PRO_V5`), written by `useSerialization` every 10 s as a
   compare-and-swap under a Web Lock, so concurrent tabs cannot overwrite each
   other. Embedded images and videos travel inside it as data URLs.
-- **Library** — named graphics in IndexedDB (`kcs-library`, `utils/projectLibrary`).
+- **Library** — named graphics in IndexedDB (`kcs-library`, `utils/persistence/projectLibrary`).
   Opening one goes through the validated import into a new template tab.
 - **Preset library** — user motion presets in `localStorage`
   (`keyframe_custom_motion_presets`), outside the project; moved with preset

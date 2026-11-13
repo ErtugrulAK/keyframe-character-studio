@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createCustomPart } from '../utils/partFactory';
+import { createCustomPart } from '../utils/layers/partFactory';
+import { TOOLBAR_COLORS } from '../utils/editor/constants';
 
 describe('PartFactory Utility', () => {
   it('creates a standard part and track', () => {
@@ -44,6 +45,16 @@ describe('PartFactory Utility', () => {
     expect(particleRes.newPart.particleConfig).toBeDefined();
     expect(mographRes.newPart.fillEnabled).toBeUndefined();
     expect(particleRes.newPart.fillEnabled).toBeUndefined();
+  });
+
+  it('gives layers made one after another different colours: any 4 in a row differ', () => {
+    const colours = Array.from({ length: 200 }, () => createCustomPart('custom_circle', 'Circle', 1).newPart.fillColor);
+    for (let index = 3; index < colours.length; index += 1) expect(new Set(colours.slice(index - 3, index + 1)).size).toBe(4);
+    expect(new Set(colours)).toEqual(new Set(TOOLBAR_COLORS));
+  });
+
+  it('makes a new text large enough to see and grab', () => {
+    expect(createCustomPart('custom_text', 'Text', 1).newPart.fontSize).toBe(72);
   });
 
   it('applies extra props safely', () => {

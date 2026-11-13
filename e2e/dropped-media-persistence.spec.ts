@@ -3,7 +3,7 @@ import { test, expect, type Page } from '@playwright/test';
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
 /**
- * Astra F-06: a file dropped on the stage was stored as a `blob:` URL, which
+ * Review F-06: a file dropped on the stage was stored as a `blob:` URL, which
  * belongs to the document that created it. The saved project then pointed at an
  * address that dies with the page, so the media came back broken after a reload.
  *

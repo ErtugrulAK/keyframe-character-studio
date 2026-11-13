@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateImportedDocument } from '../utils/importValidation';
+import { validateImportedDocument } from '../utils/persistence/importValidation';
 
 /**
  * The compatibility matrix from `docs/specs/INTEROP_STUDY.md` §4,

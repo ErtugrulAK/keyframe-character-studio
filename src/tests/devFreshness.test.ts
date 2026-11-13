@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { retireStaleDevServiceWorker } from '../utils/devFreshness';
+import { retireStaleDevServiceWorker } from '../utils/editor/devFreshness';
 import { devDocumentFreshness } from '../../vite.config';
 
 /**

@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { isCropGesture, resolveCropGesture, resolveTransformGesture, svgPointToWorld, type GestureStart } from '../components/Canvas/stageGestures';
-import { EDITOR_CAMERA_CENTER } from '../utils/projectCoordinates';
+import { EDITOR_CAMERA_CENTER } from '../utils/geometry/projectCoordinates';
 
 const identity = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
 const svg = (x: number, y: number) => ({ x: x + EDITOR_CAMERA_CENTER.x, y: y + EDITOR_CAMERA_CENTER.y });

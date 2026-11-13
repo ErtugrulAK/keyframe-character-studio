@@ -1,8 +1,7 @@
 /**
- * C3 — a narrow window opens with the left dock closed when the stage would
- * otherwise be narrower than 400 CSS px; wider windows open exactly as before.
- * The decision is taken once: the user can open the dock afterwards and it
- * stays open; opening it never moves the authored world.
+ * C3 — every window size opens with a usable stage (≥ 400 CSS px). The left
+ * dock that once had to close for it is gone; moving the Inspector never
+ * re-frames a camera the user has zoomed.
  */
 import { expect, test, type Page } from '@playwright/test';
 
@@ -28,63 +27,29 @@ const boxCentre = async (page: Page) => {
   if (!box) throw new Error('no box');
   return { x: box.x + box.width / 2, y: box.y + box.height / 2, w: box.width };
 };
-const leftToggle = (page: Page) => page.locator('.left-toolbar-toggle');
-/** The dock edge has finished travelling: the stylesheet owns its width again. */
-const dockSettled = (page: Page) => expect.poll(() => page.locator('#left-toolbar-panel').evaluate((node) => (node as HTMLElement).style.width)).toBe('');
+const inspectorToggle = (page: Page) => page.locator('.inspector-dock-toggle');
 
-for (const size of [{ width: 1440, height: 900 }, { width: 1024, height: 720 }]) {
-  test(`${size.width}×${size.height} opens with both docks, as before`, async ({ page }) => {
+// The left dock is gone (the menu bar and the toolbar replaced it), so even a
+// narrow window opens with the whole width left of the Inspector for the stage.
+for (const size of [{ width: 1440, height: 900 }, { width: 1024, height: 720 }, { width: 720, height: 450 }]) {
+  test(`${size.width}×${size.height} opens with no left dock and a ≥ 400 px stage, the box centred`, async ({ page }) => {
     await open(page, size.width, size.height);
-    await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'true');
-    await expect(page.locator('.inspector-dock-toggle')).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('.left-toolbar-toggle, .left-toolbar-container')).toHaveCount(0);
+    await expect(inspectorToggle(page)).toHaveAttribute('aria-expanded', 'true');
     expect(await stageWidth(page)).toBeGreaterThanOrEqual(400);
+    const stage = await page.locator('.stage-canvas-container').boundingBox();
+    const centred = await boxCentre(page);
+    expect(Math.abs(centred.x - (stage!.x + stage!.width / 2))).toBeLessThan(1);
   });
 }
 
-test('720×450 opens with the left dock closed and a ≥ 400 px stage; the user can open it and it stays open', async ({ page }) => {
-  await open(page, 720, 450);
-  await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'false');
-  await expect(leftToggle(page)).toHaveAccessibleName('Show Left Toolbar');
-  expect(await stageWidth(page)).toBeGreaterThanOrEqual(400);
-  // The untouched opening camera was fitted to the wider stage: the box is centred.
-  const stage = await page.locator('.stage-canvas-container').boundingBox();
-  const centred = await boxCentre(page);
-  expect(Math.abs(centred.x - (stage!.x + stage!.width / 2))).toBeLessThan(1);
-
-  // The user opens the dock (mouse) — the world does not move, and nothing closes it again.
-  const before = await boxCentre(page);
-  await leftToggle(page).click();
-  await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'true');
-  await dockSettled(page);
-  const after = await boxCentre(page);
-  expect(Math.abs(after.x - before.x)).toBeLessThan(0.5);
-  expect(Math.abs(after.y - before.y)).toBeLessThan(0.5);
-  expect(Math.abs(after.w - before.w)).toBeLessThan(0.5);
-  // Editing (selection, a timeline seek) never re-closes it.
-  await page.locator('[role="tree"] [data-layer-id="box"]').click(); // (C4: the 720×450 timeline opens collapsed)
-  // (C4: expanding the collapsed timeline is the user's own choice, then a seek)
-  await page.getByTestId('timeline-collapse-toggle').click();
-  const ruler = page.getByRole('slider', { name: 'Playhead position' });
-  await ruler.focus();
-  await page.keyboard.press('ArrowRight');
-  await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'true');
-  // Keyboard can close and reopen it.
-  await leftToggle(page).focus();
-  await page.keyboard.press('Enter');
-  await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'false');
-  await page.keyboard.press('Enter');
-  await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'true');
-});
-
-test('a narrow start keeps a camera the user has already zoomed (no refit after the user acted)', async ({ page }) => {
+test('a narrow window keeps a camera the user has already zoomed when the Inspector moves', async ({ page }) => {
   await open(page, 720, 450);
   // (C4: at 720 px the View band is a menu)
-  await page.getByRole('button', { name: 'View', exact: true }).click();
+  await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'View', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Zoom in' }).click();
   const zoomed = await page.locator('.stage-canvas-container').getAttribute('data-camera-zoom');
-  await leftToggle(page).click();
-  await dockSettled(page);
-  await leftToggle(page).click();
-  await dockSettled(page);
+  await inspectorToggle(page).click();
+  await inspectorToggle(page).click();
   await expect(page.locator('.stage-canvas-container')).toHaveAttribute('data-camera-zoom', zoomed!);
 });

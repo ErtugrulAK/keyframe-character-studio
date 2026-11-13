@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { armTool } from './fixtures/toolbarTools';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -9,7 +10,7 @@ async function clearProject(page: Page) {
 }
 
 async function createShapeByDrag(page: Page, name: string): Promise<void> {
-  await page.getByRole('button', { name, exact: true }).click();
+  await armTool(page, name);
   const box = await page.locator('.stage-canvas-container').boundingBox();
   if (!box) throw new Error('Canvas bounds unavailable');
   // Measured from the stage centre, so the docked authoring strip's layout
@@ -36,7 +37,6 @@ test('Named Sequence V2 — stable IDs, authoring metadata, Broadcast status, an
   await clearProject(page);
 
   // Fresh authoring workflow: create a real layer and a named sequence.
-  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
   await createShapeByDrag(page, 'Rectangle');
   await page.keyboard.press('Escape');
   await page.getByTitle('Create New Sequence').click();

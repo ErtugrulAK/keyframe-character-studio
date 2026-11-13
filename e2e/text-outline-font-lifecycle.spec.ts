@@ -17,7 +17,7 @@ test('a provisional text trace is retraced once the font settles', async ({ page
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 
   const probe = await page.evaluate(`(async () => {
-    const { getTextOutlinePolygons } = await import('/src/utils/textOutline.ts');
+    const { getTextOutlinePolygons } = await import('/src/utils/geometry/textOutline.ts');
     const part = {
       id: 'probe', name: 'probe', type: 'custom_text',
       textValue: 'O', fontSize: 120, fontFamily: 'Audit Probe Face',
@@ -75,7 +75,7 @@ test('quoted and fallback-list families trace real letterform geometry', async (
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 
   const probe = await page.evaluate(`(async () => {
-    const { getTextOutlinePolygons } = await import('/src/utils/textOutline.ts');
+    const { getTextOutlinePolygons } = await import('/src/utils/geometry/textOutline.ts');
     const trace = (fontFamily) => {
       const part = {
         id: 'probe', name: 'probe', type: 'custom_text',
@@ -110,7 +110,7 @@ test('repeated internal whitespace traces to the same geometry', async ({ page }
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 
   const probe = await page.evaluate(`(async () => {
-    const { getTextOutlinePolygons } = await import('/src/utils/textOutline.ts');
+    const { getTextOutlinePolygons } = await import('/src/utils/geometry/textOutline.ts');
     const trace = (textValue) => {
       const part = {
         id: 'probe', name: 'probe', type: 'custom_text',

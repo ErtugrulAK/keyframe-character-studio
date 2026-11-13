@@ -8,6 +8,22 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+- File > New from Template… opens a ready-made graphic (lower third, corner bug, scoreboard, title card or a blank canvas) at the chosen size and frame rate, fitted in view.
+- Text over time (Inspector → TEXT EFFECTS → ANIMATE TEXT): a text can type itself out, count up to its number, or run as a stopwatch or a countdown; the same in the editor, the GIF and the exported OGraf graphic.
+- Motion paths (Inspector → MOTION PATH): a layer follows a pen-drawn path layer by the path's length, optionally turning with the direction of travel; its progress is a timeline row (Motion Path › Progress) and plays the same in OGraf.
+- Layer effects: glow (colour, size, strength), layer blur and blend modes (Multiply, Screen, Overlay, Darken, Lighten, Add) beside the drop shadow.
+- Crop (Inspector → CROP): trim what a layer shows from each side without moving or scaling it.
+- Replace Image keeps the layer, its animation and its width.
+- A view bar on the stage: the real zoom percentage, Fit, 1:1, zoom presets, action-safe and title-safe guides, and an artboard backdrop (dark, light, checkerboard or a picture; editor only).
+- Timeline: type a time into the playhead field (frames, seconds or timecode), Ctrl+Left / Ctrl+Right jump to the previous / next keyframe, and K keys the transform of every selected layer.
+- Filter properties in the Inspector shows only the cards that hold what you type ("glow", "rotation", "matte").
+
+### Fixed
+- The drop shadow is drawn in the static SVG, the GIF and the OGraf graphic; it used to show only in the editor.
+- The media store works on an `http://` LAN address (a built-in SHA-256 where the browser offers none).
+- The Text tool's preview draws only the text's frame, with no shaded area.
+
 ## [1.1.0-rc.7] - 2026-11-13
 
 The seventh release candidate of 1.1.0: rc.6 with layout modifiers, keyed

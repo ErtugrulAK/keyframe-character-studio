@@ -45,7 +45,7 @@ flowchart TB
 | 🧹 Lint | `npm run lint` |
 | 🧪 Unit tests | `npx vitest run` |
 | 🏗️ Build | `npm run build` |
-| 🌐 End-to-end | `npm run test:e2e` (or the specs your change touches) |
+| 🌐 End-to-end | `npm run test:e2e` (or the specs your change touches); `npm run test:e2e:fast` runs the same suite on a production build in about half the time |
 
 All five at once, without E2E: `npm run check`.
 
@@ -53,6 +53,7 @@ All five at once, without E2E: `npm run check`.
 - Add a test that fails without your change.
 - Never relax a threshold, skip a test or add a sleep to make a test pass. Find the cause.
 - For visual changes, attach before and after screenshots.
+- A change to how a layer is drawn or evaluated must agree in all three renderers: the editor, the static SVG (`src/ograf/svgRenderer.ts`) and the OGraf runtime (`src/ograf/runtime`). Add a parity test.
 
 ## ✍️ Conventions
 

@@ -5,7 +5,7 @@
 | Version | Supported |
 |---|:---:|
 | `main` and the latest `1.1.0` release candidate | ✅ |
-| Earlier `1.1.0` candidates (`rc.1`, `rc.2`) | ⚠️ upgrade to the latest |
+| Earlier `1.1.0` candidates | ⚠️ upgrade to the latest |
 | `1.0.x` | ❌ |
 
 ## 🔒 Reporting a vulnerability
@@ -19,6 +19,8 @@
    - what it affects (editor import, OGraf package, GIF export, the optional API …);
    - a proof of concept, if you have one.
 3. You will get an answer as soon as possible, usually within a week. A fix is planned according to severity.
+
+Please give the fix time to ship before you share details publicly. Reports made in good faith are welcome and credited in the advisory, if you wish.
 
 ```mermaid
 flowchart LR

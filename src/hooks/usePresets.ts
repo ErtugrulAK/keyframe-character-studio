@@ -14,6 +14,10 @@ const PRESET_TYPES = ['in', 'out', 'stunt'] as const;
  * access itself, and that must not take the editor down while it mounts. A
  * malformed value is the same kind of input and falls back the same way.
  */
+const isStoredPresetEntry = (entry: unknown): entry is CustomMotionPreset =>
+  typeof entry === 'object' && entry !== null && !Array.isArray(entry)
+  && typeof (entry as { id?: unknown }).id === 'string' && (entry as { id: string }).id.length > 0;
+
 const readStoredPresets = (): CustomMotionPreset[] => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -22,7 +26,16 @@ const readStoredPresets = (): CustomMotionPreset[] => {
     // A parsed non-array (object/string/number) is corrupt storage — fall back
     // to defaults instead of returning a value that would crash
     // `customPresets.map(...)` downstream.
-    return Array.isArray(parsed) ? parsed : DEFAULT_INITIAL_PRESETS;
+    if (!Array.isArray(parsed)) return DEFAULT_INITIAL_PRESETS;
+    // An entry that is not an object with an id cannot be a preset, and every
+    // consumer reads `preset.type` / `preset.id` — one `null` in the stored
+    // array would take the Inspector down on every load. Only those entries
+    // are dropped; any other stored preset is kept exactly as it was saved.
+    const presets = parsed.filter(isStoredPresetEntry);
+    if (presets.length !== parsed.length) {
+      console.warn(`[Presets] Skipped ${parsed.length - presets.length} unreadable entr${parsed.length - presets.length === 1 ? 'y' : 'ies'} in the saved preset library.`);
+    }
+    return presets;
   } catch (error) {
     console.warn('[Presets] Could not read the saved preset library; using the defaults.', error);
     return DEFAULT_INITIAL_PRESETS;

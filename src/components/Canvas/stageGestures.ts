@@ -170,6 +170,8 @@ export interface TransformGestureInput {
   /** The Inspector's aspect lock, toggled for one drag by Shift. */
   scaleLocked: boolean;
   shiftKey: boolean;
+  /** Alt: a corner or edge drag scales about the box centre. */
+  altKey?: boolean;
 }
 
 /** A transform patch (WORLD values) and, for a child-frame gesture, the layer it targets. */
@@ -231,6 +233,7 @@ export const resolveTransformGesture = (mode: StageGestureMode, input: Transform
         startPointer: pointInSolveFrame(svgPointToWorld({ x: start.x, y: start.y }), frame),
         pointer: pointInSolveFrame(svgPointToWorld(pointer), frame),
         uniform: input.scaleLocked !== input.shiftKey,
+        fromCenter: input.altKey === true,
       }), frame),
     };
   }
@@ -246,6 +249,7 @@ export const resolveTransformGesture = (mode: StageGestureMode, input: Transform
         edge,
         startPointer: pointInSolveFrame({ x: start.x, y: start.y }, frame),
         pointer: pointInSolveFrame(pointer, frame),
+        fromCenter: input.altKey === true,
       }), frame),
     };
   }

@@ -1,0 +1,123 @@
+/*
+ * The menu bar: one slim row above the authoring toolbar. The row spans the
+ * window like the toolbar, but its titles sit at the left and take only the
+ * room they need.
+ */
+.menu-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 26px;
+  padding: 0 8px;
+  background: var(--kcs-bg-shell, #232323);
+  border-bottom: 1px solid var(--kcs-border-default, #333);
+  position: relative;
+  /* Above the toolbar its menus hang over, below the header whose Export menu
+     hangs over this row. */
+  z-index: calc(var(--kcs-layer-chrome) + 50);
+  flex: 0 0 auto;
+}
+
+.menu-bar-entry {
+  position: relative;
+}
+
+.menu-bar-title {
+  height: 22px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--kcs-text-secondary, #cfcfcf);
+  font: inherit;
+  font-size: 12px;
+  cursor: default;
+}
+
+.menu-bar-title:hover,
+.menu-bar-title.open {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--kcs-text-primary, #fff);
+}
+
+.menu-bar-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  min-width: 230px;
+  padding: 4px;
+  border: 1px solid var(--kcs-border-default, #3a3a3a);
+  border-radius: 6px;
+  background: var(--kcs-bg-panel, #262626);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  z-index: 1300;
+}
+
+.menu-bar-item {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px 0 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--kcs-text-secondary, #d4d4d4);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: default;
+}
+
+.menu-bar-item.active:not(.disabled) {
+  background: rgba(73, 141, 231, 0.24);
+  color: var(--kcs-text-primary, #fff);
+}
+
+.menu-bar-item.disabled {
+  color: var(--kcs-text-muted, #6f6f6f);
+}
+
+.menu-bar-check {
+  color: var(--kcs-accent);
+  font-size: 11px;
+}
+
+.menu-bar-shortcut {
+  color: var(--kcs-text-muted, #8a8a8a);
+  font-size: 11px;
+  padding-left: 18px;
+}
+
+.menu-bar-separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--kcs-border-default, #3a3a3a);
+}
+
+.project-settings-dialog {
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  overflow: auto;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--kcs-border-default, #3a3a3a);
+  border-radius: 8px;
+  background: var(--kcs-bg-panel, #262626);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+.project-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.project-settings-header h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}

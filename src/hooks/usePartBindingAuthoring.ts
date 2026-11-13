@@ -1,5 +1,5 @@
 import { useAnimator } from '../context/useAnimator';
-import { bindParts, isRelationshipChainRelated, resolveBondGroup, unbindPart } from '../utils/layers/partBinding';
+import { bindParts, resolveBondGroup, selectionHasChainRelation, unbindPart } from '../utils/layers/partBinding';
 
 /**
  * The one layer-bond authoring authority for the current selection.
@@ -43,8 +43,7 @@ export const usePartBindingAuthoring = (): PartBindingAuthoring => {
    * or a container and its member — would apply the same motion twice, so the
    * pair is refused instead of silently double-transforming the child.
    */
-  const relatedPair = selectedIds.some((first, index) =>
-    selectedIds.slice(index + 1).some((second) => isRelationshipChainRelated(characterParts, first, second)));
+  const relatedPair = selectionHasChainRelation(characterParts, selectedIds);
   const bindBlockReason = selectedIds.length < 2
     ? 'Bond needs two or more selected layers.'
     : relatedPair

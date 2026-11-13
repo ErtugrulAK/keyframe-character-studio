@@ -17,7 +17,7 @@ interface LayerSearchResult {
   shownIds: Set<string>;
 }
 
-const fold = (text: string): string => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase();
+const fold = (text: string): string => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase().replace(/ı/g, 'i');
 
 const normalizeLayerQuery = (query: string): string => fold(query.trim());
 

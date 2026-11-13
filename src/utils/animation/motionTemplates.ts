@@ -1,5 +1,6 @@
 import type { MotionTemplate, PropertyKeyframe, Track } from '../../types/animator';
 import { generateId } from '../layers/idGenerator';
+import { normalizeStepMarkers } from './stepMarkers';
 
 const DEFAULT_SEQUENCE_DURATION_FRAMES = 60;
 
@@ -20,12 +21,16 @@ export const normalizeMotionTemplates = (templates: MotionTemplate[] | undefined
     const fallbackName = `Sequence ${index + 1}`;
     const name = template.name?.trim() || template.id?.trim() || fallbackName;
     const id = template.id?.trim() || (index === 0 ? 'Sequence' : name);
+    const durationFrames = normalizeSequenceDuration(template.durationFrames);
+    const { stepMarkers: rawMarkers, ...rest } = template;
+    const stepMarkers = normalizeStepMarkers(rawMarkers, durationFrames);
     return {
-      ...template,
+      ...rest,
       id,
       name,
       type: template.type || 'in',
-      durationFrames: normalizeSequenceDuration(template.durationFrames),
+      durationFrames,
+      ...(stepMarkers.length > 0 ? { stepMarkers } : {}),
     };
   });
 };

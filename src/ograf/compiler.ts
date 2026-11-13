@@ -1,3 +1,4 @@
+import { sceneStepMarkers, stepEndFrames } from '../utils/animation/stepMarkers';
 import type { SceneData } from '../types/composition';
 import { foldDiacritics, isSafePackageRelativePath, sanitizeFilenameComponent } from '../utils/persistence/pathSafety';
 import { validateSceneForOGraf } from './validation';
@@ -81,6 +82,7 @@ export function compileOGrafManifest(sceneData: SceneData, options: OGrafExportO
   const validated = validateSceneForOGraf(sceneData, options);
   const publicFields = [...validated.publicTextFields, ...validated.publicImageFields, ...validated.publicColorFields];
   const diagnostics = [...validated.diagnostics, ...collectCompilerDiagnostics(options, publicFields)];
+  const stepEnds = stepEndFrames(sceneStepMarkers(sceneData), sceneData.totalFrames);
   const manifest: OGrafManifest = {
     $schema: OGRAF_GRAPHICS_SCHEMA_URL,
     id: getGraphicId(sceneData, options),
@@ -89,11 +91,12 @@ export function compileOGrafManifest(sceneData: SceneData, options: OGrafExportO
     version: options.version?.trim() || OGRAF_DEFAULT_VERSION,
     supportsRealTime: true,
     supportsNonRealTime: true,
-    stepCount: 1,
-    // A play runs the whole timeline at the scene's frame rate; a stop after it
-    // and an update apply at once.
+    stepCount: stepEnds.length,
+    // A play runs one step (the whole timeline when there are no step markers)
+    // at the scene's frame rate: the first one from the start; a stop after
+    // it and an update apply at once.
     actionDurations: [
-      { type: 'playAction', duration: Math.round((sceneData.totalFrames / sceneData.fps) * 1000) },
+      { type: 'playAction', duration: Math.round((stepEnds[0] / sceneData.fps) * 1000) },
       { type: 'stopAction', duration: 0 },
       { type: 'updateAction', duration: 0 },
     ],

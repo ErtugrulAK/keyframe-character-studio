@@ -17,7 +17,6 @@ import {
   AlertTriangle,
   Plus,
   ChevronDown,
-  Keyboard,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
@@ -44,8 +43,6 @@ import type { OGrafPackageReadResult } from '../../ograf/packageImport';
 import type { LottieImportResult } from '../../interop/lottie/mapDocument';
 import type { SceneData } from '../../types/composition';
 import { describeSaveStatus, formatAutosaveDelay } from '../../utils/persistence/saveStatus';
-import { MAX_AUTOSAVE_SECONDS, MIN_AUTOSAVE_SECONDS } from '../../utils/persistence/autosaveInterval';
-import { NumberField } from '../Inspector/inputs/NumberField';
 import './HeaderBar.css';
 
 type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
@@ -109,7 +106,6 @@ export const HeaderBar: React.FC = () => {
     isSaving,
     triggerManualSave,
     autosaveIntervalSeconds,
-    setAutosaveIntervalSeconds,
     getPersistenceSafety,
     forceSaveNow,
     showToast,
@@ -124,12 +120,11 @@ export const HeaderBar: React.FC = () => {
     deleteProjectTemplate,
     fps,
     setFps,
-    openShortcutReference,
     characterParts,
     tracks,
     coordinateSystem,
     isPlaying,
-  } = useAnimatorSlice('exportProject', 'importProject', 'resetProject', 'lastSavedAt', 'restoredFromLocalStorage', 'autosaveConflict', 'manualSaveRejectedAt', 'autosaveError', 'hasUnsavedChanges', 'isSaving', 'triggerManualSave', 'autosaveIntervalSeconds', 'setAutosaveIntervalSeconds', 'getPersistenceSafety', 'forceSaveNow', 'showToast', 'appMode', 'setAppMode', 'sceneTitle', 'projectTemplates', 'activeProjectTemplateId', 'setActiveProjectTemplateId', 'addProjectTemplate', 'renameProjectTemplate', 'deleteProjectTemplate', 'fps', 'setFps', 'openShortcutReference', 'characterParts', 'tracks', 'coordinateSystem', 'isPlaying');
+  } = useAnimatorSlice('exportProject', 'importProject', 'resetProject', 'lastSavedAt', 'restoredFromLocalStorage', 'autosaveConflict', 'manualSaveRejectedAt', 'autosaveError', 'hasUnsavedChanges', 'isSaving', 'triggerManualSave', 'autosaveIntervalSeconds', 'getPersistenceSafety', 'forceSaveNow', 'showToast', 'appMode', 'setAppMode', 'sceneTitle', 'projectTemplates', 'activeProjectTemplateId', 'setActiveProjectTemplateId', 'addProjectTemplate', 'renameProjectTemplate', 'deleteProjectTemplate', 'fps', 'setFps', 'characterParts', 'tracks', 'coordinateSystem', 'isPlaying');
   const readAnimator = useAnimatorReader();
 
   const [editingTmplId, setEditingTmplId] = useState<string | null>(null);
@@ -368,6 +363,7 @@ export const HeaderBar: React.FC = () => {
       setOgrafStage(null);
     }
   };
+
   /**
    * The one import entry: it decides what the file is from its **content** and
    * routes it to the importer that owns that kind. Only a Lottie document opens
@@ -636,19 +632,6 @@ export const HeaderBar: React.FC = () => {
             {autosaveConflict || autosaveError ? <AlertTriangle size={13} /> : <CheckCircle2 size={13} className="text-green" />}
             <span className="autosave-text">{saveStatus.label}</span>
           </div>
-          {/* The autosave delay: this browser's preference, written when the edit ends. */}
-          <label className="autosave-interval-field" title={`Autosave writes changes within this many seconds of the first change (${MIN_AUTOSAVE_SECONDS}–${MAX_AUTOSAVE_SECONDS}).`}>
-            <NumberField
-              aria-label="Autosave interval in seconds"
-              commit="blur"
-              min={MIN_AUTOSAVE_SECONDS}
-              max={MAX_AUTOSAVE_SECONDS}
-              step={1}
-              value={autosaveIntervalSeconds}
-              onValue={setAutosaveIntervalSeconds}
-            />
-            <span aria-hidden="true">s</span>
-          </label>
 
           {/* FPS Control */}
           <select className="select-control"
@@ -767,14 +750,7 @@ export const HeaderBar: React.FC = () => {
           <button className="btn-icon reset-btn" onClick={requestResetProject} title="Reset Canvas Project">
             <RotateCcw size={15} />
           </button>
-          <button
-            className="btn-icon"
-            onClick={openShortcutReference}
-            title="Keyboard shortcuts (?)"
-            aria-label="Keyboard shortcuts"
-          >
-            <Keyboard size={15} />
-          </button>
+          {/* Keyboard shortcuts open from Help > Keyboard Shortcuts (or ?). */}
         </div>
       </header>
       <ImportReportDialog

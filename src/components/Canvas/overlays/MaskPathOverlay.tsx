@@ -43,7 +43,6 @@ const VERTEX_HIT_RADIUS = 8;
 const HANDLE_RADIUS = 4;
 const HANDLE_HIT_RADIUS = 8;
 const CONTOUR_HIT_WIDTH = 12;
-const CENTER_HANDLE_SIZE = 12;
 /** A press becomes a drag only past this many CSS pixels, so a click selects without writing. */
 const DRAG_THRESHOLD_PX = 3;
 /** Arrow-key nudge in project units (Shift: ×10), along the screen axes. */
@@ -397,12 +396,6 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
   if (!contourD) return null;
 
   const vertices = path.points.map((vertex) => toScreen(vertex));
-  const center = vertices.length > 0
-    ? {
-      x: (Math.min(...vertices.map((point) => point.x)) + Math.max(...vertices.map((point) => point.x))) / 2,
-      y: (Math.min(...vertices.map((point) => point.y)) + Math.max(...vertices.map((point) => point.y))) / 2,
-    }
-    : null;
   const selectedVertex = selectedIndex !== null ? path.points[selectedIndex] : undefined;
   const editable = interactive && Boolean(frame);
   const maskName = owner.masks?.find((candidate) => candidate.id === maskId)?.name ?? maskId;
@@ -477,13 +470,15 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
           pointerEvents="none"
         />
       )}
-      {editable && (
+      {/* Two hit areas over the same contour: the inside drags the mask (move
+          cursor), the outline band adds a point on a double-click (the "add"
+          cursor, as on a path's outline). Both start the same drag. */}
+      {editable && path.closed && (
         <path
-          data-testid="mask-path-hit-area"
+          data-testid="mask-path-fill-hit-area"
           d={contourD}
-          fill={path.closed ? 'transparent' : 'none'}
-          stroke="transparent"
-          strokeWidth={CONTOUR_HIT_WIDTH * zScale}
+          fill="transparent"
+          stroke="none"
           style={{ cursor: 'move' }}
           onPointerDown={(event) => begin(event, 'path', -1)}
           onDoubleClick={(event) => {
@@ -494,21 +489,24 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
           {...gestureHandlers}
         />
       )}
-      {editable && center && (
-        <rect
-          data-testid="mask-path-move-handle"
-          x={center.x - (CENTER_HANDLE_SIZE / 2) * zScale}
-          y={center.y - (CENTER_HANDLE_SIZE / 2) * zScale}
-          width={CENTER_HANDLE_SIZE * zScale}
-          height={CENTER_HANDLE_SIZE * zScale}
-          rx={2 * zScale}
-          fill="rgba(34, 211, 238, 0.25)"
-          stroke={OUTLINE_COLOR}
-          strokeWidth={1.2 * zScale}
-          style={{ cursor: 'move' }}
+      {editable && (
+        <path
+          data-testid="mask-path-hit-area"
+          d={contourD}
+          fill="none"
+          stroke="transparent"
+          strokeWidth={CONTOUR_HIT_WIDTH * zScale}
+          style={{ cursor: 'copy' }}
           onPointerDown={(event) => begin(event, 'path', -1)}
+          onDoubleClick={(event) => {
+            if (!onInsertVertex) return;
+            event.stopPropagation();
+            onInsertVertex(worldPoint(event.clientX, event.clientY));
+          }}
           {...gestureHandlers}
-        />
+        >
+          <title>Double-click to add a point here</title>
+        </path>
       )}
       {renderHandle('in')}
       {renderHandle('out')}

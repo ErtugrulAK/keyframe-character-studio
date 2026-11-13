@@ -4,6 +4,9 @@ import { isSafeOGrafPackagePath, sanitizeOGrafId } from './compiler';
 import { OGrafPackageWriteError, describeOGrafValueForDiagnostics } from './diagnostics';
 import type { OGrafGeneratedPackage } from './types';
 
+/** The time every packaged file carries (a ZIP stores local DOS time from 1980). */
+const PACKAGE_FILE_TIME = new Date(2000, 0, 1);
+
 interface OGrafBrowserZip {
   fileName: string;
   bytes: Uint8Array;
@@ -70,6 +73,9 @@ export async function createOGrafBrowserZip(plan: OGrafGeneratedPackage, options
   // the folder name Reality Hub looks for (one ending in `-ograf` was not listed).
   return {
     fileName: `${sanitizeOGrafDownloadName(plan.manifest.name)}.ograf.zip`,
-    bytes: zipSync(files),
+    // One fixed file time: fflate stamps the current time otherwise, so two
+    // packages of the same graphic differed whenever a 2-second DOS-time step
+    // fell between them.
+    bytes: zipSync(files, { mtime: PACKAGE_FILE_TIME }),
   };
 }

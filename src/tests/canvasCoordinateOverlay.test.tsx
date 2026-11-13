@@ -1,8 +1,8 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
+import { leaveStage, rememberStagePointer } from '../utils/editor/stagePointer';
 import { describe, expect, it } from 'vitest';
 import type { Transform } from '../types/animator';
-import type { WorldAffine } from '../utils/geometry/containerMath';
 import { CanvasCoordinateOverlay } from '../components/Canvas/overlays/CanvasCoordinateOverlay';
 import { CanvasCoordinateReadout } from '../components/Canvas/overlays/CanvasCoordinateReadout';
 
@@ -21,7 +21,7 @@ const transform = (
 });
 
 const renderOverlay = (
-  selectedTransform: (Transform & { affine?: WorldAffine }) | null = null,
+  visibleRect: { left: number; right: number; top: number; bottom: number } | null = null,
 ) => render(
   <svg>
     <CanvasCoordinateOverlay
@@ -31,63 +31,91 @@ const renderOverlay = (
       height={1080}
       origin={ORIGIN}
       zScale={1}
-      selectedTransform={selectedTransform}
+      visibleRect={visibleRect}
     />
   </svg>,
 );
 
+const points = (polygon: Element | null) => (polygon?.getAttribute('points') ?? '')
+  .split(' ').map((pair) => pair.split(',').map(Number));
+
 describe('CanvasCoordinateOverlay', () => {
-  it('draws X and Y axes through the editor-camera origin', () => {
+  it('draws faint white X and Y axes through the editor-camera origin', () => {
     const { getByTestId } = renderOverlay();
 
     const xAxis = getByTestId('coordinate-overlay').querySelector<SVGLineElement>('[data-axis="x"]');
     const yAxis = getByTestId('coordinate-overlay').querySelector<SVGLineElement>('[data-axis="y"]');
-    expect(xAxis).not.toBeNull();
-    expect(yAxis).not.toBeNull();
     expect(xAxis?.getAttribute('x1')).toBe('-660');
     expect(xAxis?.getAttribute('x2')).toBe('1260');
     expect(xAxis?.getAttribute('y1')).toBe('240');
     expect(xAxis?.getAttribute('y2')).toBe('240');
     expect(yAxis?.getAttribute('x1')).toBe('300');
-    expect(yAxis?.getAttribute('x2')).toBe('300');
     expect(yAxis?.getAttribute('y1')).toBe('-300');
     expect(yAxis?.getAttribute('y2')).toBe('780');
-
-    const origin = getByTestId('coordinate-origin').querySelector('circle');
-    expect(origin?.getAttribute('cx')).toBe('300');
-    expect(origin?.getAttribute('cy')).toBe('240');
+    for (const axis of [xAxis, yAxis]) expect(axis?.getAttribute('stroke')).toMatch(/^rgba\(255, 255, 255, 0\.\d+\)$/);
   });
 
-  it('marks the selected evaluated world position, not the authored local position', () => {
-    const { getByTestId } = renderOverlay(transform({ x: 100, y: -50 }));
-
-    const marker = getByTestId('coordinate-selection-marker');
-    expect(marker.getAttribute('data-world-x')).toBe('100');
-    expect(marker.getAttribute('data-world-y')).toBe('-50');
-    const ring = marker.querySelector('circle');
-    expect(ring?.getAttribute('cx')).toBe('400');
-    expect(ring?.getAttribute('cy')).toBe('190');
+  it('has no origin marker, no X/Y badges and no selection centre marker', () => {
+    const { queryByTestId, getByTestId } = renderOverlay();
+    expect(queryByTestId('coordinate-origin')).toBeNull();
+    expect(queryByTestId('coordinate-axis-badge-x')).toBeNull();
+    expect(queryByTestId('coordinate-selection-marker')).toBeNull();
+    expect(getByTestId('coordinate-overlay').querySelector('text')).toBeNull();
   });
 
-  it('uses the derived world affine for a sheared or parented selection', () => {
-    const { getByTestId } = renderOverlay(transform({
-      x: 999,
-      y: 999,
-      affine: { a: 0, b: 1, c: -1, d: 0, e: 120, f: -40 },
-    }));
+  it('puts a small triangle on each visible edge where an axis crosses it, pointing at the origin', () => {
+    const view = { left: -100, right: 700, top: 0, bottom: 500 };
+    const { getByTestId } = renderOverlay(view);
+    const left = points(getByTestId('coordinate-axis-marker-left'));
+    const right = points(getByTestId('coordinate-axis-marker-right'));
+    const top = points(getByTestId('coordinate-axis-marker-top'));
+    const bottom = points(getByTestId('coordinate-axis-marker-bottom'));
+    // Base on the edge, tip inwards on the axis.
+    expect(left[0][0]).toBe(-100);
+    expect(left[1]).toEqual([-95, 240]);
+    expect(right[1]).toEqual([695, 240]);
+    expect(top[1]).toEqual([300, 5]);
+    expect(bottom[1]).toEqual([300, 495]);
+    // The axes reach the edges of the view.
+    const xAxis = getByTestId('coordinate-overlay').querySelector('[data-axis="x"]');
+    expect(xAxis?.getAttribute('x1')).toBe('-660');
+  });
 
-    const marker = getByTestId('coordinate-selection-marker');
-    expect(marker.getAttribute('data-world-x')).toBe('120');
-    expect(marker.getAttribute('data-world-y')).toBe('-40');
-    const ring = marker.querySelector('circle');
-    expect(ring?.getAttribute('cx')).toBe('420');
-    expect(ring?.getAttribute('cy')).toBe('200');
+  it('the markers follow the axes when the view pans, and hide when an axis is off screen', () => {
+    const { getByTestId, queryByTestId, rerender } = renderOverlay({ left: 0, right: 800, top: 100, bottom: 600 });
+    expect(points(getByTestId('coordinate-axis-marker-left'))[1]).toEqual([5, 240]);
+    rerender(
+      <svg>
+        <CanvasCoordinateOverlay artX={-660} artY={-300} width={1920} height={1080} origin={ORIGIN} zScale={1} visibleRect={{ left: 0, right: 800, top: 260, bottom: 700 }} />
+      </svg>,
+    );
+    expect(queryByTestId('coordinate-axis-marker-left')).toBeNull();
+    expect(points(getByTestId('coordinate-axis-marker-top'))[1]).toEqual([300, 265]);
+  });
+
+  it('keeps a constant on-screen marker size at any zoom', () => {
+    const { getByTestId } = render(
+      <svg>
+        <CanvasCoordinateOverlay artX={-660} artY={-300} width={1920} height={1080} origin={ORIGIN} zScale={4} visibleRect={{ left: 0, right: 800, top: 0, bottom: 600 }} />
+      </svg>,
+    );
+    expect(points(getByTestId('coordinate-axis-marker-left'))[1]).toEqual([20, 240]);
+  });
+
+  it('the markers follow the pointer over the stage, and return to the axes when it leaves', () => {
+    const view = { left: 0, right: 800, top: 0, bottom: 600 };
+    const { getByTestId } = renderOverlay(view);
+    // World (100, -40) is stage point (400, 200).
+    act(() => rememberStagePointer({ x: 100, y: -40 }));
+    expect(points(getByTestId('coordinate-axis-marker-top'))[1]).toEqual([400, 5]);
+    expect(points(getByTestId('coordinate-axis-marker-left'))[1]).toEqual([5, 200]);
+    act(() => leaveStage());
+    expect(points(getByTestId('coordinate-axis-marker-top'))[1]).toEqual([300, 5]);
+    expect(points(getByTestId('coordinate-axis-marker-left'))[1]).toEqual([5, 240]);
   });
 
   it('stays decorative and pointer-transparent', () => {
-    const { getByTestId, queryByTestId } = renderOverlay();
-
-    expect(queryByTestId('coordinate-selection-marker')).toBeNull();
+    const { getByTestId } = renderOverlay();
     const overlay = getByTestId('coordinate-overlay');
     expect(overlay.getAttribute('pointer-events')).toBe('none');
     expect(overlay.getAttribute('aria-hidden')).toBe('true');

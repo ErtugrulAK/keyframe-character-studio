@@ -193,6 +193,12 @@ async function hideCoordinateOverlay(page: Page): Promise<void> {
   const overlayToggle = page.getByRole('button', { name: 'Toggle coordinate overlay' });
   if (await overlayToggle.getAttribute('aria-pressed') === 'true') await overlayToggle.click();
   await expect(page.locator('.canvas-coordinate-overlay')).toHaveCount(0);
+  // The editor grid is the same kind of chrome: a grid line under a probe
+  // reads as layer pixels (a 0.1-alpha line lifted a "hidden" probe to 48
+  // once the grid fitted the artboard, QA 2026-11-13), so it is off as well.
+  const gridToggle = page.getByRole('button', { name: 'Toggle grid' });
+  if (await gridToggle.getAttribute('aria-pressed') === 'true') await gridToggle.click();
+  await expect(page.getByTestId('stage-grid')).toHaveCount(0);
 }
 
 async function seed(page: Page, layers: Record<string, unknown>[], tracks: Record<string, unknown>[] = []): Promise<void> {
@@ -705,6 +711,39 @@ test.describe('M14 track matte — FEATHER (real browser pixel assertions)', () 
     expect(soft[1]).toBeLessThan(soft[2]);
     expect(soft[2]).toBeGreaterThan(soft[0] + 30); // meaningful gradient
     expect(soft[3]).toBeGreaterThan(200);          // inside still fully visible
+  });
+
+  test('V-H13 — a keyed Track Matte feather: sharp at its 0 key, a ramp at its 12 key (QA rc6 round 4)', async ({ page }) => {
+    const source = makeLayer('src', 'Source', 'custom_box', { zIndex: 1, fillColor: '#ff0000' });
+    const target = makeLayer('tgt', 'Target', 'custom_circle', {
+      zIndex: 2, fillColor: '#00ff00', scaleX: 2, scaleY: 2,
+      trackMatte: { sourceLayerId: 'src', mode: 'alpha', sourceVisible: false, feather: 0 },
+    });
+    const featherKeys = [
+      { id: 'mf0', frame: 0, value: 0, easing: 'linear' },
+      { id: 'mf20', frame: 20, value: 12, easing: 'linear' },
+    ];
+    await seed(page, [source, target], [{ partId: 'src', channels: {} }, { partId: 'tgt', channels: { matteFeather: featherKeys } }]);
+
+    const sharp = await edgeProbe(page);
+    expect(sharp[0]).toBeLessThan(45);
+    expect(sharp[1]).toBeLessThan(45);
+    expect(sharp[2]).toBeLessThan(45);
+    expect(sharp[3]).toBeGreaterThan(200);
+
+    // Frame 20 on the ruler (the default 18 px per frame).
+    const grid = page.locator('.timeline-grid-container');
+    const gridBox = await grid.boundingBox();
+    const rulerBox = await page.locator('.time-ruler').boundingBox();
+    const scrollLeft = await grid.evaluate((node) => node.scrollLeft);
+    await page.mouse.click(gridBox!.x - scrollLeft + 20 * 18 + 4, rulerBox!.y + rulerBox!.height / 2);
+    await expect(page.locator('.playhead-frame-label')).toHaveText('20');
+
+    const soft = await edgeProbe(page);
+    expect(soft[0]).toBeGreaterThan(45);
+    expect(soft[0]).toBeLessThan(soft[1]);
+    expect(soft[1]).toBeLessThan(soft[2]);
+    expect(soft[3]).toBeGreaterThan(200);
   });
 
   test('V-I — feather stays world-aligned with a ROTATED target', async ({ page }) => {

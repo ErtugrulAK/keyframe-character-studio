@@ -1,6 +1,8 @@
+import { isHomeTransform } from '../utils/layers/resetTransform';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AnimationTrackData, CharacterPart, Track, MotionTemplate, PropertyKeyframe } from '../types/animator';
 import type { PersistedTrackState, SceneCoordinateSystem, SceneData, SceneLayer } from '../types/composition';
+import type { FitToTextSettings } from '../utils/layers/layoutModifiers';
 import { initializeIdCounter } from '../utils/layers/idGenerator';
 import { makeEmptyChannels, DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../utils/animation/defaults';
 import { convertLegacyKeyframesToChannels, fillChannelsFromLegacyKeyframes } from '../utils/animation/legacyKeyframeConversion';
@@ -19,6 +21,13 @@ import { ASSET_REF_PREFIX, createAssetStore, createIndexedDbAssetBackend, startA
  */
 const readOptionalNumber = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
 const readOptionalString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
+
+/** An Auto Size setting with its own copy of the extra text list (only the ids that are strings). */
+const cloneFitToText = (settings: FitToTextSettings): FitToTextSettings => {
+  const { extraTextLayerIds, ...rest } = settings;
+  const extra = Array.isArray(extraTextLayerIds) ? extraTextLayerIds.filter((id): id is string => typeof id === 'string') : [];
+  return extra.length > 0 ? { ...rest, extraTextLayerIds: extra } : rest;
+};
 /** A saved ISO timestamp, only when it actually parses to a valid date. */
 const readOptionalDate = (value: unknown): Date | undefined => {
   const text = readOptionalString(value);
@@ -107,6 +116,13 @@ function toSceneData(
     matte: p.matte,
     masks: p.masks,
     trackMatte: p.trackMatte,
+    ...(p.textFit ? { textFit: { ...p.textFit } } : {}),
+    ...(p.fitToText ? { fitToText: cloneFitToText(p.fitToText) } : {}),
+    ...(p.follow ? { follow: { ...p.follow } } : {}),
+    ...(p.lookAt ? { lookAt: { ...p.lookAt } } : {}),
+    ...(p.homeTransform ? { homeTransform: { ...p.homeTransform } } : {}),
+    ...(p.justify ? { justify: { ...p.justify } } : {}),
+    ...(p.repeater ? { repeater: { ...p.repeater } } : {}),
     ...(p.effects?.length ? { effects: p.effects } : {}),
     booleanGroupId: p.booleanGroupId,
     booleanOperation: p.booleanOperation,
@@ -241,6 +257,13 @@ function fromSceneData(
     matte: l.matte,
     masks: l.masks,
     trackMatte: l.trackMatte,
+    ...(l.textFit && typeof l.textFit === 'object' ? { textFit: { ...l.textFit } } : {}),
+    ...(l.fitToText && typeof l.fitToText === 'object' && typeof l.fitToText.textLayerId === 'string' ? { fitToText: cloneFitToText(l.fitToText) } : {}),
+    ...(l.follow && typeof l.follow === 'object' && typeof l.follow.targetLayerId === 'string' ? { follow: { ...l.follow } } : {}),
+    ...(l.lookAt && typeof l.lookAt === 'object' && typeof l.lookAt.targetLayerId === 'string' ? { lookAt: { ...l.lookAt } } : {}),
+    ...(isHomeTransform(l.homeTransform) ? { homeTransform: { ...l.homeTransform } } : {}),
+    ...(l.justify && typeof l.justify === 'object' ? { justify: { ...l.justify } } : {}),
+    ...(l.repeater && typeof l.repeater === 'object' ? { repeater: { ...l.repeater } } : {}),
     ...(l.effects?.length ? { effects: l.effects.map((effect) => ({ ...effect })) } : {}),
     booleanGroupId: l.booleanGroupId,
     booleanOperation: l.booleanOperation,
@@ -418,7 +441,16 @@ interface UseSerializationOptions {
    * the new S0: the restore is initialization, never a user-undoable change.
    */
   requestHistoryBaseline?: () => void;
+  /**
+   * The saved scene could not be restored (its reason). The editor starts
+   * empty, and the refused copy is kept under `AUTOSAVE_REFUSED_STORAGE_KEY`
+   * so the next autosave cannot destroy it.
+   */
+  onRestoreRefused?: (message: string) => void;
 }
+
+/** Where a saved scene the restore refused is kept, so a later autosave cannot overwrite the only copy. */
+export const AUTOSAVE_REFUSED_STORAGE_KEY = `${AUTOSAVE_STORAGE_KEY}_REFUSED`;
 
 /**
  * Bounded wait a manual save gives the shared autosave lock before
@@ -553,6 +585,7 @@ export const useSerialization = ({
   setCurrentFrame,
   setIsPlaying,
   requestHistoryBaseline = noopRequestHistoryBaseline,
+  onRestoreRefused,
 }: UseSerializationOptions): UseSerializationApi => {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
@@ -588,6 +621,11 @@ export const useSerialization = ({
   const autosavePausedRef = useRef<boolean>(false);
   const restoreDecidedRef = useRef<boolean>(false);
   const restoreAppliedRef = useRef<boolean>(false);
+  // The latest callback, read by the one-shot restore without re-running it.
+  const onRestoreRefusedRef = useRef(onRestoreRefused);
+  useEffect(() => {
+    onRestoreRefusedRef.current = onRestoreRefused;
+  }, [onRestoreRefused]);
 
   // The SAFE-01 read-compare-write runs as one critical section
   // inside the Web Lock named after the guarded key. manualPendingRef keeps a
@@ -631,7 +669,16 @@ export const useSerialization = ({
         // instead of being applied, and the defaults stay in place.
         const validation = validateImportedDocument(saved);
         if (!validation.ok) {
-          console.warn('[Storage] Autosave restore refused:', validation.diagnostics[0]?.code, validation.diagnostics[0]?.message);
+          const reason = validation.diagnostics[0];
+          console.warn('[Storage] Autosave restore refused:', reason?.code, reason?.message);
+          let kept = false;
+          try {
+            localStorage.setItem(AUTOSAVE_REFUSED_STORAGE_KEY, saved);
+            kept = true;
+          } catch {
+            kept = false;
+          }
+          onRestoreRefusedRef.current?.(`The saved scene could not be opened: ${reason?.message ?? 'it is not a valid scene'}${kept ? ' A copy was kept in this browser.' : ''}`);
           return;
         }
 

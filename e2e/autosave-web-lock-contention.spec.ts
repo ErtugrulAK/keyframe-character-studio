@@ -1,4 +1,5 @@
 import { test, expect, type BrowserContext, type Page } from '@playwright/test';
+import { armTool } from './fixtures/toolbarTools';
 
 /**
  * SAFE-02 — real two-tab Web Locks contention.
@@ -59,8 +60,7 @@ async function readIds(page: Page): Promise<string[] | null> {
 }
 
 async function addRectangle(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).first().click({ timeout: 5000 });
-  await page.getByRole('button', { name: 'Rectangle', exact: true }).first().click({ timeout: 5000 });
+  await armTool(page, 'Rectangle');
   const stage = await page.locator('.stage-canvas-container').boundingBox() /* C7b: the visible stage; the drawing surface is window-sized */;
   if (!stage) throw new Error('stage svg is not visible');
   await page.mouse.move(stage.x + stage.width - 140, stage.y + stage.height - 110);

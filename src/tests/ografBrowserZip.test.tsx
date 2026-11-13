@@ -82,6 +82,23 @@ describe('browser OGraf ZIP writer', () => {
     expect(new TextDecoder().decode(unzipSync(first.bytes)['scene.kcs'])).toContain('project-unit-center-v1');
   });
 
+  it('writes the same bytes whatever the clock says', async () => {
+    // The ZIP stamped each file with the current time, so two packages of one
+    // graphic differed across a 2-second step (seen as a flake under load).
+    const plan = compileOGrafPackage(makeScene());
+    const actualWriter = await vi.importActual<typeof import('../ograf/browserZip')>('../ograf/browserZip');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date(2026, 10, 3, 12, 0, 0));
+      const first = await actualWriter.createOGrafBrowserZip(plan);
+      vi.setSystemTime(new Date(2026, 10, 3, 12, 0, 10));
+      const second = await actualWriter.createOGrafBrowserZip(plan);
+      expect(first.bytes).toEqual(second.bytes);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('sanitizes deterministic download names', () => {
     expect(sanitizeOGrafDownloadName(' Ä Project / Demo ')).toBe('a-project-demo');
     expect(sanitizeOGrafDownloadName('')).toBe('graphic');

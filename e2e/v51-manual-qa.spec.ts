@@ -56,8 +56,17 @@ test.describe('KCS V5.1 manual QA gates', () => {
     await booleanUnion.click();
     await expect(booleanUnion).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('[data-testid="freeform-vertex-marker"]')).toHaveCount(0);
+    // The result reads as one shape: its operands are listed once it is opened
+    // with a double-click on the stage, and a double-click closes it again.
+    await expect(page.locator('.nested-node.actor-node')).toHaveCount(0);
+    const result = page.locator('.stage-svg g[data-part-id^="boolean"]').first();
+    const box = (await result.boundingBox())!;
+    await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(page.locator('.stage-canvas-container')).toHaveAttribute('data-edit-mode', 'boolean');
     await expect(page.locator('.nested-node.actor-node', { hasText: 'Operand A' })).toBeVisible();
     await expect(page.locator('.nested-node.actor-node', { hasText: 'Operand B' })).toBeVisible();
+    await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(page.locator('.nested-node.actor-node')).toHaveCount(0);
     await page.getByRole('button', { name: 'Dissolve Boolean' }).click();
     await expect(page.locator('.actor-node', { hasText: 'Operand A' })).toHaveCount(1);
     await expect(page.locator('.actor-node', { hasText: 'Operand B' })).toHaveCount(1);

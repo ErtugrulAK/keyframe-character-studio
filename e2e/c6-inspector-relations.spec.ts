@@ -14,7 +14,7 @@ import { openDetailsTab, openInspectorCard } from './fixtures/inspectorTabs';
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 const E = () => ({ x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [] });
 const L = (id: string, name: string, extra: Record<string, unknown> = {}) => ({ id, name, type: 'custom_rect', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, fillColor: '#22d3ee', strokeColor: '#101218', width: 120, height: 60, ...extra });
-const LONG = 'Hero character silhouette with a very long descriptive layer name';
+const LONG = 'Hero character silhouette with a very long descriptive layer name that keeps going past any Inspector width';
 
 async function seed(page: Page): Promise<void> {
   const layers = [

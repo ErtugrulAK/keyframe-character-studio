@@ -1,4 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
+import { armTool } from './fixtures/toolbarTools';
 
 /**
  * AUTHORING UX — CROSS-FEATURE INTERACTION COLLISIONS.
@@ -204,8 +205,7 @@ test('the menu owns Escape: the shape tool keeps its authoring session', async (
   await seed(page, [{ id: 'a', name: 'Alpha', x: 0 }]);
 
   // Arm the rectangle tool, then open the editor menu from the keyboard.
-  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
-  await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+  await armTool(page, 'Rectangle');
   await page.keyboard.press('Shift+F10');
   await expect(menu(page)).toBeVisible();
 

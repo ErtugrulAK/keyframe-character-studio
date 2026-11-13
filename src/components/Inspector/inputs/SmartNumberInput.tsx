@@ -30,6 +30,8 @@ export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, 
 
   const [editingValue, setEditingValue] = React.useState<string>(String(displayVal));
   const [isFocused, setIsFocused] = React.useState<boolean>(false);
+  /** True between the mouse-down that focuses the field and its mouse-up. */
+  const selectOnMouseUpRef = React.useRef<boolean>(false);
 
   React.useEffect(() => {
     if (!isFocused) {
@@ -56,8 +58,9 @@ export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, 
     }
   };
 
-  const handleBlur = () => {
+  const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
     setIsFocused(false);
+    const field = event.currentTarget;
     let parsed = parseFloat(editingValue);
     if (isNaN(parsed)) {
       setEditingValue(String(displayVal));
@@ -74,6 +77,7 @@ export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, 
       if (max !== undefined) clamped = Math.min(max, clamped);
       const rounded = Math.round(clamped * Math.pow(10, decimals)) / Math.pow(10, decimals);
       setEditingValue(String(rounded));
+      if (field.value !== String(rounded)) field.value = String(rounded);
       if (rounded / scale !== value) {
         onChange(rounded / scale);
       }
@@ -81,6 +85,10 @@ export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, 
     }
     const rounded = Math.round(parsed * Math.pow(10, decimals)) / Math.pow(10, decimals);
     setEditingValue(String(rounded));
+    // React leaves a number field alone when its text parses to the same
+    // number, so "030" stayed on screen after Enter (QA 2026-11-13). The
+    // field shows the committed value once it is left.
+    if (field.value !== String(rounded)) field.value = String(rounded);
   };
 
   const displayStep = step !== undefined ? step * Math.abs(scale) : undefined;
@@ -94,7 +102,23 @@ export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, 
       min={min !== undefined ? min * scale : undefined}
       max={max !== undefined ? max * scale : undefined}
       step={displayStep}
-      onFocus={() => setIsFocused(true)}
+      // Focusing selects the whole value, so typing replaces it: a click on
+      // "0" then "30" used to give "030" (QA 2026-11-13). The mouse-up that
+      // ends the focusing click would place the caret and drop the selection,
+      // so that one mouse-up is skipped.
+      onFocus={(event) => {
+        setIsFocused(true);
+        event.currentTarget.select();
+      }}
+      onMouseUp={(event) => {
+        if (selectOnMouseUpRef.current) {
+          selectOnMouseUpRef.current = false;
+          event.preventDefault();
+        }
+      }}
+      onMouseDown={(event) => {
+        selectOnMouseUpRef.current = document.activeElement !== event.currentTarget;
+      }}
       onChange={handleChange}
       onBlur={handleBlur}
       onKeyDown={(e) => {

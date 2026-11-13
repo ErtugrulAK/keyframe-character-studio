@@ -279,6 +279,13 @@ describe('project import boundary', () => {
 
     expect(refusalCode(JSON.stringify({ characterParts, tracks: [] }))).toBe('KCS_IMPORT_TOO_MANY_LAYERS');
   });
+
+  it('counts layers, not layers plus their tracks: a 3000-layer scene opens (QA rc6 round 4)', () => {
+    const layers = Array.from({ length: 3000 }, (_, index) => ({ id: `l${index}`, name: `L${index}`, type: 'custom_rect', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: index, fillColor: '#fff', strokeColor: '#000' }));
+    const tracks = layers.map((layer) => ({ partId: layer.id, channels: {} }));
+    const scene = { version: 1, coordinateSystem: 'project-unit-center-v1', width: 1920, height: 1080, fps: 30, totalFrames: 60, layers, tracks };
+    expect(validateImportedDocument(JSON.stringify(scene)).ok).toBe(true);
+  });
 });
 
 /**

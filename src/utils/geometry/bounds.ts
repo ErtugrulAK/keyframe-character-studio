@@ -2,6 +2,7 @@ import type { CharacterPart, Transform } from '../../types/animator';
 import { textBaselineOffset } from './textOrigin';
 import { applyAffine, worldAffineOf, type WorldAffine } from './containerMath';
 import { getShapeGeometry } from './shapeGeometry';
+import { bezierPathExtremePoints } from './bezierPath';
 import { resolveShapeAppearance } from '../layers/shapeAppearance';
 
 type TextMetrics = {
@@ -220,9 +221,13 @@ export const getPartLocalBounds = (
     if (part.path?.points?.length) {
       const width = part.width ?? 200;
       const height = part.height ?? 120;
+      // The box covers the drawn curve: a smooth edge can bulge past its
+      // vertices. The normalized mapping is affine per axis, so the extremes
+      // found in the path's own space stay the extremes once mapped.
+      const extremes = bezierPathExtremePoints(part.path);
       const pathPoints = part.path.coordinateSpace === 'normalized'
-        ? part.path.points.map((point) => ({ x: (point.x - 0.5) * width, y: (point.y - 0.5) * height }))
-        : part.path.points;
+        ? extremes.map((point) => ({ x: (point.x - 0.5) * width, y: (point.y - 0.5) * height }))
+        : extremes;
       bounds = boundsFromPoints(pathPoints);
     }
   }

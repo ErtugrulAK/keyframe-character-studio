@@ -422,3 +422,54 @@ export const sampleBezierPath = (path: BezierPath | undefined, samplesPerSegment
   samples.push({ x: closing.x, y: closing.y });
   return samples;
 };
+
+/** The `t` in (0, 1) where one axis of a cubic Bezier turns (its derivative is zero). */
+const cubicTurningTimes = (p0: number, p1: number, p2: number, p3: number): number[] => {
+  // B'(t)/3 = a t^2 + b t + c
+  const a = -p0 + 3 * p1 - 3 * p2 + p3;
+  const b = 2 * (p0 - 2 * p1 + p2);
+  const c = p1 - p0;
+  const roots: number[] = [];
+  if (Math.abs(a) < 1e-12) {
+    if (Math.abs(b) > 1e-12) roots.push(-c / b);
+  } else {
+    const discriminant = b * b - 4 * a * c;
+    if (discriminant >= 0) {
+      const root = Math.sqrt(discriminant);
+      roots.push((-b + root) / (2 * a), (-b - root) / (2 * a));
+    }
+  }
+  return roots.filter((t) => t > 0 && t < 1);
+};
+
+/**
+ * The points that decide the box around a path as it is DRAWN: every vertex,
+ * plus each curved segment's turning points. A curve can bulge past its
+ * vertices (a smooth handle pulls it outward), so a box over the vertices
+ * alone cut the drawn shape. Segments follow `buildBezierPathD`: a segment is
+ * curved when either end has a handle, and a closed path's closing segment too.
+ */
+export const bezierPathExtremePoints = (path: BezierPath | undefined): PathPoint[] => {
+  if (!path || path.points.length === 0) return [];
+  const extremes: PathPoint[] = path.points.map((point) => ({ x: point.x, y: point.y }));
+  if (path.points.length < 2) return extremes;
+  const segmentCount = path.closed ? path.points.length : path.points.length - 1;
+  for (let index = 0; index < segmentCount; index += 1) {
+    const start = path.points[index];
+    const end = path.points[(index + 1) % path.points.length];
+    if (!start.handleOut && !end.handleIn) continue;
+    const p0 = { x: start.x, y: start.y };
+    const p1 = start.handleOut ?? p0;
+    const p3 = { x: end.x, y: end.y };
+    const p2 = end.handleIn ?? p3;
+    const times = [...cubicTurningTimes(p0.x, p1.x, p2.x, p3.x), ...cubicTurningTimes(p0.y, p1.y, p2.y, p3.y)];
+    for (const t of times) {
+      const u = 1 - t;
+      extremes.push({
+        x: u ** 3 * p0.x + 3 * u ** 2 * t * p1.x + 3 * u * t ** 2 * p2.x + t ** 3 * p3.x,
+        y: u ** 3 * p0.y + 3 * u ** 2 * t * p1.y + 3 * u * t ** 2 * p2.y + t ** 3 * p3.y,
+      });
+    }
+  }
+  return extremes;
+};

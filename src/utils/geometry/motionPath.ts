@@ -42,6 +42,40 @@ export interface MotionPathPose {
   angle: number;
 }
 
+/**
+ * A layer's link to the path it follows. The path is another layer's outline
+ * (a freeform layer), placed by that layer's own transform, so moving or
+ * editing the path moves the follower too. `progress` is the static share of
+ * the path's length (the `motionPathProgress` channel keys it over time);
+ * `orient` turns the follower with the direction of travel.
+ */
+export interface MotionPathLink {
+  sourcePartId: string;
+  enabled?: boolean;
+  orient?: boolean;
+  progress?: number;
+}
+
+/** A 2D affine map, as `containerMath` writes it: x' = a x + c y + e, y' = b x + d y + f. */
+export interface MotionPathAffine {
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+  e: number;
+  f: number;
+}
+
+/** Whether a stored value is a well-formed link (import validation). */
+export const isMotionPathLink = (value: unknown): value is MotionPathLink => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const link = value as Record<string, unknown>;
+  return typeof link.sourcePartId === 'string' && link.sourcePartId.length > 0
+    && (link.enabled === undefined || typeof link.enabled === 'boolean')
+    && (link.orient === undefined || typeof link.orient === 'boolean')
+    && (link.progress === undefined || (typeof link.progress === 'number' && Number.isFinite(link.progress)));
+};
+
 export const createMotionPath = () => {
   const STEPS_PER_SEGMENT = 32;
 
@@ -137,9 +171,29 @@ export const createMotionPath = () => {
     return { x: point.x, y: point.y, angle };
   };
 
-  return { measure, poseAt };
+  /**
+   * The pose at `progress` carried through the path layer's own transform:
+   * where the follower sits in the space the path layer is placed in, and the
+   * direction of travel there (the path's tangent turned by the same map).
+   */
+  const follow = (table: MotionPathTable, affine: MotionPathAffine, progress: number): MotionPathPose => {
+    const pose = poseAt(table, progress);
+    const radians = (pose.angle * Math.PI) / 180;
+    const ux = Math.cos(radians);
+    const uy = Math.sin(radians);
+    const tx = affine.a * ux + affine.c * uy;
+    const ty = affine.b * ux + affine.d * uy;
+    return {
+      x: affine.a * pose.x + affine.c * pose.y + affine.e,
+      y: affine.b * pose.x + affine.d * pose.y + affine.f,
+      angle: tx !== 0 || ty !== 0 ? (Math.atan2(ty, tx) * 180) / Math.PI : pose.angle,
+    };
+  };
+
+  return { measure, poseAt, follow };
 };
 
 const motionPath = createMotionPath();
 export const measureMotionPath = motionPath.measure;
 export const motionPathPoseAt = motionPath.poseAt;
+export const followMotionPath = motionPath.follow;

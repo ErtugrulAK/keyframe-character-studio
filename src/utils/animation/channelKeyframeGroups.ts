@@ -215,6 +215,8 @@ export const applyChannelStaticValue = (
       return part.trackMatte?.gradient
         ? { ...part, trackMatte: { ...part.trackMatte, gradient: { ...part.trackMatte.gradient, angle: normalizeGradientAngle(value) ?? 0 } } }
         : part;
+    case 'motionPathProgress':
+      return part.motionPath ? { ...part, motionPath: { ...part.motionPath, progress: value } } : part;
     default:
       // Exhaustive over TrackChannel; an unknown channel must never guess-write.
       return part;
@@ -263,6 +265,8 @@ export const channelArmValue = (
       return normalizeStrength(part.trackMatte?.strength);
     case 'matteGradientAngle':
       return normalizeGradientAngle(part.trackMatte?.gradient?.angle) ?? 0;
+    case 'motionPathProgress':
+      return part.motionPath?.progress ?? 0;
     default:
       // Unreachable for the exhaustive TrackChannel union.
       return authored.x;

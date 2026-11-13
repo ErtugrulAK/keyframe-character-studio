@@ -43,6 +43,7 @@ const createEmptyChannels = (): Record<TrackChannel, PropertyKeyframe[]> => ({
   maskOffsetX: [], maskOffsetY: [], maskScale: [], maskRotation: [],
   trimPathStart: [], trimPathEnd: [], trimPathOffset: [],
   matteFeather: [], matteStrength: [], matteGradientAngle: [],
+  motionPathProgress: [],
 });
 
 /**
@@ -251,6 +252,8 @@ export function fillChannelsFromLegacyKeyframes(
   filled.matteFeather = canonical?.matteFeather ?? [];
   filled.matteStrength = canonical?.matteStrength ?? [];
   filled.matteGradientAngle = canonical?.matteGradientAngle ?? [];
+  // Nor a motion path's progress.
+  filled.motionPathProgress = canonical?.motionPathProgress ?? [];
 
   return filled;
 }

@@ -64,6 +64,7 @@ const TREE_LABEL: Partial<Record<TrackChannel, string>> = {
   matteFeather: 'Feather',
   matteStrength: 'Strength',
   matteGradientAngle: 'Gradient Angle',
+  motionPathProgress: 'Progress',
 };
 
 /** A mask property row reads like other motion tools: Path, Feather, Opacity, Expansion. */

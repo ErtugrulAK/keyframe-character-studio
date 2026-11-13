@@ -242,13 +242,13 @@ export interface PathKeyframe {
 }
 
 // Channel keys match Transform property names
-export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity' | 'maskOffsetX' | 'maskOffsetY' | 'maskScale' | 'maskRotation' | 'trimPathStart' | 'trimPathEnd' | 'trimPathOffset' | 'matteFeather' | 'matteStrength' | 'matteGradientAngle';
+export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity' | 'maskOffsetX' | 'maskOffsetY' | 'maskScale' | 'maskRotation' | 'trimPathStart' | 'trimPathEnd' | 'trimPathOffset' | 'matteFeather' | 'matteStrength' | 'matteGradientAngle' | 'motionPathProgress';
 
 export type LayerMaskChannelProperty = 'opacity' | 'feather' | 'expansion';
 export type LayerMaskChannel = `${string}:${LayerMaskChannelProperty}`;
 export type LayerMaskPathChannel = `${string}:path`;
 export type AnimationChannel = TrackChannel | LayerMaskChannel | LayerMaskPathChannel;
-export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation', 'trimPathStart', 'trimPathEnd', 'trimPathOffset', 'matteFeather', 'matteStrength', 'matteGradientAngle'];
+export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation', 'trimPathStart', 'trimPathEnd', 'trimPathOffset', 'matteFeather', 'matteStrength', 'matteGradientAngle', 'motionPathProgress'];
 
 export const layerMaskChannel = (maskId: string, property: LayerMaskChannelProperty): LayerMaskChannel =>
   `${maskId}:${property}`;
@@ -427,6 +427,8 @@ export interface CharacterPart {
   fontSize?: number;
   /** Text: a typewriter or a counting number over time (`utils/animation/textEffects`). */
   textEffect?: import('../utils/animation/textEffects').TextEffect;
+  /** Follows a path layer's outline over time (`utils/geometry/motionPath`). */
+  motionPath?: import('../utils/geometry/motionPath').MotionPathLink;
   /** Text: its box, alignment and hiding (`utils/layers/layoutModifiers`). */
   textFit?: TextFitSettings;
   /** Box-like shape: Auto Size, the text layer whose width it follows (`utils/layers/layoutModifiers`). */

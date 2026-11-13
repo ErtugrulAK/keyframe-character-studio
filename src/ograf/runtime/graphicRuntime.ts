@@ -21,6 +21,7 @@ import type { createShapeAppearance } from '../../utils/layers/shapeAppearance';
 import type { describePaint, describeText } from '../../utils/layers/drawDescriptor';
 import type { createTrackMatteMarkup, TrackMatteGradientInput } from '../trackMatteMarkup';
 import type { createTextEffects, DisplayedText, TextEffect } from '../../utils/animation/textEffects';
+import type { createMotionPath, MotionPathLink } from '../../utils/geometry/motionPath';
 import type { createLayerEffects, LayerBlendMode } from '../../utils/layers/layerEffects';
 import type { createLayerCrop, LayerCrop } from '../../utils/layers/layerCrop';
 import type { createLayoutModifiers, FitToTextSettings, FollowSettings, JustifySettings, LookAtSettings, RepeaterSettings, TextFitSettings } from '../../utils/layers/layoutModifiers';
@@ -86,6 +87,8 @@ export interface RuntimeLayer {
   visible?: boolean;
   parentId?: string;
   booleanGroupId?: string;
+  /** Follows a path layer's outline (`utils/geometry/motionPath`). */
+  motionPath?: MotionPathLink;
   width?: number;
   height?: number;
   borderRadius?: number;
@@ -214,6 +217,8 @@ export interface GraphicRuntimeEnvironment {
   textEffects: ReturnType<typeof createTextEffects>;
   /** Drop shadow, glow, blur and blend mode (`utils/layers/layerEffects`), the editor's own filter. */
   layerEffects: ReturnType<typeof createLayerEffects>;
+  /** Where a layer that follows a path sits (`utils/geometry/motionPath`), the editor's own measure. */
+  motionPath: ReturnType<typeof createMotionPath>;
   /** The layer crop (`utils/layers/layerCrop`), the editor's own clip. */
   layerCrop: ReturnType<typeof createLayerCrop>;
   /** The Track Matte mask, as the editor draws it (`ograf/trackMatteMarkup`). */
@@ -244,6 +249,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     layerEffects,
     layerCrop,
     trackMatteMarkup,
+    motionPath,
   } = environment;
   const STEP_ENDS = environment.stepEnds && environment.stepEnds.length > 0 ? environment.stepEnds : [SCENE.totalFrames];
   /** The frame a step starts on: 0, then the previous step's end. */
@@ -643,11 +649,13 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
   function evaluateScene(scene: RuntimeScene, frame: number): EvaluatedRuntimeLayer[] {
     const transforms: Record<string, RuntimeWorldTransform> = Object.create(null);
     const visiting = new Set<string>();
-    const evaluateTransform = (layer: RuntimeLayer): RuntimeWorldTransform => {
-      if (Object.prototype.hasOwnProperty.call(transforms, layer.id)) return transforms[layer.id];
+    const following = new Set<string>();
+    // A layer's pose in its parent's space, with its motion path, as the
+    // editor's `localPose` (utils/animation/evaluateTransform) resolves it.
+    const localPose = (layer: RuntimeLayer): RuntimeWorldTransform => {
       const track = scene.tracks.find((item) => item.partId === layer.id);
       const channels = track && track.channels ? track.channels : {};
-      let result: RuntimeWorldTransform = {
+      const pose: RuntimeWorldTransform = {
         x: channelValue(channels.x, frame, layer.x),
         y: channelValue(channels.y, frame, layer.y),
         rotation: channelValue(channels.rotation, frame, layer.rotation),
@@ -655,6 +663,29 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
         scaleY: channelValue(channels.scaleY, frame, layer.scaleY),
         opacity: channelValue(channels.opacity, frame, layer.opacity),
       };
+      const link = layer.motionPath;
+      if (!link || link.enabled === false || following.has(layer.id)) return pose;
+      const source = scene.layers.find((item) => item.id === link.sourcePartId);
+      if (!source || source.id === layer.id || source.type !== 'custom_freeform') return pose;
+      if ((source.parentId || source.booleanGroupId) !== (layer.parentId || layer.booleanGroupId)) return pose;
+      const outline = source.path || (source.points ? { closed: true, points: source.points } : undefined);
+      const table = motionPath.measure(outline as Parameters<typeof motionPath.measure>[0]);
+      if (!table) return pose;
+      following.add(layer.id);
+      const sourcePose = localPose(source);
+      following.delete(layer.id);
+      const fallback = typeof link.progress === 'number' ? link.progress : 0;
+      const onPath = motionPath.follow(table, affineOfTransform(sourcePose), channelValue(channels.motionPathProgress, frame, fallback));
+      return {
+        ...pose,
+        x: onPath.x + (pose.x - layer.x),
+        y: onPath.y + (pose.y - layer.y),
+        rotation: pose.rotation + (link.orient === true ? onPath.angle : 0),
+      };
+    };
+    const evaluateTransform = (layer: RuntimeLayer): RuntimeWorldTransform => {
+      if (Object.prototype.hasOwnProperty.call(transforms, layer.id)) return transforms[layer.id];
+      let result: RuntimeWorldTransform = localPose(layer);
       if (visiting.has(layer.id)) return result;
       visiting.add(layer.id);
       if (layer.parentId || layer.booleanGroupId) {

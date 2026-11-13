@@ -146,6 +146,8 @@ export interface SceneLayer {
   fontFamily?: string;
   /** Text: a typewriter or a counting number over time (`utils/animation/textEffects`). */
   textEffect?: import('../utils/animation/textEffects').TextEffect;
+  /** Follows a path layer's outline over time (`utils/geometry/motionPath`). */
+  motionPath?: import('../utils/geometry/motionPath').MotionPathLink;
   /** Text: its box, alignment and hiding (`utils/layers/layoutModifiers`). */
   textFit?: TextFitSettings;
   /** Box-like shape: Auto Size, the text layer whose width it follows (`utils/layers/layoutModifiers`). */

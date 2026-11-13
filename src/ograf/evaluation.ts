@@ -47,6 +47,7 @@ function toCharacterPart(layer: SceneLayer): CharacterPart {
     effects: layer.effects,
     textValue: layer.textValue,
     ...(layer.textEffect ? { textEffect: layer.textEffect } : {}),
+    ...(layer.motionPath ? { motionPath: layer.motionPath } : {}),
     fontSize: layer.fontSize,
     fontFamily: layer.fontFamily,
     ...(layer.textOrigin !== undefined ? { textOrigin: layer.textOrigin } : {}),

@@ -49,6 +49,7 @@ import { useRowWindow, type RowViewport } from '../../hooks/useRowWindow';
 import { useRetainedScrollTop, useRetainedUiState } from '../../hooks/useRetainedUiState';
 import { rowOffsets, type RowWindowSegment } from '../../utils/editor/rowWindow';
 import { edgeScrollStep, laneContextOf, laneGroupHeight, laneKeyframePositions, laneKeyframes, type LaneContext } from './timelineLaneLayout';
+import { TimelineTimeField } from './TimelineTimeField';
 import './SequencerTimeline.css';
 
 /**
@@ -1061,14 +1062,6 @@ export const SequencerTimeline: React.FC = () => {
     if (timelineGridRef.current) timelineGridRef.current.scrollLeft = 0;
   };
 
-  const formatTimecode = (frame: number, currentFps: number) => {
-    const totalSeconds = Math.floor(frame / currentFps);
-    const subFrames = frame % currentFps;
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}:${String(subFrames).padStart(2, '0')}`;
-  };
-
   /**
    * K1 (D2) — arm / disarm a property (C10: the "+" of an unanimated row, or
    * the row's "Remove all keyframes"). Reading the state decides the flow:
@@ -1426,8 +1419,7 @@ export const SequencerTimeline: React.FC = () => {
         <div className="timeline-header-left timeline-header-band timeline-header-band-timing">
           <div className="timeline-timing-group">
             <Clock size={15} className="timeline-clock-icon" aria-hidden="true" />
-            <span className="timecode-text">{formatTimecode(currentFrame, fps)}</span>
-            <span className="timecode-total">/ {formatTimecode(totalFrames, fps)}</span>
+            <TimelineTimeField currentFrame={currentFrame} totalFrames={totalFrames} fps={fps} onSeek={(frame) => setCurrentFrame(frame)} />
           </div>
           <div className="divider-v" />
           <div className="duration-control-box">

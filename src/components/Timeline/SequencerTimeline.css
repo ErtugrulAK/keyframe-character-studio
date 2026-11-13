@@ -1535,3 +1535,38 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   color: var(--kcs-accent);
   background: rgba(73, 141, 231, 0.18);
 }
+
+/* The playhead time is a field: type 25, 25f, 1.5s, 500ms or a timecode. */
+.timeline-header .timecode-input {
+  width: 74px;
+  min-width: 0;
+  padding: 1px 4px;
+  border: 1px solid transparent;
+  border-radius: var(--kcs-radius-control);
+  background: transparent;
+  font-family: var(--font-main);
+}
+.timeline-header .timecode-input:hover {
+  border-color: var(--kcs-border-default);
+}
+.timeline-header .timecode-input:focus {
+  outline: none;
+  border-color: var(--kcs-accent);
+  background: var(--kcs-bg-timeline);
+  text-align: left;
+}
+.timecode-mode-toggle {
+  min-width: 22px;
+  height: 18px;
+  padding: 0 4px;
+  border: 1px solid var(--kcs-border-default);
+  border-radius: var(--kcs-radius-control);
+  background: transparent;
+  color: var(--kcs-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.timecode-mode-toggle:hover {
+  color: var(--kcs-text-primary);
+}

@@ -8,7 +8,7 @@ import {
   rowWindowRange,
   type RowWindowRange,
   type RowWindowSegment,
-} from '../utils/rowWindow';
+} from '../utils/editor/rowWindow';
 
 export interface RowViewport {
   /** Top of the visible area, in the row content's own coordinates. */
@@ -38,7 +38,7 @@ const sameRange = (a: RowWindowRange, b: RowWindowRange): boolean => a.start ===
 
 /**
  * Mounts only the rows of a long list that are in (or near) its scroll
- * viewport, plus the pinned rows — see `utils/rowWindow`. The viewport is read
+ * viewport, plus the pinned rows — see `utils/editor/rowWindow`. The viewport is read
  * on scroll and on resize, but the list re-renders only when the set of rows
  * to mount changes, never for every scrolled pixel.
  */

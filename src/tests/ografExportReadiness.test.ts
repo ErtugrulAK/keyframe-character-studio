@@ -30,7 +30,7 @@ describe('summarizeOGrafExportReadiness', () => {
 
     expect(readiness.status).toBe('ready');
     expect(readiness.title).toBe('Ready to export');
-    expect(readiness.message).toContain('my-project-ograf.zip');
+    expect(readiness.message).toContain('my-project.ograf.zip');
     expect(readiness.message).not.toContain('Exported');
     expect(readiness.action).toContain('OGraf Package');
   });
@@ -45,7 +45,7 @@ describe('summarizeOGrafExportReadiness', () => {
     expect(readiness.action).toContain('Remove the layer');
     expect(readiness.blocking?.code).toBe('OGRAF_UNSUPPORTED_SHAPE');
     expect(readiness.message.toLowerCase()).not.toContain('ready to export');
-    expect(readiness.message).not.toContain('-ograf.zip');
+    expect(readiness.message).not.toContain('.ograf.zip');
   });
 
   it('keeps warnings non-blocking and says so', () => {
@@ -73,7 +73,7 @@ describe('summarizeOGrafExportReadiness', () => {
 
   it('uses the shared trusted-directory wording when no name is supplied', () => {
     const readiness = summarizeOGrafExportReadiness([]);
-    expect(readiness.message).toContain('the -ograf.zip archive');
+    expect(readiness.message).toContain('the .ograf.zip archive');
     expect(OGRAF_TRUSTED_DIRECTORY_NOTE).toContain('trusted dedicated source and output directories');
   });
 });

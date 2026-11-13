@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { placeFloatingPanel } from '../utils/floatingPanel';
+import { placeFloatingPanel } from '../utils/editor/floatingPanel';
 
 const viewport = { width: 1000, height: 800 };
 const panel = { width: 236, height: 320 };

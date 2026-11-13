@@ -3,7 +3,7 @@ import type { BezierPath, CharacterPart, FreeformPoint, Transform } from '../../
 import type { SceneCoordinateSystem } from '../../../../types/composition';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { StyleCard } from '../style/StyleCard';
-import { freeformVertexToDisplay, freeformVertexToLocal, resolveFreeformPath } from '../../../../utils/freeform';
+import { freeformVertexToDisplay, freeformVertexToLocal, resolveFreeformPath } from '../../../../utils/geometry/freeform';
 
 interface TransformVertexEditorProps {
   selectedPart: CharacterPart;
@@ -11,7 +11,7 @@ interface TransformVertexEditorProps {
   coordinateSystem: SceneCoordinateSystem;
   onPartPropChange: (key: keyof CharacterPart, value: unknown) => void;
   /**
-   * C6 — writes the canonical path. The canvas draws `path` whenever it exists,
+   * Writes the canonical path. The canvas draws `path` whenever it exists,
    * so a vertex typed here must move THAT point (with its handles); writing the
    * legacy `points` alone changed nothing on screen.
    */

@@ -174,38 +174,18 @@ describe('StyleAppearanceSection', () => {
     expect(container.querySelectorAll('input[type="color"]')).toHaveLength(0);
     expect(screen.getByRole('dialog', { name: 'FILL COLOR Color Picker' })).toBeTruthy();
   });
-  it('embeds a single Color control inside the TEXT section', () => {
-    const onColorChange = vi.fn();
-    const onPropChange = vi.fn();
-    const { container } = render(
+  it('a text layer keeps only its effects in the Inspector (its settings are in the options bar)', () => {
+    render(
       <StyleTextFields
         selectedPart={{ ...makePart('custom_text'), textValue: 'Headline', fontFamily: 'Inter' }}
-        onPartPropChange={onPropChange}
-        onPartColorChange={onColorChange}
+        onPartPropChange={vi.fn()}
+        onPartColorChange={vi.fn()}
       />,
     );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Expand TEXT' }));
-    expect(screen.getByText('TEXT')).toBeTruthy();
-    openPicker('COLOR');
-    expect(screen.getAllByText('COLOR').length).toBeGreaterThanOrEqual(2);
-    expect(screen.queryByText('FILL')).toBeNull();
-    // Text owns a STROKE group here; the shape Appearance card stays separate.
-    expect(screen.getByText('STROKE')).toBeTruthy();
-    expect(screen.getByLabelText('Text Stroke Enabled')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Expand APPEARANCE' })).toBeNull();
-    expect(screen.queryByText('QUICK PALETTE SWATCHES')).toBeNull();
-    expect(container.querySelectorAll('input[type="color"]')).toHaveLength(0);
-
-    const hue = screen.getByRole('slider', { name: 'COLOR Hue' });
-    const alpha = screen.getByRole('slider', { name: 'COLOR Alpha' });
-    mockSliderBounds(hue);
-    mockSliderBounds(alpha);
-    fireEvent.pointerDown(hue, { clientX: 50, pointerId: 1 });
-    fireEvent.pointerDown(alpha, { clientX: 25, pointerId: 2 });
-
-    expect(onColorChange).toHaveBeenCalledWith('fillColor', '#00ffff');
-    expect(onPropChange).toHaveBeenCalledWith('fillOpacity', 0.25);
+    expect(screen.queryByRole('button', { name: 'Expand TEXT' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Expand TEXT EFFECTS' })).toBeTruthy();
+    expect(screen.queryByLabelText('Text Stroke Enabled')).toBeNull();
+    expect(document.querySelector('.text-content-control')).toBeNull();
   });
 });
 

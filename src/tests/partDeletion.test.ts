@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, Track } from '../types/animator';
-import { collectOwnedDeletionIds, deleteParts } from '../utils/partDeletion';
+import { collectOwnedDeletionIds, deleteParts } from '../utils/layers/partDeletion';
 
 const part = (id: string, overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id,

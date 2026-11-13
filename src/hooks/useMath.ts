@@ -1,7 +1,8 @@
 import { useCallback, useRef } from 'react';
 import type { CharacterPart, Transform, AnimationTrackData } from '../types/animator';
 import type { WorldAffine } from '../types/composition';
-import { evaluateTransform } from '../utils/evaluateTransform';
+import { partIndexOf } from '../utils/layers/partBinding';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
 
 interface UseMathOptions {
   characterParts: CharacterPart[];
@@ -34,7 +35,7 @@ interface TransformCache {
  * React hook wrapping the pure `evaluateTransform` function.
  *
  * Phase 2: The hook delegates all evaluation to the pure function and only adds
- * per-frame memoization. Actual math lives in `utils/evaluateTransform.ts`.
+ * per-frame memoization. Actual math lives in `utils/animation/evaluateTransform.ts`.
  *
  * API unchanged: `getComputedTransform(partId, frame) → Transform`
  */
@@ -68,7 +69,7 @@ export const useMath = ({ characterParts, tracks, activeTemplateId }: UseMathOpt
       if (cached) return cached;
 
       const world = evaluateTransform(characterParts, tracks, activeTemplateId, partId, frame);
-      const part = characterParts.find((p) => p.id === partId);
+      const part = partIndexOf(characterParts).get(partId);
 
       // WorldTransform → the Transform API shape still consumed by the
       // inspector/timeline, PLUS the derived world affine when the nesting is

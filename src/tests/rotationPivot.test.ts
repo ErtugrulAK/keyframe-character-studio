@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Transform } from '../types/animator';
-import { applyAffine, worldAffineOf } from '../utils/containerMath';
-import { rotateAboutWorldPivot } from '../utils/rotationGesture';
+import { applyAffine, worldAffineOf } from '../utils/geometry/containerMath';
+import { rotateAboutWorldPivot } from '../utils/geometry/rotationGesture';
 
 /**
  * The arrange commands turn a selection ±90° about ONE world pivot captured

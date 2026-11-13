@@ -8,6 +8,14 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## [Unreleased]
 
+## [1.1.0-rc.7] - 2026-11-13
+
+The seventh release candidate of 1.1.0: rc.6 with layout modifiers, keyed
+Track Matte edges, OGraf step markers and renderer support, and a new editor
+layout (menu bar, tool flyouts, double-click edit modes) shaped by the manual
+QA rounds since rc.6. rc.5 and rc.6 were prepared but never tagged; their
+changes ship here. Scenes saved before open unchanged.
+
 ### Added
 - Layout modifiers (Inspector → Properties → MODIFIERS), live in the editor and in the exported OGraf graphic, each one a checkbox:
   - Text Box: a text keeps a width (it shrinks, then squeezes), aligns left, centre or right, and caps its characters (also the OGraf field's limit).
@@ -21,14 +29,14 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 - Step markers (the flag button on the timeline, at the playhead) split a sequence into OGraf steps: each Next in a playout plays to the next marker and holds.
 - Crop ends the sequence at the playhead, and DURATION shows the new length (two decimals: 60 frames at 120 fps read 0.5 s).
 - The autosave delay is set in the Project panel.
-- A menu bar (File, Edit, Object, View, Help) above the toolbar runs the editor's commands; File > Project Settings holds the resolution, autosave delay and Library.
+- A menu bar (File, Edit, Object, View, Help) above the toolbar runs the commands the header and toolbar do not offer: File > Library… opens the graphic library and File > Project Settings… holds the resolution and autosave delay.
 - Tool flyouts: hold (or right-click) the shape button for Rectangle, Square, Triangle, Rhombus, Parallelogram and Star, or the ellipse button for Ellipse and Circle (always round); the picked tool stays on the button.
 - An options row under the toolbar edits the selected text: style, text, font, size, colour, outline and alignment.
 - Double-click edit modes: a path's points, a layer's mask or a Boolean result's operands open on a double-click on the layer and close on a double-click on empty stage (or Escape).
 - A Boolean result is one shape in the layer tree, and it can join another Boolean or become a path with Shape to Path.
 - Edit > Paste in Place puts the copy exactly over the original.
-- The Text tool draws a text box: a drag sets its width and font size, a click places a text.
-- A Media button (and File > Add Image or Video…) opens the file picker directly.
+- The Text tool draws a text like a shape: a drag sets its box and font size (8 to 1000), and the preview frame hugs the text it will place.
+- A Media button on the toolbar opens the file picker directly.
 - Ctrl+V pastes at the mouse; animated copies carry their motion.
 - Alt on a corner or edge handle scales about the centre; Alt while drawing draws from the centre.
 - Reset Transform returns layers to the pose they were made with; the conversion is named Shape to Path.
@@ -36,6 +44,11 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 - A rotation ring shows the turn while the rotate handle is dragged.
 - Freeform paths get a transform frame (corners and rotation) beside their points.
 - The timeline groups properties like After Effects (Trim Paths, Masks, Track Matte, Transform) and U shows only animated properties.
+- Text boxes: a shape can follow its text (FIT TO TEXT), hugging it up to a maximum width before the text shrinks to a minimum size and then hits a character limit.
+- OGraf export: the graphic follows the OGraf renderer contract, including non-real-time rendering; the package carries a thumbnail; public fields carry GDD types and can be hidden; a Track Matte's soft edge, strength and gradient are exported; every bundled text font goes into the package.
+- Copy and paste the whole layer selection; Shift draws a square or a circle; an imported scene names the active tab after its file.
+- A crash shows a recovery card instead of a blank page.
+- A second double-click inside a mask closes mask editing; the mask outline shows an add-point cursor and its inside a move cursor.
 
 ### Changed
 - The left panel is gone: the menu bar, the toolbar flyouts and the Media button replace it. The header is 42 px tall instead of 79 px.
@@ -53,7 +66,14 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 - A dragged layer also snaps by its own position, so a text lands on X/Y = 0.
 - New shapes drawn one after another differ in colour; a new text is 72 px.
 - Inspector cards (Text, Modifiers, Track Matte) start closed on each layer.
+- Autosaved images and videos live in a content-addressed IndexedDB store instead of the 5 MB autosave, and media no saved scene names are deleted when only one editor tab is open.
+- Undo snapshots share structure instead of copying the scene; the evaluator is faster; the import readers, the curve editor and the library load on demand.
 - Large scenes: layers re-render only when they change, a selection of more than 200 layers is framed by one box, and a large selection no longer mounts every timeline row (Select All on 3000 layers: playback 6 → 18 fps).
+- The stage grid fits the artboard with whole cells, starting from the axes (60 units at 1920×1080, 40 at 1280×720).
+- Each command has one home: File keeps only Library… and Project Settings…; Broadcast Mode is the header's switch.
+- The shadow is laid out like fill and stroke, with a Shadow Enabled checkbox; Inspector cards have no dividers.
+- A number field selects its value on focus and shows the committed value (30, not 030) after Enter.
+- A repeated notice replaces the one on screen instead of stacking; the minimum-points notice is an error.
 
 ### Fixed
 - A scene of more than 2,500 layers was refused on reload (the limit counted layers and their tracks), so the editor opened empty and the next autosave overwrote the work. The limit now counts layers (5,000), and a saved scene the editor cannot open is kept in its own storage key, with a message.
@@ -63,6 +83,23 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 - A shape or ellipse toolbar button activated without a pointer (a screen reader, a switch device) did nothing.
 - An SVG image stored as a percent-encoded data URL lost its non-ASCII text in the OGraf package ("Işık" became "I_1k"), and one with a bare `%` (`width="100%"`) or a `;charset=utf-8` parameter was refused by the export and the Lottie import.
 - Unlocking a layer re-enabled an Inspector control that had become disabled for its own reason while the layer was locked.
+- Each template tab keeps its own canvas size, frame rate and length; a new tab opens at 1920×1080; undo never writes another tab's layers; switching tabs clears the selection and edit modes.
+- A new sequence opens at its own length, and deleting the open sequence opens the next one properly.
+- A duplicated group keeps its stacking order, and its links point at the copies.
+- A Pen shape's frame covers its curved edges.
+- A double-click inside a mask no longer adds a point.
+- A dissolved Boolean operand no longer freezes at its baked pose.
+- A mirrored copy plays the exact mirror of its original.
+- The library reports a failed read, a write is done only when it commits, and Duplicate and Open report what really happened.
+- A panel that cannot load no longer takes the editor down, and asks for a reload.
+- Copy CSS in the curve editor confirms only a copy that happened, and the result is announced to screen readers.
+- The Media button says when a file cannot be added; only YouTube hosts open in the YouTube player.
+- A corrupt stored preset no longer crashes the editor.
+- An undo snapshot that differs only by -0 is not a new undo step.
+- Layer search finds a dotless ı when the query types i.
+
+### Security
+- Development dependencies updated to close the npm audit advisories: vite 8.3.4, vitest 5.0.3, undici and fast-uri.
 
 ## [1.1.0-rc.6] - 2026-10-30
 

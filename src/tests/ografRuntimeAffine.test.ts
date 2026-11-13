@@ -10,7 +10,7 @@
  *
  * The editor preview and the static SVG renderer read the map through
  * `worldAffineOf`; the generated `graphic.mjs` cannot import the application, so
- * it runs the canonical helpers embedded from `utils/containerMath` — the same
+ * it runs the canonical helpers embedded from `utils/geometry/containerMath` — the same
  * source, not a second copy of the law. This file proves the emitted helper set is
  * closed under its own references, that the spelling decision is the canonical
  * `affineTrsReading`, and that a layer whose map IS a TRS keeps the historical
@@ -18,8 +18,8 @@
  */
 import { describe, expect, test } from 'vitest';
 import type { SceneData, SceneLayer, WorldTransform } from '../types/composition';
-import { affineSvgTransform, affineTrsReading, worldAffineOf } from '../utils/containerMath';
-import { EDITOR_CAMERA_CENTER } from '../utils/projectCoordinates';
+import { affineSvgTransform, affineTrsReading, worldAffineOf } from '../utils/geometry/containerMath';
+import { EDITOR_CAMERA_CENTER } from '../utils/geometry/projectCoordinates';
 import { generateGraphicModule } from '../ograf/runtimeTemplate';
 import { renderOGrafSvg } from '../ograf/svgRenderer';
 import { evaluateOGrafScene } from '../ograf/evaluation';

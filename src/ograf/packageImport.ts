@@ -1,7 +1,7 @@
 import { unzipSync } from 'fflate';
-import { MAX_IMPORT_CHARACTERS, type ImportDiagnostic } from '../utils/importValidation';
+import { MAX_IMPORT_CHARACTERS, type ImportDiagnostic } from '../utils/persistence/importValidation';
 import { OGRAF_PACKAGE_LIMITS } from './packageLimits';
-import { hasCaseInsensitiveCollision, isPrototypeSensitiveKey, isReservedWindowsName, isSafePackageRelativePath, normalizePackagePath } from '../utils/pathSafety';
+import { hasCaseInsensitiveCollision, isPrototypeSensitiveKey, isReservedWindowsName, isSafePackageRelativePath, normalizePackagePath } from '../utils/persistence/pathSafety';
 
 /**
  * Reads an OGraf package back into the editable scene it was exported from.

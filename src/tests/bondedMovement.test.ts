@@ -11,8 +11,8 @@ import { renderHook, act } from '@testing-library/react';
 import type React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { useInspector } from '../hooks/useInspector';
-import { evaluateTransform } from '../utils/evaluateTransform';
-import { makeEmptyChannels } from '../utils/defaults';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { makeEmptyChannels } from '../utils/animation/defaults';
 import type { CharacterPart, Track, Transform, TrackChannel, PropertyKeyframe } from '../types/animator';
 
 const base = (over: Partial<Transform> = {}): Transform =>

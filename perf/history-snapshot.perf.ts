@@ -9,7 +9,7 @@
  * the size of a typical photo, because media sits in the scene as a data URL.
  */
 import { buildProfileScene, DEFAULT_PROFILE_SCENES } from './sceneBuilder';
-import { structurallyEqual } from '../src/utils/historySnapshot';
+import { structurallyEqual } from '../src/utils/persistence/historySnapshot';
 import type { CharacterPart } from '../src/types/animator';
 
 const median = (samples: number[]) => [...samples].sort((a, b) => a - b)[Math.floor(samples.length / 2)];

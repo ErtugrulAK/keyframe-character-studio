@@ -2,6 +2,7 @@
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { expect, test } from 'vitest';
+import { onAir } from './helpers/ografOnAir';
 
 /** The host executes the module exported by production-minified compiler code. */
 test('a production-exported OGraf module loads and renders a deep affine child', async () => {
@@ -51,6 +52,7 @@ test('a production-exported OGraf module loads and renders a deep affine child',
   };
   const graphic = new Graphic();
   expect((await graphic.load({ renderType: 'realtime' })).statusCode).toBe(200);
+  await onAir(graphic);
   const transform = /data-layer-id="child"[^>]*><g transform="([^"]+)"/u.exec(graphic.innerHTML)?.[1];
   const matrix = transform && /matrix\(([^)]+)\)/u.exec(transform);
   if (!matrix) throw new Error('The sheared child was not rendered with its exact affine map.');

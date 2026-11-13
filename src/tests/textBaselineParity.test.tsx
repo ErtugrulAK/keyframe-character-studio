@@ -17,8 +17,8 @@ import { renderTextOrClonerPart } from '../components/Canvas/renderers/parts/Tex
 import { renderOGrafSvg } from '../ograf/svgRenderer';
 import { evaluateOGrafScene } from '../ograf/evaluation';
 import { generateGraphicModule } from '../ograf/runtimeTemplate';
-import { textMaskContent } from '../utils/matte';
-import { getPartLocalBounds } from '../utils/bounds';
+import { textMaskContent } from '../utils/layers/matte';
+import { getPartLocalBounds } from '../utils/geometry/bounds';
 
 const textLayer: SceneLayer = {
   id: 'headline', name: 'Headline', type: 'custom_text',
@@ -95,6 +95,15 @@ describe('text sits on its baseline in every renderer', () => {
   it('the stage and the OGraf/GIF static renderer draw the text bold', () => {
     expect(textTag(stageText({}))).toContain('font-weight="bold"');
     expect(textTag(renderOGrafSvg(evaluateOGrafScene(scene, 0)))).toContain('font-weight="bold"');
+  });
+
+  it('the stage, the static renderer and the runtime paint the outline under the fill', () => {
+    // Variable fonts overlap their contours; an outline on top drew lines inside the letters.
+    const outlined = { strokeEnabled: true, strokeWidth: 4 };
+    const outlinedScene: SceneData = { ...scene, layers: [{ ...textLayer, ...outlined }] };
+    expect(textTag(stageText(outlined))).toContain('paint-order="stroke"');
+    expect(textTag(renderOGrafSvg(evaluateOGrafScene(outlinedScene, 0)))).toContain('paint-order="stroke"');
+    expect(textTag(runtimeMarkup(outlinedScene, 'x-ograf-text-paint-order'))).toContain('paint-order="stroke"');
   });
 });
 

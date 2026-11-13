@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { openProjectSettings } from './fixtures/toolbarTools';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -111,9 +112,10 @@ test('project resolution changes preserve imported image placement and dimension
     };
   });
 
-  await page.getByText('Project', { exact: true }).click();
+  await openProjectSettings(page);
   await page.getByRole('button', { name: '1440p (16:9)' }).click();
   await expect(page.getByText('1440p (16:9)', { exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
 
   const after = await page.evaluate(() => {
     const image = document.querySelector<SVGImageElement>('image[href="photo.png"]');

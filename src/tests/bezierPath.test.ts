@@ -7,7 +7,7 @@ import {
   legacyFreeformPointsToPath,
   legacyMaskPointsToPath,
   normalizeBezierPath,
-} from '../utils/bezierPath';
+} from '../utils/geometry/bezierPath';
 
 describe('bezierPath', () => {
   it('builds straight and cubic SVG segments from one path contract', () => {

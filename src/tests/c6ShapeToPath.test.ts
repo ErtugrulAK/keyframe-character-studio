@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, Track } from '../types/animator';
-import { BEZIER_ARC_KAPPA, convertShapeToEditablePath, ellipseToPath, rectangleToPath, shapeToPathBlockReason } from '../utils/shapeToPath';
-import { sampleBezierPath } from '../utils/bezierPath';
-import { getPartBounds } from '../utils/bounds';
-import { maskPathNormalizationSize } from '../utils/layerMasks';
+import { BEZIER_ARC_KAPPA, convertShapeToEditablePath, ellipseToPath, rectangleToPath, shapeToPathBlockReason } from '../utils/geometry/shapeToPath';
+import { sampleBezierPath } from '../utils/geometry/bezierPath';
+import { getPartBounds } from '../utils/geometry/bounds';
+import { maskPathNormalizationSize } from '../utils/layers/layerMasks';
 
 /**
  * C6 — Rectangle (and the other basic shapes) → editable path. The converted

@@ -5,7 +5,7 @@ import {
   mergeImportedPresets,
   isDefaultPresetId,
   PRESET_EXPORT_VERSION,
-} from '../utils/presetExportImport';
+} from '../utils/animation/presetExportImport';
 import type { CustomMotionPreset, CustomMotionPresetKeyframe } from '../types/animator';
 import { DEFAULT_INITIAL_PRESETS } from '../context/initialStateData';
 

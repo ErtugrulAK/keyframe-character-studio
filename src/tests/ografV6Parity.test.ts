@@ -5,6 +5,7 @@ import { layerMaskPathChannel } from '../types/animator';
 import { compileOGrafPackage } from '../ograf/packageCompiler';
 import { evaluateOGrafScene } from '../ograf/evaluation';
 import { renderOGrafSvg } from '../ograf/svgRenderer';
+import { onAir } from './helpers/ografOnAir';
 
 const makePath = (offset: number, tangent = false): BezierPath => ({
   version: 1,
@@ -101,6 +102,7 @@ describe('OGraf V6 compositor parity', () => {
     const graphic = document.createElement(tag);
     document.body.appendChild(graphic);
     await graphic.load({ renderType: 'realtime' });
+    await onAir(graphic);
     graphic._currentFrame = 5;
     graphic._render();
     const canonical = renderOGrafSvg(evaluateOGrafScene(scene, 5));

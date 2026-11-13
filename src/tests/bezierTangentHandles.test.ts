@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { initializeSmoothHandles, legacyFreeformPointsToPath, createBezierPath } from '../utils/bezierPath';
+import { initializeSmoothHandles, legacyFreeformPointsToPath, createBezierPath } from '../utils/geometry/bezierPath';
 import type { BezierPath } from '../types/animator';
 
 const square = (): BezierPath => legacyFreeformPointsToPath([

@@ -2,16 +2,18 @@ import React, { useCallback, useEffect, useLayoutEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnimatorProvider } from './context/AnimatorContext';
 import { EditorContextMenuProvider } from './context/EditorContextMenuContext';
+import { EditorCrashBoundary } from './components/Shared/EditorCrashBoundary';
 import { useAnimator } from './context/useAnimator';
 import { HeaderBar } from './components/Header/HeaderBar';
 import { AuthoringToolbar } from './components/Toolbar/AuthoringToolbar';
-import { LeftToolbar } from './components/Toolbar/LeftToolbar';
+import { MenuBar } from './components/MenuBar/MenuBar';
+import { ToolOptionsBar } from './components/Toolbar/ToolOptionsBar';
 import { StageCanvas } from './components/Canvas/StageCanvas';
 import { PropertyInspector } from './components/Inspector/PropertyInspector';
 import { SequencerTimeline } from './components/Timeline/SequencerTimeline';
 import { LiveDirectorPanel } from './components/Broadcast/LiveDirectorPanel';
 import { useDockedPanelEdge } from './hooks/useDockedPanelEdge';
-import { REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, closeDocksForNarrowStage, isPhoneLayout } from './utils/workspaceLayout';
+import { REFIT_UNTOUCHED_CAMERA_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT, isPhoneLayout } from './utils/editor/workspaceLayout';
 
 import './kcsEditorTheme.css';
 
@@ -44,35 +46,29 @@ const MainAppContent: React.FC = () => {
   const handleModeSwapAnimationEnd = useCallback((event: React.AnimationEvent<HTMLDivElement>) => {
     if (event.animationName === 'kcs-mode-enter') finishModeSwap();
   }, [finishModeSwap]);
-  const leftToolbar = useDockedPanelEdge(true, 'left');
   const inspector = useDockedPanelEdge(true, 'right');
 
-  // C3 — a narrow (or browser-zoomed) window opens with the left dock closed
+  // A narrow (or browser-zoomed) window opens with the left dock closed
   // when the stage would otherwise be narrower than MIN_OPENING_STAGE_WIDTH.
   // Measured once from the real first layout, before the first paint (the
   // microtask runs before the browser paints, outside React's commit), then the
   // untouched opening camera is re-fitted to the wider stage. After this the
   // dock opens and closes only when the user says so, or (C11, below) when the
   // window itself is made narrower.
-  // C11: on a phone-width window the docks open OVER the stage
+  // On a phone-width window the docks open OVER the stage
   // (kcsEditorTheme.css), so they never squeeze it to nothing, and the
   // inspector opens closed too — open, it would cover the whole stage.
-  const snapLeftDock = leftToolbar.snap;
   const snapInspector = inspector.snap;
   const closeDocksIfStageNarrow = useCallback((): boolean => {
     const stage = document.querySelector('.stage-canvas-container');
     if (!stage) return false;
     if (isPhoneLayout()) {
-      // The docks would cover the stage: both start (or become) closed.
-      snapLeftDock(false);
+      // The inspector would cover the stage: it starts (or becomes) closed.
       snapInspector(false);
       return true;
     }
-    return closeDocksForNarrowStage(
-      () => stage.getBoundingClientRect().width,
-      [() => snapLeftDock(false)],
-    );
-  }, [snapLeftDock, snapInspector]);
+    return false;
+  }, [snapInspector]);
   useLayoutEffect(() => {
     if (appMode !== 'edit') return;
     let cancelled = false;
@@ -87,7 +83,7 @@ const MainAppContent: React.FC = () => {
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // C11 — the same rule when the WINDOW is made narrower (resizing, snapping
+  // The same rule when the WINDOW is made narrower (resizing, snapping
   // the browser to half the screen, rotating a tablet). Only a shrink acts, so
   // a dock the user reopens in a narrow window is never closed again under them.
   useEffect(() => {
@@ -111,7 +107,7 @@ const MainAppContent: React.FC = () => {
     };
   }, [appMode, closeDocksIfStageNarrow]);
 
-  // R2-07 — the browser's native context menu is suppressed for the whole
+  // The browser's native context menu is suppressed for the whole
   // editor: canvas, layer list, sequence tabs, toolbar, timeline, Details and
   // every text field. The listener runs in the CAPTURE phase on `document`, so
   // it always gets there first: no component can right-click its way around it,
@@ -127,7 +123,7 @@ const MainAppContent: React.FC = () => {
 
   return (
     /*
-     * R3-02 / R4-01 — the two dock handles are children of the editor WORKSPACE
+     * The two dock handles are children of the editor WORKSPACE
      * ROW (`.main-layout`), the box the timeline resize shortens from below. The
      * row's TOP edge never moves — only its height does — so a handle pinned a
      * fixed distance below that edge keeps the same vertical centre at every
@@ -137,19 +133,14 @@ const MainAppContent: React.FC = () => {
      * read, and the panel geometry tokens they measure.
      */
     <div
-      className={`app-container ${leftToolbar.visible ? '' : 'left-toolbar-hidden'} ${inspector.visible ? '' : 'inspector-hidden'} ${modeSwapActive ? 'kcs-mode-swap' : ''}`}
+      className={`app-container ${inspector.visible ? '' : 'inspector-hidden'} ${modeSwapActive ? 'kcs-mode-swap' : ''}`}
       onAnimationEnd={handleModeSwapAnimationEnd}
     >
       <MemoHeaderBar />
+      {appMode === 'edit' && <MenuBar />}
       {appMode === 'edit' && <MemoAuthoringToolbar />}
+      {appMode === 'edit' && <ToolOptionsBar />}
       <div className="main-layout">
-        {appMode === 'edit' && (
-          <LeftToolbar
-            isHidden={!leftToolbar.visible}
-            edgeStyle={leftToolbar.edgeStyle}
-            panelRef={leftToolbar.panelRef}
-          />
-        )}
         <MemoStageCanvas />
         {appMode === 'edit' && (
           <PropertyInspector
@@ -157,19 +148,6 @@ const MainAppContent: React.FC = () => {
             edgeStyle={inspector.edgeStyle}
             panelRef={inspector.panelRef}
           />
-        )}
-        {appMode === 'edit' && (
-          <button
-            type="button"
-            ref={leftToolbar.handleRef as React.RefObject<HTMLButtonElement>}
-            className="sidebar-handle left-toolbar-toggle"
-            aria-label={leftToolbar.visible ? 'Hide Left Toolbar' : 'Show Left Toolbar'}
-            aria-expanded={leftToolbar.visible}
-            aria-controls="left-toolbar-panel"
-            onClick={leftToolbar.toggle}
-          >
-            {leftToolbar.visible ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-          </button>
         )}
         {appMode === 'edit' && (
           <button
@@ -193,9 +171,12 @@ const MainAppContent: React.FC = () => {
 export function App() {
   return (
     <AnimatorProvider>
-      <EditorContextMenuProvider>
-        <MainAppContent />
-      </EditorContextMenuProvider>
+      {/* Inside the provider: a crash keeps the document in memory to save. */}
+      <EditorCrashBoundary>
+        <EditorContextMenuProvider>
+          <MainAppContent />
+        </EditorContextMenuProvider>
+      </EditorCrashBoundary>
     </AnimatorProvider>
   );
 }

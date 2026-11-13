@@ -34,15 +34,6 @@ export const ShapeCreationPreview: React.FC<ShapeCreationPreviewProps> = ({ type
     const baselineY = ink ? bounds.centerY - (ink.minY + ink.maxY) / 2 : bounds.centerY;
     return (
       <g data-testid="shape-creation-preview" pointerEvents="none">
-        <rect
-          data-testid="text-creation-area"
-          x={bounds.minX}
-          y={bounds.minY}
-          width={bounds.width}
-          height={bounds.height}
-          fill="rgba(56, 189, 248, 0.06)"
-          stroke="none"
-        />
         {ink && (
           <rect
             data-testid="text-creation-frame"

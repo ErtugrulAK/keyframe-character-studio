@@ -119,7 +119,9 @@ test('the Text tool places nothing on a plain click, and its preview fits the bo
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   await page.mouse.move(to.x, to.y, { steps: 6 });
-  const area = (await page.getByTestId('text-creation-area').boundingBox())!;
+  // QA 2026-11-13 (qa23): only the text's dashed frame is drawn, no shaded area.
+  await expect(page.getByTestId('text-creation-area')).toHaveCount(0);
+  const area = { x: from.x, y: from.y, width: to.x - from.x, height: to.y - from.y };
   const ink = (await page.getByTestId('text-creation-preview').boundingBox())!;
   expect(ink.x).toBeGreaterThanOrEqual(area.x - 1);
   expect(ink.x + ink.width).toBeLessThanOrEqual(area.x + area.width + 1);

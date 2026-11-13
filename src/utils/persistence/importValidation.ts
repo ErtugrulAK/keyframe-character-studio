@@ -340,6 +340,17 @@ const sharedLayerValueProblem = (record: Record<string, unknown>, path: string, 
     const effectError = effectsValidationError(record.effects, owner, maskIds);
     if (effectError) return sceneProblem('KCS_IMPORT_INVALID_EFFECT', `${path}.effects`, effectError, REIMPORT_ACTION);
   }
+  if (record.textEffect !== undefined) {
+    const effect = asRecord(record.textEffect);
+    const count = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+    const valid = effect
+      && (effect.kind === 'typewriter' || effect.kind === 'count')
+      && count(effect.startFrame) && count(effect.durationFrames)
+      && (effect.from === undefined || (typeof effect.from === 'number' && Number.isFinite(effect.from)));
+    if (!valid) {
+      return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.textEffect`, `${owner} declares a text effect that is not a typewriter or a count with a start and a length in frames.`);
+    }
+  }
   for (const field of ['matte', 'trackMatte', 'textFit', 'fitToText', 'follow', 'justify', 'repeater'] as const) {
     if (record[field] !== undefined && !asRecord(record[field])) {
       return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.${field}`, `${owner} declares a ${field} that is not an object.`);

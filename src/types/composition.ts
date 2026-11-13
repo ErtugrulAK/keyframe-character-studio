@@ -136,6 +136,8 @@ export interface SceneLayer {
   textValue?: string;
   fontSize?: number;
   fontFamily?: string;
+  /** Text: a typewriter or a counting number over time (`utils/animation/textEffects`). */
+  textEffect?: import('../utils/animation/textEffects').TextEffect;
   /** Text: its box, alignment and hiding (`utils/layers/layoutModifiers`). */
   textFit?: TextFitSettings;
   /** Box-like shape: Auto Size, the text layer whose width it follows (`utils/layers/layoutModifiers`). */
@@ -276,9 +278,13 @@ export interface LayerContent {
   points?: { x: number; y: number }[];
   /** V6 canonical freeform path. */
   path?: BezierPath;
+  /** What a text shows at this frame (`utils/animation/textEffects`); absent = `textValue` as written. */
+  displayedText?: import('../utils/animation/textEffects').DisplayedText;
   textValue?: string;
   fontSize?: number;
   fontFamily?: string;
+  /** Text: a typewriter or a counting number over time (`utils/animation/textEffects`). */
+  textEffect?: import('../utils/animation/textEffects').TextEffect;
   /** Text: its box, alignment and hiding (`utils/layers/layoutModifiers`). */
   textFit?: TextFitSettings;
   /** Box-like shape: Auto Size, the text layer whose width it follows (`utils/layers/layoutModifiers`). */

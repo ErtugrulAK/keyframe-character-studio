@@ -425,6 +425,8 @@ export interface CharacterPart {
   baseTransform: Transform;
   textValue?: string;
   fontSize?: number;
+  /** Text: a typewriter or a counting number over time (`utils/animation/textEffects`). */
+  textEffect?: import('../utils/animation/textEffects').TextEffect;
   /** Text: its box, alignment and hiding (`utils/layers/layoutModifiers`). */
   textFit?: TextFitSettings;
   /** Box-like shape: Auto Size, the text layer whose width it follows (`utils/layers/layoutModifiers`). */

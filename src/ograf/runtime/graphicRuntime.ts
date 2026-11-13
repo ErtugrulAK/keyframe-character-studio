@@ -20,6 +20,7 @@ import type { createWorldAffineAlgebra, WorldAffine } from '../../utils/geometry
 import type { createShapeAppearance } from '../../utils/layers/shapeAppearance';
 import type { describePaint, describeText } from '../../utils/layers/drawDescriptor';
 import type { createTrackMatteMarkup, TrackMatteGradientInput } from '../trackMatteMarkup';
+import type { createTextEffects, DisplayedText, TextEffect } from '../../utils/animation/textEffects';
 import type { createLayoutModifiers, FitToTextSettings, FollowSettings, JustifySettings, LookAtSettings, RepeaterSettings, TextFitSettings } from '../../utils/layers/layoutModifiers';
 
 export interface RuntimePoint {
@@ -98,6 +99,8 @@ export interface RuntimeLayer {
   strokeWidth?: number;
   strokeAlignment?: string;
   textValue?: string;
+  /** A typewriter or a count over time (`utils/animation/textEffects`). */
+  textEffect?: TextEffect;
   fontSize?: number;
   fontFamily?: string;
   textOrigin?: string;
@@ -161,6 +164,8 @@ export interface EvaluatedRuntimeLayer extends RuntimeLayer {
   trimPathEnd: number;
   trimPathOffset: number;
   masks: EvaluatedRuntimeMask[];
+  /** What the text shows at this frame (`utils/animation/textEffects`), as in the editor. */
+  displayedText?: DisplayedText;
 }
 
 export interface RuntimeActionResult {
@@ -193,6 +198,8 @@ export interface GraphicRuntimeEnvironment {
   describeText: typeof describeText;
   /** Layout modifiers: text boxes, auto size, follow, justify, repeater (`utils/layers/layoutModifiers`). */
   layout: ReturnType<typeof createLayoutModifiers>;
+  /** Text over time: typewriter and count (`utils/animation/textEffects`), the editor's own rules. */
+  textEffects: ReturnType<typeof createTextEffects>;
   /** The Track Matte mask, as the editor draws it (`ograf/trackMatteMarkup`). */
   trackMatteMarkup: ReturnType<typeof createTrackMatteMarkup>;
   /**
@@ -217,6 +224,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     describePaint,
     describeText,
     layout,
+    textEffects,
     trackMatteMarkup,
   } = environment;
   const STEP_ENDS = environment.stepEnds && environment.stepEnds.length > 0 ? environment.stepEnds : [SCENE.totalFrames];
@@ -658,6 +666,9 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
         trimPathEnd: channelValue(channels.trimPathEnd, frame, layer.trimPathEnd === undefined ? 1 : layer.trimPathEnd),
         trimPathOffset: channelValue(channels.trimPathOffset, frame, layer.trimPathOffset || 0),
       } as EvaluatedRuntimeLayer;
+      if (layer.textEffect && layer.textValue) {
+        evaluated.displayedText = textEffects.resolveDisplayedText(layer.textValue, layer.textEffect, frame);
+      }
       // A keyed Track Matte feather / strength / gradient angle, as the editor
       // evaluates it (`evaluateTrackMatte`): the channel over the packaged value.
       const render = layer.trackMatte && layer.trackMatte.render;
@@ -724,6 +735,13 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
    * A text layer's glyphs, painted as the editor paints them. A silhouette
    * caller (matte, clip) passes the paint that replaces the layer's own.
    */
+  /** The characters a text draws: its effect's result (the rest kept in place, transparent), else the text. */
+  function textContent(layer: RuntimeLayer, written: string): string {
+    const shown = (layer as EvaluatedRuntimeLayer).displayedText;
+    if (!shown) return escapeXml(written);
+    return escapeXml(shown.shown) + (shown.hidden ? '<tspan fill-opacity="0" stroke-opacity="0">' + escapeXml(shown.hidden) + '</tspan>' : '');
+  }
+
   function text(layer: RuntimeLayer, silhouette?: { fill: string; stroke: string }): string {
     const paint = describePaint(resolveShapeAppearance(layer));
     const glyphs = describeText(layer, layer.textOrigin === 'center' ? (layer.fontSize || 24) * textBoxCentreEm : 0);
@@ -740,7 +758,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       'font-size': glyphs.fontSize,
       'font-weight': glyphs.fontWeight,
       'font-family': glyphs.fontFamily,
-    }) + '>' + escapeXml(glyphs.text) + '</text>';
+    }) + '>' + textContent(layer, glyphs.text) + '</text>';
   }
 
   function image(layer: RuntimeLayer, imageReferences: Record<string, string>, props: SvgAttributes): string {

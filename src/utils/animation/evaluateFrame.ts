@@ -15,6 +15,7 @@
  *   - proceduralAnimation.ts (Step 4 Phase A)
  */
 
+import { resolveDisplayedText } from './textEffects';
 import type { CharacterPart, CustomMotionPreset, AnimationTrackData, LayerMask } from '../../types/animator';
 import type {
   EvaluatedFrame,
@@ -126,7 +127,7 @@ export function evaluateFrame(
       },
       opacity: finalOpacity,
       visible,
-      content: extractContent(layer, trim, masks, evaluateTrackMatte(layer.trackMatte, track, layerFrame, sequenceId || 'Sequence')),
+      content: extractContent(layer, trim, masks, evaluateTrackMatte(layer.trackMatte, track, layerFrame, sequenceId || 'Sequence'), layerFrame),
       zIndex: layer.zIndex,
     });
   }
@@ -143,6 +144,7 @@ function extractContent(
   trim: ReturnType<typeof evaluateTrimPath>,
   masks?: LayerMask[],
   trackMatte: CharacterPart['trackMatte'] = layer.trackMatte,
+  frame = 0,
 ): LayerContent {
   return {
     fillColor: layer.fillColor,
@@ -158,6 +160,8 @@ function extractContent(
     trackMatte,
     effects: layer.effects,
     textValue: layer.textValue,
+    // The one text-over-time authority; renderers draw this and keep no clock.
+    ...(layer.textEffect && layer.textValue ? { displayedText: resolveDisplayedText(layer.textValue, layer.textEffect, frame) } : {}),
     fontSize: layer.fontSize,
     fontFamily: layer.fontFamily,
     ...(layer.textOrigin !== undefined ? { textOrigin: layer.textOrigin } : {}),

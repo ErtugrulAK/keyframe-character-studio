@@ -113,7 +113,7 @@ const PartContentView: React.FC<PartContentProps> = ({ part, content, booleanCon
   };
 
   if (rp.type === 'custom_video' || rp.type === 'custom_image') return <>{renderMediaPart({ part: rp, fill, stroke, isSelected })}</>;
-  if (rp.type === 'custom_text' || rp.type === 'mograph_cloner') return <>{renderTextOrClonerPart({ part: rp, fill, stroke, isSelected, currentFrame: frame })}</>;
+  if (rp.type === 'custom_text' || rp.type === 'mograph_cloner') return <>{renderTextOrClonerPart({ part: rp, fill, stroke, isSelected, currentFrame: frame, displayedText: content.displayedText })}</>;
   return <>{renderShapePart({ part: rp, fill, stroke, isSelected, isGhost })}</>;
 };
 
@@ -122,7 +122,9 @@ const sameContentFields = (a: EvaluatedLayer['content'], b: EvaluatedLayer['cont
   if (a === b) return true;
   const keys = Object.keys(a) as (keyof EvaluatedLayer['content'])[];
   if (keys.length !== Object.keys(b).length) return false;
-  return keys.every((key) => Object.is(a[key], b[key]));
+  return keys.every((key) => Object.is(a[key], b[key])
+    // A text effect's result is a fresh object every frame: equal when it shows the same characters.
+    || (key === 'displayedText' && a.displayedText?.shown === b.displayedText?.shown && a.displayedText?.hidden === b.displayedText?.hidden));
 };
 
 const PartContent = React.memo(PartContentView, (prev, next) => (

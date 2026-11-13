@@ -6,7 +6,7 @@ import { sceneStepMarkers, stepEndFrames } from '../utils/animation/stepMarkers'
 import {
   runtimeCompareByStackingOrder,
   runtimeDescribePaint,
-  runtimeDescribeText, runtimeLayoutModifiers, runtimeTrackMatteMarkup,
+  runtimeDescribeText, runtimeLayoutModifiers, runtimeTextEffects, runtimeTrackMatteMarkup,
   runtimeGraphicFactory,
   runtimeResolveShapeAppearance,
   runtimeResolveMatteSource,
@@ -81,6 +81,7 @@ const RUNTIME = (${runtimeGraphicFactory()})({
   describePaint: ${runtimeDescribePaint()},
   describeText: ${runtimeDescribeText()},
   layout: ${runtimeLayoutModifiers()},
+  textEffects: ${runtimeTextEffects()},
   trackMatteMarkup: ${runtimeTrackMatteMarkup()},
   stepEnds: ${JSON.stringify(stepEndFrames(sceneStepMarkers(sceneData), sceneData.totalFrames))},
 });

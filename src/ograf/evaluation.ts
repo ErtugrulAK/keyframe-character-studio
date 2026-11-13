@@ -46,6 +46,7 @@ function toCharacterPart(layer: SceneLayer): CharacterPart {
     trackMatte: layer.trackMatte,
     effects: layer.effects,
     textValue: layer.textValue,
+    ...(layer.textEffect ? { textEffect: layer.textEffect } : {}),
     fontSize: layer.fontSize,
     fontFamily: layer.fontFamily,
     ...(layer.textOrigin !== undefined ? { textOrigin: layer.textOrigin } : {}),

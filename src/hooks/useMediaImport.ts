@@ -2,6 +2,39 @@ import { useCallback } from 'react';
 import { useAnimatorSlice } from '../context/useAnimator';
 import type { ImageContentBounds } from '../types/animator';
 import { contentBoundsInLocalUnits, visibleContentRectOfImage } from '../utils/geometry/imageContentBounds';
+import { fitImageSize, replacedImageSize } from '../utils/geometry/imageLayerSize';
+
+interface LoadedImage {
+  dataUrl: string;
+  naturalWidth: number;
+  naturalHeight: number;
+  image: HTMLImageElement;
+}
+
+/** Reads an image file into a data URL and a decoded image; rejects when the file cannot be read or decoded. */
+const loadImageFile = (file: File): Promise<LoadedImage> => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onerror = () => reject(new Error('read'));
+  reader.onload = (event) => {
+    const dataUrl = event.target?.result as string;
+    const image = new Image();
+    image.onload = () => resolve({ dataUrl, naturalWidth: image.naturalWidth, naturalHeight: image.naturalHeight, image });
+    image.onerror = () => reject(new Error('decode'));
+    image.src = dataUrl;
+  };
+  reader.readAsDataURL(file);
+});
+
+/**
+ * The drawn box is the whole bitmap, transparent padding included. Measuring
+ * the visible pixels is what keeps the layer's bounds — control points, gizmo,
+ * resize handles — on the art.
+ */
+const contentBoundsFor = (loaded: LoadedImage, width: number, height: number): ImageContentBounds | undefined => {
+  if (!loaded.naturalWidth || !loaded.naturalHeight) return undefined;
+  const content = visibleContentRectOfImage(loaded.image);
+  return content ? contentBoundsInLocalUnits(content, loaded.naturalWidth, loaded.naturalHeight, width, height) : undefined;
+};
 
 /**
  * Adds picked or dropped image and video files as layers: an image is sized to
@@ -17,43 +50,16 @@ export const useMediaImport = () => {
       // added says so whichever way it came in instead of doing nothing.
       const refuse = () => showToast(`"${file.name}" could not be read.`, 'error');
       if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onerror = refuse;
-        reader.onload = (e) => {
-          const dataUrl = e.target?.result as string;
-          const img = new Image();
-          img.onload = () => {
-            let w = 140;
-            let h = 140;
-            let imageContentBounds: ImageContentBounds | undefined;
-            if (img.naturalWidth && img.naturalHeight) {
-              const maxDim = 150;
-              if (img.naturalWidth >= img.naturalHeight) {
-                w = maxDim;
-                h = Math.round(maxDim * (img.naturalHeight / img.naturalWidth));
-              } else {
-                h = maxDim;
-                w = Math.round(maxDim * (img.naturalWidth / img.naturalHeight));
-              }
-              // The drawn box is the whole bitmap, transparent padding included.
-              // Measuring the visible pixels here is what keeps the layer's
-              // bounds — control points, gizmo, resize handles — on the art.
-              const content = visibleContentRectOfImage(img);
-              if (content) {
-                imageContentBounds = contentBoundsInLocalUnits(content, img.naturalWidth, img.naturalHeight, w, h);
-              }
-            }
-            addCustomPart('custom_image', cleanName, {
-              imageUrl: dataUrl,
-              width: w,
-              height: h,
-              ...(imageContentBounds ? { imageContentBounds } : {}),
-            });
-          };
-          img.onerror = refuse;
-          img.src = dataUrl;
-        };
-        reader.readAsDataURL(file);
+        loadImageFile(file).then((loaded) => {
+          const { width, height } = fitImageSize(loaded.naturalWidth, loaded.naturalHeight);
+          const imageContentBounds = contentBoundsFor(loaded, width, height);
+          addCustomPart('custom_image', cleanName, {
+            imageUrl: loaded.dataUrl,
+            width,
+            height,
+            ...(imageContentBounds ? { imageContentBounds } : {}),
+          });
+        }, refuse);
       } else if (file.type.startsWith('video/') || /\.(mp4|webm|mov|ogg)$/i.test(file.name)) {
         const reader = new FileReader();
         reader.onerror = refuse;
@@ -65,4 +71,29 @@ export const useMediaImport = () => {
       }
     });
   }, [addCustomPart, showToast]);
+};
+
+/**
+ * Replaces an image layer's picture and keeps everything else: position,
+ * rotation, scale, animation, masks, mattes and effects. The layer keeps its
+ * width; its height follows the new picture's proportions, so nothing is
+ * cropped. One undo step.
+ */
+export const useReplaceImage = () => {
+  const { setCharacterParts, showToast } = useAnimatorSlice('setCharacterParts', 'showToast');
+  return useCallback((partId: string, file: File) => {
+    if (!file.type.startsWith('image/')) {
+      showToast(`"${file.name}" is not an image.`, 'error');
+      return;
+    }
+    loadImageFile(file).then((loaded) => {
+      setCharacterParts((parts) => parts.map((part) => {
+        if (part.id !== partId || part.type !== 'custom_image') return part;
+        const { width, height } = replacedImageSize(part.width, part.height, loaded.naturalWidth, loaded.naturalHeight);
+        const imageContentBounds = contentBoundsFor(loaded, width, height);
+        const { imageContentBounds: _previous, ...rest } = part;
+        return { ...rest, imageUrl: loaded.dataUrl, width, height, ...(imageContentBounds ? { imageContentBounds } : {}) };
+      }));
+    }, () => showToast(`"${file.name}" could not be read.`, 'error'));
+  }, [setCharacterParts, showToast]);
 };

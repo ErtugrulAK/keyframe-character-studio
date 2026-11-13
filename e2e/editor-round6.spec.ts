@@ -262,3 +262,37 @@ test('the safe-area guides frame 93 % and 90 % of the artboard, and are off by d
   expect(title.height / artboard.height).toBeCloseTo(0.9, 2);
   expect(action.x + action.width / 2).toBeCloseTo(artboard.x + artboard.width / 2, 0);
 });
+
+test('Replace Image swaps the picture and keeps the layer, its animation and its width', async ({ page }) => {
+  // Round 6 (OGraf Studio review): replace an image without rebuilding the layer.
+  const pixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  await seed(page, [{ id: 'img', name: 'Photo', type: 'custom_image', x: 100, y: -40, rotation: 15, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, width: 100, height: 100, imageUrl: pixel }]);
+  await page.evaluate((key) => {
+    const doc = JSON.parse(localStorage.getItem(key) ?? '{}');
+    doc.tracks[0].channels = { x: [{ id: 'kx', frame: 0, value: 100, easing: 'linear', templateId: 'Sequence' }, { id: 'kx2', frame: 30, value: 300, easing: 'linear', templateId: 'Sequence' }] };
+    localStorage.setItem(key, JSON.stringify(doc));
+  }, STORAGE_KEY);
+  await page.reload();
+  await page.locator('[role="tree"] [data-layer-id="img"]').click();
+  const wide = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 40;
+    canvas.height = 20;
+    const context = canvas.getContext('2d')!;
+    context.fillStyle = '#3080ff';
+    context.fillRect(0, 0, 40, 20);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  await page.getByRole('button', { name: 'Expand IMAGE' }).click();
+  await expect(page.getByRole('button', { name: 'Replace Image…' })).toBeVisible();
+  await page.getByTestId('replace-image-input').setInputFiles({ name: 'wide.png', mimeType: 'image/png', buffer: Buffer.from(wide, 'base64') });
+  await expect.poll(async () => (await savedLayers(page)).find((layer) => layer.id === 'img')?.height).toBe(50);
+  const layer = (await savedLayers(page)).find((candidate) => candidate.id === 'img')!;
+  expect(layer.width).toBe(100);
+  expect(layer.rotation).toBe(15);
+  expect(String(layer.imageUrl)).not.toBe(pixel);
+  const keys = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').tracks[0].channels.x.map((k: { frame: number; value: number }) => [k.frame, k.value]), STORAGE_KEY);
+  expect(keys).toEqual([[0, 100], [30, 300]]);
+  await page.keyboard.press('Control+z');
+  await expect.poll(async () => (await savedLayers(page)).find((candidate) => candidate.id === 'img')?.height).toBe(100);
+});

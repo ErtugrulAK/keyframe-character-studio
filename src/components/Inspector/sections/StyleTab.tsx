@@ -8,6 +8,7 @@ import { StyleClonerSection } from './style/StyleClonerSection';
 import { StyleParticleSection } from './style/StyleParticleSection';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
 import { ColorCorrectionCard } from './style/ColorCorrectionCard';
+import { ReplaceImageCard } from './style/ReplaceImageCard';
 import type { ColorCorrectionEffect, LayerMask } from '../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../types/composition';
 import { StyleMatteSection } from './style/StyleMatteSection';
@@ -137,6 +138,9 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         onColorInteractionStart={onColorInteractionStart}
         onColorInteractionEnd={onColorInteractionEnd}
       />
+      {selectedPart.type === 'custom_image' && (
+        <ReplaceImageCard part={selectedPart} readOnlyReason={colorCorrection?.readOnlyReason ?? undefined} />
+      )}
       {colorCorrection && selectedPart.type === 'custom_image' && (
         <ColorCorrectionCard
           part={selectedPart}

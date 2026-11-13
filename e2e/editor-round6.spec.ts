@@ -209,3 +209,20 @@ test('Alt on a corner handle scales about the centre', async ({ page }) => {
   expect(Number(layer.scaleX)).toBeCloseTo(1.5, 1);
   expect(Number(layer.scaleY)).toBeCloseTo(50 / 30, 1);
 });
+
+test('K keys the transform of every selected layer as one undo step', async ({ page }) => {
+  // Round 6 (OGraf Studio review, "Key transform"): one key for the selection.
+  await seed(page, [rect('a', 'Alpha', -150, 0), rect('b', 'Beta', 150, 0)]);
+  await page.locator('[role="tree"] [data-layer-id="a"]').click();
+  await page.locator('[role="tree"] [data-layer-id="b"]').click({ modifiers: ['Shift'] });
+  await page.locator('.stage-canvas-container').hover();
+  await page.keyboard.press('k');
+  const keyed = async () => {
+    await savedLayers(page);
+    return page.evaluate((key) => (JSON.parse(localStorage.getItem(key) ?? '{}').tracks as Array<{ partId: string; channels: Record<string, Array<{ frame: number }>> }>)
+      .map((track) => [track.partId, (track.channels.x ?? []).map((k) => k.frame)]), STORAGE_KEY);
+  };
+  expect(await keyed()).toEqual([['a', [0]], ['b', [0]]]);
+  await page.keyboard.press('Control+z');
+  expect(await keyed()).toEqual([['a', []], ['b', []]]);
+});

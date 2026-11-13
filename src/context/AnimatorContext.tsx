@@ -1012,6 +1012,15 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [easeKeyframeGroups, selectedKeyframeIds, tracks]);
 
   useKeyboardShortcuts({
+    keySelectedTransforms: () => {
+      const selected = new Set(selectedPartIds);
+      const keyable = tracks.filter((track) => selected.has(track.partId) && !track.locked);
+      if (keyable.length === 0) return false;
+      startBatchInteraction();
+      keyable.forEach((track) => addKeyframeToTrack(track.id, currentFrame));
+      endBatchInteraction();
+      return true;
+    },
     jumpToAdjacentKeyframe: (direction) => {
       const frame = resolveSceneAdjacentKeyframeFrame({ tracks, parts: characterParts, activeTemplateId, partIds: selectedPartIds, frame: currentFrame, direction });
       if (frame === null) return false;

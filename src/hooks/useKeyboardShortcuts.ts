@@ -72,6 +72,8 @@ export interface EditorShortcutCommands {
   unlockAllLayers?: () => void;
   /** Ctrl+Left / Ctrl+Right — moves the playhead to the adjacent keyframe; false when there is none. */
   jumpToAdjacentKeyframe?: (direction: 'previous' | 'next') => boolean;
+  /** K — keys every transform property of the selected layers at the playhead; false when nothing can be keyed. */
+  keySelectedTransforms?: () => boolean;
   /**
    * The arrow-key nudge, run through the arrange authority: `beginNudge`
    * opens one batch and returns the mover (total offset since the start), or
@@ -162,6 +164,7 @@ export const useKeyboardShortcuts = ({
   easySelectedKeyframes,
   unlockAllLayers,
   jumpToAdjacentKeyframe,
+  keySelectedTransforms,
   beginNudge,
   endNudge,
 }: EditorShortcutCommands) => {
@@ -376,6 +379,10 @@ export const useKeyboardShortcuts = ({
           if (!jumpToAdjacentKeyframe) return;
           if (jumpToAdjacentKeyframe(id === 'keyframe-previous' ? 'previous' : 'next')) event.preventDefault();
           return;
+        case 'key-transform':
+          if (!keySelectedTransforms) return;
+          if (keySelectedTransforms()) event.preventDefault();
+          return;
         case 'shortcut-reference':
           if (openShortcutReference) {
             event.preventDefault();
@@ -445,5 +452,6 @@ export const useKeyboardShortcuts = ({
     easySelectedKeyframes,
     unlockAllLayers,
     jumpToAdjacentKeyframe,
+    keySelectedTransforms,
   ]);
 };

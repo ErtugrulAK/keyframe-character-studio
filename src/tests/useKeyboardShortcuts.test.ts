@@ -549,3 +549,29 @@ describe('keyframe navigation shortcuts', () => {
     expect(jump).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('key transform shortcut', () => {
+  it('keys the selected layers on K, and leaves K alone when nothing can be keyed', () => {
+    let keyable = true;
+    const key = vi.fn(() => keyable);
+    renderHook(() => useKeyboardShortcuts({
+      selectedPartId: 'part_1',
+      undo: vi.fn(),
+      redo: vi.fn(),
+      copySelectedPart: vi.fn(),
+      pasteCopiedPart: vi.fn(),
+      duplicateSelectedPart: vi.fn(),
+      deleteSelectedKeyframes: vi.fn(() => false),
+      deletePart: vi.fn(),
+      keySelectedTransforms: key,
+    }));
+    const first = new KeyboardEvent('keydown', { key: 'k', cancelable: true });
+    act(() => { window.dispatchEvent(first); });
+    expect(key).toHaveBeenCalledTimes(1);
+    expect(first.defaultPrevented).toBe(true);
+    keyable = false;
+    const second = new KeyboardEvent('keydown', { key: 'k', cancelable: true });
+    act(() => { window.dispatchEvent(second); });
+    expect(second.defaultPrevented).toBe(false);
+  });
+});

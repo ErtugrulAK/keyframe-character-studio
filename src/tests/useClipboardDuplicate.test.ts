@@ -72,3 +72,48 @@ describe('Duplicate of a group', () => {
     expect(copies[0].fitToText?.textLayerId).toBe('text');
   });
 });
+
+describe('Duplicate keeps the stacking order', () => {
+  /**
+   * QA 2026-11-13: a duplicated lower third showed its text BEHIND its bar.
+   * The copies were numbered in the group's walk order instead of their
+   * stacking order, so a text listed before its bar but drawn above it
+   * came out drawn below it. Paste already ranks by stacking order.
+   */
+  const stackedScene = () => {
+    const group = part('group', { isGroup: true, zIndex: 1 });
+    const text = part('text', { type: 'custom_text', parentId: 'group', zIndex: 3 });
+    const bar = part('bar', { parentId: 'group', zIndex: 2 });
+    return [group, text, bar];
+  };
+
+  const duplicateStacked = () => {
+    const parts = stackedScene();
+    const setCharacterParts = vi.fn();
+    const { result } = renderHook(() => useClipboard({
+      characterParts: parts,
+      tracks: parts.map((p) => track(p.id)),
+      selectedPartId: 'group',
+      showToast: vi.fn(),
+      setTracks: vi.fn(),
+      setCharacterParts,
+      setSelectedPartId: vi.fn(),
+    }));
+    act(() => result.current.duplicateSelectedPart());
+    const after = setCharacterParts.mock.calls[0][0](parts) as CharacterPart[];
+    const z = (name: string) => after.find((p) => p.name === name)!.zIndex ?? 0;
+    return { z, originals: parts };
+  };
+
+  it('draws the copied text above the copied bar, as the original is', () => {
+    const { z } = duplicateStacked();
+    expect(z('text Copy')).toBeGreaterThan(z('bar Copy'));
+    expect(z('bar Copy')).toBeGreaterThan(z('group Copy'));
+  });
+
+  it('places every copy above every original', () => {
+    const { z, originals } = duplicateStacked();
+    const highestOriginal = Math.max(...originals.map((p) => p.zIndex ?? 0));
+    for (const name of ['group Copy', 'text Copy', 'bar Copy']) expect(z(name)).toBeGreaterThan(highestOriginal);
+  });
+});

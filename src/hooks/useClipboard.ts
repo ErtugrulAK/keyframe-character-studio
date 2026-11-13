@@ -264,6 +264,12 @@ export const useClipboard = ({
 
     const cloneTrackFor = (sourceId: string, cloneId: string, name: string): Track => cloneTrackOnto(tracks.find((t) => t.partId === sourceId), cloneId, name);
 
+    // The copies stack above the scene in the originals' own order, as Paste
+    // does: numbering them in the group's walk order drew a text listed before
+    // its bar, but stacked above it, behind the copied bar.
+    const stacking = [...sources].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
+    const zIndexOf = new Map(stacking.map((source, rank) => [source.id, characterParts.length + 1 + rank]));
+
     const newParts: CharacterPart[] = [];
     const newTracks: Track[] = [];
     sources.forEach((source, index) => {
@@ -273,7 +279,7 @@ export const useClipboard = ({
         ...structuredClone(source),
         id: cloneId,
         name,
-        zIndex: characterParts.length + 1 + index,
+        zIndex: zIndexOf.get(source.id)!,
         boundPartIds: undefined,
         baseTransform: index === 0
           ? { ...source.baseTransform, x: source.baseTransform.x + 20, y: source.baseTransform.y + 20 }

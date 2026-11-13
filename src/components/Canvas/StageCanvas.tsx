@@ -2095,9 +2095,14 @@ export const StageCanvas: React.FC = () => {
                     if (!frame) return;
                     // A point goes on the outline only: the hit area also fills
                     // the inside (to drag the mask), and a double-click there
-                    // used to add a point on the nearest edge.
+                    // used to add a point on the nearest edge. Inside, the
+                    // double-click closes the mask, as one on a path's body
+                    // closes its points (the second double-click leaves the mode).
                     const near = nearestMaskPathSegment(maskEditing.mask.path, frame, world);
-                    if (!near || near.distance > MASK_OUTLINE_INSERT_RADIUS * zScale) return;
+                    if (!near || near.distance > MASK_OUTLINE_INSERT_RADIUS * zScale) {
+                      exitMaskEditing();
+                      return;
+                    }
                     applyMaskTopologyEdit(maskEditing.owner.id, maskEditing.mask.id, (basePath) => {
                       const hit = nearestMaskPathSegment(basePath, frame, world);
                       return hit ? insertMaskVertex(basePath, hit.segmentIndex, hit.t) : null;

@@ -110,6 +110,14 @@ describe('template tabs keep their own frame rate and length', () => {
     expect(ctx().projectResolution).toEqual({ width: 1080, height: 1920 });
   });
 
+  it('a new tab opens at the default canvas size, not the size of the tab it leaves', () => {
+    // QA 2026-11-13: after A was set to 1280x720, every new tab opened at 1280x720.
+    const ctx = renderProvider();
+    act(() => { ctx().setProjectResolution({ width: 1280, height: 720 }); });
+    act(() => { ctx().addProjectTemplate('B'); });
+    expect(ctx().projectResolution).toEqual({ width: 1920, height: 1080 });
+  });
+
   it('a tab opens at its active sequence\'s length', () => {
     const ctx = renderProvider();
     const aId = ctx().activeProjectTemplateId;

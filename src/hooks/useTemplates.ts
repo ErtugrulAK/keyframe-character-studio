@@ -27,6 +27,9 @@ interface TemplateCanvas {
   projectResolution?: { width: number; height: number };
 }
 
+/** The canvas size a new template opens at (the editor's initial size). */
+const DEFAULT_TEMPLATE_RESOLUTION = { width: 1920, height: 1080 } as const;
+
 /** The frame count a template opens at: its active sequence's duration. */
 const activeSequenceDuration = (templates: MotionTemplate[], activeId: string): number | undefined =>
   (templates.find((template) => template.id === activeId) ?? templates[0])?.durationFrames;
@@ -299,10 +302,13 @@ export const useTemplates = ({
     setActiveProjectTemplateIdState(newId);
     setSceneTitleState(cleanName);
     setFps(60); // Strictly default to 60 FPS for new templates
+    // A new template opens at the default canvas size as it opens at the
+    // default rate: it used to keep the size of the tab it was made from.
+    setProjectResolution?.(DEFAULT_TEMPLATE_RESOLUTION);
     const freshDuration = activeSequenceDuration(normalizeMotionTemplates(DEFAULT_MOTION_TEMPLATES), 'Sequence');
     if (freshDuration !== undefined) setTotalFrames?.(freshDuration);
     onProjectTemplateSwitched?.();
-  }, [onProjectTemplateSwitched, fps, projectResolution, setTotalFrames, activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setTemplateCanvasStore, setProjectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setFps, setCoordinateSystem]);
+  }, [onProjectTemplateSwitched, fps, projectResolution, setProjectResolution, setTotalFrames, activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setTemplateCanvasStore, setProjectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setFps, setCoordinateSystem]);
 
   const renameProjectTemplate = useCallback((id: string, newName: string) => {
     const cleanName = newName.trim();

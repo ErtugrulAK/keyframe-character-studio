@@ -15,8 +15,8 @@ import { DetailsPanel } from '../components/Inspector/DetailsPanel';
 import { StageCanvas } from '../components/Canvas/StageCanvas';
 import type { CharacterPart, LayerMask, Track } from '../types/animator';
 import { layerMaskPathChannel } from '../types/animator';
-import { createEllipseMaskPath, createRectangleMaskPath, transformMaskPathInLayerSpace } from '../utils/maskPathCreation';
-import { resolveChannelAnimationState } from '../utils/timelineMetrics';
+import { createEllipseMaskPath, createRectangleMaskPath, transformMaskPathInLayerSpace } from '../utils/geometry/maskPathCreation';
+import { resolveChannelAnimationState } from '../utils/editor/timelineMetrics';
 
 const rect = createRectangleMaskPath('normalized', { x: 0.2, y: 0.2 }, { x: 0.8, y: 0.8 });
 const mask = (overrides: Partial<LayerMask> = {}): LayerMask => ({ id: 'mask-2', name: 'Imported', mode: 'add', enabled: true, path: rect, ...overrides });

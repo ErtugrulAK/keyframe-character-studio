@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'vitest';
 import type { BezierPath, Track } from '../types/animator';
 import { layerMaskPathChannel } from '../types/animator';
-import { interpolatePathChannel } from '../utils/defaults';
+import { interpolatePathChannel } from '../utils/animation/defaults';
 import {
   addMaskPathKeyframeMutator,
   deleteMaskPathKeyframeMutator,
   updateMaskPathKeyframeFrameMutator,
   updateMaskPathKeyframeValueMutator,
-} from '../utils/trackMutations';
-import { evaluateLayerMasks } from '../utils/evaluateLayerMasks';
+} from '../utils/animation/trackMutations';
+import { evaluateLayerMasks } from '../utils/animation/evaluateLayerMasks';
 
 const path = (x: number, handleOut = false): BezierPath => ({
   version: 1,

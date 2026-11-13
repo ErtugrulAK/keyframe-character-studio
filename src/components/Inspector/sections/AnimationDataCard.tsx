@@ -10,7 +10,7 @@ interface AnimationDataCardProps {
 }
 
 /**
- * M26 — the canonical animation-data actions (copy, paste onto this layer,
+ * The canonical animation-data actions (copy, paste onto this layer,
  * clear). Named sequences still use them; the legacy procedural IN/OUT editor
  * is intentionally de-emphasized without removing its data model or runtime
  * support.

@@ -1,8 +1,8 @@
 import type { CharacterPart, Track, Transform } from '../types/animator';
-import type { ProjectResolution } from '../utils/projectCoordinates';
-import { getLayerWorldBounds } from '../utils/layerGrouping';
-import { unionWorldBounds } from '../utils/layoutGeometry';
-import { collectArrangeTargets } from '../utils/vectorArrange';
+import type { ProjectResolution } from '../utils/geometry/projectCoordinates';
+import { getLayerWorldBounds } from '../utils/layers/layerGrouping';
+import { unionWorldBounds } from '../utils/geometry/layoutGeometry';
+import { collectArrangeTargets, someArrangeTarget } from '../utils/layers/vectorArrange';
 import {
   clampStageCropRect,
   isFullStageCropRect,
@@ -13,7 +13,7 @@ import {
   stageCropResolution,
   stageCropShift,
   type StageCropRect,
-} from '../utils/stageCrop';
+} from '../utils/geometry/stageCrop';
 import type { ToastOptions } from './useToast';
 
 type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
@@ -129,11 +129,21 @@ export const createStageCropActions = ({
   const selectionIds = selectedPartId && !selectedPartIds.includes(selectedPartId)
     ? [...selectedPartIds, selectedPartId]
     : selectedPartIds;
-  const selectionTargets = collectArrangeTargets(characterParts, selectionIds, worldOf);
-  const selectionCropRect = selectionTargets.length > 0
-    ? stageCropRectFromWorldBounds(unionWorldBounds(selectionTargets.map((target) => target.bounds)), projectResolution)
-    : null;
-  // C5 — the visible-content rectangle is computed only when that crop runs.
+  // The selection's region is measured only when that crop runs. Its
+  // availability is read on every provider render (every playback frame), so
+  // it stops at the first selected layer on the stage: the union of boxes
+  // contains each box, so that layer alone already makes the region non-empty.
+  const selectionCropRect = (): StageCropRect | null => {
+    const selectionTargets = collectArrangeTargets(characterParts, selectionIds, worldOf);
+    return selectionTargets.length > 0
+      ? stageCropRectFromWorldBounds(unionWorldBounds(selectionTargets.map((target) => target.bounds)), projectResolution)
+      : null;
+  };
+  const canCropToSelection = blockReason === null && (
+    someArrangeTarget(characterParts, selectionIds, worldOf, (target) => stageCropRectFromWorldBounds(target.bounds, projectResolution) !== null)
+    || selectionCropRect() !== null
+  );
+  // The visible-content rectangle is computed only when that crop runs.
   // The commands are rebuilt on every provider render (every playback frame),
   // and the availability flag only needs ONE visible layer with bounds, so it
   // stops at the first one instead of evaluating every layer's world box.
@@ -177,10 +187,10 @@ export const createStageCropActions = ({
 
   return {
     blockReason,
-    canCropToSelection: blockReason === null && selectionCropRect !== null,
+    canCropToSelection,
     canCropToVisibleContent: hasVisibleContent,
     applyCropRegion: (rect) => commitCrop(rect ?? null, 'Cropped the stage'),
-    cropToSelection: () => commitCrop(selectionCropRect, 'Cropped the stage to the selection'),
+    cropToSelection: () => commitCrop(selectionCropRect(), 'Cropped the stage to the selection'),
     cropToVisibleContent: () => commitCrop(boundsOfLayers(visibleParts()), 'Cropped the stage to the visible content'),
   };
 };

@@ -6,10 +6,14 @@
 import { describe, expect, it } from 'vitest';
 import { createGraphicRuntime, type GraphicRuntimeEnvironment, type RuntimeScene } from '../ograf/runtime/graphicRuntime';
 import { runtimeGraphicFactory } from '../ograf/runtimeSnippets';
-import { compareByStackingOrder } from '../utils/stackingOrder';
-import { resolveMatteSource } from '../utils/matte';
-import { createWorldAffineAlgebra } from '../utils/containerMath';
-import { TEXT_BOX_CENTRE_EM } from '../utils/textOrigin';
+import { compareByStackingOrder } from '../utils/layers/stackingOrder';
+import { resolveMatteSource } from '../utils/layers/matte';
+import { createWorldAffineAlgebra } from '../utils/geometry/containerMath';
+import { TEXT_BOX_CENTRE_EM } from '../utils/geometry/textOrigin';
+import { resolveShapeAppearance } from '../utils/layers/shapeAppearance';
+import { describePaint, describeText } from '../utils/layers/drawDescriptor';
+import { createLayoutModifiers, SHAPE_EXTENTS } from '../utils/layers/layoutModifiers';
+import { onAir } from './helpers/ografOnAir';
 
 class HostElement { innerHTML = ''; }
 
@@ -30,6 +34,10 @@ const environmentFor = (scene: RuntimeScene): GraphicRuntimeEnvironment => ({
   compareByStackingOrder,
   resolveMatteSource: resolveMatteSource as GraphicRuntimeEnvironment['resolveMatteSource'],
   affine: createWorldAffineAlgebra(),
+  resolveShapeAppearance: resolveShapeAppearance as GraphicRuntimeEnvironment['resolveShapeAppearance'],
+  describePaint,
+  describeText,
+  layout: createLayoutModifiers(SHAPE_EXTENTS),
 });
 
 const runtimeFor = (scene: RuntimeScene) => createGraphicRuntime(environmentFor(scene));
@@ -69,6 +77,7 @@ describe('graphic runtime', () => {
     const { Graphic } = runtimeFor(sceneOf([rect()]));
     const graphic = new Graphic() as unknown as HostElement & InstanceType<typeof Graphic>;
     expect(await graphic.load({ renderType: 'realtime' })).toEqual({ statusCode: 200 });
+    await onAir(graphic);
     expect(await graphic.updateAction({ data: { tint: 'red' } })).toEqual({ statusCode: 400, statusMessage: 'Color value must be a #rrggbb value: tint' });
     expect(await graphic.updateAction({ data: { other: '#000000' } })).toEqual({ statusCode: 400, statusMessage: 'Unknown public field: other' });
     expect(await graphic.updateAction({ data: { tint: '#00ff00' } })).toEqual({ statusCode: 200 });

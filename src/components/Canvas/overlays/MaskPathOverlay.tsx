@@ -1,8 +1,8 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { BezierPath, CharacterPart, Transform } from '../../../types/animator';
-import type { WorldAffine } from '../../../utils/containerMath';
-import { altMoveVertexHandle, pullVertexHandles, toggleVertexKind, type BezierHandleKind, type PathPoint } from '../../../utils/bezierPath';
-import { buildLayerMaskPathD } from '../../../utils/layerMasks';
+import type { WorldAffine } from '../../../utils/geometry/containerMath';
+import { altMoveVertexHandle, pullVertexHandles, toggleVertexKind, type BezierHandleKind, type PathPoint } from '../../../utils/geometry/bezierPath';
+import { buildLayerMaskPathD } from '../../../utils/layers/layerMasks';
 import {
   maskPathDeltaFromWorld,
   maskPathPointToWorld,
@@ -11,14 +11,14 @@ import {
   resolveMaskPathFrame,
   translateMaskPath,
   type MaskPathFrame,
-} from '../../../utils/maskPathEditing';
+} from '../../../utils/geometry/maskPathEditing';
 import type { MaskGestureSnapshot } from '../../../hooks/useMaskEditing';
-import { isEditableElement, ownsShortcutScope } from '../../../utils/keyboardFocus';
-import { isBlockingModalOpen } from '../../../utils/modalBoundary';
-import { EDITOR_CAMERA_CENTER } from '../../../utils/projectCoordinates';
-import { consumeMaskPointsFocusRequest } from '../../../utils/maskPointFocus';
+import { isEditableElement, ownsShortcutScope } from '../../../utils/editor/keyboardFocus';
+import { isBlockingModalOpen } from '../../../utils/editor/modalBoundary';
+import { EDITOR_CAMERA_CENTER } from '../../../utils/geometry/projectCoordinates';
+import { consumeMaskPointsFocusRequest } from '../../../utils/geometry/maskPointFocus';
 
-/** C10 — Alt-drag from a vertex: new mirrored handles, the out handle at the pointer. */
+/** Alt-drag from a vertex: new mirrored handles, the out handle at the pointer. */
 const pullMaskHandles = (initialPath: BezierPath, index: number, delta: PathPoint): BezierPath => ({
   ...initialPath,
   points: initialPath.points.map((vertex, at) => (at === index ? pullVertexHandles(vertex, delta) : vertex)),
@@ -43,7 +43,6 @@ const VERTEX_HIT_RADIUS = 8;
 const HANDLE_RADIUS = 4;
 const HANDLE_HIT_RADIUS = 8;
 const CONTOUR_HIT_WIDTH = 12;
-const CENTER_HANDLE_SIZE = 12;
 /** A press becomes a drag only past this many CSS pixels, so a click selects without writing. */
 const DRAG_THRESHOLD_PX = 3;
 /** Arrow-key nudge in project units (Shift: ×10), along the screen axes. */
@@ -77,7 +76,7 @@ interface Gesture {
   pointerId: number;
   /** True once the pointer crossed the drag threshold and the history batch opened. */
   started: boolean;
-  /** C10 — Alt held at the press: a handle breaks or relinks, a vertex pulls out new handles. */
+  /** Alt held at the press: a handle breaks or relinks, a vertex pulls out new handles. */
   alt: boolean;
 }
 
@@ -105,12 +104,12 @@ interface MaskPathOverlayProps {
   /** The selected vertex (transient editor state owned by the mask-editing hook). */
   selectedIndex: number | null;
   onSelectIndex: (index: number | null) => void;
-  /** WP-03: double-click on the outline adds a point there (static paths only). */
+  /** Double-click on the outline adds a point there (static paths only). */
   onInsertVertex?: (world: PathPoint) => void;
 }
 
 /**
- * WP-02 — on-canvas editing of one existing layer mask.
+ * On-canvas editing of one existing layer mask.
  *
  * The outline is the renderer's own contour (`buildLayerMaskPathD` with the
  * owner's evaluated world map); pointer input goes through the inverse of that
@@ -179,7 +178,7 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
   }, []);
 
   /**
-   * WP-06 — keyboard alternative to dragging: the arrow keys nudge the
+   * Keyboard alternative to dragging: the arrow keys nudge the
    * selected point (or the whole path when no point is selected) by one
    * project unit along the screen axes, Shift by ten. A held key is ONE undo
    * entry (the batch closes on keyup or blur). Text fields, open dialogs and
@@ -198,7 +197,7 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
     };
     const onKeyDown = (event: KeyboardEvent) => {
       const latest = latestNudge.current;
-      // C4 — in the keyboard model focus IS the selection: a focused point is
+      // In the keyboard model focus IS the selection: a focused point is
       // the point the keys act on even before the selection caught up with it.
       const focusedIndex = overlayRef.current?.contains(document.activeElement)
         ? Number(document.activeElement?.getAttribute('data-index'))
@@ -206,7 +205,7 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
       const current = latest.selectedIndex === null && Number.isInteger(focusedIndex)
         ? { ...latest, selectedIndex: focusedIndex }
         : latest;
-      // C2-F — `]` / `[` walk the selected point forward / back along the path
+      // `]` / `[` walk the selected point forward / back along the path
       // (wrapping), so a point can be picked and then nudged without a pointer.
       if ((event.key === ']' || event.key === '[') && current.interactive && !gestureRef.current
         && !event.altKey && !event.ctrlKey && !event.metaKey
@@ -219,7 +218,7 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
         current.onSelectIndex(index === null ? (step > 0 ? 0 : count - 1) : (index + step + count) % count);
         return;
       }
-      // C10 — C switches the SELECTED point between Corner and Smooth (one undo
+      // C switches the SELECTED point between Corner and Smooth (one undo
       // step). A mouse click selects a point without focusing it, so this no
       // longer waits for keyboard focus inside the point list.
       if ((event.key === 'c' || event.key === 'C') && current.interactive && !gestureRef.current
@@ -233,7 +232,7 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
         current.onBatchEnd();
         return;
       }
-      // C4 — with a point FOCUSED (keyboard model): Home/End reach the first and last point.
+      // With a point FOCUSED (keyboard model): Home/End reach the first and last point.
       const focusedInside = overlayRef.current?.contains(document.activeElement) ?? false;
       if (focusedInside && current.interactive && !gestureRef.current && !event.altKey && !event.ctrlKey && !event.metaKey) {
         const count = current.path.points.length;
@@ -274,7 +273,7 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
     };
   }, []);
 
-  // C4 — focus follows the selection while the keyboard is in the point list
+  // Focus follows the selection while the keyboard is in the point list
   // (]/[, Home/End), and a deleted focused point hands focus to its neighbour.
   useEffect(() => {
     const overlay = overlayRef.current;
@@ -397,12 +396,6 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
   if (!contourD) return null;
 
   const vertices = path.points.map((vertex) => toScreen(vertex));
-  const center = vertices.length > 0
-    ? {
-      x: (Math.min(...vertices.map((point) => point.x)) + Math.max(...vertices.map((point) => point.x))) / 2,
-      y: (Math.min(...vertices.map((point) => point.y)) + Math.max(...vertices.map((point) => point.y))) / 2,
-    }
-    : null;
   const selectedVertex = selectedIndex !== null ? path.points[selectedIndex] : undefined;
   const editable = interactive && Boolean(frame);
   const maskName = owner.masks?.find((candidate) => candidate.id === maskId)?.name ?? maskId;
@@ -477,13 +470,15 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
           pointerEvents="none"
         />
       )}
-      {editable && (
+      {/* Two hit areas over the same contour: the inside drags the mask (move
+          cursor), the outline band adds a point on a double-click (the "add"
+          cursor, as on a path's outline). Both start the same drag. */}
+      {editable && path.closed && (
         <path
-          data-testid="mask-path-hit-area"
+          data-testid="mask-path-fill-hit-area"
           d={contourD}
-          fill={path.closed ? 'transparent' : 'none'}
-          stroke="transparent"
-          strokeWidth={CONTOUR_HIT_WIDTH * zScale}
+          fill="transparent"
+          stroke="none"
           style={{ cursor: 'move' }}
           onPointerDown={(event) => begin(event, 'path', -1)}
           onDoubleClick={(event) => {
@@ -494,21 +489,24 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
           {...gestureHandlers}
         />
       )}
-      {editable && center && (
-        <rect
-          data-testid="mask-path-move-handle"
-          x={center.x - (CENTER_HANDLE_SIZE / 2) * zScale}
-          y={center.y - (CENTER_HANDLE_SIZE / 2) * zScale}
-          width={CENTER_HANDLE_SIZE * zScale}
-          height={CENTER_HANDLE_SIZE * zScale}
-          rx={2 * zScale}
-          fill="rgba(34, 211, 238, 0.25)"
-          stroke={OUTLINE_COLOR}
-          strokeWidth={1.2 * zScale}
-          style={{ cursor: 'move' }}
+      {editable && (
+        <path
+          data-testid="mask-path-hit-area"
+          d={contourD}
+          fill="none"
+          stroke="transparent"
+          strokeWidth={CONTOUR_HIT_WIDTH * zScale}
+          style={{ cursor: 'copy' }}
           onPointerDown={(event) => begin(event, 'path', -1)}
+          onDoubleClick={(event) => {
+            if (!onInsertVertex) return;
+            event.stopPropagation();
+            onInsertVertex(worldPoint(event.clientX, event.clientY));
+          }}
           {...gestureHandlers}
-        />
+        >
+          <title>Double-click to add a point here</title>
+        </path>
       )}
       {renderHandle('in')}
       {renderHandle('out')}
@@ -554,7 +552,7 @@ export const MaskPathOverlay: React.FC<MaskPathOverlayProps> = ({
                 }}
                 onPointerDown={(event) => begin(event, 'vertex', index)}
                 onDoubleClick={(event) => {
-                  // C10/C12 — double-click a point: handles out, or retracted (one undo step).
+                  // Double-click a point: handles out, or retracted (one undo step).
                   event.stopPropagation();
                   if (gestureRef.current) return;
                   onBatchStart();

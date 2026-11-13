@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, PropertyKeyframe, Track, Transform } from '../types/animator';
-import { evaluateTransform } from '../utils/evaluateTransform';
-import { makeEmptyChannels } from '../utils/defaults';
-import { validateCritical } from '../utils/validateScene';
-import { collectOwnedDeletionIds, deleteParts } from '../utils/partDeletion';
+import { evaluateTransform } from '../utils/animation/evaluateTransform';
+import { makeEmptyChannels } from '../utils/animation/defaults';
+import { validateCritical } from '../utils/persistence/validateScene';
+import { collectOwnedDeletionIds, deleteParts } from '../utils/layers/partDeletion';
 import {
   createGroupDisplayName,
   createLayerGroup,
@@ -17,7 +17,7 @@ import {
   resolveOutermostGroupAncestor,
   resolveStageSelectionTarget,
   ungroupBlockReason,
-} from '../utils/layerGrouping';
+} from '../utils/layers/layerGrouping';
 
 const makePart = (id: string, x: number, overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id,

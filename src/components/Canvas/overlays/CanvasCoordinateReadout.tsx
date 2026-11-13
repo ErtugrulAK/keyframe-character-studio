@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Transform } from '../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../types/composition';
-import { formatInspectorCoordinate, toInspectorPositionDisplay } from '../../../utils/coordinateDisplay';
+import { formatInspectorCoordinate, toInspectorPositionDisplay } from '../../../utils/editor/coordinateDisplay';
 
 interface CanvasCoordinateReadoutProps {
   transform: Transform;

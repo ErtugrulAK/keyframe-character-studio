@@ -16,8 +16,8 @@
 import { describe, expect, test } from 'vitest';
 import type { SceneData, SceneLayer } from '../types/composition';
 import type { TrackMatteV2 } from '../types/animator';
-import { compareByStackingOrder, stackingOrder } from '../utils/stackingOrder';
-import { resolveMatteSource } from '../utils/matte';
+import { compareByStackingOrder, stackingOrder } from '../utils/layers/stackingOrder';
+import { resolveMatteSource } from '../utils/layers/matte';
 import { runtimeCompareByStackingOrder, runtimeResolveMatteSource } from '../ograf/runtimeSnippets';
 import { generateGraphicModule } from '../ograf/runtimeTemplate';
 import { renderOGrafSvg } from '../ograf/svgRenderer';

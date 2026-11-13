@@ -16,7 +16,7 @@ import {
   type CornerId,
   type CornerResizeResult,
   type EdgeId,
-} from '../utils/cornerResize';
+} from '../utils/geometry/cornerResize';
 
 const BOUNDS: CornerBounds = { minX: -60, minY: -30, maxX: 60, maxY: 30 };
 const OPPOSITE: Record<CornerId, CornerId> = { tl: 'br', tr: 'bl', bl: 'tr', br: 'tl' };

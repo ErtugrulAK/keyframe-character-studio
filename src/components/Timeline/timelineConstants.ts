@@ -15,6 +15,9 @@ export const CHANNEL_META: Record<TrackChannel, { label: string; color: string; 
   trimPathStart: { label: 'Trim Start', shortLabel: 'TS', color: '#22d3ee' },
   trimPathEnd: { label: 'Trim End', shortLabel: 'TE', color: '#2dd4bf' },
   trimPathOffset: { label: 'Trim Offset', shortLabel: 'TO°', color: '#a78bfa' },
+  matteFeather: { label: 'Matte Feather', shortLabel: 'MF', color: '#f472b6' },
+  matteStrength: { label: 'Matte Strength', shortLabel: 'MSt', color: '#fb923c' },
+  matteGradientAngle: { label: 'Matte Gradient Angle', shortLabel: 'MA°', color: '#facc15' },
 };
 
 export const TRACK_ROW_HEIGHT = 30;   // parent track row
@@ -29,7 +32,7 @@ export const CHANNEL_ROW_HEIGHT = 24; // sub-channel row
 export const KEYFRAME_DRAG_THRESHOLD_PX = 3;
 
 /**
- * R4-08 — the clearance between a keyframe glyph and the interpolation connector
+ * The clearance between a keyframe glyph and the interpolation connector
  * that runs into it. The glyph is an 8px box rotated 45° (≈11.3px across, ≈14.1px
  * while hovered); 9px clears even the hovered corner, so a hollow keyframe never
  * shows the connector through its interior and the glyph never grows to hide it.
@@ -58,7 +61,7 @@ export const OUTLINER_MAX_WIDTH = 520;
 export const TIMELINE_COLLAPSED_HEIGHT = 39;
 
 /**
- * C4 — the height the timeline OPENS with (a session's first mount only; the
+ * The height the timeline OPENS with (a session's first mount only; the
  * user's later resize or collapse is kept for the rest of the session). A tall
  * window keeps the historic 320 px; a shorter one gives the timeline about a
  * third of its height, so the stage and the layer list are not squeezed by a
@@ -78,7 +81,7 @@ export const resolveOpeningTimelineHeight = (windowHeight: number): number => (
 export const shouldOpenTimelineCollapsed = (windowHeight: number): boolean => windowHeight < COLLAPSED_OPENING_MAX_WINDOW_HEIGHT;
 
 /**
- * R5-03 — how long the collapse/expand edge takes. Short enough to read as one
+ * How long the collapse/expand edge takes. Short enough to read as one
  * motion of the same edge, long enough that the eye follows the strip instead of
  * seeing it jump. C8: 320 ms (was 180), the same soft ease-in-out as the
  * side docks.

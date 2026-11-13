@@ -71,6 +71,39 @@ describe('useKeyboardShortcuts Hook', () => {
     document.body.removeChild(input);
   });
 
+  it('undoes and redoes from a focused slider, checkbox or select, and runs nothing else there', () => {
+    const undo = vi.fn();
+    const redo = vi.fn();
+    const deletePart = vi.fn();
+    const copySelectedPart = vi.fn();
+    renderHook(() => useKeyboardShortcuts({
+      selectedPartId: 'part_1',
+      undo,
+      redo,
+      copySelectedPart,
+      pasteCopiedPart: vi.fn(),
+      duplicateSelectedPart: vi.fn(),
+      deleteSelectedKeyframes: vi.fn(() => false),
+      deletePart,
+    }));
+    const slider = Object.assign(document.createElement('input'), { type: 'range' });
+    const checkbox = Object.assign(document.createElement('input'), { type: 'checkbox' });
+    const select = document.createElement('select');
+    for (const control of [slider, checkbox, select]) {
+      document.body.appendChild(control);
+      control.focus();
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true })));
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'y', ctrlKey: true })));
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', ctrlKey: true })));
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' })));
+      document.body.removeChild(control);
+    }
+    expect(undo).toHaveBeenCalledTimes(3);
+    expect(redo).toHaveBeenCalledTimes(3);
+    expect(copySelectedPart).not.toHaveBeenCalled();
+    expect(deletePart).not.toHaveBeenCalled();
+  });
+
   it.each(['Backspace', 'Delete'])('deletes a selected keyframe before the selected part with %s', (key) => {
     const deleteSelectedKeyframes = vi.fn(() => true);
     const deletePart = vi.fn();
@@ -258,8 +291,9 @@ describe('shortcut commands added in round four, part four', () => {
     pressWith('p');
 
     expect(api.armShapeCreation).toHaveBeenNthCalledWith(1, 'custom_rect', 'Rectangle');
-    expect(api.armShapeCreation).toHaveBeenNthCalledWith(2, 'custom_circle', 'Circle');
-    expect(api.addCustomPart).toHaveBeenCalledWith('custom_text', 'Text');
+    expect(api.armShapeCreation).toHaveBeenNthCalledWith(2, 'custom_circle', 'Ellipse');
+    // T arms the Text tool (click to place, drag to draw the box).
+    expect(api.armShapeCreation).toHaveBeenNthCalledWith(3, 'custom_text', 'Text');
     expect(api.setActiveTool).toHaveBeenCalledWith('freeform_draw');
   });
 

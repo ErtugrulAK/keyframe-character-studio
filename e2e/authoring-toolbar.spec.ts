@@ -121,7 +121,7 @@ test('the toolbar is a compact strip that drives the shared tool and grid state'
 
   // Grid is the context flag the stage renders from: the grid rects appear and
   // disappear with it.
-  const gridRects = page.locator('.stage-svg rect[fill="url(#svg-grid-minor)"]');
+  const gridRects = page.getByTestId('stage-grid');
   const gridWasVisible = (await gridRects.count()) > 0;
   await toolbarButton(page, 'Toggle grid').click();
   await expect(toolbarButton(page, 'Toggle grid')).toHaveAttribute('aria-pressed', gridWasVisible ? 'false' : 'true');
@@ -362,7 +362,7 @@ test('every control is reachable and operable from the keyboard', async ({ page 
   await expect(pan).toHaveAttribute('aria-pressed', 'true');
 
   const grid = toolbarButton(page, 'Toggle grid');
-  const gridWasVisible = (await page.locator('.stage-svg rect[fill="url(#svg-grid-minor)"]').count()) > 0;
+  const gridWasVisible = (await page.getByTestId('stage-grid').count()) > 0;
   await grid.focus();
   // Enter activates a toolbar button; Space stays the editor's play/pause key.
   await page.keyboard.press('Enter');

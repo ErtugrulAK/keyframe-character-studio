@@ -1675,31 +1675,6 @@ export const StageCanvas: React.FC = () => {
         }}
       >
         <defs>
-          {/* Minor grid: 50px cells anchored at the origin (2 cells = 100px = 1 unit) */}
-          <pattern
-            id="svg-grid-minor"
-            width="50"
-            height="50"
-            patternUnits="userSpaceOnUse"
-            x={EDITOR_CAMERA_CENTER.x}
-            y={EDITOR_CAMERA_CENTER.y}
-          >
-            {/* Both edges of the tile, so a line is centred on its grid position
-                (one edge alone left half the line clipped, off the axis), and
-                one screen pixel wide at any zoom. */}
-            <path d="M 0 0 V 50 M 50 0 V 50 M 0 0 H 50 M 0 50 H 50" fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth={1 / Math.max(0.05, zoomLevel)} />
-          </pattern>
-          {/* Major grid: 100px lines anchored at the origin (1 cell = 100px = 1 unit) */}
-          <pattern
-            id="svg-grid-major"
-            width="100"
-            height="100"
-            patternUnits="userSpaceOnUse"
-            x={EDITOR_CAMERA_CENTER.x}
-            y={EDITOR_CAMERA_CENTER.y}
-          >
-            <path d="M 0 0 V 100 M 100 0 V 100 M 0 0 H 100 M 0 100 H 100" fill="none" stroke="rgba(255, 255, 255, 0.10)" strokeWidth={1 / Math.max(0.05, zoomLevel)} />
-          </pattern>
           <clipPath id="artboard-clip">
             <rect
               x={outputOrigin.x - projectResolution.width / 2}

@@ -139,6 +139,11 @@ test.describe('WP-03 — mask creation and path edits', () => {
       return element?.getAttribute('data-testid');
     }, top);
     expect(hit).toBe('mask-path-hit-area');
+    // QA 2026-11-13: the outline shows the "add point" cursor, the inside the
+    // "move" one (the whole mask showed "move").
+    const cursorAt = (point: { x: number; y: number }) => page.evaluate(({ x, y }) => getComputedStyle(document.elementFromPoint(x, y)!).cursor, point);
+    expect(await cursorAt(top)).toBe('copy');
+    expect(await cursorAt({ x: c.x, y: c.y + 5 })).toBe('move');
     await page.mouse.dblclick(top.x, top.y);
     await expect(page.getByTestId('mask-vertex')).toHaveCount(5);
     expect((await contours(page, 'mask-1')).overlay).not.toBe(outlineBefore);

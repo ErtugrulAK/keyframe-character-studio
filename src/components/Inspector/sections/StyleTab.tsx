@@ -9,6 +9,7 @@ import { StyleParticleSection } from './style/StyleParticleSection';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
 import { ColorCorrectionCard } from './style/ColorCorrectionCard';
 import { ReplaceImageCard } from './style/ReplaceImageCard';
+import { LayerCropCard } from './style/LayerCropCard';
 import type { ColorCorrectionEffect, LayerMask } from '../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../types/composition';
 import { StyleMatteSection } from './style/StyleMatteSection';
@@ -138,6 +139,9 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         onColorInteractionStart={onColorInteractionStart}
         onColorInteractionEnd={onColorInteractionEnd}
       />
+      {selectedPart.type !== 'mograph_cloner' && selectedPart.type !== 'particle_system' && !selectedPart.isGroup && (
+        <LayerCropCard part={selectedPart} onPartPropChange={handlePartPropChange} readOnlyReason={colorCorrection?.readOnlyReason ?? undefined} />
+      )}
       {selectedPart.type === 'custom_image' && (
         <ReplaceImageCard part={selectedPart} readOnlyReason={colorCorrection?.readOnlyReason ?? undefined} />
       )}

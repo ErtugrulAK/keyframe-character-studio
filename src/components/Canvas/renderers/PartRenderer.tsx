@@ -1,5 +1,6 @@
 import React from 'react';
 import { hasLayerFilter, layerBlendMode, layerFilterMarkup } from '../../../utils/layers/layerEffects';
+import { cropClipMarkup, isLayerCrop, layerCropId } from '../../../utils/layers/layerCrop';
 import type { CharacterPart } from '../../../types/animator';
 import type { EvaluatedLayer } from '../../../types/composition';
 import { renderShapePart } from './parts/ShapePartRenderers';
@@ -163,6 +164,7 @@ const PartRendererView: React.FC<PartRendererProps> = ({
   // Drop shadow, glow and blur: the one filter every renderer draws (`utils/layers/layerEffects`).
   const filterId = !isGhost && hasLayerFilter(el.content) ? `drop-shadow-${part.id}` : undefined;
   const blendMode = isGhost ? null : layerBlendMode(el.content);
+  const cropId = isLayerCrop(el.content.crop) ? layerCropId('layer-crop', part.id) : undefined;
   const pathContent = (
     <PartContent
       part={part}
@@ -203,7 +205,13 @@ const PartRendererView: React.FC<PartRendererProps> = ({
       {...(copy ? {} : layerPointerHandlers)}
     >
       {!copy && filterId ? <defs dangerouslySetInnerHTML={{ __html: layerFilterMarkup(el.content, filterId) }} /> : <defs />}
-      {pathContent}
+      {cropId ? (
+        // The crop trims the content in its own units, before the effects (`utils/layers/layerCrop`).
+        <>
+          {!copy && <defs dangerouslySetInnerHTML={{ __html: cropClipMarkup(el.content.crop, cropId) }} />}
+          <g clipPath={`url(#${cropId})`} data-layer-crop="">{pathContent}</g>
+        </>
+      ) : pathContent}
     </g>
   );
   /*

@@ -134,6 +134,8 @@ export interface SceneLayer {
   glowSize?: number;
   glowStrength?: number;
   blendMode?: import('../utils/layers/layerEffects').LayerBlendMode;
+  /** The visible part of the layer, in its local units (`utils/layers/layerCrop`); absent = all of it. */
+  crop?: import('../utils/layers/layerCrop').LayerCrop;
   borderRadius?: number;
   /** Stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
   strokeLinejoin?: 'miter' | 'round';
@@ -323,6 +325,8 @@ export interface LayerContent {
   glowSize?: number;
   glowStrength?: number;
   blendMode?: import('../utils/layers/layerEffects').LayerBlendMode;
+  /** The visible part of the layer, in its local units (`utils/layers/layerCrop`); absent = all of it. */
+  crop?: import('../utils/layers/layerCrop').LayerCrop;
   borderRadius?: number;
   /** Stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
   strokeLinejoin?: 'miter' | 'round';

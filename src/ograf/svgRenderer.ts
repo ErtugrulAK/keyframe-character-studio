@@ -12,6 +12,7 @@ import { getShapeGeometry, polygonPointsToString } from '../utils/geometry/shape
 import { resolveShapeAppearance } from '../utils/layers/shapeAppearance';
 import { describePaint, describeText } from '../utils/layers/drawDescriptor';
 import { layerBlendMode, layerFilterMarkup } from '../utils/layers/layerEffects';
+import { cropClipMarkup, layerCropId } from '../utils/layers/layerCrop';
 import { getTrimPathDashProps, resolveTrimPath } from '../utils/geometry/trimPath';
 import { affineTrsReading, worldAffineOf } from '../utils/geometry/containerMath';
 import type { OGrafEvaluatedScene } from './evaluation';
@@ -428,7 +429,11 @@ function renderLayer(scene: OGrafEvaluatedScene, layer: EvaluatedLayer, options:
   // Drop shadow, glow and blur on the transformed content, as the stage draws them (`utils/layers/layerEffects`).
   const effectsId = `kcs-fx-${safeSvgId(layer.id)}`;
   const effects = layerFilterMarkup(layer.content, effectsId);
-  const transformedBody = mixColorCorrection(`<g transform="${layerTransform(scene, layer)}"${effects ? ` filter="url(#${effectsId})"` : ''}>${effects ? `<defs>${effects}</defs>` : ''}${body}</g>`, correction);
+  // The crop trims the content in its own units, before the effects (`utils/layers/layerCrop`).
+  const cropId = layerCropId('kcs-crop', layer.id);
+  const crop = cropClipMarkup(layer.content.crop, cropId);
+  const croppedBody = crop ? `<defs>${crop}</defs><g clip-path="url(#${cropId})">${body}</g>` : body;
+  const transformedBody = mixColorCorrection(`<g transform="${layerTransform(scene, layer)}"${effects ? ` filter="url(#${effectsId})"` : ''}>${effects ? `<defs>${effects}</defs>` : ''}${croppedBody}</g>`, correction);
   const blend = layerBlendMode(layer.content);
   const maskedBody = allMaskIds.reduceRight(
     (content, id) => `<g mask="url(#${escapeXml(id)})">${content}</g>`,

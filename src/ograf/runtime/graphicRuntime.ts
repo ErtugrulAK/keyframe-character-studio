@@ -22,6 +22,7 @@ import type { describePaint, describeText } from '../../utils/layers/drawDescrip
 import type { createTrackMatteMarkup, TrackMatteGradientInput } from '../trackMatteMarkup';
 import type { createTextEffects, DisplayedText, TextEffect } from '../../utils/animation/textEffects';
 import type { createLayerEffects, LayerBlendMode } from '../../utils/layers/layerEffects';
+import type { createLayerCrop, LayerCrop } from '../../utils/layers/layerCrop';
 import type { createLayoutModifiers, FitToTextSettings, FollowSettings, JustifySettings, LookAtSettings, RepeaterSettings, TextFitSettings } from '../../utils/layers/layoutModifiers';
 
 export interface RuntimePoint {
@@ -108,6 +109,7 @@ export interface RuntimeLayer {
   glowSize?: number;
   glowStrength?: number;
   blendMode?: LayerBlendMode;
+  crop?: LayerCrop;
   textValue?: string;
   /** A typewriter or a count over time (`utils/animation/textEffects`). */
   textEffect?: TextEffect;
@@ -212,6 +214,8 @@ export interface GraphicRuntimeEnvironment {
   textEffects: ReturnType<typeof createTextEffects>;
   /** Drop shadow, glow, blur and blend mode (`utils/layers/layerEffects`), the editor's own filter. */
   layerEffects: ReturnType<typeof createLayerEffects>;
+  /** The layer crop (`utils/layers/layerCrop`), the editor's own clip. */
+  layerCrop: ReturnType<typeof createLayerCrop>;
   /** The Track Matte mask, as the editor draws it (`ograf/trackMatteMarkup`). */
   trackMatteMarkup: ReturnType<typeof createTrackMatteMarkup>;
   /**
@@ -238,6 +242,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     layout,
     textEffects,
     layerEffects,
+    layerCrop,
     trackMatteMarkup,
   } = environment;
   const STEP_ENDS = environment.stepEnds && environment.stepEnds.length > 0 ? environment.stepEnds : [SCENE.totalFrames];
@@ -1023,7 +1028,11 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     // Drop shadow, glow and blur, as the editor draws them (`utils/layers/layerEffects`).
     const effectsId = runtimeId('kcs-fx', layer.id);
     const effects = layerEffects.layerFilterMarkup(layer, effectsId);
-    let inner = '<g transform="' + transform(scene, layer) + '"' + (effects ? ' filter="url(#' + effectsId + ')"' : '') + '>' + (effects ? '<defs>' + effects + '</defs>' : '') + body + '</g>';
+    // The crop trims the content in its own units, before the effects (`utils/layers/layerCrop`).
+    const cropId = runtimeId('kcs-crop', layer.id);
+    const crop = layerCrop.cropClipMarkup(layer.crop, cropId);
+    const croppedBody = crop ? '<defs>' + crop + '</defs><g clip-path="url(#' + cropId + ')">' + body + '</g>' : body;
+    let inner = '<g transform="' + transform(scene, layer) + '"' + (effects ? ' filter="url(#' + effectsId + ')"' : '') + '>' + (effects ? '<defs>' + effects + '</defs>' : '') + croppedBody + '</g>';
     const blend = layerEffects.layerBlendMode(layer);
     const ids = (maskMap[layer.id] || []).concat(matteId ? [matteId] : []);
     ids.slice().reverse().forEach((id) => {

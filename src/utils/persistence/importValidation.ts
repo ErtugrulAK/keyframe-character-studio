@@ -1,6 +1,7 @@
 import type { CharacterPart, Track } from '../../types/animator';
 import { CLOCK_FORMATS } from '../animation/textEffects';
 import { LAYER_BLEND_MODES } from '../layers/layerEffects';
+import { isLayerCrop } from '../layers/layerCrop';
 import type { SceneData } from '../../types/composition';
 import { isPrototypeSensitiveKey } from './pathSafety';
 import { isSceneCoordinateSystem } from './coordinateMigration';
@@ -344,6 +345,9 @@ const sharedLayerValueProblem = (record: Record<string, unknown>, path: string, 
   }
   if (record.blendMode !== undefined && !(LAYER_BLEND_MODES as readonly unknown[]).includes(record.blendMode)) {
     return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.blendMode`, `${owner} declares a blend mode KCS does not know.`);
+  }
+  if (record.crop !== undefined && !isLayerCrop(record.crop)) {
+    return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.crop`, `${owner} declares a crop that is not a rectangle with a positive width and height.`);
   }
   if (record.textEffect !== undefined) {
     const effect = asRecord(record.textEffect);

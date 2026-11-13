@@ -15,6 +15,7 @@ import { describePaint, describeText } from '../utils/layers/drawDescriptor';
 import { createLayoutModifiers, SHAPE_EXTENTS } from '../utils/layers/layoutModifiers';
 import { createTextEffects } from '../utils/animation/textEffects';
 import { createLayerEffects } from '../utils/layers/layerEffects';
+import { createLayerCrop } from '../utils/layers/layerCrop';
 import { onAir } from './helpers/ografOnAir';
 
 class HostElement { innerHTML = ''; }
@@ -42,6 +43,7 @@ const environmentFor = (scene: RuntimeScene): GraphicRuntimeEnvironment => ({
   layout: createLayoutModifiers(SHAPE_EXTENTS),
   textEffects: createTextEffects(),
   layerEffects: createLayerEffects(),
+  layerCrop: createLayerCrop(),
 });
 
 const runtimeFor = (scene: RuntimeScene) => createGraphicRuntime(environmentFor(scene));

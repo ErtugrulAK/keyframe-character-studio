@@ -179,6 +179,7 @@ function extractContent(
     ...(layer.layerBlur !== undefined ? { layerBlur: layer.layerBlur } : {}),
     ...(layer.glowColor !== undefined ? { glowColor: layer.glowColor, glowSize: layer.glowSize, glowStrength: layer.glowStrength } : {}),
     ...(layer.blendMode !== undefined ? { blendMode: layer.blendMode } : {}),
+    ...(layer.crop ? { crop: layer.crop } : {}),
     borderRadius: layer.borderRadius,
     strokeLinejoin: layer.strokeLinejoin,
     trimPathEnabled: trim.isModern ? trim.enabled : undefined,

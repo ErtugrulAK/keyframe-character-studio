@@ -80,3 +80,16 @@ test('Multiply darkens what it covers; Normal does not', async ({ page }) => {
   expect(normal[0]).toBeGreaterThan(200);
   expect(normal[1]).toBeLessThan(60);
 });
+
+test('a crop trims what the layer shows without moving it', async ({ page }) => {
+  // Round 6 (OGraf Studio review): the right half of the rectangle is cropped away.
+  await seed(page, [rect('card', 0, '#ff0000', { crop: { x: -60, y: -30, width: 60, height: 60 } })]);
+  const shape = (await page.locator('.stage-svg g[data-part-id="card"] [data-layer-crop] rect, .stage-svg g[data-part-id="card"] [data-layer-crop] path').first().boundingBox())!;
+  const [left, right] = await pixels(page, [
+    [shape.x + shape.width * 0.25, shape.y + shape.height / 2],
+    [shape.x + shape.width * 0.75, shape.y + shape.height / 2],
+  ]);
+  expect(left[0]).toBeGreaterThan(200);
+  expect(left[1]).toBeLessThan(60);
+  expect(right[0]).toBeLessThan(80);
+});

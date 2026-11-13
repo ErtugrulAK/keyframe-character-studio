@@ -63,6 +63,7 @@ function toCharacterPart(layer: SceneLayer): CharacterPart {
     ...(layer.layerBlur !== undefined ? { layerBlur: layer.layerBlur } : {}),
     ...(layer.glowColor !== undefined ? { glowColor: layer.glowColor, glowSize: layer.glowSize, glowStrength: layer.glowStrength } : {}),
     ...(layer.blendMode !== undefined ? { blendMode: layer.blendMode } : {}),
+    ...(layer.crop ? { crop: layer.crop } : {}),
     width: layer.width,
     height: layer.height,
     trimPathEnabled: layer.trimPathEnabled,

@@ -4,6 +4,7 @@ import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { ColorPickerPopover } from '../../inputs/ColorPickerPopover';
 import { StyleCard } from './StyleCard';
 import { StyleEffectsSection } from './StyleEffectsSection';
+import { TextEffectControls } from './TextEffectControls';
 import { KCS_TEXT_FONT_FAMILIES } from '../../../../utils/layers/textFonts';
 
 interface StyleTextFieldsProps {
@@ -27,10 +28,11 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({
     selectedPart.type === 'custom_banner';
   if (!applies) return null;
   // A text layer's settings live in the options bar under the toolbar; the
-  // Inspector keeps only its effects (shadow).
+  // Inspector keeps only its effects (animation over time, shadow).
   if (selectedPart.type === 'custom_text') {
     return (
       <StyleCard key={`text-effects:${selectedPart.id}`} title="TEXT EFFECTS" collapsible retainKey={`text-effects:${selectedPart.id}`}>
+        <TextEffectControls selectedPart={selectedPart} onPartPropChange={onPartPropChange} />
         <StyleEffectsSection selectedPart={selectedPart} onPartPropChange={onPartPropChange} embedded />
       </StyleCard>
     );

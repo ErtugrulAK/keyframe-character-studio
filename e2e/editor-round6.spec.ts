@@ -329,3 +329,35 @@ test('New from Template opens a ready-made lower third, fitted in view, in the e
   expect(artboard.x).toBeGreaterThanOrEqual(stage.x);
   expect(artboard.x + artboard.width).toBeLessThanOrEqual(stage.x + stage.width);
 });
+
+test('a text types itself out, set in the Inspector and kept after a reload', async ({ page }) => {
+  // Round 6 (OGraf Studio review): text effects over time.
+  await seed(page, [{ id: 't', name: 'Score', type: 'custom_text', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, textValue: 'HELLO WORLD', fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' }]);
+  await page.locator('[role="tree"] [data-layer-id="t"]').click();
+  const expand = page.getByRole('button', { name: 'Expand TEXT EFFECTS' });
+  if (await expand.count()) await expand.click();
+  await page.getByLabel('ANIMATE TEXT').selectOption('typewriter');
+  const drawn = page.locator('.stage-canvas-container [data-part-id="t"] text').first();
+  const seek = async (time: string) => {
+    const field = page.getByRole('textbox', { name: 'Current time' });
+    await field.fill(time);
+    await field.press('Enter');
+  };
+  // One second at 30 fps: half way, HELLO is shown and the rest holds its place, transparent.
+  const width = (await drawn.boundingBox())!.width;
+  await seek('15f');
+  await expect(drawn.locator('[data-text-effect-hidden]')).toHaveText(' WORLD');
+  expect(await drawn.evaluate((node) => node.firstChild?.textContent)).toBe('HELLO');
+  expect(Math.abs((await drawn.boundingBox())!.width - width)).toBeLessThan(2);
+  await seek('1s');
+  await expect(drawn.locator('[data-text-effect-hidden]')).toHaveCount(0);
+
+  // Kept by the autosave and after a reload.
+  const saved = (await savedLayers(page)).find((layer) => layer.id === 't') as unknown as { textEffect: unknown };
+  expect(saved.textEffect).toEqual({ kind: 'typewriter', startFrame: 0, durationFrames: 30 });
+  await page.reload();
+  await page.locator('[role="tree"] [data-layer-id="t"]').click();
+  await seek('15f');
+  await expect(page.locator('.stage-canvas-container [data-part-id="t"] [data-text-effect-hidden]')).toHaveText(' WORLD');
+
+});

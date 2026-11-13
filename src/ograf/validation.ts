@@ -1,5 +1,5 @@
 import type { SceneData, SceneLayer } from '../types/composition';
-import { isPrototypeSensitiveKey, normalizePackagePath } from '../utils/pathSafety';
+import { isPrototypeSensitiveKey, normalizePackagePath } from '../utils/persistence/pathSafety';
 import {
   type OGrafAssetPlan,
   type OGrafDiagnosticCode,
@@ -13,7 +13,7 @@ import {
 } from './types';
 import { resolveOGrafPublicControls } from './publicControls';
 import { describeOGrafValueForDiagnostics } from './diagnostics';
-import { resolveMatteSource } from '../utils/matte';
+import { resolveMatteSource } from '../utils/layers/matte';
 const SUPPORTED_LAYER_TYPES: Record<string, true> = {
   custom_box: true,
   custom_rect: true,
@@ -229,7 +229,7 @@ function validateLayerInput(layer: SceneLayer, diagnostics: OGrafExportDiagnosti
     layer,
     'layer',
   );
-  for (const field of ['id', 'name', 'type', 'fillColor', 'strokeColor', 'textValue', 'fontFamily', 'imageUrl', 'videoUrl']) {
+  for (const field of ['id', 'name', 'type', 'fillColor', 'strokeColor', 'textValue', 'fontFamily', 'textOrigin', 'imageUrl', 'videoUrl']) {
     if (record[field] !== undefined && typeof record[field] !== 'string') {
       invalidProject(diagnostics, `Layer field "${field}" must be a string.`, layer, 'layer');
     }
@@ -270,6 +270,15 @@ function validateLayerInput(layer: SceneLayer, diagnostics: OGrafExportDiagnosti
   }
   if (layer.trackMatte && !['alpha', 'luminance'].includes(layer.trackMatte.mode)) {
     invalidProject(diagnostics, `Track matte mode "${describeOGrafValueForDiagnostics(String(layer.trackMatte.mode))}" is not supported.`, layer, 'track-matte');
+  }
+  if (layer.trackMatte) {
+    validateFiniteFields(layer.trackMatte as unknown as Record<string, unknown>, ['feather', 'strength'], diagnostics, layer, 'track-matte');
+    if (layer.trackMatte.gradient) {
+      if (layer.trackMatte.gradient.type !== undefined && !['linear', 'radial'].includes(layer.trackMatte.gradient.type)) {
+        invalidProject(diagnostics, `Track matte gradient type "${describeOGrafValueForDiagnostics(String(layer.trackMatte.gradient.type))}" is not supported.`, layer, 'track-matte');
+      }
+      validateFiniteFields(layer.trackMatte.gradient as unknown as Record<string, unknown>, ['angle'], diagnostics, layer, 'track-matte');
+    }
   }
 }
 function validateTrackInput(
@@ -437,6 +446,20 @@ function validateFont(
     ...(entry.sourcePath ? { sourcePath: entry.sourcePath } : {}),
     ...(entry.binaryContent ? { binaryContent: entry.binaryContent } : {}),
     ...(entry.licenseText ? { licenseText: entry.licenseText } : {}),
+    ...(entry.unicodeRange ? { unicodeRange: entry.unicodeRange } : {}),
+    ...(entry.fontWeight ? { fontWeight: entry.fontWeight } : {}),
+  });
+  // Further subsets of the same family travel as their own faces; `#n` keeps
+  // their sources distinct, and the package names them by family.
+  entry.additionalFaces?.forEach((face, index) => {
+    assets.push({
+      source: `${source}#${index + 1}`,
+      packagedPath: normalizePackagedPath(layer.fontFamily!, 'font', face.packagedPath),
+      kind: 'font',
+      binaryContent: face.binaryContent,
+      unicodeRange: face.unicodeRange,
+      ...(face.fontWeight ? { fontWeight: face.fontWeight } : {}),
+    });
   });
 }
 
@@ -493,6 +516,8 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
       diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_ALPHA_MATTE', 'ERROR', 'Legacy matte strength cannot be emitted faithfully by OGraf Export V1.', layer, 'matte'));
     }
   }
+  // A Track Matte's soft edge, strength and gradient are emitted as the editor
+  // draws them (`ograf/trackMatteMarkup`).
   if (layer.trackMatte && layer.trackMatte.sourceLayerId === layer.id) {
     diagnostics.push(diagnostic('OGRAF_INVALID_TRACK_MATTE', 'ERROR', 'Track Matte V2 cannot reference its own layer.', layer, 'track-matte'));
   }
@@ -500,7 +525,7 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
   if (proceduralValues.some((value) => /(?:shake|random)/iu.test(value))) {
     diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_NONDETERMINISTIC_PROCEDURAL', 'ERROR', 'Non-deterministic procedural animation is not supported by OGraf Export V1.', layer, 'procedural-animation'));
   }
-  // F-04: the generated runtime renders the timeline (transform/opacity/mask
+  // The generated runtime renders the timeline (transform/opacity/mask
   // channels) and nothing else, so a layer whose frame output the *editor*
   // resolves from an in/out preset would play a different animation in the
   // exported graphic. That is a silent difference, so the export is refused
@@ -527,19 +552,25 @@ function createPublicStateSchema(
   const properties: Record<string, Record<string, unknown>> = Object.create(null);
   for (const field of textFields) {
     if (isPrototypeSensitiveKey(field.id)) continue;
+    // GDD: a KCS text is one line. Text names the graphic in playout lists.
     properties[field.id] = {
       type: 'string',
-      ...(field.title ? { title: field.title } : {}),
+      gddType: 'single-line',
+      ...(field.title ? { title: field.title, label: field.title } : {}),
       ...(field.defaultValue !== undefined ? { default: field.defaultValue } : {}),
+      ...(field.maxLength !== undefined ? { maxLength: field.maxLength } : {}),
     };
   }
   const packagedImageValues = assets.filter((asset) => asset.kind === 'image').map((asset) => asset.packagedPath);
   for (const field of imageFields) {
     if (isPrototypeSensitiveKey(field.id)) continue;
+    // GDD: a choice among the packaged images; an image path does not name the graphic.
     properties[field.id] = {
       type: 'string',
       enum: field.options || packagedImageValues,
-      ...(field.title ? { title: field.title } : {}),
+      gddType: 'select',
+      hidden: true,
+      ...(field.title ? { title: field.title, label: field.title } : {}),
       ...(field.defaultValue !== undefined ? { default: field.defaultValue } : {}),
     };
   }
@@ -550,7 +581,8 @@ function createPublicStateSchema(
       format: 'color',
       gddType: 'color-rrggbb',
       pattern: '^#[0-9a-f]{6}$',
-      ...(field.title ? { title: field.title } : {}),
+      hidden: true,
+      ...(field.title ? { title: field.title, label: field.title } : {}),
       ...(field.defaultValue !== undefined ? { default: field.defaultValue.toLowerCase() } : {}),
     };
   }
@@ -599,7 +631,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
   if (!sceneData || (sceneData.version !== 1 && sceneData.version !== 2 && sceneData.version !== 3) || !Number.isFinite(sceneData.width) || !Number.isFinite(sceneData.height) || !Number.isFinite(sceneData.fps)) {
     diagnostics.push({ code: 'OGRAF_INVALID_PROJECT', severity: 'ERROR', message: 'SceneData must be a version 1, 2 or 3 project with finite width, height, and FPS.' });
   }
-  // WP-08 — the generated OGraf runtime does not draw colour correction and
+  // The generated OGraf runtime does not draw colour correction and
   // would read an effect-only mask as an alpha cut, so either one blocks the
   // package (never flattened, never silently dropped). GIF renders both.
   for (const layer of sceneData?.layers || []) {
@@ -641,7 +673,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
   for (const layer of sceneData.layers || []) {
     const storedSourceId = layer.trackMatte?.sourceLayerId ?? layer.matte?.sourcePartId;
     if (!storedSourceId) continue;
-    // WP-07: only the ACTIVE relationship is an export edge — the one the
+    // Only the ACTIVE relationship is an export edge — the one the
     // editor, the stage and the generated runtime all resolve through
     // `resolveMatteSource` (an enabled Track Matte, else an enabled legacy
     // matte). A disabled relationship renders nothing, so it can neither form

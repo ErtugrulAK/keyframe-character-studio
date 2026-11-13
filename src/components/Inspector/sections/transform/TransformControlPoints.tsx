@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { CharacterPart, Transform } from '../../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../../types/composition';
-import { getPartBounds } from '../../../../utils/bounds';
+import { getPartBounds } from '../../../../utils/geometry/bounds';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 
 interface TransformControlPointsProps {

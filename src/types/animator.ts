@@ -1,4 +1,5 @@
-import type { MatteGradientStop } from '../utils/matte';
+import type { MatteGradientStop } from '../utils/layers/matte';
+import type { FitToTextSettings, FollowSettings, JustifySettings, LookAtSettings, RepeaterSettings, TextFitSettings } from '../utils/layers/layoutModifiers';
 
 export type EasingType =
   | 'linear'
@@ -64,7 +65,7 @@ export interface MaskPoint {
   handleOut?: { x: number; y: number };
 }
 
-/** M11/M13 — Track matte modes. `'clip'` (MVP) clips the target with the
+/** Track matte modes. `'clip'` (MVP) clips the target with the
  *  source's world-space geometry via SVG clipPath; `'alpha'` and `'luminance'`
  *  use an SVG <mask> (alpha channel / luminance of the source's fill). */
 export type MatteMode = 'clip' | 'alpha' | 'luminance';
@@ -83,7 +84,7 @@ export interface LayerMask {
   expansion?: number;
   locked?: boolean;
   /**
-   * WP-08 — false: an EFFECT-ONLY mask. It does not cut the layer; it only
+   * False: an EFFECT-ONLY mask. It does not cut the layer; it only
    * scopes an effect (colour correction). Absent = true: the mask cuts the
    * layer's alpha exactly as before.
    */
@@ -91,7 +92,7 @@ export interface LayerMask {
 }
 
 /**
- * WP-08 — a colour correction on a layer (first slice: images). Absent
+ * A colour correction on a layer (first slice: images). Absent
  * fields are neutral: enabled true, amount 1, brightness 0, contrast 1,
  * saturation 1. Scope 'mask' limits it to one of the SAME layer's masks; a
  * missing or disabled mask means the correction is NOT applied.
@@ -114,6 +115,11 @@ export interface TrackMatteV2 {
   inverted?: boolean;
   enabled?: boolean;
   sourceVisible?: boolean;
+  /** Soft edge, strength and gradient: the same render parameters, with the
+   *  same meaning and defaults, as the legacy matte's (see `PartMatte`). */
+  feather?: number;
+  strength?: number;
+  gradient?: PartMatte['gradient'];
 }
 
 export interface ProjectTemplate {
@@ -125,7 +131,7 @@ export interface ProjectTemplate {
 /** Static placement of a modern shape stroke relative to its authored path. */
 export type StrokeAlignment = 'center' | 'inside' | 'outside';
 
-/** M11 — Track matte: this part is clipped by another part's (the source's)
+/** Track matte: this part is clipped by another part's (the source's)
  *  evaluated world-space shape geometry. Legacy data may omit `mode` (treated
  *  as 'clip' at runtime — see `resolveMatteMode`) and `inverted`. */
 export interface PartMatte {
@@ -144,11 +150,11 @@ export interface PartMatte {
    * Applied via feGaussianBlur on the mask content (browser-verified).
    * Geometry is NOT affected — this is a render parameter only. */
   feather?: number;
-  /** M16: matte strength 0-1 (render parameter only — NOT geometry, NOT a
+  /** Matte strength 0-1 (render parameter only — NOT geometry, NOT a
    *  channel). undefined = legacy behavior = full strength (1). Malformed
    *  values normalize to 1 via normalizeStrength. */
   strength?: number;
-  /** M17: linear gradient matte (render parameter only — paint definition,
+  /** Linear gradient matte (render parameter only — paint definition,
    *  NEVER geometry). undefined = legacy behavior (no gradient).
    *  Angle is source-local degrees; 0 = left→right, 90 = top→bottom.
    *  M19: optional custom stops (2-4 MVP, render-only paint data — NEVER
@@ -174,6 +180,16 @@ export interface MaskData {
   points: MaskPoint[];
   /** V6 canonical path; `points` remains a legacy compatibility field. */
   path?: BezierPath;
+}
+
+/** A layer's own pose when it was made: what Reset Transform returns to. */
+export interface HomeTransform {
+  x: number;
+  y: number;
+  rotation: number;
+  scaleX: number;
+  scaleY: number;
+  opacity: number;
 }
 
 export interface Transform {
@@ -226,13 +242,13 @@ export interface PathKeyframe {
 }
 
 // Channel keys match Transform property names
-export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity' | 'maskOffsetX' | 'maskOffsetY' | 'maskScale' | 'maskRotation' | 'trimPathStart' | 'trimPathEnd' | 'trimPathOffset';
+export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity' | 'maskOffsetX' | 'maskOffsetY' | 'maskScale' | 'maskRotation' | 'trimPathStart' | 'trimPathEnd' | 'trimPathOffset' | 'matteFeather' | 'matteStrength' | 'matteGradientAngle';
 
 export type LayerMaskChannelProperty = 'opacity' | 'feather' | 'expansion';
 export type LayerMaskChannel = `${string}:${LayerMaskChannelProperty}`;
 export type LayerMaskPathChannel = `${string}:path`;
 export type AnimationChannel = TrackChannel | LayerMaskChannel | LayerMaskPathChannel;
-export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation', 'trimPathStart', 'trimPathEnd', 'trimPathOffset'];
+export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation', 'trimPathStart', 'trimPathEnd', 'trimPathOffset', 'matteFeather', 'matteStrength', 'matteGradientAngle'];
 
 export const layerMaskChannel = (maskId: string, property: LayerMaskChannelProperty): LayerMaskChannel =>
   `${maskId}:${property}`;
@@ -389,7 +405,7 @@ export interface CharacterPart {
   /**
    * Layers bonded to this one: a position change on either side moves both by
    * the same world-space delta. Mutual — the union of both lists is the
-   * authority (see `utils/partBinding`). Rotation, scale and opacity stay
+   * authority (see `utils/layers/partBinding`). Rotation, scale and opacity stay
    * independent, so this is not a parent-child transform.
    */
   boundPartIds?: string[];
@@ -397,7 +413,7 @@ export interface CharacterPart {
    * True for a layer that exists only as an authoring container: it owns no
    * geometry of its own and exists so that its `parentId` children move, scale
    * and rotate together through the ordinary parent-child transform
-   * (`utils/evaluateTransform`). It is not a Boolean group (`booleanOperandIds`)
+   * (`utils/animation/evaluateTransform`). It is not a Boolean group (`booleanOperandIds`)
    * and not a bond (`boundPartIds`): those keep their own contracts.
    *
    * Distinct from a Lottie-imported parent, whose `parentId` children are real
@@ -409,6 +425,22 @@ export interface CharacterPart {
   baseTransform: Transform;
   textValue?: string;
   fontSize?: number;
+  /** Text: its box, alignment and hiding (`utils/layers/layoutModifiers`). */
+  textFit?: TextFitSettings;
+  /** Box-like shape: Auto Size, the text layer whose width it follows (`utils/layers/layoutModifiers`). */
+  fitToText?: FitToTextSettings;
+  /** Auto Follow: sits next to another layer's edge; x is the gap (`utils/layers/layoutModifiers`). */
+  follow?: FollowSettings;
+  /** Look At: turns to face another layer (`utils/layers/layoutModifiers`). */
+  lookAt?: LookAtSettings;
+  /** Where the layer was made (position, turn, size, opacity); Reset Transform returns it there. */
+  homeTransform?: HomeTransform;
+  /** Group: Justify, where its children's combined bounds sit (`utils/layers/layoutModifiers`). */
+  justify?: JustifySettings;
+  /** Repeater: copies in a line, grid or ring (`utils/layers/layoutModifiers`). */
+  repeater?: RepeaterSettings;
+  /** Render-only: the layer a repeated copy was made from. Never stored. */
+  repeatSourceId?: string;
   cardCategory?: string;
   cardTitle?: string;
   cardButtonText?: string;
@@ -419,7 +451,7 @@ export interface CharacterPart {
   shadowOffsetX?: number;
   shadowOffsetY?: number;
   borderRadius?: number;
-  /** C6 — stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
+  /** Stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
   strokeLinejoin?: 'miter' | 'round';
   width?: number;
   height?: number;
@@ -468,6 +500,9 @@ export interface CharacterPart {
   anchor?: AnchorPreset;
   anchorOffsetX?: number;
   anchorOffsetY?: number;
+
+  /** Where the text's origin sits: absent = on the baseline (every older text). See utils/geometry/textOrigin. */
+  textOrigin?: import('../utils/geometry/textOrigin').TextOrigin;
 
   // ── Feature 3: Text Stagger Animation ──
   textAnimMode?: TextAnimMode;
@@ -520,7 +555,7 @@ export interface CharacterPart {
   matte?: PartMatte;
   /** V6 source relationship. Legacy `matte` remains the fallback. */
   trackMatte?: TrackMatteV2;
-  /** WP-08 — layer effects (colour correction). Absent = none (every scene before v3). */
+  /** Layer effects (colour correction). Absent = none (every scene before v3). */
   effects?: ColorCorrectionEffect[];
 
   // ── Feature 10: Custom Preset Animation Engine ──
@@ -587,4 +622,6 @@ export interface MotionTemplate {
   type: 'in' | 'out' | 'stunt';
   durationFrames: number;
   description?: string;
+  /** Frames that split the sequence into OGraf steps (`utils/animation/stepMarkers`); absent = one step. */
+  stepMarkers?: number[];
 }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useSerialization, type UseSerializationApi } from '../hooks/useSerialization';
-import { AUTOSAVE_STORAGE_KEY, AUTOSAVE_LOCK_NAME } from '../utils/constants';
+import { AUTOSAVE_STORAGE_KEY, AUTOSAVE_LOCK_NAME } from '../utils/editor/constants';
 import type { CharacterPart, MotionTemplate, Track } from '../types/animator';
 import type { SceneCoordinateSystem } from '../types/composition';
 
@@ -327,6 +327,9 @@ describe('SAFE-02 — the CAS critical section runs inside one lock grant', () =
     const manager = {
       async request(name: string, options: { ifAvailable?: boolean; signal?: AbortSignal }, cb: (lock: { name: string } | undefined) => Promise<unknown>): Promise<unknown> {
         names.push(name);
+        // Web Locks are per name: another lock (the asset session) never
+        // contends with the autosave lock this stub models.
+        if (name !== AUTOSAVE_LOCK_NAME) return cb({ name });
         if (options.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
         if (options.ifAvailable && held) {
           events.push('skip');

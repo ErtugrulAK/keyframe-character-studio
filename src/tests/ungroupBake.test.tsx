@@ -28,6 +28,7 @@ import type { Transform } from '../types/animator';
 import { compileOGrafPackage } from '../ograf/packageCompiler';
 import { evaluateOGrafScene } from '../ograf/evaluation';
 import { renderOGrafSvg } from '../ograf/svgRenderer';
+import { onAir } from './helpers/ografOnAir';
 
 const POSE_CHANNELS = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'] as const;
 
@@ -354,7 +355,9 @@ describe('R3-13 — ungrouping an animated group', () => {
     const groupedGraphic = instantiateGraphic(runtimeSource(groupedScene));
     const ungroupedGraphic = instantiateGraphic(runtimeSource(ungroupedScene));
     await groupedGraphic.load({ renderType: 'realtime', data: {} });
+    await onAir(groupedGraphic);
     await ungroupedGraphic.load({ renderType: 'realtime', data: {} });
+    await onAir(ungroupedGraphic);
 
     const markups: string[] = [];
     frames.forEach((frame) => {

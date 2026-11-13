@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAnimator } from '../../context/useAnimator';
+import { useAnimatorSlice } from '../../context/useAnimator';
 import { Zap, Film, CheckCircle2, Play } from 'lucide-react';
 import './LiveDirector.css';
 
@@ -11,7 +11,7 @@ export const LiveDirectorPanel: React.FC = () => {
     setActiveTemplateId,
     playNamedSequence,
     namedSequenceRuntime,
-  } = useAnimator();
+  } = useAnimatorSlice('sceneTitle', 'motionTemplates', 'activeTemplateId', 'setActiveTemplateId', 'playNamedSequence', 'namedSequenceRuntime');
 
   return (
     <div className="live-director-panel">

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BezierPath } from '../types/animator';
-import { sampleBezierPath } from '../utils/bezierPath';
-import { applyPathOrderEdit, applyPathOrderEditEverywhere, planPathOrderEdit, type PathOrderCommand } from '../utils/maskPathOrder';
+import { sampleBezierPath } from '../utils/geometry/bezierPath';
+import { applyPathOrderEdit, applyPathOrderEditEverywhere, planPathOrderEdit, type PathOrderCommand } from '../utils/geometry/maskPathOrder';
 
 const curved = (closed = true): BezierPath => ({
   version: 1,

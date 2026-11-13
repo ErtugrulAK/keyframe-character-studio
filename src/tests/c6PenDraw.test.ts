@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useFreeformDraw, PEN_DRAG_THRESHOLD_PX } from '../hooks/useFreeformDraw';
-import { addPenAnchor, dedupePenAnchors, dragPenTangent, offsetPenAnchors, penAnchorsToPath } from '../utils/penDraft';
+import { addPenAnchor, dedupePenAnchors, dragPenTangent, offsetPenAnchors, penAnchorsToPath } from '../utils/geometry/penDraft';
 import type { BezierPath } from '../types/animator';
 
 /**

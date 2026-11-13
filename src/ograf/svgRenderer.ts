@@ -1,17 +1,20 @@
 import { describeOGrafValueForDiagnostics } from './diagnostics';
+import { textBaselineOffset } from '../utils/geometry/textOrigin';
 import type { CharacterPart } from '../types/animator';
 import type { EvaluatedLayer, LayerContent } from '../types/composition';
-import { buildBezierPathD } from '../utils/bezierPath';
-import { buildFreeformPath } from '../utils/freeform';
-import { buildLayerMaskDefinition, layerMaskFilterId } from '../utils/layerMasks';
-import { alphaMasks, colorCorrectionFilter, colorCorrectionIds, resolveColorCorrection, resolvedParameters } from '../utils/colorCorrection';
-import { resolveMatteSource } from '../utils/matte';
-import { stackingOrder } from '../utils/stackingOrder';
-import { getShapeGeometry, polygonPointsToString } from '../utils/shapeGeometry';
-import { resolveShapeAppearance } from '../utils/shapeAppearance';
-import { getTrimPathDashProps, resolveTrimPath } from '../utils/trimPath';
-import { affineTrsReading, worldAffineOf } from '../utils/containerMath';
+import { buildBezierPathD } from '../utils/geometry/bezierPath';
+import { buildFreeformPath } from '../utils/geometry/freeform';
+import { buildLayerMaskDefinition, layerMaskFilterId } from '../utils/layers/layerMasks';
+import { alphaMasks, colorCorrectionFilter, colorCorrectionIds, resolveColorCorrection, resolvedParameters } from '../utils/layers/colorCorrection';
+import { resolveMatteSource } from '../utils/layers/matte';
+import { stackingOrder } from '../utils/layers/stackingOrder';
+import { getShapeGeometry, polygonPointsToString } from '../utils/geometry/shapeGeometry';
+import { resolveShapeAppearance } from '../utils/layers/shapeAppearance';
+import { describePaint, describeText } from '../utils/layers/drawDescriptor';
+import { getTrimPathDashProps, resolveTrimPath } from '../utils/geometry/trimPath';
+import { affineTrsReading, worldAffineOf } from '../utils/geometry/containerMath';
 import type { OGrafEvaluatedScene } from './evaluation';
+import { trackMatteMask, trackMatteRenderParameters } from './trackMatteMarkup';
 
 interface OGrafSvgRenderOptions {
   imageReferences?: Record<string, string>;
@@ -23,6 +26,8 @@ type MatteRelationship = {
   mode: 'alpha' | 'luminance';
   inverted: boolean;
   sourceVisible: boolean;
+  /** A Track Matte (with its soft edge, strength and gradient); absent for a legacy matte. */
+  trackMatte?: NonNullable<LayerContent['trackMatte']>;
 };
 
 function escapeXml(value: string): string {
@@ -70,7 +75,8 @@ function renderGeometry(type: string, content: LayerContent, props: SvgAttribute
   if (!geometry) return '';
   if (geometry.kind === 'circle') return `<circle cx="0" cy="0" r="${svgNumber(geometry.r)}"${attributes(props)} />`;
   if (geometry.kind === 'rect') {
-    const rx = content.borderRadius ?? geometry.rx;
+    // As in the editor, a capsule keeps its fixed ends; the other rects take the authored radius.
+    const rx = type === 'custom_capsule' ? geometry.rx : content.borderRadius ?? geometry.rx;
     return `<rect x="${svgNumber(geometry.x)}" y="${svgNumber(geometry.y)}" width="${svgNumber(geometry.width)}" height="${svgNumber(geometry.height)}" rx="${svgNumber(rx)}"${attributes(props)} />`;
   }
   return `<polygon points="${escapeXml(polygonPointsToString(geometry.points))}"${attributes(props)} />`;
@@ -78,13 +84,12 @@ function renderGeometry(type: string, content: LayerContent, props: SvgAttribute
 
 function renderText(layer: EvaluatedLayer, props: SvgAttributes = {}): string {
   const content = layer.content;
-  const text = content.textValue || 'TEXT';
   // A caller that passes paint is drawing a silhouette — the matte path paints
   // the source black to punch the hole — so those values replace the layer's own
   // paint. Appending them instead produced a second `fill` the browser ignores,
   // which left the glyphs their own colour and the hole missing for a dark text.
   const { fill, stroke, 'fill-opacity': fillOpacity, ...rest } = props;
-  const appearance = resolveShapeAppearance({
+  const paint = describePaint(resolveShapeAppearance({
     type: 'custom_text',
     fillColor: content.fillColor ?? 'none',
     strokeColor: content.strokeColor ?? 'none',
@@ -94,13 +99,13 @@ function renderText(layer: EvaluatedLayer, props: SvgAttributes = {}): string {
     strokeOpacity: content.strokeOpacity,
     strokeWidth: content.strokeWidth,
     strokeAlignment: content.strokeAlignment,
-  });
+  }));
+  const glyphs = describeText(content, textBaselineOffset(content));
   // Authored paint wins; only silhouette callers (matte) replace the stroke.
-  const authoredStroke = appearance.strokeEnabled ? appearance.strokeColor : 'none';
-  const strokeColor = stroke === undefined ? authoredStroke : String(stroke);
-  const fillColor = fill === undefined ? (appearance.fillEnabled ? appearance.fillColor : 'none') : String(fill);
-  const resolvedFillOpacity = fillOpacity === undefined ? appearance.fillOpacity : Number(fillOpacity);
-  return `<text x="0" y="0" text-anchor="middle" fill="${escapeXml(fillColor || 'none')}" fill-opacity="${svgNumber(resolvedFillOpacity ?? 1)}" stroke="${escapeXml(strokeColor || 'none')}" stroke-opacity="${svgNumber(appearance.strokeOpacity)}" stroke-width="${svgNumber(appearance.strokeWidth)}" font-size="${svgNumber(content.fontSize || 24)}" font-weight="bold" font-family="${escapeXml(content.fontFamily || 'Outfit')}"${attributes(rest)}>${escapeXml(text)}</text>`;
+  const strokeColor = stroke === undefined ? paint.stroke : String(stroke);
+  const fillColor = fill === undefined ? paint.fill : String(fill);
+  const resolvedFillOpacity = fillOpacity === undefined ? paint.fillOpacity : Number(fillOpacity);
+  return `<text x="0" y="${svgNumber(glyphs.y)}" text-anchor="middle" fill="${escapeXml(fillColor || 'none')}" fill-opacity="${svgNumber(resolvedFillOpacity ?? 1)}" stroke="${escapeXml(strokeColor || 'none')}" stroke-opacity="${svgNumber(paint.strokeOpacity)}" stroke-width="${svgNumber(paint.strokeWidth)}" paint-order="stroke" font-size="${svgNumber(glyphs.fontSize)}" font-weight="${glyphs.fontWeight}" font-family="${escapeXml(glyphs.fontFamily)}"${attributes(rest)}>${escapeXml(glyphs.text)}</text>`;
 }
 
 function renderImage(layer: EvaluatedLayer, options: OGrafSvgRenderOptions, props: SvgAttributes = {}): string {
@@ -152,7 +157,7 @@ function layerTransform(scene: OGrafEvaluatedScene, layer: EvaluatedLayer): stri
 
 function renderShape(layer: EvaluatedLayer): string {
   const content = layer.content;
-  const appearance = resolveShapeAppearance({
+  const paint = describePaint(resolveShapeAppearance({
     type: layer.type as Parameters<typeof resolveShapeAppearance>[0]['type'],
     fillColor: content.fillColor || 'none',
     strokeColor: content.strokeColor || 'none',
@@ -162,34 +167,34 @@ function renderShape(layer: EvaluatedLayer): string {
     strokeOpacity: content.strokeOpacity,
     strokeWidth: content.strokeWidth,
     strokeAlignment: content.strokeAlignment,
-  });
+  }));
   const common: SvgAttributes = {
-    fill: appearance.fillEnabled ? appearance.fillColor : 'none',
-    'fill-opacity': appearance.fillOpacity,
-    stroke: appearance.strokeEnabled ? appearance.strokeColor : 'none',
-    'stroke-opacity': appearance.strokeOpacity,
-    'stroke-width': appearance.strokeWidth,
-    // C12 — as in the editor, the stroke is in scene units whatever the
+    fill: paint.fill,
+    'fill-opacity': paint.fillOpacity,
+    stroke: paint.stroke,
+    'stroke-opacity': paint.strokeOpacity,
+    'stroke-width': paint.strokeWidth,
+    // As in the editor, the stroke is in scene units whatever the
     // layer's own scale (the document is drawn at one unit per pixel).
     'vector-effect': 'non-scaling-stroke',
     ...renderTrim(content),
   };
   const geometry = renderGeometry(layer.type, content, common);
   if (!geometry) throw new Error(`Unsupported or invalid SVG geometry for layer "${describeOGrafValueForDiagnostics(layer.id)}" (${describeOGrafValueForDiagnostics(layer.type)}).`);
-  if (appearance.strokeAlignment === 'center' || !appearance.strokeEnabled || appearance.strokeWidth <= 0) return geometry;
-  const maskId = safeSvgId(`${appearance.strokeAlignment}-stroke-${layer.id}`);
+  if (paint.strokeAlignment === 'center' || !paint.stroked) return geometry;
+  const maskId = safeSvgId(`${paint.strokeAlignment}-stroke-${layer.id}`);
   const maskGeometry = renderGeometry(layer.type, content, {
-    fill: appearance.strokeAlignment === 'inside' ? 'white' : 'black',
+    fill: paint.strokeAlignment === 'inside' ? 'white' : 'black',
     stroke: 'none',
   });
   const fillGeometry = renderGeometry(layer.type, content, { ...common, stroke: 'none', 'stroke-width': 0 });
   const strokeGeometry = renderGeometry(layer.type, content, {
     ...common,
     fill: 'none',
-    'stroke-width': appearance.strokeWidth * 2,
+    'stroke-width': paint.strokeWidth * 2,
     mask: `url(#${maskId})`,
   });
-  return `<g><defs><mask id="${maskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"><rect x="-1000000" y="-1000000" width="2000000" height="2000000" fill="${appearance.strokeAlignment === 'inside' ? 'black' : 'white'}" />${maskGeometry}</mask></defs>${fillGeometry}${strokeGeometry}</g>`;
+  return `<g><defs><mask id="${maskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"><rect x="-1000000" y="-1000000" width="2000000" height="2000000" fill="${paint.strokeAlignment === 'inside' ? 'black' : 'white'}" />${maskGeometry}</mask></defs>${fillGeometry}${strokeGeometry}</g>`;
 }
 
 function asCharacterPart(layer: EvaluatedLayer): CharacterPart {
@@ -208,7 +213,7 @@ function asCharacterPart(layer: EvaluatedLayer): CharacterPart {
 }
 
 function renderLayerMaskDefinitions(scene: OGrafEvaluatedScene, target: EvaluatedLayer): { defs: string; ids: string[] } {
-  // WP-08 — effect-only masks scope an effect; they never cut the layer.
+  // Effect-only masks scope an effect; they never cut the layer.
   const masks = alphaMasks(target.content.masks);
   if (masks.length === 0) return { defs: '', ids: [] };
   const part = asCharacterPart(target);
@@ -279,6 +284,7 @@ function getMatteRelationship(layer: EvaluatedLayer): MatteRelationship | undefi
     mode: v2.mode,
     inverted: v2.inverted === true,
     sourceVisible: v2.sourceVisible !== false,
+    trackMatte: v2,
   };
 }
 
@@ -300,12 +306,35 @@ function renderTrackMatteDefinition(scene: OGrafEvaluatedScene, target: Evaluate
   const sourceFill = relationship.inverted
     ? 'black'
     : relationship.mode === 'luminance' ? (source.content.fillColor || 'white') : 'white';
+  // The editor's matte paints the source silhouette at full opacity: its own
+  // fill opacity never weakens the matte (only the relationship's strength does).
   const sourceContent = renderLayerContent(source, options, {
     fill: sourceFill,
     stroke: 'none',
-    'fill-opacity': source.content.fillOpacity ?? 1,
+    'fill-opacity': 1,
   });
   if (!sourceContent) throw new Error(`Track matte source "${describeOGrafValueForDiagnostics(source.id)}" has no supported SVG content.`);
+  if (relationship.trackMatte) {
+    // A Track Matte: soft edge, strength and gradient as the editor draws them.
+    const affine = worldAffineOf(source.transform);
+    return {
+      defs: trackMatteMask({
+        id,
+        width: scene.width,
+        height: scene.height,
+        mode: relationship.mode,
+        inverted: relationship.inverted,
+        ...trackMatteRenderParameters(relationship.trackMatte, source.type),
+        source: { type: source.type, points: source.content.points, width: source.content.width, height: source.content.height, fontSize: source.content.fontSize, textValue: source.content.textValue },
+        transform: layerTransform(scene, source),
+        affine: { ...affine, e: affine.e + scene.width / 2, f: affine.f + scene.height / 2 },
+        silhouette: (fill) => renderLayerContent(source, options, { fill, stroke: 'none', 'fill-opacity': 1 }),
+        fillColor: source.content.fillColor || 'white',
+      }),
+      id,
+      relationship,
+    };
+  }
   const sourceShape = `<g transform="${layerTransform(scene, source)}">${sourceContent}</g>`;
   const body = relationship.inverted
     ? `<rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" />${sourceShape}`
@@ -334,7 +363,7 @@ function renderClipDefs(scene: OGrafEvaluatedScene, options: OGrafSvgRenderOptio
   return defs.join('');
 }
 
-/** WP-08 — how one layer's colour correction is drawn in this renderer. */
+/** How one layer's colour correction is drawn in this renderer. */
 interface ColorCorrectionMarkup {
   filterId: string;
   coverageId?: string;
@@ -343,7 +372,7 @@ interface ColorCorrectionMarkup {
 }
 
 /**
- * WP-08 — the same correction the editor draws (`PartRenderer`): one sRGB
+ * The same correction the editor draws (`PartRenderer`): one sRGB
  * filter F and, for a mask scope, a coverage luminance mask w and its inverse
  * (1 - w) built from the layer's evaluated mask. Anything but an 'applied'
  * correction (off, neutral, missing or disabled mask) produces nothing.
@@ -375,7 +404,7 @@ function renderColorCorrectionDefinitions(scene: OGrafEvaluatedScene, target: Ev
   return { defs: `${filter}${coverageFilter}${coverage}${inverse}`, markup: { filterId: ids.filter, coverageId: ids.coverage, inverseId: ids.inverse, amount } };
 }
 
-/** WP-08 — C_out = (1 - w)*C + w*F(C), A_out = A: two copies in an isolated group, the second added with plus-lighter. */
+/** C_out = (1 - w)*C + w*F(C), A_out = A: two copies in an isolated group, the second added with plus-lighter. */
 function mixColorCorrection(body: string, correction: ColorCorrectionMarkup | undefined): string {
   if (!correction) return body;
   const original = correction.inverseId ? ` mask="url(#${escapeXml(correction.inverseId)})"` : ` opacity="${svgNumber(1 - correction.amount)}"`;

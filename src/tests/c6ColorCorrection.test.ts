@@ -10,13 +10,13 @@ import {
   resetColorCorrection,
   resolveColorCorrection,
   sceneUsesEffectFeatures,
-} from '../utils/colorCorrection';
-import { validateImportedDocument } from '../utils/importValidation';
+} from '../utils/layers/colorCorrection';
+import { validateImportedDocument } from '../utils/persistence/importValidation';
 import { validateSceneForOGraf } from '../ograf/validation';
 import { validateGifScene } from '../export/gifPlan';
 import { evaluateSceneFrame } from '../ograf/evaluation';
 import { renderOGrafSvg } from '../ograf/svgRenderer';
-import { cloneAnimationOntoTarget } from '../utils/animationTransfer';
+import { cloneAnimationOntoTarget } from '../utils/animation/animationTransfer';
 
 /**
  * WP-08 — mask-constrained colour correction: the resolution rules, the filter

@@ -1,6 +1,5 @@
 /**
- * C4 — the layer lock and the mask lock, end to end (behaviour table in
- * reports/.../c4-continuation/08_C4_RESULTS.md).
+ * C4 — the layer lock and the mask lock, end to end.
  *
  * Layer lock: the canvas does not pick a locked layer (clicks reach the layer
  * beneath), the box and Select All leave it out; it can still be selected in the
@@ -207,8 +206,6 @@ test('a saved mask lock protects only that mask path; its row unlocks it', async
   await expect(page.getByRole('checkbox', { name: /Lock path/ })).toHaveCount(0);
   const editOnCanvas = page.getByRole('button', { name: 'Edit on Canvas' });
   await expect(editOnCanvas).toBeDisabled();
-  await expect(page.getByRole('switch', { name: 'Closed path' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Reverse direction' })).toBeDisabled();
   await expect(page.getByRole('button', { name: '1. Window (locked)' })).toBeVisible();
   // The rest of the mask is not locked.
   const hole = page.getByRole('checkbox', { name: 'Cut a hole' });

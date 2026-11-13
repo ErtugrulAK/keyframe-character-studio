@@ -1,30 +1,30 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import type { CharacterPart, CustomMotionPreset } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
-import { builtinPresetToCustomKeyframes } from '../../../../utils/presetConversion';
+import { builtinPresetToCustomKeyframes } from '../../../../utils/animation/presetConversion';
 import type { SavePresetInput, UpdatePresetInput } from '../../../../hooks/usePresets';
-import { buildPresetExportPayload, validatePresetImportPayload, mergeImportedPresets, isDefaultPresetId } from '../../../../utils/presetExportImport';
+import { buildPresetExportPayload, validatePresetImportPayload, mergeImportedPresets, isDefaultPresetId } from '../../../../utils/animation/presetExportImport';
 
 interface TransformInOutPresetCardProps {
   selectedPart: CharacterPart;
   onPartPropChange: (key: keyof CharacterPart, value: any) => void;
-  // M25 — user-saved custom preset library (25A data layer + 25C UI)
+  // User-saved custom preset library (25A data layer + 25C UI)
   customPresets: CustomMotionPreset[];
   onSavePreset: (input: SavePresetInput) => CustomMotionPreset | null;
   onUpdatePreset?: (id: string, input: UpdatePresetInput) => CustomMotionPreset | null;
   onDeletePreset: (id: string) => void;
-  // M26 — copy/paste/clear ANIMATION (26A data layer + 26B UI)
+  // Copy/paste/clear ANIMATION (26A data layer + 26B UI)
   onCopyAnimation?: () => void;
   onPasteAnimation?: () => void;
   onClearAnimation?: () => void;
   clipboardSourceId?: string | null;
-  // M30 — custom preset library export/import (30A pure helpers + 30B UI)
+  // Custom preset library export/import (30A pure helpers + 30B UI)
   onImportPresets?: (presets: CustomMotionPreset[]) => void;
   showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 /**
- * M23 — IN / OUT animation presets.
+ * IN / OUT animation presets.
  *
  * Exposes the EXISTING procedural animation engine (computeProceduralDelta /
  * applyEditPreset in proceduralAnimation.ts) through the Inspector. Setting
@@ -32,7 +32,7 @@ interface TransformInOutPresetCardProps {
  * onPartPropChange → atomic history entry; the timeline beginning/end preview
  * and the broadcast state machine consume the SAME fields automatically.
  *
- * M25 — adds the "Custom" optgroup (user-saved presets from the existing
+ * Adds the "Custom" optgroup (user-saved presets from the existing
  * custom preset library). Saving converts the CURRENT selected animation
  * behavior into a standalone CustomMotionPreset (independent of the builtin
  * id); deleting only ever removes custom presets, never builtins.
@@ -53,7 +53,7 @@ const BASIC_PRESETS: { value: string; label: string }[] = [
   { value: 'spin', label: 'Spin' },
 ];
 
-// M24 — builtin COMBINATION presets (Option A IDs from proceduralAnimation).
+// Builtin COMBINATION presets (Option A IDs from proceduralAnimation).
 // Only genuinely NEW behavior: fade+slide ≡ slide and fade+scale ≡ pop
 // (every builtin already carries opacity=eased), so those are NOT offered.
 const COMBO_PRESETS: { value: string; label: string }[] = [
@@ -97,7 +97,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
   const inDur = selectedPart.inAnimDuration ?? 30;
   const outDur = selectedPart.outAnimDuration ?? 30;
 
-  // M25 — transient UI state for the compact save dialog (name input only;
+  // Transient UI state for the compact save dialog (name input only;
   // the preset collection itself stays in usePresets — no second state)
   const [saveContext, setSaveContext] = useState<{
     which: 'in' | 'out';
@@ -115,7 +115,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
   const [editName, setEditName] = useState('');
   const [editCategory, setEditCategory] = useState('');
 
-  // M25 — the Custom optgroup lists ONLY user-saved presets. The collection
+  // The Custom optgroup lists ONLY user-saved presets. The collection
   // is seeded with DEFAULT_INITIAL_PRESETS (builtin custom presets used by
   // the runtime/broadcast) — those are NOT user-owned and must not appear as
   // "Custom" (nor get the Delete control). 25A's collision guard guarantees
@@ -291,7 +291,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
     closeEditPreset();
   };
 
-  // M30 — export the user custom preset library as a versioned JSON file.
+  // Export the user custom preset library as a versioned JSON file.
   // 30A pure helper owns user/default filtering; no history, no scene change.
   const handleExport = () => {
     const payload = buildPresetExportPayload(customPresets);
@@ -306,7 +306,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
     URL.revokeObjectURL(url);
   };
 
-  // M30 — import: hidden file input → whole-file validation (30A) → merge
+  // Import: hidden file input → whole-file validation (30A) → merge
   // (30A) → existing usePresets persistence. Invalid → import NOTHING.
   const importFileRef = useRef<HTMLInputElement | null>(null);
 

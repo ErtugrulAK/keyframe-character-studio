@@ -131,7 +131,7 @@ test('materialized KCS OGraf package interoperates with Chromium', async ({ page
   expect(manifest.$schema).toBe('https://ograf.ebu.io/v1/specification/json-schemas/graphics/schema.json');
   expect(manifest.main).toBe('graphic.mjs');
   expect(manifest.supportsRealTime).toBe(true);
-  expect(manifest.supportsNonRealTime).toBe(false);
+  expect(manifest.supportsNonRealTime).toBe(true);
   expect(manifest.customActions).toBeUndefined();
   const generatedScene = await readFile(join(packageRoot, 'scene.kcs'), 'utf8');
   expect(generatedScene).not.toMatch(/(?:[A-Z]:\\\\|\/Users\/|\/home\/|localhost|node_modules|react|src\/)/iu);
@@ -154,11 +154,11 @@ test('materialized KCS OGraf package interoperates with Chromium', async ({ page
       document.body.append(graphic);
       const loadResult = await guard('load', graphic.load({ renderType: 'realtime', data: { headlineText: 'Updated' } }));
       const initialSvg = graphic.innerHTML;
-      const imageHref = graphic.querySelector('image')?.getAttribute('href') || '';
-      const imageResponse = await guard('asset-fetch', fetch(new URL(imageHref, location.href)));
       const _activePlay = graphic.playAction({});
       await new Promise((resolve) => setTimeout(resolve, 50));
       const intermediateSvg = graphic.innerHTML;
+      const imageHref = graphic.querySelector('image')?.getAttribute('href') || '';
+      const imageResponse = await guard('asset-fetch', fetch(new URL(imageHref, location.href)));
       const stopResult = await guard('stop', graphic.stopAction({ skipAnimation: true }));
       const finalPlayResult = await guard('final-play', graphic.playAction({ skipAnimation: true }));
       const finalSvg = graphic.innerHTML;
@@ -182,11 +182,13 @@ test('materialized KCS OGraf package interoperates with Chromium', async ({ page
     });
 
     expect(result.loadResult).toMatchObject({ statusCode: 200 });
+    // OGraf: a loaded graphic paints nothing before its first playAction.
     expect(result.initialSvg).toContain('<svg');
-    expect(result.initialSvg).toContain('Updated');
-    expect(result.initialSvg).toContain('stroke-dasharray');
-    expect(result.initialSvg).toContain('inside-stroke-target');
-    expect(result.initialSvg).toContain('kcs-clip-source');
+    expect(result.initialSvg).not.toContain('data-layer-id');
+    expect(result.intermediateSvg).toContain('Updated');
+    expect(result.intermediateSvg).toContain('stroke-dasharray');
+    expect(result.intermediateSvg).toContain('inside-stroke-target');
+    expect(result.intermediateSvg).toContain('kcs-clip-source');
     expect(new URL(result.imageHref).pathname).toBe('/assets/images/logo.png');
     expect(result.imageOk).toBe(true);
     expect(result.intermediateSvg).toContain('data-layer-id="target"');

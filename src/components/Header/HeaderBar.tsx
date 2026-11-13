@@ -1,14 +1,14 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { sanitizeFilenameComponent } from '../../utils/pathSafety';
-import { packageFileAdmissionProblem, projectFileAdmissionProblem } from '../../utils/fileAdmission';
-import { downloadBlob } from '../../utils/fileDownload';
+import { sanitizeFilenameComponent } from '../../utils/persistence/pathSafety';
+import { packageFileAdmissionProblem, projectFileAdmissionProblem } from '../../utils/persistence/fileAdmission';
+import { downloadBlob } from '../../utils/persistence/fileDownload';
 // The GIF export pipeline (panel + encoder + OGraf svg/validation chain) is
 // only reachable when the panel is open, so it ships as a lazy chunk instead
 // of weighing down the editor's initial bundle. The gate owns the lazy
 // mount, its loading state and a localized failure/retry card.
 import { GifPanelGate } from './GifPanelGate';
 import type { SceneData as ExportableSceneData } from '../../types/composition';
-import { useAnimator } from '../../context/useAnimator';
+import { useAnimatorSlice, useAnimatorReader } from '../../context/useAnimator';
 import {
   Download,
   Upload,
@@ -17,7 +17,6 @@ import {
   AlertTriangle,
   Plus,
   ChevronDown,
-  Keyboard,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
@@ -37,11 +36,13 @@ import { buildOGrafCapabilityReport, type OGrafCapabilityReport } from '../../og
 import { OGrafCapabilityDialog } from './OGrafCapabilityDialog';
 import type { ToastOptions } from '../../hooks/useToast';
 import { ImportReportDialog } from '../Modal/ImportReportDialog';
-import { classifyImport } from '../../utils/importDispatch';
-import { readOGrafPackage, type OGrafPackageReadResult } from '../../ograf/packageImport';
-import { importLottieDocument, type LottieImportResult } from '../../interop/lottie/mapDocument';
+import { classifyImport } from '../../utils/persistence/importDispatch';
+// The package reader (with its ZIP inflater) and the Lottie mapper run only
+// when such a file is chosen, so they load then.
+import type { OGrafPackageReadResult } from '../../ograf/packageImport';
+import type { LottieImportResult } from '../../interop/lottie/mapDocument';
 import type { SceneData } from '../../types/composition';
-import { describeSaveStatus } from '../../utils/saveStatus';
+import { describeSaveStatus, formatAutosaveDelay } from '../../utils/persistence/saveStatus';
 import './HeaderBar.css';
 
 type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
@@ -104,6 +105,7 @@ export const HeaderBar: React.FC = () => {
     hasUnsavedChanges,
     isSaving,
     triggerManualSave,
+    autosaveIntervalSeconds,
     getPersistenceSafety,
     forceSaveNow,
     showToast,
@@ -118,13 +120,12 @@ export const HeaderBar: React.FC = () => {
     deleteProjectTemplate,
     fps,
     setFps,
-    openShortcutReference,
     characterParts,
     tracks,
     coordinateSystem,
-    currentFrame,
     isPlaying,
-  } = useAnimator();
+  } = useAnimatorSlice('exportProject', 'importProject', 'resetProject', 'lastSavedAt', 'restoredFromLocalStorage', 'autosaveConflict', 'manualSaveRejectedAt', 'autosaveError', 'hasUnsavedChanges', 'isSaving', 'triggerManualSave', 'autosaveIntervalSeconds', 'getPersistenceSafety', 'forceSaveNow', 'showToast', 'appMode', 'setAppMode', 'sceneTitle', 'projectTemplates', 'activeProjectTemplateId', 'setActiveProjectTemplateId', 'addProjectTemplate', 'renameProjectTemplate', 'deleteProjectTemplate', 'fps', 'setFps', 'characterParts', 'tracks', 'coordinateSystem', 'isPlaying');
+  const readAnimator = useAnimatorReader();
 
   const [editingTmplId, setEditingTmplId] = useState<string | null>(null);
   const [editingTmplName, setEditingTmplName] = useState<string>('');
@@ -173,7 +174,7 @@ export const HeaderBar: React.FC = () => {
       characterParts.length > 0 ||
       tracks.length > 0 ||
       coordinateSystem !== 'project-unit-center-v1' ||
-      currentFrame !== 0 ||
+      readAnimator().currentFrame !== 0 ||
       isPlaying;
     if (!carriesResettableState) {
       resetProject();
@@ -199,7 +200,7 @@ export const HeaderBar: React.FC = () => {
   };
 
   /**
-   * WP-07 — the pre-export check: the SAME compile the OGraf export runs, read
+   * The pre-export check: the SAME compile the OGraf export runs, read
    * per layer. Opening it never writes or downloads anything.
    */
   const [ografCheck, setOgrafCheck] = useState<{ report: OGrafCapabilityReport | null } | null>(null);
@@ -259,10 +260,11 @@ export const HeaderBar: React.FC = () => {
     unsaved: hasUnsavedChanges,
     lastSavedAt: lastSavedAt?.getTime() ?? null,
     now: clockNow,
+    intervalSeconds: autosaveIntervalSeconds,
   });
 
   /**
-   * SAFE-01: a conflict pause must be noticed, not discovered. One toast per
+   * A conflict pause must be noticed, not discovered. One toast per
    * session (the badge stays visible afterwards); the current in-memory edits
    * are never replaced — the user reloads to adopt the external document or
    * exports this tab's work.
@@ -275,7 +277,7 @@ export const HeaderBar: React.FC = () => {
     }
   }, [autosaveConflict, showToast]);
   /**
-   * SAFE-02: a manual save that never got the shared lock within its bounded
+   * A manual save that never got the shared lock within its bounded
    * wait is reported once per event. The edits stay in memory, autosave is
    * NOT paused, and the next interval tick retries the write — so this is an
    * info notice, deliberately not the conflict error.
@@ -296,7 +298,7 @@ export const HeaderBar: React.FC = () => {
 
 
   /**
-   * D2: a failed persistence attempt is announced once per event, never on
+   * A failed persistence attempt is announced once per event, never on
    * every retried tick. The document stays in memory untouched; the badge
    * keeps showing the failure until a write lands, and the manual click is
    * the immediate retry.
@@ -305,9 +307,9 @@ export const HeaderBar: React.FC = () => {
   useEffect(() => {
     if (autosaveError && autosaveErrorAnnouncedRef.current !== autosaveError.at) {
       autosaveErrorAnnouncedRef.current = autosaveError.at;
-      showToast(`Auto-save failed: browser storage ${autosaveError.kind === 'quota' ? 'is full' : 'is unavailable'}. Your changes are kept in memory — export the project to keep them. Autosave retries every 10 seconds.`, 'error', { title: 'Save failed' });
+      showToast(`Auto-save failed: browser storage ${autosaveError.kind === 'quota' ? 'is full' : 'is unavailable'}. Your changes are kept in memory — ${autosaveError.kind === 'quota' ? 'save the graphic to the Library (Project panel; it has far more room) or export it' : 'export the project'} to keep them. Autosave retries every ${formatAutosaveDelay(autosaveIntervalSeconds)}.`, 'error', { title: 'Save failed' });
     }
-  }, [autosaveError, showToast]);
+  }, [autosaveError, autosaveIntervalSeconds, showToast]);
   /**
    * Opens the GIF panel on a SNAPSHOT of the current scene: the summary the user
    * reads and the frames that are written come from the same document, so an edit
@@ -332,8 +334,14 @@ export const HeaderBar: React.FC = () => {
       if (notifyOGrafDiagnostics(showToast, plan.diagnostics)) return;
 
       setOgrafStage('package');
-      const { createOGrafBrowserZip } = await import('../../ograf/browserZip');
-      const archive = await createOGrafBrowserZip(plan);
+      const [{ createOGrafBrowserZip }, { renderOGrafThumbnail }] = await Promise.all([
+        import('../../ograf/browserZip'),
+        import('../../export/ografThumbnail'),
+      ]);
+      // A thumbnail lets renderers list the graphic with a preview; a package
+      // without one is still complete, so a failed render never blocks it.
+      const thumbnail = await renderOGrafThumbnail(plan).catch(() => undefined);
+      const archive = await createOGrafBrowserZip(plan, { thumbnail });
       downloadBlob(archive.bytes, archive.fileName, 'application/zip');
     } catch (error) {
       const remediation = describeOGrafPackageWriteFailure(error);
@@ -355,6 +363,7 @@ export const HeaderBar: React.FC = () => {
       setOgrafStage(null);
     }
   };
+
   /**
    * The one import entry: it decides what the file is from its **content** and
    * routes it to the importer that owns that kind. Only a Lottie document opens
@@ -368,7 +377,7 @@ export const HeaderBar: React.FC = () => {
     const lowerName = file.name.toLowerCase();
     const looksLikePackage = lowerName.endsWith('.zip') || lowerName.endsWith('.ograf');
     if (looksLikePackage) {
-      // N3 PR-2c1: a package over the importer's own ceiling is refused on its
+      // A package over the importer's own ceiling is refused on its
       // declared size, before any bytes are allocated for it.
       const packageRefusal = packageFileAdmissionProblem(file);
       if (packageRefusal) {
@@ -385,13 +394,16 @@ export const HeaderBar: React.FC = () => {
           showToast('The selected package could not be read.', 'error');
           return;
         }
-        setPendingPackageImport({ fileName: file.name, result: readOGrafPackage(new Uint8Array(buffer)) });
+        import('../../ograf/packageImport').then(
+          ({ readOGrafPackage }) => setPendingPackageImport({ fileName: file.name, result: readOGrafPackage(new Uint8Array(buffer)) }),
+          () => showToast('The package reader could not be loaded. Reload the editor and try again.', 'error'),
+        );
       };
       packageReader.onerror = () => showToast('The selected package could not be read.', 'error');
       packageReader.readAsArrayBuffer(file);
       return;
     }
-    // N3 PR-2c1: oversized text imports are refused on declared size before
+    // Oversized text imports are refused on declared size before
     // FileReader allocates them; the post-read validators stay the authority.
     const projectRefusal = projectFileAdmissionProblem(file);
     if (projectRefusal) {
@@ -406,21 +418,29 @@ export const HeaderBar: React.FC = () => {
         showToast('The selected file could not be read as text.', 'error');
         return;
       }
-      switch (classifyImport(file.name, text)) {
+      const kind = classifyImport(file.name, text);
+      switch (kind) {
         case 'ograf-package':
         case 'ograf-manifest':
           showToast('This is an OGraf graphic manifest. Import the .zip/.ograf package it belongs to, or export the KCS project again.', 'error');
           return;
         case 'lottie':
           // Parsing only: nothing in the project changes until the report is accepted.
-          setPendingLottieImport({ fileName: file.name, result: importLottieDocument(text) });
+          import('../../interop/lottie/mapDocument').then(
+            ({ importLottieDocument }) => setPendingLottieImport({ fileName: file.name, result: importLottieDocument(text) }),
+            () => showToast('The Lottie importer could not be loaded. Reload the editor and try again.', 'error'),
+          );
           return;
         default: {
           const result = importProject(text, fileNameWithoutExt);
           if (result.ok) {
-            // A successful import shows as its new Template tab; it can still
-            // carry warnings (for example the legacy migration notice), and
-            // those are shown.
+            // A scene replaces the ACTIVE tab, which takes the file's name (a
+            // legacy project already opens in a new tab named after it).
+            if (kind === 'kcs-scene' && fileNameWithoutExt) renameProjectTemplate(activeProjectTemplateId, fileNameWithoutExt);
+            // A successful import replaces the active template's content (a
+            // legacy project document opens as a new tab); it can still carry
+            // warnings (for example the legacy migration notice), and those
+            // are shown.
             const [notice] = result.diagnostics;
             if (notice) showToast(notice.message, 'info', { title: notice.code, action: notice.action });
             return;
@@ -602,7 +622,7 @@ export const HeaderBar: React.FC = () => {
             onClick={triggerManualSave}
             data-last-saved-at={lastSavedAt ? String(lastSavedAt.getTime()) : ''}
             data-save-state={saveStatus.state}
-            // C7 — restore provenance (this browser's autosave vs a shared
+            // Restore provenance (this browser's autosave vs a shared
             // file; autosave is per origin, so a LAN visitor may see another
             // project) is stated here instead of a header chip.
             title={restoredFromLocalStorage ? `${saveStatus.detail} This project was restored from this browser's autosave, not from a shared project file; use Import to open another machine's document.` : saveStatus.detail}
@@ -730,14 +750,7 @@ export const HeaderBar: React.FC = () => {
           <button className="btn-icon reset-btn" onClick={requestResetProject} title="Reset Canvas Project">
             <RotateCcw size={15} />
           </button>
-          <button
-            className="btn-icon"
-            onClick={openShortcutReference}
-            title="Keyboard shortcuts (?)"
-            aria-label="Keyboard shortcuts"
-          >
-            <Keyboard size={15} />
-          </button>
+          {/* Keyboard shortcuts open from Help > Keyboard Shortcuts (or ?). */}
         </div>
       </header>
       <ImportReportDialog

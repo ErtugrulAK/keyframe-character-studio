@@ -50,6 +50,8 @@ interface CornerResizeInput {
   pointer: { x: number; y: number };
   /** Keep the authored aspect ratio (the Inspector's Aspect Ratio lock). */
   uniform?: boolean;
+  /** Scale about the box centre (Alt held) instead of the opposite corner. */
+  fromCenter?: boolean;
   /** Smallest allowed scale magnitude per axis. */
   minScale?: number;
 }
@@ -74,6 +76,7 @@ export const resolveCornerResize = ({
   startPointer,
   pointer,
   uniform = false,
+  fromCenter = false,
   minScale = MIN_CORNER_SCALE,
 }: CornerResizeInput): CornerResizeResult => {
   const { x, y, rotation, scaleX, scaleY } = transform;
@@ -85,8 +88,9 @@ export const resolveCornerResize = ({
   const isTop = corner === 'tl' || corner === 'tr';
   const draggedLocalX = isLeft ? bounds.minX : bounds.maxX;
   const draggedLocalY = isTop ? bounds.minY : bounds.maxY;
-  const oppositeLocalX = isLeft ? bounds.maxX : bounds.minX;
-  const oppositeLocalY = isTop ? bounds.maxY : bounds.minY;
+  // From the centre, the box centre is the fixed point and both sides move.
+  const oppositeLocalX = fromCenter ? (bounds.minX + bounds.maxX) / 2 : isLeft ? bounds.maxX : bounds.minX;
+  const oppositeLocalY = fromCenter ? (bounds.minY + bounds.maxY) / 2 : isTop ? bounds.maxY : bounds.minY;
 
   const radians = (rotation * Math.PI) / 180;
   const cos = Math.cos(radians);
@@ -149,6 +153,8 @@ interface EdgeResizeInput {
   startPointer: { x: number; y: number };
   /** Current pointer position in world space. */
   pointer: { x: number; y: number };
+  /** Scale about the box centre (Alt held) instead of the opposite edge. */
+  fromCenter?: boolean;
   /** Smallest allowed scale magnitude per axis. */
   minScale?: number;
 }
@@ -171,6 +177,7 @@ export const resolveEdgeResize = ({
   edge,
   startPointer,
   pointer,
+  fromCenter = false,
   minScale = MIN_CORNER_SCALE,
 }: EdgeResizeInput): CornerResizeResult => {
   const { x, y, rotation, scaleX, scaleY } = transform;
@@ -182,9 +189,11 @@ export const resolveEdgeResize = ({
   const draggedLocal = isHorizontal
     ? (isStartSide ? bounds.minX : bounds.maxX)
     : (isStartSide ? bounds.minY : bounds.maxY);
-  const oppositeLocal = isHorizontal
-    ? (isStartSide ? bounds.maxX : bounds.minX)
-    : (isStartSide ? bounds.maxY : bounds.minY);
+  const oppositeLocal = fromCenter
+    ? (isHorizontal ? (bounds.minX + bounds.maxX) / 2 : (bounds.minY + bounds.maxY) / 2)
+    : isHorizontal
+      ? (isStartSide ? bounds.maxX : bounds.minX)
+      : (isStartSide ? bounds.maxY : bounds.minY);
   // The fixed point of the gesture is the midpoint of the opposite edge, so the
   // whole opposite edge keeps its world position.
   const oppositeLocalX = isHorizontal ? oppositeLocal : (bounds.minX + bounds.maxX) / 2;

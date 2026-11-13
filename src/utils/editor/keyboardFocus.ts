@@ -25,6 +25,21 @@ export const isEditableElement = (element: Element | null | undefined): boolean 
   return (element as HTMLElement).isContentEditable === true;
 };
 
+/** Input types that take no typed text: a slider, a checkbox, a colour well. */
+const NON_TEXT_INPUT_TYPES = ['range', 'checkbox', 'radio', 'color', 'button', 'submit', 'reset', 'file'];
+
+/**
+ * True while a surface that edits TEXT holds focus: its own Ctrl+Z belongs to
+ * the typing. A focused slider, checkbox or select is editable but has no text
+ * history, so the editor's undo still applies to it.
+ */
+export const isTextEntryElement = (element: Element | null | undefined): boolean => {
+  if (!isEditableElement(element)) return false;
+  if (element!.tagName === 'SELECT') return false;
+  if (element!.tagName === 'INPUT') return !NON_TEXT_INPUT_TYPES.includes((element as HTMLInputElement).type);
+  return true;
+};
+
 /** The scope of the surface the focused element lives in, when it declares one. */
 export const focusedShortcutScope = (): string | null => {
   if (typeof document === 'undefined') return null;

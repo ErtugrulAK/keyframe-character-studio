@@ -110,7 +110,7 @@ describe('timeline property-row ownership (finding G)', () => {
 
     const header = block.querySelector('.ue-subgroup-header') as HTMLElement;
     expect(header.getAttribute('data-owner-part-id')).toBe(first);
-    expect(header.getAttribute('aria-label')).toBe('Position properties of Rect A');
+    expect(header.getAttribute('aria-label')).toBe('Transform properties of Rect A');
 
     const owners = [...block.querySelectorAll('.ue-channel-row')]
       .map((row) => row.getAttribute('data-owner-part-id'));
@@ -146,15 +146,15 @@ describe('timeline property-row ownership (finding G)', () => {
     const block = h.trackRow('Rect A').querySelector('.ue-channel-group') as HTMLElement;
     const labels = [...block.querySelectorAll('[aria-label]')].map((node) => node.getAttribute('aria-label'));
     expect(labels.filter((label) => label?.includes('properties of'))).toEqual([
+      'Transform properties of Rect A',
       'Position properties of Rect A',
       'Scale properties of Rect A',
     ]);
     // C7 — a rectangle without Trim Paths lists no Trim Paths group.
     expect(labels.some((label) => label?.startsWith('Trim'))).toBe(false);
 
-    // R4-06 — the first header under the layer is Position: there is no
-    // `Transform` wrapper row to collapse, and the group itself still names its
-    // owner when its rows are hidden.
+    // The first header under the layer is Transform (After Effects grouping);
+    // the group still names its owner when its rows are hidden.
     const header = block.querySelector('.ue-subgroup-header') as HTMLElement;
     expect(header.getAttribute('aria-expanded')).toBe('true');
 

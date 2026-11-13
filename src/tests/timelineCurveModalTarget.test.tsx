@@ -2,7 +2,7 @@
  * C-01 — Motion Curves modal writes into the SELECTED layer only.
  *
  * Renders the real SequencerTimeline inside the real AnimatorProvider and
- * reproduces the Astra scenario: layer A owns canonical x keyframes, layer B
+ * reproduces the review scenario: layer A owns canonical x keyframes, layer B
  * owns live legacy keyframes, B is selected. Applying an easing preset must
  * change B's segment and must not touch A's canonical curve.
  */

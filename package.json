@@ -15,6 +15,7 @@
     "check": "npm run lint && npx tsc -b --pretty false && npm test && npm run build",
     "preview": "vite preview",
     "test:e2e": "playwright test",
+    "test:e2e:fast": "playwright test -c playwright.fast.config.ts",
     "qa:release": "node scripts/run-release-gate.mjs",
     "qa:v6": "node scripts/run-v6-qa.mjs",
     "qa:visual": "node scripts/run-visual-qa.mjs",

@@ -118,10 +118,17 @@ test('the generated runtime renders the same inverted alpha matte as the canonic
     const module = await import(/* @vite-ignore */ url);
     const tag = `x-ograf-matte-visual-${Math.random().toString(36).slice(2)}`;
     customElements.define(tag, module.default);
-    const graphic = document.createElement(tag) as HTMLElement & { load: (params: unknown) => Promise<unknown> };
+    const graphic = document.createElement(tag) as HTMLElement & { load: (params: unknown) => Promise<unknown>; playAction: (params: unknown) => Promise<unknown> };
     document.body.appendChild(graphic);
     await graphic.load({ renderType: 'realtime', data: {} });
-    return graphic.innerHTML;
+    // A graphic paints nothing before its first play; the SVG fills its
+    // renderer, so it is given the scene's size to rasterize on its own.
+    await graphic.playAction({ skipAnimation: true });
+    const svg = graphic.querySelector('svg')!;
+    const [, , width, height] = (svg.getAttribute('viewBox') || '').split(' ');
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height);
+    return svg.outerHTML;
   }, source);
 
   const [inside, outside] = await sampleAlpha(page, runtimeSvg);
@@ -135,10 +142,15 @@ const runtimeMarkup = (page: Page, scene: SceneData) => page.evaluate(async (mod
   const module = await import(/* @vite-ignore */ url);
   const tag = `x-ograf-matte-visual-${Math.random().toString(36).slice(2)}`;
   customElements.define(tag, module.default);
-  const graphic = document.createElement(tag) as HTMLElement & { load: (params: unknown) => Promise<unknown> };
+  const graphic = document.createElement(tag) as HTMLElement & { load: (params: unknown) => Promise<unknown>; playAction: (params: unknown) => Promise<unknown> };
   document.body.appendChild(graphic);
   await graphic.load({ renderType: 'realtime', data: {} });
-  return graphic.innerHTML;
+  await graphic.playAction({ skipAnimation: true });
+  const svg = graphic.querySelector('svg')!;
+  const [, , width, height] = (svg.getAttribute('viewBox') || '').split(' ');
+  svg.setAttribute('width', width);
+  svg.setAttribute('height', height);
+  return svg.outerHTML;
 }, compileOGrafPackage(scene).files.find((file) => file.path === 'graphic.mjs')?.content || '');
 
 /** The most opaque pixel of a rasterized SVG: a glyph's centre is not a fixed point. */

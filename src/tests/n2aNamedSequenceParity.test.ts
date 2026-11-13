@@ -14,6 +14,7 @@ import type { SceneData, SceneLayer } from '../types/composition';
 import { evaluateSceneFrame, evaluateOGrafScene } from '../ograf/evaluation';
 import { compileOGrafPackage } from '../ograf/packageCompiler';
 import { renderOGrafSvg } from '../ograf/svgRenderer';
+import { onAir } from './helpers/ografOnAir';
 
 function layer(): SceneLayer {
   return {
@@ -134,6 +135,7 @@ describe('N2a — active named sequence drives the SSR/GIF default', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
     graphic._currentFrame = 30;
     graphic._render();
     expect(graphic.innerHTML).toContain(BASE_POSE_AT_30);
@@ -146,6 +148,7 @@ describe('N2a — active named sequence drives the SSR/GIF default', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    await onAir(graphic);
 
     // Hand arithmetic per frame: Named 100→140 linear over 0..60.
     for (const [frame, translation] of [

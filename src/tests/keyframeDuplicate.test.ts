@@ -199,12 +199,12 @@ describe('M27 27A — determinism / schema / metadata', () => {
     expect(a.track.channels.x[1].value).toBe(b.track.channels.x[1].value);
   });
 
-  it('19. channel schema unchanged (only the 10 known TrackChannels)', () => {
+  it('19. channel schema unchanged (only the known TrackChannels)', () => {
     const ch = makeEmptyChannels();
     ch.x = [kf('x1', 10) as never];
     const res = duplicateKeyframeGroup(makeTrack({ channels: ch }), 10);
     expect(Object.keys(res.track.channels).sort()).toEqual(
-      ['maskOffsetX', 'maskOffsetY', 'maskRotation', 'maskScale', 'opacity', 'rotation', 'scaleX', 'scaleY', 'trimPathEnd', 'trimPathOffset', 'trimPathStart', 'x', 'y'],
+      ['maskOffsetX', 'maskOffsetY', 'maskRotation', 'maskScale', 'matteFeather', 'matteGradientAngle', 'matteStrength', 'opacity', 'rotation', 'scaleX', 'scaleY', 'trimPathEnd', 'trimPathOffset', 'trimPathStart', 'x', 'y'],
     );
   });
 

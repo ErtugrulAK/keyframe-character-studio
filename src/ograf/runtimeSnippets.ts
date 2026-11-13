@@ -25,6 +25,9 @@ import { createWorldAffineAlgebra } from '../utils/geometry/containerMath';
 import { createGraphicRuntime } from './runtime/graphicRuntime';
 import { createShapeAppearance } from '../utils/layers/shapeAppearance';
 import { describePaint, describeText } from '../utils/layers/drawDescriptor';
+import { createLayoutModifiers, SHAPE_EXTENTS } from '../utils/layers/layoutModifiers';
+import { createTrackMatteMarkup, SHAPE_BOUNDS } from './trackMatteMarkup';
+import { matteContentBlurBox } from '../utils/layers/matte';
 
 /**
  * A helper's source, as the runtime will receive it.
@@ -60,6 +63,11 @@ export const runtimeResolveShapeAppearance = (): string => `(${sourceOf(createSh
 /** The shared draw descriptors (`utils/layers/drawDescriptor`): what a layer paints and writes. */
 export const runtimeDescribePaint = (): string => sourceOf(describePaint as (...args: never[]) => unknown);
 export const runtimeDescribeText = (): string => sourceOf(describeText as (...args: never[]) => unknown);
+
+/** The Track Matte mask markup, with the shapes' local bounds as data and the soft-edge region of a text or image. */
+export const runtimeTrackMatteMarkup = (): string => `(${sourceOf(createTrackMatteMarkup as (...args: never[]) => unknown)})(${JSON.stringify(SHAPE_BOUNDS)}, ${sourceOf(matteContentBlurBox as (...args: never[]) => unknown)})`;
+
+export const runtimeLayoutModifiers = (): string => `(${sourceOf(createLayoutModifiers as (...args: never[]) => unknown)})(${JSON.stringify(SHAPE_EXTENTS)})`;
 
 /**
  * The graphic runtime factory itself. Like the affine algebra it is one

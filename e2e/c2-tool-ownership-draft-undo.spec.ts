@@ -60,7 +60,7 @@ async function stageCenter(page: Page) {
 const pose = (layer: Record<string, any>) => [layer.x, layer.y, layer.rotation, layer.scaleX, layer.scaleY, layer.width, layer.height];
 
 test.describe('C2 — tool ownership on top of a full-canvas image', () => {
-  for (const tool of ['Add rectangle', 'Add circle'] as const) {
+  for (const tool of ['Add rectangle', 'Add ellipse'] as const) {
     test(`${tool}: a drag over the image creates the shape and leaves the image alone`, async ({ page }) => {
       await seed(page);
       const before = await savedScene(page);

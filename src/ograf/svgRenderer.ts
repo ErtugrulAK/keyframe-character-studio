@@ -14,6 +14,7 @@ import { describePaint, describeText } from '../utils/layers/drawDescriptor';
 import { getTrimPathDashProps, resolveTrimPath } from '../utils/geometry/trimPath';
 import { affineTrsReading, worldAffineOf } from '../utils/geometry/containerMath';
 import type { OGrafEvaluatedScene } from './evaluation';
+import { trackMatteMask, trackMatteRenderParameters } from './trackMatteMarkup';
 
 interface OGrafSvgRenderOptions {
   imageReferences?: Record<string, string>;
@@ -25,6 +26,8 @@ type MatteRelationship = {
   mode: 'alpha' | 'luminance';
   inverted: boolean;
   sourceVisible: boolean;
+  /** A Track Matte (with its soft edge, strength and gradient); absent for a legacy matte. */
+  trackMatte?: NonNullable<LayerContent['trackMatte']>;
 };
 
 function escapeXml(value: string): string {
@@ -281,6 +284,7 @@ function getMatteRelationship(layer: EvaluatedLayer): MatteRelationship | undefi
     mode: v2.mode,
     inverted: v2.inverted === true,
     sourceVisible: v2.sourceVisible !== false,
+    trackMatte: v2,
   };
 }
 
@@ -310,6 +314,27 @@ function renderTrackMatteDefinition(scene: OGrafEvaluatedScene, target: Evaluate
     'fill-opacity': 1,
   });
   if (!sourceContent) throw new Error(`Track matte source "${describeOGrafValueForDiagnostics(source.id)}" has no supported SVG content.`);
+  if (relationship.trackMatte) {
+    // A Track Matte: soft edge, strength and gradient as the editor draws them.
+    const affine = worldAffineOf(source.transform);
+    return {
+      defs: trackMatteMask({
+        id,
+        width: scene.width,
+        height: scene.height,
+        mode: relationship.mode,
+        inverted: relationship.inverted,
+        ...trackMatteRenderParameters(relationship.trackMatte, source.type),
+        source: { type: source.type, points: source.content.points, width: source.content.width, height: source.content.height, fontSize: source.content.fontSize, textValue: source.content.textValue },
+        transform: layerTransform(scene, source),
+        affine: { ...affine, e: affine.e + scene.width / 2, f: affine.f + scene.height / 2 },
+        silhouette: (fill) => renderLayerContent(source, options, { fill, stroke: 'none', 'fill-opacity': 1 }),
+        fillColor: source.content.fillColor || 'white',
+      }),
+      id,
+      relationship,
+    };
+  }
   const sourceShape = `<g transform="${layerTransform(scene, source)}">${sourceContent}</g>`;
   const body = relationship.inverted
     ? `<rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" />${sourceShape}`

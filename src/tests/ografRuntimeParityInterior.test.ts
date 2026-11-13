@@ -26,6 +26,7 @@ import type { PropertyKeyframe } from '../types/animator';
 import type { SceneData } from '../types/composition';
 import { interpolateChannel, deriveAutoBezierControlPoints } from '../utils/animation/defaults';
 import { interpolateBezierPath } from '../utils/geometry/bezierPath';
+import { onAir } from './helpers/ografOnAir';
 
 // --- independent helper: bisection (a different algorithm than the runtime's
 // Newton iteration, so agreement is real evidence, not shared code) -----------
@@ -197,6 +198,7 @@ async function instantiate(scene: SceneData): Promise<RuntimeGraphic> {
   const Graphic = new Function('HTMLElement', source)(HostElement) as new () => RuntimeGraphic;
   const graphic = new Graphic();
   const loaded = await graphic.load({ renderType: 'realtime' });
+  await onAir(graphic);
   expect(loaded.statusCode).toBe(200);
   return graphic;
 }

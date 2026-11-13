@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
 import type { CharacterPart, Transform, AnimationTrackData } from '../types/animator';
 import type { WorldAffine } from '../types/composition';
+import { partIndexOf } from '../utils/layers/partBinding';
 import { evaluateTransform } from '../utils/animation/evaluateTransform';
 
 interface UseMathOptions {
@@ -68,7 +69,7 @@ export const useMath = ({ characterParts, tracks, activeTemplateId }: UseMathOpt
       if (cached) return cached;
 
       const world = evaluateTransform(characterParts, tracks, activeTemplateId, partId, frame);
-      const part = characterParts.find((p) => p.id === partId);
+      const part = partIndexOf(characterParts).get(partId);
 
       // WorldTransform → the Transform API shape still consumed by the
       // inspector/timeline, PLUS the derived world affine when the nesting is

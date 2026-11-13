@@ -4,7 +4,7 @@ import type { CharacterPart, Transform } from '../../../types/animator';
 import { getPartLocalBounds } from '../../../utils/geometry/bounds';
 import type { CornerBounds } from '../../../utils/geometry/cornerResize';
 import { applyAffine, affineSvgTransform, type WorldAffine } from '../../../utils/geometry/containerMath';
-import { getTransformGizmoMetrics } from '../../../utils/geometry/transformGizmoMetrics';
+import { getTransformGizmoMetrics, resizeCursorFor } from '../../../utils/geometry/transformGizmoMetrics';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/geometry/projectCoordinates';
 
 export type ScaleMode =
@@ -40,6 +40,11 @@ interface TransformGizmoProps {
   onRotateMouseDown: (e: React.MouseEvent) => void;
   onScaleMouseDown: (e: React.MouseEvent, mode: ScaleMode, bounds?: CornerBounds) => void;
   isGroup?: boolean;
+  /**
+   * Draw the four edge handles (default). A path leaves them out: their spots
+   * sit on the path's own edges, where a double-click adds a point.
+   */
+  edgeHandles?: boolean;
   overrideHalfW?: number;
   overrideHalfH?: number;
   /** Box centre in local units; used with the override extents (a group's own origin is not its centre). */
@@ -68,6 +73,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   onRotateMouseDown,
   onScaleMouseDown,
   isGroup = false,
+  edgeHandles = true,
   overrideHalfW,
   overrideHalfH,
   overrideCenterX = 0,
@@ -159,7 +165,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   );
 
   /** One corner handle (plus its hit target) at a point of the frame's own space. */
-  const renderCornerHandle = (point: { x: number; y: number }, corner: typeof CORNER_HANDLES[number]) => (
+  const renderCornerHandle = (point: { x: number; y: number }, corner: typeof CORNER_HANDLES[number], cursor: string = corner.cursor) => (
     <g key={`corner-${corner.key}`}>
       <rect
         x={point.x - metrics.cornerSize / 2}
@@ -168,8 +174,8 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         height={metrics.cornerSize}
         fill="#4a8fe7"
         stroke="#ffffff"
-        strokeWidth={1.5 * zScale}
-        style={{ cursor: corner.cursor, pointerEvents: 'auto' }}
+        strokeWidth={1 * zScale}
+        style={{ cursor, pointerEvents: 'auto' }}
         onMouseDown={(e) => onScaleMouseDown(e, corner.mode, resizeBounds)}
       />
       <rect
@@ -180,16 +186,16 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         height={metrics.hitRadius * 2}
         fill="transparent"
         pointerEvents="auto"
-        style={{ cursor: corner.cursor }}
+        style={{ cursor }}
         onMouseDown={(e) => onScaleMouseDown(e, corner.mode, resizeBounds)}
       />
     </g>
   );
 
   /** One edge handle (plus its hit target) at a point of the frame's own space. */
-  const renderEdgeHandle = (point: { x: number; y: number }, cursor: string, mode: ScaleMode, fill: string) => (
+  const renderEdgeHandle = (point: { x: number; y: number }, cursor: string, mode: ScaleMode, fill: string) => !edgeHandles ? null : (
     <g>
-      <circle cx={point.x} cy={point.y} r={metrics.edgeRadius} fill={fill} stroke="#ffffff" strokeWidth={1.5 * zScale} style={{ cursor, pointerEvents: 'auto' }} onMouseDown={(e) => onScaleMouseDown(e, mode, resizeBounds)} />
+      <circle cx={point.x} cy={point.y} r={metrics.edgeRadius} fill={fill} stroke="#ffffff" strokeWidth={1 * zScale} style={{ cursor, pointerEvents: 'auto' }} onMouseDown={(e) => onScaleMouseDown(e, mode, resizeBounds)} />
       <circle data-testid="gizmo-hit-target" cx={point.x} cy={point.y} r={metrics.hitRadius} fill="transparent" pointerEvents="auto" style={{ cursor }} onMouseDown={(e) => onScaleMouseDown(e, mode, resizeBounds)} />
     </g>
   );
@@ -256,6 +262,8 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
     // `hypot(c, d)` output units long per local unit.
     const upAxisLength = Math.hypot(affine.c, affine.d);
     const rotationOffsetLocal = upAxisLength > 0 ? metrics.rotationOffset / upAxisLength : metrics.rotationOffset;
+    // A handle's screen direction is its local direction through the affine's linear part.
+    const cursorAt = (localX: number, localY: number) => resizeCursorFor(affine.a * localX + affine.c * localY, affine.b * localX + affine.d * localY);
 
     return (
       <g data-testid="transform-gizmo" style={{ pointerEvents: 'none' }}>
@@ -268,6 +276,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
               {CORNER_HANDLES.map((corner) => renderCornerHandle(
                 applyAffine(affine, { x: corner.x === 0 ? box.minX : box.maxX, y: corner.y === 0 ? box.minY : box.maxY }),
                 corner,
+                cursorAt(corner.x === 0 ? -1 : 1, corner.y === 0 ? -1 : 1),
               ))}
             </>
           )}
@@ -275,10 +284,10 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
           {!isGroup && (
             <>
               {renderRotationHandle(topEdgeCenter, applyAffine(affine, { x: boxCenterX, y: box.minY - rotationOffsetLocal }))}
-              {renderEdgeHandle(applyAffine(affine, { x: box.minX, y: boxCenterY }), 'ew-resize', 'scale_left', '#4a8fe7')}
-              {renderEdgeHandle(applyAffine(affine, { x: box.maxX, y: boxCenterY }), 'ew-resize', 'scale_right', '#4a8fe7')}
-              {renderEdgeHandle(topEdgeCenter, 'ns-resize', 'scale_top', '#c084fc')}
-              {renderEdgeHandle(applyAffine(affine, { x: boxCenterX, y: box.maxY }), 'ns-resize', 'scale_bottom', '#c084fc')}
+              {renderEdgeHandle(applyAffine(affine, { x: box.minX, y: boxCenterY }), cursorAt(-1, 0), 'scale_left', '#4a8fe7')}
+              {renderEdgeHandle(applyAffine(affine, { x: box.maxX, y: boxCenterY }), cursorAt(1, 0), 'scale_right', '#4a8fe7')}
+              {renderEdgeHandle(topEdgeCenter, cursorAt(0, -1), 'scale_top', '#c084fc')}
+              {renderEdgeHandle(applyAffine(affine, { x: boxCenterX, y: box.maxY }), cursorAt(0, 1), 'scale_bottom', '#c084fc')}
             </>
           )}
         </g>
@@ -287,6 +296,14 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   }
 
   const rotationY = top - metrics.rotationOffset;
+  // The frame is drawn mirrored by the scale signs and then rotated, so a
+  // handle's screen direction goes through both.
+  const radians = (selectedTransform.rotation * Math.PI) / 180;
+  const cursorAt = (localX: number, localY: number) => {
+    const x = localX * orientationScaleX;
+    const y = localY * orientationScaleY;
+    return resizeCursorFor(x * Math.cos(radians) - y * Math.sin(radians), x * Math.sin(radians) + y * Math.cos(radians));
+  };
 
   return (
     <g
@@ -302,6 +319,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
             {CORNER_HANDLES.map((corner) => renderCornerHandle(
               { x: corner.x === 0 ? left : right, y: corner.y === 0 ? top : bottom },
               corner,
+              cursorAt(corner.x === 0 ? -1 : 1, corner.y === 0 ? -1 : 1),
             ))}
           </>
         )}
@@ -309,10 +327,10 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         {!isGroup && (
           <>
             {renderRotationHandle({ x: centerX, y: top }, { x: centerX, y: rotationY })}
-            {renderEdgeHandle({ x: left, y: centerY }, 'ew-resize', 'scale_left', '#4a8fe7')}
-            {renderEdgeHandle({ x: right, y: centerY }, 'ew-resize', 'scale_right', '#4a8fe7')}
-            {renderEdgeHandle({ x: centerX, y: top }, 'ns-resize', 'scale_top', '#c084fc')}
-            {renderEdgeHandle({ x: centerX, y: bottom }, 'ns-resize', 'scale_bottom', '#c084fc')}
+            {renderEdgeHandle({ x: left, y: centerY }, cursorAt(-1, 0), 'scale_left', '#4a8fe7')}
+            {renderEdgeHandle({ x: right, y: centerY }, cursorAt(1, 0), 'scale_right', '#4a8fe7')}
+            {renderEdgeHandle({ x: centerX, y: top }, cursorAt(0, -1), 'scale_top', '#c084fc')}
+            {renderEdgeHandle({ x: centerX, y: bottom }, cursorAt(0, 1), 'scale_bottom', '#c084fc')}
           </>
         )}
       </g>

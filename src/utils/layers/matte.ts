@@ -18,7 +18,8 @@
  * Geometry comes exclusively from `shapeGeometry.ts` — nothing is hardcoded
  * here. `custom_freeform` (and non-shape types) return null → no clip.
  */
-import type { BodyPartType, CharacterPart, MatteMode, PartMatte, TrackMatteV2 } from '../../types/animator';
+import type { AnimationTrackData, BodyPartType, CharacterPart, MatteMode, PartMatte, TrackMatteV2 } from '../../types/animator';
+import { interpolateChannel } from '../animation/defaults';
 import { textBaselineOffset } from '../geometry/textOrigin';
 import { buildBezierPathD, legacyFreeformPointsToPath } from '../geometry/bezierPath';
 import { applyAffine, invertAffine, worldAffineOf, type WorldAffine } from '../geometry/containerMath';
@@ -251,6 +252,35 @@ export interface MatteMask {
  * undefined/0 → 0 (sharp M13 edge); negative/NaN/±Infinity → 0.
  * Pure; NEVER touches geometry (feather is a render parameter only).
  */
+/**
+ * The filter region of a soft TEXT or IMAGE matte, in the source's own space.
+ *
+ * Those masks blur the glyphs or the image inside the source's transform, so
+ * their filter region is read in that local space. A world-space region there
+ * missed the content (a text at the origin lost its left half, or all of it)
+ * and the feathered matte painted nothing. The box is generous: a text is
+ * measured nowhere here, so it allows a wide face (0.8 em per character) plus
+ * a font size each side, two font sizes up and down, and the blur's reach.
+ * Self-contained: the OGraf runtime embeds its source.
+ */
+export function matteContentBlurBox(
+  content: { kind: 'text' | 'image'; text?: string; fontSize?: number; width?: number; height?: number },
+  feather: number,
+): { x: number; y: number; width: number; height: number } {
+  const reach = 2 * Math.max(0, feather);
+  let halfWidth: number;
+  let halfHeight: number;
+  if (content.kind === 'text') {
+    const size = typeof content.fontSize === 'number' && content.fontSize > 0 ? content.fontSize : 24;
+    halfWidth = (Array.from(String(content.text || 'TEXT')).length * size * 0.8) / 2 + size;
+    halfHeight = 2 * size;
+  } else {
+    halfWidth = (typeof content.width === 'number' && content.width > 0 ? content.width : 180) / 2;
+    halfHeight = (typeof content.height === 'number' && content.height > 0 ? content.height : 120) / 2;
+  }
+  return { x: -halfWidth - reach, y: -halfHeight - reach, width: 2 * (halfWidth + reach), height: 2 * (halfHeight + reach) };
+}
+
 export function normalizeFeather(value: number | undefined): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
   return Math.max(0, value);
@@ -266,6 +296,36 @@ export function normalizeStrength(value: number | undefined): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return 1;
   if (value < 0 || value > 1) return 1;
   return value;
+}
+
+/**
+ * The Track Matte at a frame: its feather and strength follow the
+ * `matteFeather` / `matteStrength` / `matteGradientAngle` channels once they are keyed (the record's
+ * own values are the static ones). A curve that overshoots is clamped, so a
+ * strength above 1 never snaps to the legacy "full strength" fallback. The
+ * same record object comes back when neither channel is keyed.
+ */
+export function evaluateTrackMatte(
+  trackMatte: TrackMatteV2 | undefined,
+  track: Pick<AnimationTrackData, 'channels'> | undefined,
+  frame: number,
+  templateId: string,
+): TrackMatteV2 | undefined {
+  if (!trackMatte || !track?.channels) return trackMatte;
+  const keys = (channel: 'matteFeather' | 'matteStrength' | 'matteGradientAngle') =>
+    (track.channels[channel] || []).filter((key) => (key.templateId || 'Sequence') === templateId);
+  const feather = keys('matteFeather');
+  const strength = keys('matteStrength');
+  const angle = trackMatte.gradient ? keys('matteGradientAngle') : [];
+  if (feather.length === 0 && strength.length === 0 && angle.length === 0) return trackMatte;
+  const next: TrackMatteV2 = { ...trackMatte };
+  if (feather.length > 0) next.feather = Math.max(0, interpolateChannel(feather, frame, normalizeFeather(trackMatte.feather)));
+  if (strength.length > 0) next.strength = Math.min(1, Math.max(0, interpolateChannel(strength, frame, normalizeStrength(trackMatte.strength))));
+  // A gradient's angle turns with its keys (it is drawn modulo 360).
+  if (angle.length > 0 && trackMatte.gradient) {
+    next.gradient = { ...trackMatte.gradient, angle: interpolateChannel(angle, frame, normalizeGradientAngle(trackMatte.gradient.angle) ?? 0) };
+  }
+  return next;
 }
 
 /** One default gradient stop. */

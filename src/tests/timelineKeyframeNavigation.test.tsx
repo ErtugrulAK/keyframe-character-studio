@@ -56,7 +56,7 @@ const renderRow = (track: Track, currentFrame: number) => {
     <TrackOutlinerRow
       track={track}
       parts={[part('p1', 'Body')]}
-      isChildLayer={false}
+      depth={0}
       isSelected
       editingPartId={null}
       editingNameValue=""
@@ -90,24 +90,24 @@ describe('R3-05/R3-06 — the timeline property tree', () => {
     expect(screen.getByRole('button', { name: 'Position properties of Body' })).toBeTruthy();
     // C7 — the Trim Paths group is listed because this layer holds Trim keys.
     expect(screen.getByRole('button', { name: 'Trim Paths properties of Body' })).toBeTruthy();
-    // R4-06 — `Transform` is the internal model name, not a level the user reads
-    // through: no wrapper row, and no row that only restates the layer.
-    expect(screen.queryByRole('button', { name: 'Transform property group of Body' })).toBeNull();
+    // The transform properties sit in a Transform group, as in After Effects.
+    expect(screen.getByRole('button', { name: 'Transform properties of Body' })).toBeTruthy();
 
     // Linearised tree order: the leaves sit under the parent that names them.
     const tree = [...view.container.querySelectorAll('.ue-subgroup-header, .ue-channel-row')]
       .map((row) => row.textContent?.trim());
     expect(tree).toEqual([
+      'Trim Paths',
+      'Start',
+      'End',
+      'Offset',
+      'Transform',
       'Position',
       'X',
       'Y',
       'Scale',
       'Rotation',
       'Opacity',
-      'Trim Paths',
-      'Start',
-      'End',
-      'Offset',
     ]);
   });
 

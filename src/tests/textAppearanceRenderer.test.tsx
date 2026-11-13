@@ -52,6 +52,13 @@ describe('native SVG text appearance rendering', () => {
     expect(render({ fillEnabled: false })).toContain('fill="none"');
   });
 
+  it('paints an authored outline under the fill, so overlapping glyph contours draw no lines inside the letters', () => {
+    expect(render()).toContain('paint-order="stroke"');
+    expect(render({ textAnimMode: 'chars' } as Partial<CharacterPart>)).toContain('paint-order="stroke"');
+    // The selection highlight (outline off) stays on top so it remains visible.
+    expect(render({ strokeEnabled: false }, { selected: true })).not.toContain('paint-order');
+  });
+
   it('keeps a selection highlight only while the outline is switched off', () => {
     expect(render({ strokeEnabled: false }, { selected: true })).toContain('stroke="#4a8fe7"');
     expect(render({ strokeEnabled: false }, { selected: false })).toContain('stroke="none"');

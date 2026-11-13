@@ -271,6 +271,15 @@ function validateLayerInput(layer: SceneLayer, diagnostics: OGrafExportDiagnosti
   if (layer.trackMatte && !['alpha', 'luminance'].includes(layer.trackMatte.mode)) {
     invalidProject(diagnostics, `Track matte mode "${describeOGrafValueForDiagnostics(String(layer.trackMatte.mode))}" is not supported.`, layer, 'track-matte');
   }
+  if (layer.trackMatte) {
+    validateFiniteFields(layer.trackMatte as unknown as Record<string, unknown>, ['feather', 'strength'], diagnostics, layer, 'track-matte');
+    if (layer.trackMatte.gradient) {
+      if (layer.trackMatte.gradient.type !== undefined && !['linear', 'radial'].includes(layer.trackMatte.gradient.type)) {
+        invalidProject(diagnostics, `Track matte gradient type "${describeOGrafValueForDiagnostics(String(layer.trackMatte.gradient.type))}" is not supported.`, layer, 'track-matte');
+      }
+      validateFiniteFields(layer.trackMatte.gradient as unknown as Record<string, unknown>, ['angle'], diagnostics, layer, 'track-matte');
+    }
+  }
 }
 function validateTrackInput(
   track: unknown,
@@ -507,6 +516,8 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
       diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_ALPHA_MATTE', 'ERROR', 'Legacy matte strength cannot be emitted faithfully by OGraf Export V1.', layer, 'matte'));
     }
   }
+  // A Track Matte's soft edge, strength and gradient are emitted as the editor
+  // draws them (`ograf/trackMatteMarkup`).
   if (layer.trackMatte && layer.trackMatte.sourceLayerId === layer.id) {
     diagnostics.push(diagnostic('OGRAF_INVALID_TRACK_MATTE', 'ERROR', 'Track Matte V2 cannot reference its own layer.', layer, 'track-matte'));
   }
@@ -541,19 +552,25 @@ function createPublicStateSchema(
   const properties: Record<string, Record<string, unknown>> = Object.create(null);
   for (const field of textFields) {
     if (isPrototypeSensitiveKey(field.id)) continue;
+    // GDD: a KCS text is one line. Text names the graphic in playout lists.
     properties[field.id] = {
       type: 'string',
-      ...(field.title ? { title: field.title } : {}),
+      gddType: 'single-line',
+      ...(field.title ? { title: field.title, label: field.title } : {}),
       ...(field.defaultValue !== undefined ? { default: field.defaultValue } : {}),
+      ...(field.maxLength !== undefined ? { maxLength: field.maxLength } : {}),
     };
   }
   const packagedImageValues = assets.filter((asset) => asset.kind === 'image').map((asset) => asset.packagedPath);
   for (const field of imageFields) {
     if (isPrototypeSensitiveKey(field.id)) continue;
+    // GDD: a choice among the packaged images; an image path does not name the graphic.
     properties[field.id] = {
       type: 'string',
       enum: field.options || packagedImageValues,
-      ...(field.title ? { title: field.title } : {}),
+      gddType: 'select',
+      hidden: true,
+      ...(field.title ? { title: field.title, label: field.title } : {}),
       ...(field.defaultValue !== undefined ? { default: field.defaultValue } : {}),
     };
   }
@@ -564,7 +581,8 @@ function createPublicStateSchema(
       format: 'color',
       gddType: 'color-rrggbb',
       pattern: '^#[0-9a-f]{6}$',
-      ...(field.title ? { title: field.title } : {}),
+      hidden: true,
+      ...(field.title ? { title: field.title, label: field.title } : {}),
       ...(field.defaultValue !== undefined ? { default: field.defaultValue.toLowerCase() } : {}),
     };
   }

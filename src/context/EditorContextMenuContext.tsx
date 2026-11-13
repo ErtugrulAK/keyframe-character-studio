@@ -45,11 +45,12 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     setLayersLocked,
     toggleTrackEditVisibility,
     convertToEditablePath,
+    resetSelectedTransforms,
   } = useAnimatorSlice(
     'appMode', 'characterParts', 'tracks', 'selectedPartId', 'selectedPartIds', 'setSelectedPartId',
     'setSelectedPartIds', 'handleSelectPart', 'deletePart', 'copySelectedPart', 'pasteCopiedPart',
     'duplicateSelectedPart', 'clipboardData', 'reorderParts', 'booleanOperandEditingGroupId',
-    'setBooleanOperandEditingGroupId', 'setLayersLocked', 'toggleTrackEditVisibility', 'convertToEditablePath',
+    'setBooleanOperandEditingGroupId', 'setLayersLocked', 'toggleTrackEditVisibility', 'convertToEditablePath', 'resetSelectedTransforms',
   );
   const { selectedBooleanGroup, dissolveBooleanGroup } = useBooleanAuthoring();
   const { selectedGroup, canGroup, groupSelection, ungroupSelection } = useLayerGrouping();
@@ -98,7 +99,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     if (targetId === null) {
       const groups: ContextMenuGroup[] = [];
       const emptyStage: ContextMenuGroup = [];
-      if (clipboardData) emptyStage.push({ id: 'paste', label: 'Paste', shortcut: hint('paste'), run: pasteCopiedPart });
+      if (clipboardData) emptyStage.push({ id: 'paste', label: 'Paste', shortcut: hint('paste'), run: () => pasteCopiedPart() });
       if (characterParts.length > 0) emptyStage.push({ id: 'select-all', label: 'Select All', shortcut: hint('select-all'), run: selectAll });
       if (emptyStage.length > 0) groups.push(emptyStage);
       return groups;
@@ -124,7 +125,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
       label: 'Paste',
       shortcut: hint('paste'),
       disabled: !clipboardData,
-      run: pasteCopiedPart,
+      run: () => pasteCopiedPart(),
     });
     if (hasPrimary) clipboardGroup.push({ id: 'duplicate', label: 'Duplicate', shortcut: hint('duplicate'), run: duplicateSelectedPart });
     // The label names the delete's scope: a group takes its layers, a plain
@@ -161,10 +162,14 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     }
     // A basic shape can become an editable path; a refused case stays
     // listed, disabled, so the reason is one hover away.
-    if (single && primaryPart && isConvertibleShapeType(primaryPart.type)) {
-      const blocked = shapeToPathBlockReason(primaryPart, tracks) ?? (primaryTrack?.locked ? 'This layer is locked.' : null);
-      layerActions.push({ id: 'convert-to-path', label: 'Convert to Editable Path', disabled: Boolean(blocked), ...(blocked ? { title: blocked } : {}), run: () => { convertToEditablePath(primaryPart.id); } });
+    if (single && primaryPart && (isConvertibleShapeType(primaryPart.type) || primaryPart.booleanOperandIds?.length)) {
+      // A Boolean result is flattened into its own shape.
+      const blocked = (primaryPart.booleanOperandIds?.length ? null : shapeToPathBlockReason(primaryPart, tracks)) ?? (primaryTrack?.locked ? 'This layer is locked.' : null);
+      layerActions.push({ id: 'convert-to-path', label: 'Shape to Path', disabled: Boolean(blocked), ...(blocked ? { title: blocked } : {}), run: () => { convertToEditablePath(primaryPart.id); } });
     }
+
+    // Back to the pose the layer was made with (every selected layer).
+    if (hasPrimary) layerActions.push({ id: 'reset-transform', label: 'Reset Transform', run: resetSelectedTransforms });
 
     const groupActions: ContextMenuGroup = [];
     if (selectedGroup) groupActions.push({ id: 'ungroup', label: 'Ungroup', run: ungroupSelection });
@@ -183,6 +188,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     copySelectedPart,
     canGroup,
     convertToEditablePath,
+    resetSelectedTransforms,
     deleteSelection,
     duplicateSelectedPart,
     groupSelection,
@@ -243,7 +249,15 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
   const latestOpener = useRef(openMenuWithLatest);
   useLayoutEffect(() => { latestOpener.current = openMenuWithLatest; });
   const openContextMenu = useCallback((request: ContextMenuRequest) => latestOpener.current(request), []);
-  const contextValue = useMemo(() => ({ openContextMenu, closeContextMenu }), [openContextMenu, closeContextMenu]);
+  // Select All and Delete for the menu bar, stable like the opener.
+  const latestCommands = useRef({ selectAll, deleteSelection });
+  useLayoutEffect(() => { latestCommands.current = { selectAll, deleteSelection }; });
+  const selectAllCommand = useCallback(() => latestCommands.current.selectAll(), []);
+  const deleteSelectionCommand = useCallback(() => latestCommands.current.deleteSelection(), []);
+  const contextValue = useMemo(
+    () => ({ openContextMenu, closeContextMenu, selectAll: selectAllCommand, deleteSelection: deleteSelectionCommand }),
+    [openContextMenu, closeContextMenu, selectAllCommand, deleteSelectionCommand],
+  );
 
   // Shift+F10 / the ContextMenu key opens the same menu for the current
   // selection, anchored on the layer's rendered box (or the stage centre).

@@ -206,6 +206,7 @@
   transition: all 0.2s ease;
 }
 
+/* Autosave delay (seconds), beside the status it governs */
 .autosave-status-badge:hover {
   background: rgba(16, 185, 129, 0.18);
   border-color: rgba(16, 185, 129, 0.5);
@@ -577,6 +578,7 @@
   .header-action-btn {
     padding: 0 6px;
   }
+
 }
 
 /*

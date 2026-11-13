@@ -563,6 +563,8 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 }
 .fit-pill-btn:hover { background: #2e2e2e; color: #e8e8e8; border-color: #444444; }
 .crop-btn:hover { border-color: var(--accent-teal) !important; color: var(--accent-teal) !important; }
+.step-marker-btn[aria-pressed='true'] { border-color: #f59e0b; color: #f59e0b; }
+.timeline-header .step-marker-btn { padding: 0 7px; }
 
 .zoom-btn { width: 26px; height: 26px; }
 
@@ -765,8 +767,14 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   user-select: none;
 }
 .ue-subgroup-header:hover { background: #242424; }
+/* A top group (Transform, Masks, Track Matte) starts at the rail; a group
+   inside one (Position, Scale, a mask) is one step in. */
+.ue-header-indent-top {
+  width: 0;
+  flex-shrink: 0;
+}
 .ue-header-indent {
-  width: 12px;
+  width: 22px;
   flex-shrink: 0;
 }
 .ue-subgroup-label {
@@ -800,11 +808,15 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 .ue-channel-row:hover { background: var(--kcs-bg-rail); }
 
 .ue-channel-indent {
-  width: 34px;
+  width: 22px;
   flex-shrink: 0;
 }
 .ue-channel-indent-deep {
-  width: 56px;
+  width: 44px;
+  flex-shrink: 0;
+}
+.ue-channel-indent-deeper {
+  width: 66px;
   flex-shrink: 0;
 }
 
@@ -852,6 +864,13 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   scrollbar-width: thin;
   scrollbar-color: var(--border-color) transparent;
 }
+/* The scrolled content: as tall and wide as the lanes, and at least the pane. */
+.timeline-grid-content {
+  position: relative;
+  width: max-content;
+  min-width: 100%;
+  min-height: 100%;
+}
 .timeline-grid-container::-webkit-scrollbar { width: 6px; height: 6px; }
 .timeline-grid-container::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: var(--radius-xs); }
 
@@ -878,6 +897,27 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 }
 .ruler-mark.major { border-left: 1px solid var(--border-color); }
 .ruler-mark.ten { border-left: 1px solid rgba(29, 114, 226, 0.4); }
+/* A step marker: a flag on the ruler where an exported step ends. */
+.ruler-step-marker {
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 100%;
+  margin-left: -1px;
+  padding: 0;
+  border: 0;
+  border-left: 2px solid #f59e0b;
+  background: linear-gradient(#f59e0b, #f59e0b) no-repeat 0 2px / 8px 8px;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.ruler-step-marker:hover,
+.ruler-step-marker:focus-visible {
+  background-size: 10px 10px;
+  outline: none;
+}
+
 .ruler-label {
   position: absolute; top: 4px; left: 4px;
   font-family: var(--font-main);
@@ -895,8 +935,9 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   pointer-events: none;
   box-shadow: none;
 }
+/* Sticky like the ruler, so the frame badge stays on it while the lanes scroll. */
 .playhead-head {
-  position: absolute; top: 0; left: -11px;
+  position: sticky; top: 0; margin-left: -11px;
   width: 24px; height: 18px;
   background: var(--accent-teal);
   clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%);
@@ -1411,7 +1452,8 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   color: var(--kcs-text-primary);
 }
 
-.timeline-header .crop-btn {
+.timeline-header .crop-btn,
+.timeline-header .step-marker-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -1478,4 +1520,18 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   background: var(--kcs-text-muted, #939393);
   opacity: 0.75;
   pointer-events: none;
+}
+
+/* After Effects' U: the property tree shows only keyed properties. */
+.ue-outliner-ruler-spacer {
+  justify-content: space-between;
+}
+.timeline-animated-only-btn {
+  width: 22px;
+  height: 22px;
+  color: var(--kcs-text-muted);
+}
+.timeline-animated-only-btn.active {
+  color: var(--kcs-accent);
+  background: rgba(73, 141, 231, 0.18);
 }

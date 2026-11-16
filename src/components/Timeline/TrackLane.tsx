@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import type { EasingType, Track, TrackChannel, AnimationChannel, LayerMaskChannel, LayerMaskPathChannel, PropertyKeyframe, PathKeyframe, Transform } from '../../types/animator';
 import { QUICK_EASINGS, type SegmentCurve } from '../../utils/animation/keyframeEasing';
 import type { KeyframeCopyPayload } from '../../utils/animation/keyframeCopyPaste';
@@ -7,6 +7,7 @@ import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/
 import { hasChannelDataForTemplate, resolveConnectorSegments } from '../../utils/editor/timelineMetrics';
 import { resolveLaneRows, type LaneContext } from './timelineLaneLayout';
 import { usePointerMenuPlacement } from '../../hooks/usePointerMenuPlacement';
+import { useCloseOnOutsideMouseDown } from '../../hooks/useCloseOnOutsideMouseDown';
 
 interface TrackLaneProps {
   track: Track;
@@ -196,16 +197,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
   } | null>(null);
   const kfMenuRef = useRef<HTMLDivElement | null>(null);
   const kfMenuPlacement = usePointerMenuPlacement(kfMenuRef, kfMenu);
-  useEffect(() => {
-    if (!kfMenu) return;
-    const handleGlobalClick = (e: MouseEvent) => {
-      if (kfMenuRef.current && !kfMenuRef.current.contains(e.target as Node)) {
-        setKfMenu(null);
-      }
-    };
-    window.addEventListener('mousedown', handleGlobalClick);
-    return () => window.removeEventListener('mousedown', handleGlobalClick);
-  }, [kfMenu]);
+  useCloseOnOutsideMouseDown(kfMenuRef, kfMenu !== null, () => setKfMenu(null));
   const openKfMenu = (e: React.MouseEvent, frame: number, onDelete: () => void) => {
     e.preventDefault();
     e.stopPropagation();
@@ -219,16 +211,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
   const [pasteMenu, setPasteMenu] = useState<{ frame: number; x: number; y: number } | null>(null);
   const pasteMenuRef = useRef<HTMLDivElement | null>(null);
   const pasteMenuPlacement = usePointerMenuPlacement(pasteMenuRef, pasteMenu);
-  useEffect(() => {
-    if (!pasteMenu) return;
-    const handleGlobalClick = (e: MouseEvent) => {
-      if (pasteMenuRef.current && !pasteMenuRef.current.contains(e.target as Node)) {
-        setPasteMenu(null);
-      }
-    };
-    window.addEventListener('mousedown', handleGlobalClick);
-    return () => window.removeEventListener('mousedown', handleGlobalClick);
-  }, [pasteMenu]);
+  useCloseOnOutsideMouseDown(pasteMenuRef, pasteMenu !== null, () => setPasteMenu(null));
   const openPasteMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -241,16 +224,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
   const [laneMenu, setLaneMenu] = useState<{ channel: AnimationChannel; frame: number; x: number; y: number } | null>(null);
   const laneMenuRef = useRef<HTMLDivElement | null>(null);
   const laneMenuPlacement = usePointerMenuPlacement(laneMenuRef, laneMenu);
-  useEffect(() => {
-    if (!laneMenu) return;
-    const handleGlobalClick = (e: MouseEvent) => {
-      if (laneMenuRef.current && !laneMenuRef.current.contains(e.target as Node)) {
-        setLaneMenu(null);
-      }
-    };
-    window.addEventListener('mousedown', handleGlobalClick);
-    return () => window.removeEventListener('mousedown', handleGlobalClick);
-  }, [laneMenu]);
+  useCloseOnOutsideMouseDown(laneMenuRef, laneMenu !== null, () => setLaneMenu(null));
   const openLaneMenu = (e: React.MouseEvent, channel: AnimationChannel) => {
     if (!INSERTABLE_CHANNELS.has(channel) || track.locked) return;
     e.preventDefault();

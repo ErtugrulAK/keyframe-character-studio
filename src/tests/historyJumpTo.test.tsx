@@ -21,7 +21,10 @@ const useScene = () => {
   const [selection, setSelection] = useState<HistorySelection>({ primary: null, ids: [] });
   const tracksRef = useRef(tracks);
   const characterPartsRef = useRef(characterParts);
+  // Mirrors the production latest-ref wiring (`hooks/useProjectState`).
+  // oxlint-disable-next-line react/refs
   tracksRef.current = tracks;
+  // oxlint-disable-next-line react/refs
   characterPartsRef.current = characterParts;
   const history = useHistory({
     tracks, setTracks, tracksRef, characterParts, setCharacterParts, characterPartsRef,

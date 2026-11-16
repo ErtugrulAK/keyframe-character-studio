@@ -4,6 +4,7 @@ import { useAnimatorSlice } from '../../../../context/useAnimator';
 import { interpolateChannel } from '../../../../utils/animation/defaults';
 import { resolveMotionPathSource } from '../../../../utils/animation/evaluateTransform';
 import { generateId } from '../../../../utils/layers/idGenerator';
+import { motionPathCandidates } from '../../../../utils/layers/motionPathCandidates';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { StyleCard } from './StyleCard';
 
@@ -16,13 +17,6 @@ interface MotionPathCardProps {
   readOnlyReason?: string;
 }
 
-const placementParentOf = (part: CharacterPart): string | undefined => part.parentId ?? part.booleanGroupId;
-
-/** The layers a part can follow: other path (freeform) layers placed in the same parent. */
-export const motionPathCandidates = (part: CharacterPart, parts: readonly CharacterPart[]): CharacterPart[] =>
-  parts.filter((candidate) => candidate.id !== part.id
-    && candidate.type === 'custom_freeform'
-    && placementParentOf(candidate) === placementParentOf(part));
 
 /**
  * Motion Path: walk a layer along a path layer's outline. Choosing a path

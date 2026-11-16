@@ -17,7 +17,8 @@ vi.mock('../context/useAnimator', () => ({
     endBatchInteraction: () => log.push('end'),
   }),
 }));
-import { MotionPathCard, motionPathCandidates } from '../components/Inspector/sections/style/MotionPathCard';
+import { MotionPathCard } from '../components/Inspector/sections/style/MotionPathCard';
+import { motionPathCandidates } from '../utils/layers/motionPathCandidates';
 
 const pose = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
 const part = (id: string, type: CharacterPart['type'], extra: Partial<CharacterPart> = {}): CharacterPart => (

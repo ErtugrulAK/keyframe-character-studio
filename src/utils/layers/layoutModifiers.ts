@@ -168,6 +168,8 @@ interface LayoutLayer {
   parentId?: string;
   isGroup?: boolean;
   textValue?: string;
+  /** The letter case the text shows (`utils/layers/textCase`): capitals are measured as capitals. */
+  textCase?: string;
   fontSize?: number;
   fontFamily?: string;
   /** Where a text's origin sits: on its baseline (absent) or its box centre (`utils/geometry/textOrigin`). */
@@ -303,7 +305,9 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
         textWidths[layer.id] = 0;
         continue;
       }
-      const authoredText = layer.textValue || 'TEXT';
+      // The letters it shows (`utils/layers/textCase`; repeated, not imported:
+      // the OGraf runtime embeds this factory's own source).
+      const authoredText = layer.textCase === 'upper' ? (layer.textValue || 'TEXT').toUpperCase() : layer.textValue || 'TEXT';
       const text = limitLength(authoredText, own && own.maxLength);
       const fontSize = positive(layer.fontSize) || 24;
       const fontFamily = layer.fontFamily || 'Outfit';
@@ -417,7 +421,8 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
       const scale = Math.abs(pose(layer).scaleX * ((adjustment && adjustment.scaleXFactor) || 1));
       if (layer.type === 'custom_text') {
         let width = textWidths[layer.id];
-        if (width === undefined) width = measure(layer.textValue || 'TEXT', positive(layer.fontSize) || 24, layer.fontFamily || 'Outfit') * Math.abs(pose(layer).scaleX);
+        const shown = layer.textCase === 'upper' ? (layer.textValue || 'TEXT').toUpperCase() : layer.textValue || 'TEXT';
+        if (width === undefined) width = measure(shown, positive(layer.fontSize) || 24, layer.fontFamily || 'Outfit') * Math.abs(pose(layer).scaleX);
         return { minX: -width / 2, maxX: width / 2 };
       }
       if (layer.isGroup) {

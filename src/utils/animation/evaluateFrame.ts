@@ -16,6 +16,7 @@
  */
 
 import { resolveDisplayedText } from './textEffects';
+import { applyTextCase } from '../layers/textCase';
 import type { CharacterPart, CustomMotionPreset, AnimationTrackData, LayerMask } from '../../types/animator';
 import type {
   EvaluatedFrame,
@@ -164,7 +165,8 @@ function extractContent(
     effects: layer.effects,
     textValue: layer.textValue,
     // The one text-over-time authority; renderers draw this and keep no clock.
-    ...(layer.textEffect && (layer.textValue || layer.textEffect.kind === 'clock') ? { displayedText: resolveDisplayedText(layer.textValue ?? '', layer.textEffect, frame, fps) } : {}),
+    ...(layer.textEffect && (layer.textValue || layer.textEffect.kind === 'clock') ? { displayedText: resolveDisplayedText(applyTextCase(layer.textValue ?? '', layer.textCase), layer.textEffect, frame, fps) } : {}),
+    ...(layer.textCase !== undefined ? { textCase: layer.textCase } : {}),
     fontSize: layer.fontSize,
     fontFamily: layer.fontFamily,
     ...(layer.textOrigin !== undefined ? { textOrigin: layer.textOrigin } : {}),

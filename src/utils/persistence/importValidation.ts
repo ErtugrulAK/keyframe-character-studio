@@ -2,6 +2,7 @@ import type { CharacterPart, Track } from '../../types/animator';
 import { CLOCK_FORMATS } from '../animation/textEffects';
 import { isMotionPathLink } from '../geometry/motionPath';
 import { isPolygonShape } from '../geometry/polygonShape';
+import { isTextCase } from '../layers/textCase';
 import { LAYER_BLEND_MODES } from '../layers/layerEffects';
 import { isLayerCrop } from '../layers/layerCrop';
 import type { SceneData } from '../../types/composition';
@@ -247,7 +248,7 @@ const NUMERIC_LAYER_FIELDS = [
  */
 const STRING_LAYER_FIELDS = [
   'name', 'type', 'fillColor', 'strokeColor', 'fontFamily', 'imageUrl', 'videoUrl',
-  'inAnimPreset', 'outAnimPreset', 'strokeAlignment', 'strokeLinejoin', 'textValue', 'textOrigin', 'glowColor', 'blendMode',
+  'inAnimPreset', 'outAnimPreset', 'strokeAlignment', 'strokeLinejoin', 'textValue', 'textOrigin', 'textCase', 'glowColor', 'blendMode',
 ] as const;
 
 /** `{ x, y }` lists the geometry helpers read as coordinates. */
@@ -367,6 +368,9 @@ const sharedLayerValueProblem = (record: Record<string, unknown>, path: string, 
     if (!timed && !clock) {
       return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.textEffect`, `${owner} declares a text effect that is not a typewriter, a count or a clock with a valid start, length and format.`);
     }
+  }
+  if (record.textCase !== undefined && !isTextCase(record.textCase)) {
+    return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.textCase`, `${owner} declares a letter case other than "upper".`);
   }
   if (record.polygon !== undefined && !isPolygonShape(record.polygon)) {
     return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.polygon`, `${owner} declares polygon settings that are not 3 to 24 corners with an inner radius from 0.1 to 1.`);

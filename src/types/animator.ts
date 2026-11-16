@@ -519,6 +519,8 @@ export interface CharacterPart {
 
   /** Where the text's origin sits: absent = on the baseline (every older text). See utils/geometry/textOrigin. */
   textOrigin?: import('../utils/geometry/textOrigin').TextOrigin;
+  /** The letter case the text shows (`utils/layers/textCase`); absent = as written. */
+  textCase?: import('../utils/layers/textCase').TextCase;
 
   // ── Feature 3: Text Stagger Animation ──
   textAnimMode?: TextAnimMode;

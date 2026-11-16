@@ -166,6 +166,8 @@ export interface SceneLayer {
   repeater?: RepeaterSettings;
   /** Absent = the origin sits on the baseline. See utils/geometry/textOrigin. */
   textOrigin?: import('../utils/geometry/textOrigin').TextOrigin;
+  /** The letter case the text shows (`utils/layers/textCase`); absent = as written. */
+  textCase?: import('../utils/layers/textCase').TextCase;
   imageUrl?: string;
   videoUrl?: string;
   /** Freeform polygon vertices (center-relative) */
@@ -311,6 +313,8 @@ export interface LayerContent {
   repeater?: RepeaterSettings;
   /** Absent = the origin sits on the baseline. See utils/geometry/textOrigin. */
   textOrigin?: import('../utils/geometry/textOrigin').TextOrigin;
+  /** The letter case the text shows (`utils/layers/textCase`); absent = as written. */
+  textCase?: import('../utils/layers/textCase').TextCase;
   imageUrl?: string;
   videoUrl?: string;
   /** V6 same-layer mask stack. */

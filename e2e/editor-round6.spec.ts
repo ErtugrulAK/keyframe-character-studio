@@ -655,3 +655,31 @@ test('a Polygon from the shape tool: its corners and inner radius change the out
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
   await expect.poll(corners).toBe(12);
 });
+
+test('All caps shows a text in capitals and keeps what was typed; one undo step, kept after a reload', async ({ page }) => {
+  await seed(page, [{ id: 't', name: 'Title', type: 'custom_text', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, textValue: 'Goal for Ankara', fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' }]);
+  await page.locator('[role="tree"] [data-layer-id="t"]').click();
+  const drawn = page.locator('.stage-canvas-container [data-part-id="t"] text').first();
+  const caps = page.getByRole('toolbar', { name: 'Text options' }).getByRole('button', { name: 'All caps' });
+  const typed = page.getByRole('toolbar', { name: 'Text options' }).getByLabel('Text content');
+  const width = (await drawn.boundingBox())!.width;
+
+  await caps.click();
+  await expect(caps).toHaveAttribute('aria-pressed', 'true');
+  await expect(drawn).toHaveText('GOAL FOR ANKARA');
+  // What was typed stays as typed; the selection frame follows the wider capitals.
+  await expect(typed).toHaveValue('Goal for Ankara');
+  expect((await drawn.boundingBox())!.width).toBeGreaterThan(width);
+
+  await page.keyboard.press('Control+z');
+  await expect(drawn).toHaveText('Goal for Ankara');
+  await page.keyboard.press('Control+Shift+z');
+  await expect(drawn).toHaveText('GOAL FOR ANKARA');
+
+  const saved = (await savedLayers(page)).find((layer) => layer.id === 't')!;
+  expect(saved.textValue).toBe('Goal for Ankara');
+  expect(saved.textCase).toBe('upper');
+  await page.reload();
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  await expect(drawn).toHaveText('GOAL FOR ANKARA');
+});

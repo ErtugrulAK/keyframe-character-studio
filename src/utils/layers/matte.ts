@@ -21,6 +21,7 @@
 import type { AnimationTrackData, BodyPartType, CharacterPart, MatteMode, PartMatte, TrackMatteV2 } from '../../types/animator';
 import { interpolateChannel } from '../animation/defaults';
 import { textBaselineOffset } from '../geometry/textOrigin';
+import { applyTextCase } from './textCase';
 import { buildBezierPathD, legacyFreeformPointsToPath } from '../geometry/bezierPath';
 import { applyAffine, invertAffine, worldAffineOf, type WorldAffine } from '../geometry/containerMath';
 import type { WorldTransform } from '../../types/composition';
@@ -550,11 +551,11 @@ export interface MatteTextContent {
 }
 
 export function textMaskContent(
-  sourcePart: Pick<CharacterPart, 'textValue' | 'fontSize' | 'fontFamily' | 'textOrigin'> | undefined,
+  sourcePart: Pick<CharacterPart, 'textValue' | 'fontSize' | 'fontFamily' | 'textOrigin' | 'textCase'> | undefined,
 ): MatteTextContent | undefined {
   if (!sourcePart) return undefined;
   return {
-    content: sourcePart.textValue || 'TEXT',
+    content: applyTextCase(sourcePart.textValue || 'TEXT', sourcePart.textCase),
     fontSize: sourcePart.fontSize || 24,
     fontWeight: 'bold',
     fontFamily: sourcePart.fontFamily || 'Outfit',

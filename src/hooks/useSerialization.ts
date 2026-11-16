@@ -168,6 +168,7 @@ function toSceneData(
     fontSize: p.fontSize,
     fontFamily: p.fontFamily,
     ...(p.textOrigin !== undefined ? { textOrigin: p.textOrigin } : {}),
+    ...(p.textCase !== undefined ? { textCase: p.textCase } : {}),
     imageUrl: p.imageUrl,
     videoUrl: p.videoUrl,
     shadowColor: p.shadowColor,
@@ -325,6 +326,7 @@ function readSceneData(scene: SceneData): ReadScene {
     ...(l.trimPathOffset !== undefined ? { trimPathOffset: l.trimPathOffset } : {}),
     fontFamily: l.fontFamily,
     ...(l.textOrigin !== undefined ? { textOrigin: l.textOrigin } : {}),
+    ...(l.textCase !== undefined ? { textCase: l.textCase } : {}),
     // BUG #3 fix: restore exported procedural animation config
     // (SceneLayer defines these; computeProceduralDelta consumes them).
     inAnimPreset: l.inAnimPreset,

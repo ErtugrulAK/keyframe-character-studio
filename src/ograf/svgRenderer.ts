@@ -10,6 +10,7 @@ import { resolveMatteSource } from '../utils/layers/matte';
 import { stackingOrder } from '../utils/layers/stackingOrder';
 import { getShapeGeometry, polygonPointsToString } from '../utils/geometry/shapeGeometry';
 import { resolveShapeAppearance } from '../utils/layers/shapeAppearance';
+import { applyTextCase } from '../utils/layers/textCase';
 import { describePaint, describeText } from '../utils/layers/drawDescriptor';
 import { layerBlendMode, layerFilterMarkup } from '../utils/layers/layerEffects';
 import { cropClipMarkup, layerCropId } from '../utils/layers/layerCrop';
@@ -330,7 +331,7 @@ function renderTrackMatteDefinition(scene: OGrafEvaluatedScene, target: Evaluate
         mode: relationship.mode,
         inverted: relationship.inverted,
         ...trackMatteRenderParameters(relationship.trackMatte, source.type),
-        source: { type: source.type, points: source.content.points, width: source.content.width, height: source.content.height, fontSize: source.content.fontSize, textValue: source.content.textValue },
+        source: { type: source.type, points: source.content.points, width: source.content.width, height: source.content.height, fontSize: source.content.fontSize, textValue: source.content.textValue === undefined ? undefined : applyTextCase(source.content.textValue, source.content.textCase) },
         transform: layerTransform(scene, source),
         affine: { ...affine, e: affine.e + scene.width / 2, f: affine.f + scene.height / 2 },
         silhouette: (fill) => renderLayerContent(source, options, { fill, stroke: 'none', 'fill-opacity': 1 }),

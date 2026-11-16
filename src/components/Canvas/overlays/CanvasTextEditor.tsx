@@ -141,6 +141,8 @@ export const CanvasTextEditor: React.FC<CanvasTextEditorProps> = ({ partId, onCl
         fontSize: fontPx,
         fontFamily: box?.fontFamily,
         fontWeight: box?.fontWeight,
+        // An all-caps text is typed as it shows; the stored text stays as typed.
+        textTransform: part.textCase === 'upper' ? 'uppercase' : undefined,
       }}
       onChange={(event) => write(event.target.value)}
       onBlur={() => finish(true)}

@@ -122,6 +122,8 @@ export interface RuntimeLayer {
   fontSize?: number;
   fontFamily?: string;
   textOrigin?: string;
+  /** The letter case the text shows (`utils/layers/textCase`). */
+  textCase?: string;
   imageUrl?: string;
   trimPathEnabled?: boolean;
   trimPathStart?: number;
@@ -616,7 +618,9 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     if (layer.type === 'custom_image') return [(layer.width || 180) / 2, (layer.height || 120) / 2];
     if (layer.type !== 'custom_text') return null;
     const size = layer.fontSize || 24;
-    const text = String(layer.textValue || 'TEXT');
+    const written = String(layer.textValue || 'TEXT');
+    // Capitals are wider: measure the letters it shows (`utils/layers/textCase`).
+    const text = layer.textCase === 'upper' ? written.toUpperCase() : written;
     const measured = layout.measureTextWidth(text, size, layer.fontFamily || 'Outfit');
     const width = Math.max(measured * 1.25, Array.from(text).length * size * 0.9);
     return [width / 2 + size, size * 2];
@@ -724,7 +728,9 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
         trimPathOffset: channelValue(channels.trimPathOffset, frame, layer.trimPathOffset || 0),
       } as EvaluatedRuntimeLayer;
       if (layer.textEffect && (layer.textValue || layer.textEffect.kind === 'clock')) {
-        evaluated.displayedText = textEffects.resolveDisplayedText(layer.textValue || '', layer.textEffect, frame, scene.fps);
+        const written = layer.textValue || '';
+        // The letter case it shows (`utils/layers/textCase`), before the effect reveals it.
+        evaluated.displayedText = textEffects.resolveDisplayedText(layer.textCase === 'upper' ? written.toUpperCase() : written, layer.textEffect, frame, scene.fps);
       }
       // A keyed Track Matte feather / strength / gradient angle, as the editor
       // evaluates it (`evaluateTrackMatte`): the channel over the packaged value.
@@ -990,7 +996,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
           feather: relation.render.feather,
           strength: relation.render.strength,
           gradient: relation.render.gradient,
-          source: { type: source.type, points: source.points, width: source.width, height: source.height, fontSize: source.fontSize, textValue: source.textValue },
+          source: { type: source.type, points: source.points, width: source.width, height: source.height, fontSize: source.fontSize, textValue: source.textCase === 'upper' && source.textValue ? source.textValue.toUpperCase() : source.textValue },
           transform: transform(scene, source),
           affine: { a: affine.a, b: affine.b, c: affine.c, d: affine.d, e: affine.e + scene.width / 2, f: affine.f + scene.height / 2 },
           silhouette: (fill) => silhouette(source, IMAGE_REFERENCES, fill),

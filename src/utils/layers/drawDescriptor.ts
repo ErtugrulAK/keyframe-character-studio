@@ -48,11 +48,13 @@ export const describePaint = (appearance: ResolvedShapeAppearance): PaintDescrip
 
 /** The glyph run of a text layer: its content, font and baseline. */
 export const describeText = (
-  part: { textValue?: string; fontSize?: number; fontFamily?: string },
+  part: { textValue?: string; fontSize?: number; fontFamily?: string; textCase?: string },
   baselineY: number,
 ): TextDescriptor => ({
   y: baselineY,
-  text: part.textValue || 'TEXT',
+  // The letter case it shows (`utils/layers/textCase`). Repeated here, not
+  // imported: the OGraf runtime embeds this function's own source.
+  text: part.textCase === 'upper' ? (part.textValue || 'TEXT').toUpperCase() : part.textValue || 'TEXT',
   fontSize: part.fontSize || 24,
   fontFamily: part.fontFamily || 'Outfit',
   fontWeight: 'bold',

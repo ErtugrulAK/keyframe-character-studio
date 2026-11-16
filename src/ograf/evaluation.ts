@@ -51,6 +51,7 @@ function toCharacterPart(layer: SceneLayer): CharacterPart {
     fontSize: layer.fontSize,
     fontFamily: layer.fontFamily,
     ...(layer.textOrigin !== undefined ? { textOrigin: layer.textOrigin } : {}),
+    ...(layer.textCase !== undefined ? { textCase: layer.textCase } : {}),
     imageUrl: layer.imageUrl,
     videoUrl: layer.videoUrl,
     points: layer.points,

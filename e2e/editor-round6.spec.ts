@@ -506,3 +506,58 @@ test('History lists the undo steps by name; a click goes to that step and a new 
   await panel.getByRole('button', { name: 'Close history' }).click();
   await expect(panel).toHaveCount(0);
 });
+
+test('a double-click on a text types into it on the canvas: Enter keeps it as one undo step, Escape puts it back', async ({ page }) => {
+  await seed(page, [{ id: 't', name: 'Title', type: 'custom_text', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, textValue: 'HELLO', fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' }]);
+  const drawn = page.locator('.stage-canvas-container [data-part-id="t"] text').first();
+  const field = page.getByTestId('canvas-text-editor');
+  const open = async () => {
+    const box = (await drawn.boundingBox())!;
+    // Two presses a hand's width apart in time, as a person double-clicks.
+    await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height / 2, { delay: 40 });
+    await expect(field).toBeFocused();
+  };
+
+  await open();
+  // The field stands on the text, with its content selected: typing replaces it.
+  await expect(field).toHaveValue('HELLO');
+  // (Selecting the text opened its options bar, which resized the stage: the field follows.)
+  await expect.poll(async () => {
+    const text = (await drawn.boundingBox())!;
+    const over = (await field.boundingBox())!;
+    return Math.max(Math.abs(over.x + over.width / 2 - (text.x + text.width / 2)), Math.abs(over.y + over.height / 2 - (text.y + text.height / 2)));
+  }).toBeLessThan(3);
+  await page.keyboard.type('GOAL 2-1');
+  // The drawing follows every keystroke.
+  await expect(drawn).toHaveText('GOAL 2-1');
+  await page.keyboard.press('Enter');
+  await expect(field).toHaveCount(0);
+  await expect(page.locator('[role="tree"] [data-layer-id="t"]')).toHaveAttribute('aria-selected', 'true');
+  expect((await savedLayers(page)).find((layer) => layer.id === 't')!.textValue).toBe('GOAL 2-1');
+
+  // The whole edit is one undo step.
+  await page.keyboard.press('Control+z');
+  await expect(drawn).toHaveText('HELLO');
+  await page.keyboard.press('Control+Shift+z');
+  await expect(drawn).toHaveText('GOAL 2-1');
+
+  // Escape puts the text back and leaves nothing to undo; the layer stays selected.
+  await open();
+  await page.keyboard.type('OOPS');
+  await expect(drawn).toHaveText('OOPS');
+  await page.keyboard.press('Escape');
+  await expect(field).toHaveCount(0);
+  await expect(drawn).toHaveText('GOAL 2-1');
+  await expect(page.locator('[role="tree"] [data-layer-id="t"]')).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Control+z');
+  await expect(drawn).toHaveText('HELLO');
+
+  // A click elsewhere on the canvas keeps what was typed.
+  await page.keyboard.press('Control+Shift+z');
+  await open();
+  await page.keyboard.type('FINAL');
+  const stage = await stageBox(page);
+  await page.mouse.click(stage.x + 40, stage.y + stage.height - 40);
+  await expect(field).toHaveCount(0);
+  await expect(drawn).toHaveText('FINAL');
+});

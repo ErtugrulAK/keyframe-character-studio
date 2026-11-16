@@ -73,6 +73,7 @@ import { evaluateLayerMasks } from '../../utils/animation/evaluateLayerMasks';
 import { resolveMaskEditBlock, resolveMaskPathFrame } from '../../utils/geometry/maskPathEditing';
 import { StagePartLayers } from './StagePartLayers';
 import { EditTargetStrip } from './overlays/EditTargetStrip';
+import { CanvasTextEditor } from './overlays/CanvasTextEditor';
 import { resolveEditTarget } from '../../utils/layers/editTarget';
 import { Sparkles } from 'lucide-react';
 import './StageCanvas.css';
@@ -191,6 +192,8 @@ export const StageCanvas: React.FC = () => {
    * outside it, Escape or another selection closes them.
    */
   const [pathEditPartId, setPathEditPartId] = useState<string | null>(null);
+  /** The text layer being typed into on the canvas (double-click a text). */
+  const [textEditPartId, setTextEditPartId] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const { openContextMenu } = useEditorContextMenu();
@@ -1552,6 +1555,7 @@ export const StageCanvas: React.FC = () => {
   if (pathEditSelection !== selectedPartId) {
     setPathEditSelection(selectedPartId);
     if (pathEditPartId && pathEditPartId !== selectedPartId) setPathEditPartId(null);
+    if (textEditPartId && textEditPartId !== selectedPartId) setTextEditPartId(null);
   }
   useEffect(() => {
     if (!pathEditPartId) return undefined;
@@ -1578,6 +1582,7 @@ export const StageCanvas: React.FC = () => {
   /**
    * Double-click edit modes, with the Select tool:
    * - a freeform path opens its points;
+   * - a text opens for typing;
    * - a Boolean result opens its operands (they can be selected and moved);
    * - a layer with a mask opens the mask on the canvas.
    * A double-click outside the layer being edited, or on it again, closes the
@@ -1619,6 +1624,17 @@ export const StageCanvas: React.FC = () => {
       setPathEditPartId(part.id);
       return true;
     }
+    // A text is typed into where it stands (its mask, if any, opens from the Inspector).
+    if (part.type === 'custom_text') {
+      const refusal = lockedLayersRefusal(characterParts, tracks, [part.id]);
+      if (refusal) {
+        showToast(refusal, 'error');
+        return true;
+      }
+      handleSelectPart(part.id);
+      setTextEditPartId(part.id);
+      return true;
+    }
     if (part.masks?.length) {
       handleSelectPart(part.id);
       const refusal = enterMaskEditing(part.id, part.masks[part.masks.length - 1].id);
@@ -1632,10 +1648,11 @@ export const StageCanvas: React.FC = () => {
    * The second press of a double-click (the browser's click count): the first
    * press already selected and may have re-drawn the layer, so the browser's
    * own dblclick event is not reliable here. A double-click inside an open path
-   * or mask belongs to that overlay (it adds a point or switches its type).
+   * or mask belongs to that overlay (it adds a point or switches its type), and
+   * one in the open text field selects a word there.
    */
   const handleStageMouseDownCapture = (event: React.MouseEvent) => {
-    const inEditOverlay = (event.target as Element).closest('[data-testid="freeform-tangent-overlay"], [data-testid="mask-path-overlay"]');
+    const inEditOverlay = (event.target as Element).closest('[data-testid="freeform-tangent-overlay"], [data-testid="mask-path-overlay"], [data-testid="canvas-text-editor"]');
     if (event.button === 0 && event.detail === 2 && !inEditOverlay && handleStageDoubleClick(event)) {
       event.stopPropagation();
       event.preventDefault();
@@ -2275,6 +2292,10 @@ export const StageCanvas: React.FC = () => {
         }
         return <EditTargetStrip target={editTarget} testId="edit-target-strip" />;
       })()}
+
+      {appMode !== 'broadcast' && textEditPartId && textEditPartId === selectedPartId && (
+        <CanvasTextEditor key={textEditPartId} partId={textEditPartId} onClose={() => setTextEditPartId(null)} />
+      )}
 
       {appMode !== 'broadcast' && cameraScale > 0 && (
         <StageZoomControl

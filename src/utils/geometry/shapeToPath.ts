@@ -26,20 +26,13 @@ type ShapeToPathResult =
   | { ok: true; part: CharacterPart; precision: 'exact' | 'bezier-arc' }
   | { ok: false; reason: string };
 
-const SHAPE_LABEL: Partial<Record<CharacterPart['type'], string>> = {
-  custom_rect: 'Rectangle',
-  custom_box: 'Square',
-  custom_circle: 'Ellipse',
-  custom_capsule: 'Capsule',
-  custom_triangle: 'Triangle',
-  custom_star: 'Star',
-  custom_polygon: 'Polygon',
-  custom_diamond: 'Diamond',
-  custom_parallelogram: 'Parallelogram',
-};
+const CONVERTIBLE_TYPES: ReadonlySet<CharacterPart['type']> = new Set<CharacterPart['type']>([
+  'custom_rect', 'custom_box', 'custom_circle', 'custom_capsule', 'custom_triangle',
+  'custom_star', 'custom_polygon', 'custom_diamond', 'custom_parallelogram',
+]);
 
 /** The shape types this build converts (others are refused with a reason). */
-export const isConvertibleShapeType = (type: CharacterPart['type']): boolean => SHAPE_LABEL[type] !== undefined;
+export const isConvertibleShapeType = (type: CharacterPart['type']): boolean => CONVERTIBLE_TYPES.has(type);
 
 const vertex = (index: number, x: number, y: number, handles?: { in?: { x: number; y: number }; out?: { x: number; y: number } }): BezierVertex => ({
   id: `vertex-${index}`,
@@ -144,4 +137,3 @@ export const convertShapeToEditablePath = (part: CharacterPart, tracks: readonly
   };
 };
 
-export const convertibleShapeLabel = (type: CharacterPart['type']): string => SHAPE_LABEL[type] ?? 'Shape';

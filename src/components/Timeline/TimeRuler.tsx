@@ -10,6 +10,8 @@ interface TimeRulerProps {
   /** The sequence's step markers (frames), drawn as flags: a click seeks, a right-click removes. */
   stepMarkers?: number[];
   onRemoveStepMarker?: (frame: number) => void;
+  /** A right-click on the ruler (not on a marker flag): the step retime menu. */
+  onContextMenu?: (event: React.MouseEvent) => void;
 }
 
 /**
@@ -19,7 +21,7 @@ interface TimeRulerProps {
  * Shift+arrows step ten, Home/End jump to the ends. It mirrors the pointer
  * scrub semantics; the two are the same seek authority in the parent.
  */
-export const TimeRuler: React.FC<TimeRulerProps> = ({ frameNumbers, frameWidth, totalFrames, currentFrame, onPointerDown, onSeekFrame, stepMarkers = [], onRemoveStepMarker }) => {
+export const TimeRuler: React.FC<TimeRulerProps> = ({ frameNumbers, frameWidth, totalFrames, currentFrame, onPointerDown, onSeekFrame, stepMarkers = [], onRemoveStepMarker, onContextMenu }) => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const step = e.shiftKey ? 10 : 1;
     if (e.key === 'ArrowLeft') onSeekFrame(currentFrame - step);
@@ -44,6 +46,7 @@ export const TimeRuler: React.FC<TimeRulerProps> = ({ frameNumbers, frameWidth, 
       aria-valuetext={`Frame ${currentFrame} of ${totalFrames}`}
       onPointerDown={onPointerDown}
       onKeyDown={handleKeyDown}
+      onContextMenu={onContextMenu}
       style={{ width: `${(totalFrames + 30) * frameWidth}px`, minWidth: '100%' }}
     >
       {frameNumbers.map((frame) => {

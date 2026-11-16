@@ -29,6 +29,7 @@ import { useSelection } from '../hooks/useSelection';
 import { usePlayback } from '../hooks/usePlayback';
 import { duplicateKeyframeGroup as duplicateKeyframeGroupTrack } from '../utils/animation/keyframeDuplicate';
 import { setKeyframeGroupEasing as setKeyframeGroupEasingTrack } from '../utils/animation/keyframeEasing';
+import { retimeFrame, retimeSection, sectionAt } from '../utils/animation/sectionRetime';
 import { pasteKeyframeGroupData, type KeyframeCopyPayload } from '../utils/animation/keyframeCopyPaste';
 import { useHistory, type HistoryDocumentState } from '../hooks/useHistory';
 import { useBroadcast } from '../hooks/useBroadcast';
@@ -68,6 +69,9 @@ import { collectOwnedDeletionIds, describeDeletionScope, matteDependentsOfDeleti
 import type { ImportResult } from '../utils/persistence/importValidation';
 import type { PathOrderCommand } from '../utils/geometry/maskPathOrder';
 import { lockedLayerIds, lockedLayerNames, lockedLayersMessage, lockedMaskChanges, lockedMasksMessage, lockedPartChanges, lockedTrackChanges, type LockedMaskHit } from '../utils/layers/layerLocks';
+
+/** The longest a sequence may get (the timeline's DURATION field allows the same). */
+const MAX_SEQUENCE_SECONDS = 40;
 
 /** One confirmation the editor asks before a non-obvious edit. */
 export interface ConfirmationRequest {
@@ -234,6 +238,8 @@ export interface AnimatorContextType {
   updateMotionTemplateDuration: (id: string, durationFrames: number) => void;
   /** Sets a sequence's OGraf step markers (`utils/animation/stepMarkers`). */
   setMotionTemplateStepMarkers: (id: string, markers: number[]) => void;
+  /** Retimes the step that holds `frame` to `length` frames (one undo step); false when refused or unchanged. */
+  retimeStep: (frame: number, length: number) => boolean;
   renamePartAndTrack: (partId: string, newName: string) => void;
   reorderParts: (dragIndex: number, hoverIndex: number) => void;
   deletePart: (partId: string) => void;
@@ -1012,6 +1018,42 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setKeyframeGroupEasing = useCallback((trackId: string, frame: number, easing: EasingType, controlPoints?: [number, number, number, number]) => {
     easeKeyframeGroups(new Map([[trackId, [frame]]]), easing, controlPoints);
   }, [easeKeyframeGroups]);
+  /**
+   * The step that holds `frame`, retimed to `length` frames
+   * (`utils/animation/sectionRetime`): its keys stretch from its start, later
+   * keys and markers move, the sequence's length follows. Keys, markers and
+   * length change in ONE undo step; a refusal changes nothing and says why.
+   */
+  const retimeStep = useCallback((frame: number, length: number): boolean => {
+    const template = motionTemplates.find((candidate) => candidate.id === activeTemplateId);
+    const durationFrames = template?.durationFrames ?? totalFrames;
+    const section = sectionAt(template?.stepMarkers, durationFrames, Math.round(frame));
+    const result = retimeSection({
+      tracks, templateId: activeTemplateId, markers: template?.stepMarkers, durationFrames, section, length,
+      maxDurationFrames: Math.round(MAX_SEQUENCE_SECONDS * fps),
+    });
+    if (!result.ok) {
+      const name = result.trackId ? tracks.find((track) => track.id === result.trackId)?.name : undefined;
+      showToast(
+        result.reason === 'collision'
+          ? `That length is too short: two keyframes of ${name ?? 'a layer'} would land on the same frame.`
+          : result.reason === 'locked'
+            ? `${name ?? 'A layer'} is locked; unlock it to retime this step.`
+            : `A step is at least 1 frame, and a sequence at most ${MAX_SEQUENCE_SECONDS} s.`,
+        'info',
+      );
+      return false;
+    }
+    if (!result.changed) return false;
+    startBatchInteraction();
+    editSetTracks(result.tracks);
+    updateMotionTemplateDuration(activeTemplateId, result.durationFrames);
+    setMotionTemplateStepMarkers(activeTemplateId, result.markers);
+    setTotalFrames(result.durationFrames);
+    setCurrentFrame(retimeFrame(Math.round(currentFrame), section.start, section.end, Math.round(length)));
+    endBatchInteraction();
+    return true;
+  }, [motionTemplates, activeTemplateId, totalFrames, currentFrame, tracks, fps, showToast, startBatchInteraction, editSetTracks, updateMotionTemplateDuration, setMotionTemplateStepMarkers, setTotalFrames, setCurrentFrame, endBatchInteraction]);
   /** F9 — Easy Ease on the frames of the selected keyframes. */
   const easySelectedKeyframes = useCallback((): boolean => {
     if (selectedKeyframeIds.length === 0) return false;
@@ -1428,6 +1470,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     deleteMotionTemplate,
     updateMotionTemplateDuration,
     setMotionTemplateStepMarkers,
+    retimeStep,
   };
   // The same value as a subscription source: `useAnimatorSlice` readers
   // render only when the fields they read change, not on every frame. It is

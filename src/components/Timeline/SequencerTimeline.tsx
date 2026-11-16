@@ -41,6 +41,8 @@ import { TrackLane, type KeyframePress } from './TrackLane';
 import { CHANNEL_META, clampPanelSize, TRACK_ROW_HEIGHT, KEYFRAME_DRAG_THRESHOLD_PX, OUTLINER_DEFAULT_WIDTH, OUTLINER_MAX_WIDTH, OUTLINER_MIN_WIDTH, resolveTimelineHeightCeiling, TIMELINE_COLLAPSED_HEIGHT, TIMELINE_DEFAULT_HEIGHT, TIMELINE_EDGE_TRANSITION_MS, TIMELINE_MIN_HEIGHT, resolveOpeningTimelineHeight, shouldOpenTimelineCollapsed } from './timelineConstants';
 import { copyKeyframeGroupData, type KeyframeCopyPayload } from '../../utils/animation/keyframeCopyPaste';
 import { readKeyframeGroupEasing, type SegmentCurve } from '../../utils/animation/keyframeEasing';
+import { sectionAt } from '../../utils/animation/sectionRetime';
+import { usePointerMenuPlacement } from '../../hooks/usePointerMenuPlacement';
 import { TrackOutlinerRow } from './TrackOutlinerRow';
 import { projectLayerOrdinals } from '../../utils/layers/layerOrdinal';
 import { frameToSeconds, secondsToFrame } from '../../utils/animation/timebase';
@@ -175,6 +177,7 @@ export const SequencerTimeline: React.FC = () => {
     deleteMotionTemplate,
     updateMotionTemplateDuration,
     setMotionTemplateStepMarkers,
+    retimeStep,
   } = useAnimator();
   // The rows follow the Layers panel: a parent, then its children under it.
   const layerTree = useMemo(() => orderTracksByLayerTree(characterParts, sceneTracks), [characterParts, sceneTracks]);
@@ -556,6 +559,32 @@ export const SequencerTimeline: React.FC = () => {
     [motionTemplates, activeTemplateId, activeSequenceDurationFrames],
   );
   const stepMarkerAtPlayhead = activeStepMarkers.includes(Math.round(currentFrame));
+  /*
+   * Retime a step: a right-click on the ruler opens a small menu for the
+   * step under the pointer (between its markers, or the whole sequence),
+   * whose new length stretches its keys (`utils/animation/sectionRetime`).
+   */
+  const [retimeMenu, setRetimeMenu] = useState<{ frame: number; x: number; y: number; seconds: number } | null>(null);
+  const retimeMenuRef = useRef<HTMLDivElement | null>(null);
+  const retimeMenuPlacement = usePointerMenuPlacement(retimeMenuRef, retimeMenu);
+  const retimeSectionOf = (frame: number) => sectionAt(activeStepMarkers, activeSequenceDurationFrames, Math.round(frame));
+  useEffect(() => {
+    if (!retimeMenu) return;
+    const close = (event: MouseEvent) => {
+      if (retimeMenuRef.current && !retimeMenuRef.current.contains(event.target as Node)) setRetimeMenu(null);
+    };
+    window.addEventListener('mousedown', close);
+    return () => window.removeEventListener('mousedown', close);
+  }, [retimeMenu]);
+  const openRetimeMenu = (clientX: number, clientY: number) => {
+    const frame = getFrameFromMouse(clientX);
+    const section = retimeSectionOf(frame);
+    setRetimeMenu({ frame, x: clientX, y: clientY, seconds: Number(frameToSeconds(section.end - section.start, fps).toFixed(2)) });
+  };
+  const applyRetime = () => {
+    if (!retimeMenu) return;
+    if (retimeMenu.seconds > 0 && retimeStep(retimeMenu.frame, Math.round(secondsToFrame(retimeMenu.seconds, fps)))) setRetimeMenu(null);
+  };
   const handleToggleStepMarker = () => {
     const frame = Math.round(currentFrame);
     if (stepMarkerAtPlayhead) {
@@ -1501,6 +1530,7 @@ export const SequencerTimeline: React.FC = () => {
               <Scissors size={12} aria-hidden="true" /><span>Crop</span>
             </button>
           </div>
+
         </div>
 
         <div className="timeline-header-center timeline-transport-band">
@@ -1672,7 +1702,42 @@ export const SequencerTimeline: React.FC = () => {
             onSeekFrame={handleRulerKeySeek}
             stepMarkers={activeStepMarkers}
             onRemoveStepMarker={(frame) => setMotionTemplateStepMarkers(activeTemplateId, removeStepMarker(activeStepMarkers, frame, activeSequenceDurationFrames))}
+            onContextMenu={(event) => { event.preventDefault(); openRetimeMenu(event.clientX, event.clientY); }}
           />
+          {retimeMenu && (() => {
+            const section = retimeSectionOf(retimeMenu.frame);
+            const name = activeStepMarkers.length > 0 ? `Step ${section.index + 1}` : 'The whole sequence';
+            return (
+              <div
+                ref={retimeMenuRef}
+                role="dialog"
+                aria-label="Retime step"
+                className="editor-context-menu timeline-context-menu timeline-retime-menu"
+                style={{ position: 'fixed', left: retimeMenuPlacement?.left ?? retimeMenu.x, top: retimeMenuPlacement?.top ?? retimeMenu.y, zIndex: 1000, minWidth: 200 }}
+                onKeyDown={(event) => { if (event.key === 'Escape') { event.stopPropagation(); setRetimeMenu(null); } }}
+              >
+                <div className="timeline-retime-title">{name} (frames {section.start}–{section.end})</div>
+                <label className="timeline-retime-row">
+                  <span>Length</span>
+                  <NumberField
+                    className="duration-input"
+                    aria-label={`New length of ${name.toLowerCase()}, in seconds`}
+                    autoFocus
+                    step={0.5}
+                    min={0.01}
+                    max={40}
+                    value={retimeMenu.seconds}
+                    onFocus={(event) => event.target.select()}
+                    onValue={(seconds) => setRetimeMenu((menu) => (menu ? { ...menu, seconds } : menu))}
+                    onKeyDown={(event) => { if (event.key === 'Enter') applyRetime(); }}
+                  />
+                  <span aria-hidden="true">s</span>
+                </label>
+                <p className="timeline-retime-hint">Its keyframes stretch or squeeze; everything after it moves.</p>
+                <button type="button" className="timeline-menu-item editor-context-menu-item" onClick={applyRetime}>Retime</button>
+              </div>
+            );
+          })()}
 
           {/* Playhead */}
           <div className="playhead-line" data-frame={currentFrame} style={{ left: `${currentFrame * FRAME_WIDTH}px` }}>

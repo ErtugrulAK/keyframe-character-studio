@@ -76,7 +76,9 @@ test('the reference lists the bindings for this platform and closes on Escape', 
   // C8 added the arrow-key nudge of the selected layers: 48.
   // F9 Easy Ease on the selected keyframes: 49.
   // Round 6 added Ctrl+Left / Ctrl+Right (previous / next keyframe) and K (key the transform): 52.
-  await expect(dialog.locator('.shortcut-reference-row')).toHaveCount(52);
+  // Then Ctrl+Shift+A (deselect), Page Up / Page Down (frame step) and Home / End (first / last frame): 57.
+  await expect(dialog.locator('.shortcut-reference-row')).toHaveCount(57);
+  await expect(dialog.getByRole('region', { name: 'Timeline' })).toContainText('Go to the first frame');
   const timeline = dialog.getByRole('region', { name: 'Timeline' });
   await expect(timeline).toContainText('Go to the previous keyframe');
   await expect(timeline).toContainText('Go to the next keyframe');

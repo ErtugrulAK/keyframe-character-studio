@@ -3,6 +3,7 @@
  * undo keeping the selection, the live marquee preview and Shift/Alt applying
  * the moment they are pressed.
  */
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { armTool } from './fixtures/toolbarTools';
 
@@ -748,4 +749,17 @@ test('Page Up / Page Down step the playhead, Home / End go to the first / last f
   await page.locator('.stage-canvas-container').hover();
   await page.keyboard.press('Control+Shift+A');
   await expect(page.locator('[role="tree"] [data-layer-id="a"]')).toHaveAttribute('aria-selected', 'false');
+});
+
+test('Help names the editor version, and Deselect shows its shortcut', async ({ page }) => {
+  await seed(page, [rect('a', 'Alpha', 0, 0)]);
+  const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
+  const bar = page.getByRole('menubar', { name: 'Editor menu' });
+  await bar.getByRole('menuitem', { name: 'Help', exact: true }).click();
+  const line = page.getByRole('menuitem', { name: /^Keyframe Character Studio / });
+  await expect(line).toBeDisabled();
+  await expect(line).toHaveText(`Keyframe Character Studio ${version}`);
+  await page.keyboard.press('Escape');
+  await bar.getByRole('menuitem', { name: 'Edit', exact: true }).click();
+  await expect(page.getByRole('menuitem', { name: /^Deselect/ })).toContainText('Ctrl+Shift+A');
 });

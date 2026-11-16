@@ -7,6 +7,7 @@ import { ProjectSettingsDialog } from './ProjectSettingsDialog';
 import { useGraphicLibrary } from './useGraphicLibrary';
 import { useStartRecipes } from './useStartRecipes';
 import { HistoryPanel } from './HistoryPanel';
+import { APP_VERSION } from '../../utils/editor/appVersion';
 import './MenuBar.css';
 
 interface MenuItem {
@@ -109,7 +110,7 @@ export const MenuBar: React.FC = () => {
         ],
         [
           { id: 'select-all', label: 'Select All', shortcut: hint('select-all'), disabled: characterParts.length === 0, run: selectAll },
-          { id: 'deselect', label: 'Deselect', disabled: selection.length === 0, run: () => { setSelectedPartIds([]); setSelectedPartId(null); } },
+          { id: 'deselect', label: 'Deselect', shortcut: hint('deselect-all'), disabled: selection.length === 0, run: () => { setSelectedPartIds([]); setSelectedPartId(null); } },
         ],
       ],
     },
@@ -149,7 +150,11 @@ export const MenuBar: React.FC = () => {
     {
       id: 'help',
       label: 'Help',
-      groups: [[{ id: 'shortcuts', label: 'Keyboard Shortcuts', shortcut: hint('shortcut-reference'), run: openShortcutReference }]],
+      groups: [
+        [{ id: 'shortcuts', label: 'Keyboard Shortcuts', shortcut: hint('shortcut-reference'), run: openShortcutReference }],
+        // What build this is, for a bug report; it runs nothing.
+        [{ id: 'version', label: `Keyframe Character Studio ${APP_VERSION}`, disabled: true, run: () => undefined }],
+      ],
     },
   ];
 

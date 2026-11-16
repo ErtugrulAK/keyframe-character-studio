@@ -161,6 +161,14 @@ export interface AnimatorContextType {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  /** What each undo step did, oldest first (`utils/editor/historyLabels`); the first is where the history starts. */
+  historySteps: string[];
+  /** The step the scene is on now. */
+  historyIndex: number;
+  /** Go straight to a step (the History list); does nothing while an unfinished drawing owns Undo. */
+  jumpToHistoryStep: (index: number) => void;
+  /** An unfinished drawing owns Undo/Redo, so the list cannot be used until it is finished. */
+  historyLocked: boolean;
   /** An unfinished drawing claims Undo/Redo while it is open (null releases it). */
   registerDraftHistory: (owner: DraftHistoryOwner | null) => void;
   startBatchInteraction: () => void;
@@ -656,6 +664,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const {
     undo,
     redo,
+    jumpTo,
+    historySteps,
+    historyIndex,
     canUndo,
     canRedo,
     startBatchInteraction,
@@ -831,6 +842,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     redo();
   }, [draftHistory, redo]);
+  const jumpToHistoryStep = useCallback((index: number) => {
+    if (!draftHistory) jumpTo(index);
+  }, [draftHistory, jumpTo]);
 
   const { pathVertex, selectPathVertex, convertToEditablePath: convertShapeToPath, setPartPath, deleteSelectedPathVertex } = usePathEditing({
     characterParts,
@@ -1275,6 +1289,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     redo: draftAwareRedo,
     canUndo: draftHistory ? draftHistory.canUndo : canUndo,
     canRedo: draftHistory ? draftHistory.canRedo : canRedo,
+    historySteps,
+    historyIndex,
+    jumpToHistoryStep,
+    historyLocked: Boolean(draftHistory),
     registerDraftHistory,
     startBatchInteraction,
     endBatchInteraction,

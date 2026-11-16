@@ -471,3 +471,38 @@ test('a layer follows a drawn path: linked in the Inspector, walking it on the t
   await seek('2s');
   await expectAt(200, 0);
 });
+
+test('History lists the undo steps by name; a click goes to that step and a new edit replaces the later ones', async ({ page }) => {
+  await seed(page, [rect('a', 'Alpha', -200, 0), rect('b', 'Beta', 200, 0)]);
+  const tree = page.locator('[role="tree"]');
+  await tree.locator('[data-layer-id="a"]').click();
+  await page.keyboard.press('Delete');
+  await expect(tree.locator('[data-layer-id="a"]')).toHaveCount(0);
+  // Drag Beta on the stage: one move, one step.
+  const from = await screenOf(page, 200, 0);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 40, from.y + 30, { steps: 5 });
+  await page.mouse.up();
+
+  await page.getByRole('menubar', { name: 'Editor menu' }).getByRole('menuitem', { name: 'Edit', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'History…' }).click();
+  const panel = page.getByRole('dialog', { name: 'History' });
+  const steps = panel.locator('.history-step-label');
+  await expect(steps).toHaveText(['Start', 'Delete Alpha', 'Move Beta']);
+  await expect(panel.locator('.history-step[aria-current="step"]')).toHaveText(/Move Beta/);
+
+  // Back to the start: Alpha is there again; the later steps wait, dimmed, for redo.
+  await panel.getByRole('button', { name: /Start/ }).click();
+  await expect(tree.locator('[data-layer-id="a"]')).toHaveCount(1);
+  await expect(panel.locator('.history-step.undone')).toHaveCount(2);
+  // Forward again in one click, then back one and edit: the step after is replaced.
+  await panel.getByRole('button', { name: /Move Beta/ }).click();
+  await expect(tree.locator('[data-layer-id="a"]')).toHaveCount(0);
+  await panel.getByRole('button', { name: /Delete Alpha/ }).click();
+  await tree.locator('[data-layer-id="b"]').click();
+  await page.keyboard.press('Delete');
+  await expect(steps).toHaveText(['Start', 'Delete Alpha', 'Delete Beta']);
+  await panel.getByRole('button', { name: 'Close history' }).click();
+  await expect(panel).toHaveCount(0);
+});

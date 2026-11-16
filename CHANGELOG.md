@@ -17,6 +17,7 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 - Replace Image keeps the layer, its animation and its width.
 - A view bar on the stage: the real zoom percentage, Fit, 1:1, zoom presets, action-safe and title-safe guides, and an artboard backdrop (dark, light, checkerboard or a picture; editor only).
 - Timeline: type a time into the playhead field (frames, seconds or timecode), Ctrl+Left / Ctrl+Right jump to the previous / next keyframe, and K keys the transform of every selected layer.
+- Edit > History… lists the undo steps by name ("Move Alpha", "Delete 2 layers", "Add keyframe on Logo"); a click goes straight to that step, and the later steps stay for redo until a new edit replaces them.
 - Filter properties in the Inspector shows only the cards that hold what you type ("glow", "rotation", "matte").
 
 ### Fixed

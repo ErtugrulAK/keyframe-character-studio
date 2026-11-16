@@ -6,6 +6,7 @@ import { isConvertibleShapeType, shapeToPathBlockReason } from '../../utils/geom
 import { ProjectSettingsDialog } from './ProjectSettingsDialog';
 import { useGraphicLibrary } from './useGraphicLibrary';
 import { useStartRecipes } from './useStartRecipes';
+import { HistoryPanel } from './HistoryPanel';
 import './MenuBar.css';
 
 interface MenuItem {
@@ -52,6 +53,7 @@ export const MenuBar: React.FC = () => {
   const [openId, setOpenId] = useState<string | null>(null);
   const [activeRow, setActiveRow] = useState(0);
   const [projectSettingsOpen, setProjectSettingsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
   const { openLibrary, dialog: libraryDialog } = useGraphicLibrary();
   const { openStartRecipes, dialog: startRecipeDialog } = useStartRecipes();
@@ -92,6 +94,7 @@ export const MenuBar: React.FC = () => {
         [
           { id: 'undo', label: 'Undo', shortcut: hint('undo'), disabled: !canUndo, run: undo },
           { id: 'redo', label: 'Redo', shortcut: hint('redo'), disabled: !canRedo, run: redo },
+          { id: 'history', label: 'History…', run: () => setHistoryOpen(true) },
         ],
         [
           { id: 'cut', label: 'Cut', disabled: !single, run: () => { copySelectedPart(); deleteSelection(); } },
@@ -238,6 +241,7 @@ export const MenuBar: React.FC = () => {
       {libraryDialog}
       {startRecipeDialog}
       <ProjectSettingsDialog isOpen={projectSettingsOpen} onClose={() => setProjectSettingsOpen(false)} />
+      <HistoryPanel isOpen={historyOpen} onClose={() => setHistoryOpen(false)} />
     </div>
   );
 };

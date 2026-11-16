@@ -19,9 +19,11 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 - Timeline: type a time into the playhead field (frames, seconds or timecode), Ctrl+Left / Ctrl+Right jump to the previous / next keyframe, and K keys the transform of every selected layer.
 - Edit > History… lists the undo steps by name ("Move Alpha", "Delete 2 layers", "Add keyframe on Logo"); a click goes straight to that step, and the later steps stay for redo until a new edit replaces them.
 - Double-click a text on the canvas to type into it where it stands: the field uses the text's own font and on-screen size, the drawing follows every keystroke, Enter or a click elsewhere keeps the edit as one undo step, and Escape puts the text back.
+- Template tabs are kept across a reload: the tab list, which one is open, and every closed tab's layers, sequences, frame rate and canvas size come back. The open tab is still saved where it always was; the other tabs go to a second browser key (`KCS_WORKSPACE_V1`), written only when there is more than one tab, so a one-tab project is stored exactly as before. A damaged tab is left out and its copy kept; tabs saved by a newer build are left untouched.
 - Filter properties in the Inspector shows only the cards that hold what you type ("glow", "rotation", "matte").
 
 ### Fixed
+- Importing an older project file into a new tab no longer loses the frame rate and canvas size of the tab it leaves, and the new tab starts with its own undo history.
 - The drop shadow is drawn in the static SVG, the GIF and the OGraf graphic; it used to show only in the editor.
 - The media store works on an `http://` LAN address (a built-in SHA-256 where the browser offers none).
 - The Text tool's preview draws only the text's frame, with no shaded area.

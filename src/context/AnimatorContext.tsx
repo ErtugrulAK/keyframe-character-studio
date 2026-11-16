@@ -489,6 +489,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [projectResolution, setProjectResolution] = useState<{ width: number; height: number }>({ width: 1920, height: 1080 });
   const templateSwitchedRef = useRef<() => void>(() => undefined);
   const {
+    templateCanvasStore,
     setTemplateCanvasStore,
     projectTemplates,
     setProjectTemplates,
@@ -1161,6 +1162,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setIsPlaying,
     requestHistoryBaseline: requestBaselineReset,
     onRestoreRefused: (message) => showToast(message, 'error'),
+    projectTemplates,
+    templateCanvasStore,
+    onProjectTemplateSwitched: () => templateSwitchedRef.current(),
   });
 
 

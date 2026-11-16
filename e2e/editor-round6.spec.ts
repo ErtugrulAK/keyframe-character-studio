@@ -561,3 +561,55 @@ test('a double-click on a text types into it on the canvas: Enter keeps it as on
   await expect(field).toHaveCount(0);
   await expect(drawn).toHaveText('FINAL');
 });
+
+test('template tabs come back after a reload, the open one still open, a closed tab\'s picture kept by reference', async ({ page }) => {
+  // A noisy picture, large enough to be stored by reference (small ones stay inline):
+  // the closed tab's picture goes to the media store and the saved tabs name it.
+  await page.goto('/');
+  const png = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 48;
+    canvas.height = 48;
+    const context = canvas.getContext('2d')!;
+    const pixels = context.createImageData(48, 48);
+    let seedValue = 7;
+    for (let index = 0; index < pixels.data.length; index += 1) {
+      seedValue = (seedValue * 48271) % 2147483647;
+      pixels.data[index] = index % 4 === 3 ? 255 : seedValue % 256;
+    }
+    context.putImageData(pixels, 0, 0);
+    return canvas.toDataURL('image/png');
+  });
+  expect(png.length).toBeGreaterThan(2048);
+  await seed(page, [
+    rect('a', 'Alpha', -200, 0),
+    { id: 'pic', name: 'Picture', type: 'custom_image', x: 200, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 2, width: 200, height: 200, imageUrl: png, fillColor: '#ffffff', strokeColor: '#000000' },
+  ]);
+  const tree = page.locator('[role="tree"]');
+  await page.getByTitle('Create New Template').click();
+  await page.getByPlaceholder('Template name (e.g. LowerThird_v2)...').fill('Score');
+  await page.getByRole('button', { name: 'Create Template', exact: true }).click();
+  await expect(tree.locator('[data-layer-id="a"]')).toHaveCount(0);
+  await armTool(page, 'Rectangle');
+  const stage = await stageBox(page);
+  await page.mouse.move(stage.x + stage.width / 2 - 40, stage.y + stage.height / 2 - 30);
+  await page.mouse.down();
+  await page.mouse.move(stage.x + stage.width / 2 + 40, stage.y + stage.height / 2 + 30, { steps: 4 });
+  await page.mouse.up();
+  await expect(tree.locator('[data-layer-id]')).toHaveCount(1);
+  await savedLayers(page);
+
+  const workspace = await page.evaluate(() => localStorage.getItem('KCS_WORKSPACE_V1'));
+  expect(workspace).not.toBeNull();
+  expect(workspace).not.toContain('data:image');
+
+  await page.reload();
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  const tabs = page.locator('.header-template-tabs .header-tab:not(.add-tab) > span');
+  await expect(tabs).toHaveText(['Template', 'Score']);
+  await expect(page.locator('.header-tab.active > span')).toHaveText('Score');
+  await expect(tree.locator('[data-layer-id]')).toHaveCount(1);
+  await page.getByTitle('Template: Template').click();
+  await expect(tree.locator('[data-layer-id="a"]')).toHaveCount(1);
+  await expect(page.locator('.stage-canvas-container [data-part-id="pic"] image').first()).toHaveAttribute('href', /^data:image\/png/);
+});

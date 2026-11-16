@@ -50,7 +50,30 @@ const opacityOf = (markup: Element | Document, id: string) => {
 
 const headline = layer('title', { name: 'Headline', type: 'custom_text', textValue: 'Hi', fontSize: 72, zIndex: 2, textFit: { hideWhenEmpty: true } });
 
+/** A layer's painted y on the 1080 px canvas, from its transform. */
+const yOf = (markup: Element | Document, id: string) => {
+  const transform = markup.querySelector(`[data-layer-id="${id}"] g`)?.getAttribute('transform') ?? '';
+  return Number(/translate\([-\d.]+[ ,]+([-\d.]+)/.exec(transform)?.[1]);
+};
+
 describe('layout modifiers in the OGraf package', () => {
+  test('a Text Box with V ALIGN top keeps its top as the operator text shrinks it, as the static renderer does', async () => {
+    const data = scene([layer('title', { name: 'Headline', type: 'custom_text', textValue: 'Hi', fontSize: 72, textOrigin: 'center', textFit: { maxWidth: 400, verticalAlign: 'top' } })]);
+    const graphic = mount(data);
+    await graphic.load({ renderType: 'realtime' });
+    await graphic.playAction({ skipAnimation: true });
+    expect(yOf(graphic, 'title')).toBeCloseTo(540);
+    // 18 chars x 0.56 x 72 = 725.76 px > 400 -> size 72 x 400/725.76 (above the 50 % floor).
+    const long = 'x'.repeat(18);
+    await graphic.updateAction({ data: { headline: long } });
+    const size = 72 * (400 / 725.76);
+    expect(yOf(graphic, 'title')).toBeCloseTo(540 - 0.561 * (72 - size), 3);
+    const host = document.createElement('div');
+    host.innerHTML = renderOGrafSvg(evaluateOGrafScene({ ...data, layers: [{ ...data.layers[0], textValue: long }] }, 0));
+    expect(yOf(host, 'title')).toBeCloseTo(yOf(graphic, 'title'), 3);
+    graphic.remove();
+  });
+
   test('a follower moves with its text on every update, and an emptied text hides with its bar', async () => {
     const graphic = mount(scene([
       layer('bar', { type: 'custom_rect', fitToText: { textLayerId: 'title', padding: 24 } }),

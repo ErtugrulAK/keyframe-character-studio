@@ -1,6 +1,6 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
-import type { FitToTextSettings, FollowSettings, HorizontalAlign, RepeaterSettings, TextFitSettings } from '../../../../utils/layers/layoutModifiers';
+import type { FitToTextSettings, FollowSettings, HorizontalAlign, RepeaterSettings, TextFitSettings, VerticalAlign } from '../../../../utils/layers/layoutModifiers';
 import { fitTextIds, SHAPE_EXTENTS } from '../../../../utils/layers/layoutModifiers';
 import { SHAPE_BOUNDS } from '../../../../ograf/trackMatteMarkup';
 import type { ModifierPatch } from '../../../../hooks/useModifierEditing';
@@ -245,6 +245,14 @@ export const ModifiersCard: React.FC<ModifiersCardProps> = ({ selectedPart, char
                 {ALIGN_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             ))}
+            {field('V ALIGN', (
+              <select className="select-control" aria-label="Text vertical align" value={textFit.verticalAlign ?? 'origin'} disabled={readOnly} onChange={(event) => writeTextFit({ verticalAlign: event.target.value === 'origin' ? undefined : event.target.value as VerticalAlign })}>
+                <option value="origin">As placed</option>
+                <option value="top">Top</option>
+                <option value="middle">Middle</option>
+                <option value="bottom">Bottom</option>
+              </select>
+            ), { title: 'The edge that stays in place when the text shrinks to fit its width' })}
           </>
         );
       case 'autoSize':

@@ -194,3 +194,72 @@ test('Look At turns a layer to face its target', async ({ page }) => {
     return match ? Number(match[1]) : null;
   })).toBeCloseTo(expected, 0);
 });
+
+test('a Text Box keeps its top or bottom edge in place as its text shrinks (V ALIGN), kept after a reload', async ({ page }) => {
+  // Round 6 (OGraf Studio review): vertical alignment of a shrinking text.
+  await seed(page, 400, [
+    layer('boxed', 'Boxed', { type: 'custom_text', textValue: 'Short', fontSize: 72, fillColor: '#ffffff', textOrigin: 'center', y: -200, x: 300, zIndex: 5, textFit: { maxWidth: 400 } }),
+  ]);
+  // What the layout keeps is the editor's text box model (half height 0.561
+  // em about the centre; `getTextMetrics`, also read by Auto Size). The font
+  // draws its own box (ascent / descent), linear in the size about the same
+  // origin, so the drawn edge it should land on is computed from the
+  // full-size drawing rather than allowed for with a tolerance.
+  const HALF_EM = 0.561;
+  const edges = () => page.evaluate(() => {
+    const element = document.querySelector('.stage-canvas-container [data-part-id="boxed"] text')!;
+    const rect = element.getBoundingClientRect();
+    const ctm = (element as SVGGraphicsElement).getScreenCTM()!;
+    // The text's origin on screen: its own (0, 0), after the layout shift.
+    return { top: rect.top, bottom: rect.bottom, size: Number(element.getAttribute('font-size')), originY: ctm.f, zoom: Math.hypot(ctm.c, ctm.d) };
+  });
+  type Edges = Awaited<ReturnType<typeof edges>>;
+  /** Where the drawn `edge` belongs once the model kept the edge of `from` and the size became `now.size`. */
+  const expected = (from: Edges, now: Edges, edge: 'top' | 'bottom') => {
+    const sign = edge === 'top' ? -1 : 1;
+    const originAfter = from.originY + sign * HALF_EM * (from.size - now.size) * from.zoom;
+    const drawnOffset = ((edge === 'top' ? from.top : from.bottom) - from.originY) * (now.size / from.size);
+    return originAfter + drawnOffset;
+  };
+  const openCard = async (card: string) => {
+    await select(page, 'Boxed');
+    await openDetailsTab(page, 'Properties');
+    const expand = page.getByRole('button', { name: `Expand ${card}`, exact: true });
+    if (await expand.count()) await expand.click();
+  };
+  const setText = async (value: string) => {
+    await openCard('TEXT');
+    await page.locator('.text-content-control').fill(value);
+  };
+  const setVertical = async (value: string) => {
+    await openCard('MODIFIERS');
+    await page.getByLabel('Text vertical align').selectOption(value);
+  };
+  await select(page, 'Boxed');
+  const full = await edges();
+  expect(full.size).toBe(72);
+
+  // Top: a longer text shrinks, and its top stays where the short one's was.
+  await setVertical('top');
+  await setText('A much longer headline than fits');
+  await expect.poll(async () => (await edges()).size).toBeLessThan(72);
+  await expect.poll(async () => { const now = await edges(); return Math.abs(now.top - expected(full, now, 'top')); }).toBeLessThanOrEqual(0.5);
+  expect((await edges()).bottom).toBeLessThan(full.bottom - 10);
+
+  // Bottom: back to the short text, then the long one keeps the bottom.
+  await setText('Short');
+  await setVertical('bottom');
+  await expect.poll(async () => (await edges()).size).toBe(72);
+  const shortAgain = await edges();
+  await setText('A much longer headline than fits');
+  await expect.poll(async () => { const now = await edges(); return Math.abs(now.bottom - expected(shortAgain, now, 'bottom')); }).toBeLessThanOrEqual(0.5);
+  expect((await edges()).top).toBeGreaterThan(shortAgain.top + 10);
+
+  await expect(page.locator('.autosave-status-badge')).toHaveAttribute('data-save-state', 'saved', { timeout: 15000 });
+  const kept = await edges();
+  await page.reload();
+  await expect(page.locator('[data-part-id="boxed"]').first()).toBeVisible({ timeout: 30000 });
+  await page.evaluate(() => document.fonts.ready);
+  await select(page, 'Boxed');
+  await expect.poll(async () => Math.abs((await edges()).bottom - kept.bottom)).toBeLessThanOrEqual(0.5);
+});

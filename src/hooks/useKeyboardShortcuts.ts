@@ -74,6 +74,12 @@ export interface EditorShortcutCommands {
   jumpToAdjacentKeyframe?: (direction: 'previous' | 'next') => boolean;
   /** K — keys every transform property of the selected layers at the playhead; false when nothing can be keyed. */
   keySelectedTransforms?: () => boolean;
+  /** Page Up / Page Down — moves the playhead by `delta` frames, clamped to the sequence; false when it cannot move. */
+  stepFrame?: (delta: number) => boolean;
+  /** Home / End — moves the playhead to the first or last frame; false when it is there already. */
+  goToFrameEdge?: (edge: 'start' | 'end') => boolean;
+  /** Ctrl+Shift+A — clears the layer selection. */
+  deselectAllLayers?: () => void;
   /**
    * The arrow-key nudge, run through the arrange authority: `beginNudge`
    * opens one batch and returns the mover (total offset since the start), or
@@ -165,6 +171,9 @@ export const useKeyboardShortcuts = ({
   unlockAllLayers,
   jumpToAdjacentKeyframe,
   keySelectedTransforms,
+  stepFrame,
+  goToFrameEdge,
+  deselectAllLayers,
   beginNudge,
   endNudge,
 }: EditorShortcutCommands) => {
@@ -383,6 +392,30 @@ export const useKeyboardShortcuts = ({
           if (!keySelectedTransforms) return;
           if (keySelectedTransforms()) event.preventDefault();
           return;
+        case 'frame-previous':
+        case 'frame-next': {
+          // A list, menu, slider or a mask point keeps its own paging keys.
+          if (!stepFrame || !canvasOwnsArrows()) return;
+          const size = event.shiftKey ? 10 : 1;
+          event.preventDefault();
+          stepFrame(id === 'frame-previous' ? -size : size);
+          return;
+        }
+        case 'go-to-start':
+        case 'go-to-end':
+          if (!goToFrameEdge || !canvasOwnsArrows()) return;
+          event.preventDefault();
+          goToFrameEdge(id === 'go-to-start' ? 'start' : 'end');
+          return;
+        case 'deselect-all':
+          if (isMaskEditing) {
+            event.preventDefault();
+            return;
+          }
+          if (!deselectAllLayers) return;
+          event.preventDefault();
+          deselectAllLayers();
+          return;
         case 'shortcut-reference':
           if (openShortcutReference) {
             event.preventDefault();
@@ -453,5 +486,8 @@ export const useKeyboardShortcuts = ({
     unlockAllLayers,
     jumpToAdjacentKeyframe,
     keySelectedTransforms,
+    stepFrame,
+    goToFrameEdge,
+    deselectAllLayers,
   ]);
 };

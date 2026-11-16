@@ -726,3 +726,26 @@ test('Copy / Paste Easing moves only the curve, and Add Keyframe Here keys a lan
   await page.getByRole('menuitem', { name: 'Add Keyframe Here' }).click();
   expect(await savedX('b')).toEqual([[0, 0, 'linear'], [15, 150, 'linear'], [30, 300, 'linear']]);
 });
+
+test('Page Up / Page Down step the playhead, Home / End go to the first / last frame, Ctrl+Shift+A deselects', async ({ page }) => {
+  // Round 6 (OGraf Studio review): the shortcuts a broadcast editor expects.
+  await seed(page, [rect('a', 'Alpha', 0, 0)]);
+  await page.getByRole('button', { name: 'Show the time in frames' }).click();
+  const field = page.getByRole('textbox', { name: 'Current time' });
+  await page.locator('.stage-canvas-container').click({ position: { x: 10, y: 10 } });
+  await page.keyboard.press('End');
+  await expect(field).toHaveValue(/^60/);
+  await page.keyboard.press('PageUp');
+  await expect(field).toHaveValue(/^59/);
+  await page.keyboard.press('Shift+PageUp');
+  await expect(field).toHaveValue(/^49/);
+  await page.keyboard.press('PageDown');
+  await expect(field).toHaveValue(/^50/);
+  await page.keyboard.press('Home');
+  await expect(field).toHaveValue(/^0/);
+  await page.locator('[role="tree"] [data-layer-id="a"]').click();
+  await expect(page.locator('[role="tree"] [data-layer-id="a"]')).toHaveAttribute('aria-selected', 'true');
+  await page.locator('.stage-canvas-container').hover();
+  await page.keyboard.press('Control+Shift+A');
+  await expect(page.locator('[role="tree"] [data-layer-id="a"]')).toHaveAttribute('aria-selected', 'false');
+});

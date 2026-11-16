@@ -1041,6 +1041,22 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       endBatchInteraction();
       return true;
     },
+    stepFrame: (delta) => {
+      const next = Math.max(0, Math.min(totalFrames, Math.round(currentFrame) + delta));
+      if (next === currentFrame) return false;
+      setCurrentFrame(next);
+      return true;
+    },
+    goToFrameEdge: (edge) => {
+      const next = edge === 'start' ? 0 : totalFrames;
+      if (next === currentFrame) return false;
+      setCurrentFrame(next);
+      return true;
+    },
+    deselectAllLayers: () => {
+      setSelectedPartIds([]);
+      setSelectedPartId(null);
+    },
     jumpToAdjacentKeyframe: (direction) => {
       const frame = resolveSceneAdjacentKeyframeFrame({ tracks, parts: characterParts, activeTemplateId, partIds: selectedPartIds, frame: currentFrame, direction });
       if (frame === null) return false;

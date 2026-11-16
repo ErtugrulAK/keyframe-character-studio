@@ -575,3 +575,65 @@ describe('key transform shortcut', () => {
     expect(second.defaultPrevented).toBe(false);
   });
 });
+
+describe('frame step, first / last frame and deselect shortcuts', () => {
+  const base = {
+    selectedPartId: null,
+    undo: vi.fn(),
+    redo: vi.fn(),
+    copySelectedPart: vi.fn(),
+    pasteCopiedPart: vi.fn(),
+    duplicateSelectedPart: vi.fn(),
+    deleteSelectedKeyframes: vi.fn(() => false),
+    deletePart: vi.fn(),
+  };
+  const press = (init: KeyboardEventInit) => {
+    const event = new KeyboardEvent('keydown', { cancelable: true, ...init });
+    act(() => { window.dispatchEvent(event); });
+    return event;
+  };
+
+  it('Page Up / Page Down step one frame, ten with Shift; Home / End go to the first / last frame', () => {
+    const stepFrame = vi.fn(() => true);
+    const goToFrameEdge = vi.fn(() => true);
+    renderHook(() => useKeyboardShortcuts({ ...base, stepFrame, goToFrameEdge }));
+    expect(press({ key: 'PageDown' }).defaultPrevented).toBe(true);
+    expect(stepFrame).toHaveBeenLastCalledWith(1);
+    press({ key: 'PageUp', shiftKey: true });
+    expect(stepFrame).toHaveBeenLastCalledWith(-10);
+    press({ key: 'Home' });
+    expect(goToFrameEdge).toHaveBeenLastCalledWith('start');
+    press({ key: 'End' });
+    expect(goToFrameEdge).toHaveBeenLastCalledWith('end');
+  });
+
+  it('leaves Home / End and paging to a focused list', () => {
+    const stepFrame = vi.fn(() => true);
+    const goToFrameEdge = vi.fn(() => true);
+    renderHook(() => useKeyboardShortcuts({ ...base, stepFrame, goToFrameEdge }));
+    const tree = document.createElement('div');
+    tree.setAttribute('role', 'tree');
+    tree.tabIndex = 0;
+    document.body.appendChild(tree);
+    tree.focus();
+    try {
+      expect(press({ key: 'Home' }).defaultPrevented).toBe(false);
+      press({ key: 'PageDown' });
+      expect(goToFrameEdge).not.toHaveBeenCalled();
+      expect(stepFrame).not.toHaveBeenCalled();
+    } finally {
+      tree.remove();
+    }
+  });
+
+  it('Ctrl+Shift+A clears the layer selection; Ctrl+A still selects all', () => {
+    const deselectAllLayers = vi.fn();
+    const selectAllLayers = vi.fn();
+    renderHook(() => useKeyboardShortcuts({ ...base, deselectAllLayers, selectAllLayers }));
+    expect(press({ key: 'A', ctrlKey: true, shiftKey: true }).defaultPrevented).toBe(true);
+    expect(deselectAllLayers).toHaveBeenCalledTimes(1);
+    press({ key: 'a', ctrlKey: true });
+    expect(selectAllLayers).toHaveBeenCalledTimes(1);
+    expect(deselectAllLayers).toHaveBeenCalledTimes(1);
+  });
+});

@@ -144,7 +144,7 @@ export function buildMattePath(
   if (sourcePart.type === 'custom_freeform') {
     return freeformWorldPathD(sourcePart.path ?? legacyFreeformPointsToPath(sourcePart.points), world, outputOrigin);
   }
-  const geo = getShapeGeometry(sourcePart.type);
+  const geo = getShapeGeometry(sourcePart.type, sourcePart);
   if (!geo) return null;
   // Rectangle and box renderers apply the authored corner radius directly to
   // the same local geometry. Reuse that value so a rounded matte source cannot
@@ -780,7 +780,7 @@ const TEXT_GRADIENT_BOX_POINTS: { x: number; y: number }[] = [
  *  shapes, CharacterPart.points for freeform) plus the canonical M18 text box.
  *  Never a second geometry system — only the bounds/extent are derived. */
 function sourceLocalPoints(sourcePart: Pick<CharacterPart, 'type' | 'points'> & Partial<Pick<CharacterPart, 'width' | 'height'>>): { x: number; y: number }[] | undefined {
-  const geo = sourcePart.type === 'custom_freeform' ? undefined : getShapeGeometry(sourcePart.type as BodyPartType);
+  const geo = sourcePart.type === 'custom_freeform' ? undefined : getShapeGeometry(sourcePart.type as BodyPartType, sourcePart as { polygon?: CharacterPart['polygon'] });
   const pts = sourcePart.type === 'custom_freeform'
     ? sourcePart.points
     : sourcePart.type === 'custom_text'

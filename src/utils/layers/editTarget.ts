@@ -46,6 +46,7 @@ const SHAPE_NAMES: Partial<Record<BodyPartType, string>> = {
   custom_box: 'Square',
   custom_circle: 'Ellipse',
   custom_star: 'Star',
+  custom_polygon: 'Polygon',
   custom_triangle: 'Triangle',
   custom_diamond: 'Diamond',
   custom_parallelogram: 'Parallelogram',

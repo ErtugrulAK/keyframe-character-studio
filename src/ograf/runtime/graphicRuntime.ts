@@ -22,6 +22,7 @@ import type { describePaint, describeText } from '../../utils/layers/drawDescrip
 import type { createTrackMatteMarkup, TrackMatteGradientInput } from '../trackMatteMarkup';
 import type { createTextEffects, DisplayedText, TextEffect } from '../../utils/animation/textEffects';
 import type { createMotionPath, MotionPathLink } from '../../utils/geometry/motionPath';
+import type { createPolygonShape } from '../../utils/geometry/polygonShape';
 import type { createLayerEffects, LayerBlendMode } from '../../utils/layers/layerEffects';
 import type { createLayerCrop, LayerCrop } from '../../utils/layers/layerCrop';
 import type { createLayoutModifiers, FitToTextSettings, FollowSettings, JustifySettings, LookAtSettings, RepeaterSettings, TextFitSettings } from '../../utils/layers/layoutModifiers';
@@ -92,6 +93,8 @@ export interface RuntimeLayer {
   width?: number;
   height?: number;
   borderRadius?: number;
+  /** A Polygon layer's corners and inner radius (`utils/geometry/polygonShape`). */
+  polygon?: { sides?: number; innerRatio?: number };
   path?: RuntimePath;
   points?: RuntimePoint[];
   strokeLinejoin?: string;
@@ -219,6 +222,8 @@ export interface GraphicRuntimeEnvironment {
   layerEffects: ReturnType<typeof createLayerEffects>;
   /** Where a layer that follows a path sits (`utils/geometry/motionPath`), the editor's own measure. */
   motionPath: ReturnType<typeof createMotionPath>;
+  /** The Polygon shape's outline (`utils/geometry/polygonShape`), the editor's own corners. */
+  polygonShape: ReturnType<typeof createPolygonShape>;
   /** The layer crop (`utils/layers/layerCrop`), the editor's own clip. */
   layerCrop: ReturnType<typeof createLayerCrop>;
   /** The Track Matte mask, as the editor draws it (`ograf/trackMatteMarkup`). */
@@ -250,6 +255,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     layerCrop,
     trackMatteMarkup,
     motionPath,
+    polygonShape,
   } = environment;
   const STEP_ENDS = environment.stepEnds && environment.stepEnds.length > 0 ? environment.stepEnds : [SCENE.totalFrames];
   /** The frame a step starts on: 0, then the previous step's end. */
@@ -597,6 +603,8 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
   const PRIMITIVE_EXTENTS: Record<string, [number, number]> = {
     custom_circle: [30, 30], custom_box: [30, 30], custom_rect: [60, 30], custom_capsule: [50, 20],
     custom_triangle: [35, 35], custom_diamond: [35, 35], custom_star: [35, 35], custom_parallelogram: [85, 30],
+    // Whatever its corners, a Polygon fills this box (`utils/geometry/polygonShape`).
+    custom_polygon: [35, 35],
   };
 
   /**
@@ -771,6 +779,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     if (layer.type === 'custom_box') return '<rect x="-30" y="-30" width="60" height="60" rx="' + (layer.borderRadius ?? 0) + '"' + attrs + ' />';
     if (layer.type === 'custom_rect') return '<rect x="-60" y="-30" width="120" height="60" rx="' + (layer.borderRadius ?? 0) + '"' + attrs + ' />';
     if (layer.type === 'custom_capsule') return '<rect x="-50" y="-20" width="100" height="40" rx="20"' + attrs + ' />';
+    if (layer.type === 'custom_polygon') return '<polygon points="' + polygonShape.pointsAttribute(layer.polygon) + '"' + attrs + ' />';
     const points: Record<string, string> = {
       custom_triangle: '0,-35 35,25 -35,25',
       custom_diamond: '0,-35 35,0 0,35 -35,0',

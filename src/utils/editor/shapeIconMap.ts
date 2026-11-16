@@ -3,6 +3,7 @@ import type { BodyPartType } from '../../types/animator';
 import {
   Circle,
   Diamond,
+  Hexagon,
   PenTool,
   Pill,
   RectangleHorizontal,
@@ -32,6 +33,7 @@ export const SHAPE_ICON_MAP: Partial<Record<BodyPartType, ShapeIcon>> = {
   custom_circle: Circle,
   custom_triangle: Triangle,
   custom_star: Star,
+  custom_polygon: Hexagon,
   custom_diamond: Diamond,
   custom_parallelogram: ParallelogramIcon,
   custom_freeform: PenTool,

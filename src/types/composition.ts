@@ -137,6 +137,8 @@ export interface SceneLayer {
   /** The visible part of the layer, in its local units (`utils/layers/layerCrop`); absent = all of it. */
   crop?: import('../utils/layers/layerCrop').LayerCrop;
   borderRadius?: number;
+  /** A Polygon layer's corners and inner radius (`utils/geometry/polygonShape`); absent = a pentagon. */
+  polygon?: import('../utils/geometry/polygonShape').PolygonShape;
   /** Stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
   strokeLinejoin?: 'miter' | 'round';
 
@@ -330,6 +332,8 @@ export interface LayerContent {
   /** The visible part of the layer, in its local units (`utils/layers/layerCrop`); absent = all of it. */
   crop?: import('../utils/layers/layerCrop').LayerCrop;
   borderRadius?: number;
+  /** A Polygon layer's corners and inner radius (`utils/geometry/polygonShape`); absent = a pentagon. */
+  polygon?: import('../utils/geometry/polygonShape').PolygonShape;
   /** Stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
   strokeLinejoin?: 'miter' | 'round';
   trimPathEnabled?: boolean;

@@ -11,7 +11,7 @@ export const useInspectorFilter = (): string => useContext(InspectorFilterContex
 
 /** What each card holds, in the words a user types (its title already counts). */
 const CARD_KEYWORDS: Record<string, string> = {
-  APPEARANCE: 'fill stroke colour color width align alignment corner radius opacity shadow glow blur blend',
+  APPEARANCE: 'fill stroke colour color width align alignment corner corners radius inner polygon star opacity shadow glow blur blend',
   EFFECTS: 'shadow glow blur blend multiply screen overlay',
   'TEXT EFFECTS': 'animate typewriter count number stopwatch countdown clock timer shadow glow blur blend',
   TEXT: 'content font size colour color',

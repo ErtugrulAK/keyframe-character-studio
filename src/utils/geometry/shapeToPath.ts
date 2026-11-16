@@ -33,6 +33,7 @@ const SHAPE_LABEL: Partial<Record<CharacterPart['type'], string>> = {
   custom_capsule: 'Capsule',
   custom_triangle: 'Triangle',
   custom_star: 'Star',
+  custom_polygon: 'Polygon',
   custom_diamond: 'Diamond',
   custom_parallelogram: 'Parallelogram',
 };
@@ -106,7 +107,7 @@ export const shapeToPathBlockReason = (part: CharacterPart, tracks: readonly Tra
 
 /** The editable outline of a basic shape, in its own local space. */
 const shapeOutlinePath = (part: CharacterPart): { path: BezierPath; precision: 'exact' | 'bezier-arc' } | null => {
-  const geometry = getShapeGeometry(part.type);
+  const geometry = getShapeGeometry(part.type, part);
   if (!geometry) return null;
   if (geometry.kind === 'rect') {
     // The renderer's radius rule: a capsule keeps its own; rect and box take borderRadius.

@@ -22,6 +22,7 @@ const TRIM_PATH_ELIGIBLE_TYPES: ReadonlySet<BodyPartType> = new Set([
   'custom_circle',
   'custom_triangle',
   'custom_star',
+  'custom_polygon',
   'custom_diamond',
   'custom_parallelogram',
   'custom_capsule',

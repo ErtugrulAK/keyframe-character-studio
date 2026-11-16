@@ -56,6 +56,7 @@ function toCharacterPart(layer: SceneLayer): CharacterPart {
     points: layer.points,
     path: layer.path,
     borderRadius: layer.borderRadius,
+    ...(layer.polygon ? { polygon: layer.polygon } : {}),
     // Layer effects (`utils/layers/layerEffects`): drawn by every exporter.
     shadowColor: layer.shadowColor,
     shadowBlur: layer.shadowBlur,

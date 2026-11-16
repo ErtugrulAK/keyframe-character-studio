@@ -16,6 +16,7 @@
  * Pure, React-free, deterministic.
  */
 import type { BodyPartType } from '../../types/animator';
+import { polygonShapePoints, type PolygonShape } from './polygonShape';
 
 export type ShapeGeometry =
   | { kind: 'rect'; x: number; y: number; width: number; height: number; rx: number }
@@ -58,8 +59,12 @@ const DIAMOND_POINTS: { x: number; y: number }[] = [
 /** Local-space geometry for a shape type, or null when the type has no
  *  static geometry (freeform uses buildFreeformPath; text/image/video/cloner
  *  are not shapes). */
-export function getShapeGeometry(type: BodyPartType): ShapeGeometry | null {
+export function getShapeGeometry(type: BodyPartType, part?: { polygon?: PolygonShape }): ShapeGeometry | null {
   switch (type) {
+    // Its settings change the outline, never the 70 x 70 box (`polygonShape`):
+    // a caller without the layer still gets the right extent.
+    case 'custom_polygon':
+      return { kind: 'polygon', points: polygonShapePoints(part?.polygon) };
     case 'custom_star':
       return { kind: 'polygon', points: STAR_POINTS };
     case 'custom_circle':

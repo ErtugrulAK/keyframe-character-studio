@@ -29,6 +29,7 @@ import type { BodyPartType } from '../../types/animator';
  */
 export const ELEMENT_DROP_TYPES: readonly BodyPartType[] = Object.freeze([
   'custom_star',
+  'custom_polygon',
   'custom_circle',
   'custom_box',
   'custom_rect',

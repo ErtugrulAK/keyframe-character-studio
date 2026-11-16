@@ -1,6 +1,7 @@
 import type { CharacterPart, Track } from '../../types/animator';
 import { CLOCK_FORMATS } from '../animation/textEffects';
 import { isMotionPathLink } from '../geometry/motionPath';
+import { isPolygonShape } from '../geometry/polygonShape';
 import { LAYER_BLEND_MODES } from '../layers/layerEffects';
 import { isLayerCrop } from '../layers/layerCrop';
 import type { SceneData } from '../../types/composition';
@@ -366,6 +367,9 @@ const sharedLayerValueProblem = (record: Record<string, unknown>, path: string, 
     if (!timed && !clock) {
       return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.textEffect`, `${owner} declares a text effect that is not a typewriter, a count or a clock with a valid start, length and format.`);
     }
+  }
+  if (record.polygon !== undefined && !isPolygonShape(record.polygon)) {
+    return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.polygon`, `${owner} declares polygon settings that are not 3 to 24 corners with an inner radius from 0.1 to 1.`);
   }
   if (record.motionPath !== undefined && !isMotionPathLink(record.motionPath)) {
     return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.motionPath`, `${owner} declares a motion path that does not name a path layer or has a progress that is not a number.`);

@@ -34,6 +34,7 @@ const FIELD_GROUPS: ReadonlyArray<readonly [label: string, test: (key: string) =
   ['Change mask of', (key) => key === 'masks' || key === 'mask' || key.startsWith('mask')],
   ['Change matte of', (key) => key === 'matte' || key === 'trackMatte'],
   ['Change motion path of', (key) => key === 'motionPath'],
+  ['Change corners of', (key) => key === 'polygon'],
   ['Crop', (key) => key.startsWith('crop')],
   ['Change effects of', (key) => key.startsWith('glow') || key.startsWith('shadow') || key.startsWith('dropShadow') || key === 'layerBlur' || key === 'blendMode' || key === 'effects'],
   ['Change trim path of', (key) => key.startsWith('trimPath')],

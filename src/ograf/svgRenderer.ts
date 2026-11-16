@@ -64,7 +64,7 @@ function attributes(values: SvgAttributes): string {
 }
 
 function renderGeometry(type: string, content: LayerContent, props: SvgAttributes = {}): string {
-  const geometry = getShapeGeometry(type as Parameters<typeof getShapeGeometry>[0]);
+  const geometry = getShapeGeometry(type as Parameters<typeof getShapeGeometry>[0], content);
   if (type === 'custom_freeform') {
     const path = content.path
       ? buildBezierPathD(content.path)

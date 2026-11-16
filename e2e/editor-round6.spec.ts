@@ -613,3 +613,45 @@ test('template tabs come back after a reload, the open one still open, a closed 
   await expect(tree.locator('[data-layer-id="a"]')).toHaveCount(1);
   await expect(page.locator('.stage-canvas-container [data-part-id="pic"] image').first()).toHaveAttribute('href', /^data:image\/png/);
 });
+
+test('a Polygon from the shape tool: its corners and inner radius change the outline, not the size, and are kept after a reload', async ({ page }) => {
+  await seed(page, []);
+  await armTool(page, 'Polygon');
+  const stage = await stageBox(page);
+  await page.mouse.move(stage.x + stage.width / 2 - 60, stage.y + stage.height / 2 - 60);
+  await page.mouse.down();
+  await page.mouse.move(stage.x + stage.width / 2 + 60, stage.y + stage.height / 2 + 60, { steps: 4 });
+  await page.mouse.up();
+  const layer = page.locator('[role="tree"] [data-layer-id]');
+  await expect(layer).toHaveCount(1);
+  const id = (await layer.getAttribute('data-layer-id'))!;
+  const outline = page.locator(`.stage-canvas-container [data-part-id="${id}"] polygon`).last();
+  const corners = async () => (await outline.getAttribute('points'))!.trim().split(/\s+/u).length;
+  // A new Polygon is a pentagon.
+  await expect.poll(corners).toBe(5);
+  const size = (await outline.boundingBox())!;
+
+  await layer.click();
+  const expand = page.getByRole('button', { name: 'Expand APPEARANCE' });
+  if (await expand.count()) await expand.click();
+  await page.locator('#appearance-polygon-corners').fill('6');
+  await expect.poll(corners).toBe(6);
+  await page.locator('#appearance-polygon-inner').fill('50');
+  await expect.poll(corners).toBe(12);
+  // The same box: the settings never resize the layer.
+  const after = (await outline.boundingBox())!;
+  expect(Math.abs(after.width - size.width)).toBeLessThan(2);
+  expect(Math.abs(after.height - size.height)).toBeLessThan(2);
+
+  // One undo step per setting.
+  await page.keyboard.press('Control+z');
+  await expect.poll(corners).toBe(6);
+  await page.keyboard.press('Control+Shift+z');
+  await expect.poll(corners).toBe(12);
+
+  const saved = (await savedLayers(page)).find((entry) => entry.id === id) as unknown as { polygon: unknown };
+  expect(saved.polygon).toEqual({ sides: 6, innerRatio: 0.5 });
+  await page.reload();
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  await expect.poll(corners).toBe(12);
+});

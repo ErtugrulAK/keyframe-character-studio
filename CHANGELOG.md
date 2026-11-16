@@ -20,6 +20,7 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 - Edit > History… lists the undo steps by name ("Move Alpha", "Delete 2 layers", "Add keyframe on Logo"); a click goes straight to that step, and the later steps stay for redo until a new edit replaces them.
 - Double-click a text on the canvas to type into it where it stands: the field uses the text's own font and on-screen size, the drawing follows every keystroke, Enter or a click elsewhere keeps the edit as one undo step, and Escape puts the text back.
 - Template tabs are kept across a reload: the tab list, which one is open, and every closed tab's layers, sequences, frame rate and canvas size come back. The open tab is still saved where it always was; the other tabs go to a second browser key (`KCS_WORKSPACE_V1`), written only when there is more than one tab, so a one-tab project is stored exactly as before. A damaged tab is left out and its copy kept; tabs saved by a newer build are left untouched.
+- A Polygon shape in the shape tool: Corners (3 to 24) and Inner radius (below 100 % makes a star) in the Appearance card. The settings change the outline, never the layer's size, and the editor, the static SVG and the OGraf graphic draw the same corners. The fixed Star and Triangle are unchanged.
 - Filter properties in the Inspector shows only the cards that hold what you type ("glow", "rotation", "matte").
 
 ### Fixed

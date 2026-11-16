@@ -105,6 +105,7 @@ const PartContentView: React.FC<PartContentProps> = ({ part, content, booleanCon
     shadowOffsetX: content.shadowOffsetX ?? part.shadowOffsetX,
     shadowOffsetY: content.shadowOffsetY ?? part.shadowOffsetY,
     borderRadius: content.borderRadius ?? part.borderRadius,
+    polygon: content.polygon ?? part.polygon,
     trimPathEnabled: content.trimPathEnabled ?? part.trimPathEnabled,
     trimPathStart: content.trimPathStart ?? part.trimPathStart,
     trimPathEnd: content.trimPathEnd ?? part.trimPathEnd,

@@ -181,6 +181,7 @@ function extractContent(
     ...(layer.blendMode !== undefined ? { blendMode: layer.blendMode } : {}),
     ...(layer.crop ? { crop: layer.crop } : {}),
     borderRadius: layer.borderRadius,
+    ...(layer.polygon ? { polygon: layer.polygon } : {}),
     strokeLinejoin: layer.strokeLinejoin,
     trimPathEnabled: trim.isModern ? trim.enabled : undefined,
     trimPathStart: trim.isModern ? trim.start : undefined,

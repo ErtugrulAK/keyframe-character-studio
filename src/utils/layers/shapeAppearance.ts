@@ -27,6 +27,7 @@ export const createShapeAppearance = () => {
     'custom_circle',
     'custom_triangle',
     'custom_star',
+    'custom_polygon',
     'custom_diamond',
     'custom_parallelogram',
     'custom_capsule',
@@ -75,6 +76,7 @@ export const createShapeAppearance = () => {
     // suppresses the normal authored outline (selection styling is separate).
     const customStrokeUsesFallback = new Set<BodyPartType>([
       'custom_star',
+      'custom_polygon',
       'custom_circle',
       'custom_box',
       'custom_rect',

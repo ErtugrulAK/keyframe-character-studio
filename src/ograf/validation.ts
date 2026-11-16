@@ -20,6 +20,7 @@ const SUPPORTED_LAYER_TYPES: Record<string, true> = {
   custom_circle: true,
   custom_triangle: true,
   custom_star: true,
+  custom_polygon: true,
   custom_diamond: true,
   custom_parallelogram: true,
   custom_capsule: true,

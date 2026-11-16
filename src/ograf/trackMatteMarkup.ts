@@ -223,7 +223,7 @@ export function createTrackMatteMarkup(shapeBounds: Record<string, MatteBounds>,
 
 /** The local bounds of every shape type with static geometry. */
 export const SHAPE_BOUNDS: Record<string, MatteBounds> = (() => {
-  const types: BodyPartType[] = ['custom_star', 'custom_circle', 'custom_box', 'custom_rect', 'custom_triangle', 'custom_parallelogram', 'custom_banner', 'custom_capsule', 'custom_diamond', 'custom_card'];
+  const types: BodyPartType[] = ['custom_star', 'custom_polygon', 'custom_circle', 'custom_box', 'custom_rect', 'custom_triangle', 'custom_parallelogram', 'custom_banner', 'custom_capsule', 'custom_diamond', 'custom_card'];
   const bounds: Record<string, MatteBounds> = {};
   for (const type of types) {
     const geometry = getShapeGeometry(type);

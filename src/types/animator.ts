@@ -298,8 +298,10 @@ export interface EditorTrackState {
 export type Track = AnimationTrackData & EditorTrackState;
 
 
-export type BodyPartType = 
+export type BodyPartType =
   | 'custom_star'
+  /** Corners and inner radius set on the layer (`polygon`, `utils/geometry/polygonShape`). */
+  | 'custom_polygon'
   | 'custom_circle'
   | 'custom_box'
   | 'custom_rect'
@@ -429,6 +431,8 @@ export interface CharacterPart {
   textEffect?: import('../utils/animation/textEffects').TextEffect;
   /** Follows a path layer's outline over time (`utils/geometry/motionPath`). */
   motionPath?: import('../utils/geometry/motionPath').MotionPathLink;
+  /** A Polygon layer's corners and inner radius (`utils/geometry/polygonShape`); absent = a pentagon. */
+  polygon?: import('../utils/geometry/polygonShape').PolygonShape;
   /** Text: its box, alignment and hiding (`utils/layers/layoutModifiers`). */
   textFit?: TextFitSettings;
   /** Box-like shape: Auto Size, the text layer whose width it follows (`utils/layers/layoutModifiers`). */

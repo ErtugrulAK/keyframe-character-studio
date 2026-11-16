@@ -20,7 +20,7 @@ export type BooleanOperation = 'union' | 'subtract' | 'intersect' | 'exclude';
 type BooleanContours = FreeformPoint[][];
 
 const CLOSED_VECTOR_TYPES = new Set<CharacterPart['type']>([
-  'custom_star', 'custom_circle', 'custom_box', 'custom_rect', 'custom_triangle',
+  'custom_star', 'custom_polygon', 'custom_circle', 'custom_box', 'custom_rect', 'custom_triangle',
   'custom_banner', 'custom_capsule', 'custom_diamond', 'custom_parallelogram', 'custom_card',
 ]);
 
@@ -60,7 +60,7 @@ const transformPoint = (
 
 /** One region of a shape: a single exterior ring with no holes. */
 const localShapeRing = (part: CharacterPart): FreeformPoint[] | null => {
-  const geometry = getShapeGeometry(part.type);
+  const geometry = getShapeGeometry(part.type, part);
   if (!geometry) return null;
   if (geometry.kind === 'circle') {
     return Array.from({ length: 48 }, (_, index) => {

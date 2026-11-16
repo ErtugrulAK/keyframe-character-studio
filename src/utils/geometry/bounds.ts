@@ -200,7 +200,7 @@ export const getPartLocalBounds = (
     bounds = boundsFromPoints(part.booleanContours.flat());
   }
 
-  const geometry = getShapeGeometry(part.type);
+  const geometry = getShapeGeometry(part.type, part);
   if (!bounds && geometry) {
     if (geometry.kind === 'circle') {
       bounds = boundsFromPoints([

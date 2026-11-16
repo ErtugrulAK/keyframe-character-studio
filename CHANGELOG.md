@@ -23,6 +23,7 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 - A Polygon shape in the shape tool: Corners (3 to 24) and Inner radius (below 100 % makes a star) in the Appearance card. The settings change the outline, never the layer's size, and the editor, the static SVG and the OGraf graphic draw the same corners. The fixed Star and Triangle are unchanged.
 - All caps for a text (the options bar): the text shows in capitals while what was typed is kept as typed, so an OGraf operator's input comes out in capitals too. Its frame, matte, Auto Size and text effects use the capitals, and the editor, the static SVG and the OGraf graphic agree. The letters are capitalised the same on every machine (in Turkish, "i" becomes "I").
 - Filter properties in the Inspector shows only the cards that hold what you type ("glow", "rotation", "matte").
+- Timeline right-click: Copy Easing / Paste Easing move only a keyframe's curve (a custom curve or a handle pair travels as the same cubic; values and timing stay), and Add Keyframe Here on an empty spot of a Position, Rotation, Scale, Opacity or matte lane adds a key with the value the layer has at that frame and the easing of the segment it splits.
 
 ### Fixed
 - Importing an older project file into a new tab no longer loses the frame rate and canvas size of the tab it leaves, and the new tab starts with its own undo history.

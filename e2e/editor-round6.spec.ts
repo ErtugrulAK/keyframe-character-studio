@@ -683,3 +683,46 @@ test('All caps shows a text in capitals and keeps what was typed; one undo step,
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
   await expect(drawn).toHaveText('GOAL FOR ANKARA');
 });
+
+test('Copy / Paste Easing moves only the curve, and Add Keyframe Here keys a lane without changing the motion', async ({ page }) => {
+  // Round 6 (OGraf Studio review): the timeline right-click menu.
+  await page.goto('/');
+  const kf = (id: string, frame: number, value: number, easing = 'linear') => ({ id, frame, value, easing });
+  await page.evaluate(([key, value]) => { localStorage.clear(); localStorage.setItem(key, value); }, [STORAGE_KEY, JSON.stringify({
+    version: 1, coordinateSystem: 'project-unit-center-v1', width: 1920, height: 1080, fps: 30, totalFrames: 60,
+    layers: [rect('a', 'Alpha', 0, -100), rect('b', 'Beta', 0, 100)],
+    tracks: [
+      { id: 'track-a', partId: 'a', name: 'Alpha', color: '#22d3ee', visible: true, locked: false, expanded: false, keyframes: [], channels: { x: [kf('a0', 0, 0, 'easeOut'), kf('a30', 30, 300)] } },
+      { id: 'track-b', partId: 'b', name: 'Beta', color: '#22d3ee', visible: true, locked: false, expanded: false, keyframes: [], channels: { x: [kf('b0', 0, 0), kf('b30', 30, 300)] } },
+    ],
+  })] as const);
+  await page.reload();
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  const savedX = async (partId: string) => {
+    await savedLayers(page);
+    return page.evaluate(([key, id]) => (JSON.parse(localStorage.getItem(key) ?? '{}').tracks as Array<{ partId: string; channels: { x: Array<{ frame: number; value: number; easing: string }> } }>)
+      .find((track) => track.partId === id)!.channels.x.map((k) => [k.frame, Math.round(k.value), k.easing]), [STORAGE_KEY, partId] as [string, string]);
+  };
+
+  await page.locator('.keyframe-diamond[data-keyframe-id="a0"]').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Copy Easing' }).click();
+  await page.locator('.keyframe-diamond[data-keyframe-id="b0"]').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Paste Easing' }).click();
+  expect(await savedX('b')).toEqual([[0, 0, 'easeOut'], [30, 300, 'linear']]);
+  await page.keyboard.press('Control+z');
+  expect(await savedX('b')).toEqual([[0, 0, 'linear'], [30, 300, 'linear']]);
+
+  // Beta's X lane, frame 15: halfway along a linear 0 → 300 segment.
+  await page.getByRole('button', { name: 'Expand properties of Beta' }).click();
+  const lane = page.locator('[data-owner-part-id="b"] .ue-channel-lane[data-lane-channel="x"]');
+  const box = (await lane.boundingBox())!;
+  const frameX = await page.locator('.keyframe-diamond[data-keyframe-id="b30"]').evaluate((el) => {
+    const r = el.getBoundingClientRect(); return r.left + r.width / 2;
+  });
+  const zeroX = await page.locator('.keyframe-diamond[data-keyframe-id="b0"]').evaluate((el) => {
+    const r = el.getBoundingClientRect(); return r.left + r.width / 2;
+  });
+  await page.mouse.click((zeroX + frameX) / 2, box.y + box.height / 2, { button: 'right' });
+  await page.getByRole('menuitem', { name: 'Add Keyframe Here' }).click();
+  expect(await savedX('b')).toEqual([[0, 0, 'linear'], [15, 150, 'linear'], [30, 300, 'linear']]);
+});

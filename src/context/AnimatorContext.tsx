@@ -248,8 +248,8 @@ export interface AnimatorContextType {
   // Duplicate the keyframe frame-group at `frame` of `trackId` (27A pure helper)
   duplicateKeyframeGroup: (trackId: string, frame: number) => void;
   duplicateKeyframeGroupAt: (trackId: string, sourceFrame: number, targetFrame: number) => boolean;
-  /** Quick easing: the keyframe group at `frame` of `trackId` in the active sequence. One undo entry. */
-  setKeyframeGroupEasing: (trackId: string, frame: number, easing: EasingType) => void;
+  /** Quick easing: the keyframe group at `frame` of `trackId` in the active sequence; `controlPoints` sets a custom curve (Paste Easing). One undo entry. */
+  setKeyframeGroupEasing: (trackId: string, frame: number, easing: EasingType, controlPoints?: [number, number, number, number]) => void;
   // Paste a copied keyframe frame-group onto `trackId` at `frame` (28A pure helper)
   pasteKeyframeClipboard: (trackId: string, frame: number, payload: KeyframeCopyPayload) => void;
   applyMotionTransition: (partId: string, transitionType: string) => void;
@@ -999,18 +999,18 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Quick easing (timeline menu, F9): the keyframe groups of the active
   // sequence through the pure helper, as ONE undo entry.
-  const easeKeyframeGroups = useCallback((framesByTrack: ReadonlyMap<string, number[]>, easing: EasingType): boolean => {
+  const easeKeyframeGroups = useCallback((framesByTrack: ReadonlyMap<string, number[]>, easing: EasingType, controlPoints?: [number, number, number, number]): boolean => {
     if (framesByTrack.size === 0) return false;
     startBatchInteraction();
     editSetTracks((prev) => prev.map((track) => {
       const frames = framesByTrack.get(track.id);
-      return frames ? setKeyframeGroupEasingTrack(track, frames, activeTemplateId, easing).track : track;
+      return frames ? setKeyframeGroupEasingTrack(track, frames, activeTemplateId, easing, controlPoints).track : track;
     }));
     endBatchInteraction();
     return true;
   }, [activeTemplateId, editSetTracks, startBatchInteraction, endBatchInteraction]);
-  const setKeyframeGroupEasing = useCallback((trackId: string, frame: number, easing: EasingType) => {
-    easeKeyframeGroups(new Map([[trackId, [frame]]]), easing);
+  const setKeyframeGroupEasing = useCallback((trackId: string, frame: number, easing: EasingType, controlPoints?: [number, number, number, number]) => {
+    easeKeyframeGroups(new Map([[trackId, [frame]]]), easing, controlPoints);
   }, [easeKeyframeGroups]);
   /** F9 — Easy Ease on the frames of the selected keyframes. */
   const easySelectedKeyframes = useCallback((): boolean => {

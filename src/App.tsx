@@ -48,13 +48,11 @@ const MainAppContent: React.FC = () => {
   }, [finishModeSwap]);
   const inspector = useDockedPanelEdge(true, 'right');
 
-  // A narrow (or browser-zoomed) window opens with the left dock closed
-  // when the stage would otherwise be narrower than MIN_OPENING_STAGE_WIDTH.
   // Measured once from the real first layout, before the first paint (the
   // microtask runs before the browser paints, outside React's commit), then the
-  // untouched opening camera is re-fitted to the wider stage. After this the
-  // dock opens and closes only when the user says so, or (C11, below) when the
-  // window itself is made narrower.
+  // untouched opening camera is re-fitted. After this the inspector opens and
+  // closes only when the user says so, or (C11, below) when the window itself
+  // is made narrower.
   // On a phone-width window the docks open OVER the stage
   // (kcsEditorTheme.css), so they never squeeze it to nothing, and the
   // inspector opens closed too — open, it would cover the whole stage.

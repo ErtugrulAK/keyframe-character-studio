@@ -38,18 +38,6 @@ export const REMEASURE_STAGE_BOX_COMMAND = 'remeasure-stage-box';
 export const REFIT_UNTOUCHED_CAMERA_COMMAND = 'refit-untouched-camera';
 
 /**
- * The stage width below which the editor OPENS with the left dock
- * (Project/Media/Elements/Texts) closed, so a narrow or browser-zoomed window
- * starts with a usable stage (Master Review UI spec: canvas target ≥ 400 CSS
- * px). Decided once, at mount; afterwards only the user opens or closes it.
- */
-export const MIN_OPENING_STAGE_WIDTH = 400;
-
-const shouldOpenWithLeftDockClosed = (stageWidth: number): boolean => (
-  Number.isFinite(stageWidth) && stageWidth > 0 && stageWidth < MIN_OPENING_STAGE_WIDTH
-);
-
-/**
  * Phone-width windows, where the docks open over the stage instead of
  * beside it (kcsEditorTheme.css uses the same 600 px breakpoint). Only there
  * does the inspector also open closed: it would cover the stage entirely.
@@ -60,26 +48,6 @@ export const isPhoneLayout = (): boolean => (
   typeof window !== 'undefined' && typeof window.matchMedia === 'function'
   && window.matchMedia(PHONE_LAYOUT_QUERY).matches
 );
-
-/**
- * Closes the docks, left first, while the stage is narrower than
- * MIN_OPENING_STAGE_WIDTH. Used at mount and when the window is made narrower
- * (a phone, a tablet, a browser snapped to half the screen); never on the
- * user's own toggles, so a dock the user reopens stays open. `closers` must
- * re-layout synchronously (`snap` does), so the stage is re-measured between
- * them. Returns whether the stage was narrow at all.
- */
-export const closeDocksForNarrowStage = (
-  measureStageWidth: () => number,
-  closers: ReadonlyArray<() => void>,
-): boolean => {
-  if (!shouldOpenWithLeftDockClosed(measureStageWidth())) return false;
-  for (const close of closers) {
-    close();
-    if (!shouldOpenWithLeftDockClosed(measureStageWidth())) break;
-  }
-  return true;
-};
 
 export const commitWorkspaceLayout = (apply: () => void): void => {
   flushSync(apply);

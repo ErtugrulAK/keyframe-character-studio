@@ -1,7 +1,7 @@
 /**
  * Timeline metric helpers (pure, testable).
  *
- * Extracted from SequencerTimeline so the timeline-length (maxFrame) and
+ * Extracted from SequencerTimeline so the keyframe navigation and
  * bezier-target resolution can be regression-tested without rendering the
  * component.
  */
@@ -9,28 +9,6 @@
 import type { AnimationChannel, LayerMaskChannel, PropertyKeyframe, Track, TrackChannel, Transform } from '../../types/animator';
 import { TRACK_CHANNELS } from '../../types/animator';
 import { resolveTrackChannels } from '../animation/channelKeyframeGroups';
-
-/**
- * Longest frame across BOTH legacy keyframes and canonical channel keyframes,
- * across ALL templates (timeline length is the max of every template's
- * animation — same behavior as the previous inline logic).
- */
-export function computeMaxFrame(tracks: Track[]): number {
-  let maxFrame = 0;
-  tracks.forEach((track) => {
-    (track.keyframes || []).forEach((kf) => { if (kf.frame > maxFrame) maxFrame = kf.frame; });
-    TRACK_CHANNELS.forEach((ch) => {
-      (track.channels?.[ch] ?? []).forEach((pkf) => { if (pkf.frame > maxFrame) maxFrame = pkf.frame; });
-    });
-    Object.values(track.maskChannels ?? {}).forEach((keyframes) => {
-      keyframes.forEach((keyframe) => { if (keyframe.frame > maxFrame) maxFrame = keyframe.frame; });
-    });
-    Object.values(track.maskPathChannels ?? {}).forEach((keyframes) => {
-      keyframes.forEach((keyframe) => { if (keyframe.frame > maxFrame) maxFrame = keyframe.frame; });
-    });
-  });
-  return maxFrame;
-}
 
 /** Does the track carry any canonical channel keyframes for the template? */
 export function hasChannelDataForTemplate(track: Track, activeTemplateId: string): boolean {

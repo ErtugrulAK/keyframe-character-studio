@@ -128,7 +128,17 @@ export interface SceneLayer {
   shadowBlur?: number;
   shadowOffsetX?: number;
   shadowOffsetY?: number;
+  /** Layer effects (`utils/layers/layerEffects`): a blur of the whole layer, an outer glow and a blend mode. */
+  layerBlur?: number;
+  glowColor?: string;
+  glowSize?: number;
+  glowStrength?: number;
+  blendMode?: import('../utils/layers/layerEffects').LayerBlendMode;
+  /** The visible part of the layer, in its local units (`utils/layers/layerCrop`); absent = all of it. */
+  crop?: import('../utils/layers/layerCrop').LayerCrop;
   borderRadius?: number;
+  /** A Polygon layer's corners and inner radius (`utils/geometry/polygonShape`); absent = a pentagon. */
+  polygon?: import('../utils/geometry/polygonShape').PolygonShape;
   /** Stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
   strokeLinejoin?: 'miter' | 'round';
 
@@ -136,6 +146,10 @@ export interface SceneLayer {
   textValue?: string;
   fontSize?: number;
   fontFamily?: string;
+  /** Text: a typewriter or a counting number over time (`utils/animation/textEffects`). */
+  textEffect?: import('../utils/animation/textEffects').TextEffect;
+  /** Follows a path layer's outline over time (`utils/geometry/motionPath`). */
+  motionPath?: import('../utils/geometry/motionPath').MotionPathLink;
   /** Text: its box, alignment and hiding (`utils/layers/layoutModifiers`). */
   textFit?: TextFitSettings;
   /** Box-like shape: Auto Size, the text layer whose width it follows (`utils/layers/layoutModifiers`). */
@@ -152,6 +166,18 @@ export interface SceneLayer {
   repeater?: RepeaterSettings;
   /** Absent = the origin sits on the baseline. See utils/geometry/textOrigin. */
   textOrigin?: import('../utils/geometry/textOrigin').TextOrigin;
+  /** The letter case the text shows (`utils/layers/textCase`); absent = as written. */
+  textCase?: import('../utils/layers/textCase').TextCase;
+  /** OGraf: the playout operator can show and hide this layer, with its children (`ograf/publicControls`). Absent = no control. */
+  operatorToggle?: boolean;
+  /** OGraf: a text the playout operator sets as a number and counts with +1 / -1 buttons (`utils/layers/operatorCounter`). */
+  operatorCounter?: boolean;
+  /** OGraf: the text's clock effect waits on air until the playout operator presses Start (Pause and Reset too). */
+  operatorClock?: boolean;
+  /** OGraf: the playout operator may give this image layer any picture, not only packaged ones (`utils/layers/operatorImage`). */
+  operatorImageAny?: boolean;
+  /** OGraf: this layer's value in each playout preset (`utils/layers/operatorPresets`). */
+  operatorPresets?: import('../utils/layers/operatorPresets').OperatorPresetValue[];
   imageUrl?: string;
   videoUrl?: string;
   /** Freeform polygon vertices (center-relative) */
@@ -276,9 +302,13 @@ export interface LayerContent {
   points?: { x: number; y: number }[];
   /** V6 canonical freeform path. */
   path?: BezierPath;
+  /** What a text shows at this frame (`utils/animation/textEffects`); absent = `textValue` as written. */
+  displayedText?: import('../utils/animation/textEffects').DisplayedText;
   textValue?: string;
   fontSize?: number;
   fontFamily?: string;
+  /** Text: a typewriter or a counting number over time (`utils/animation/textEffects`). */
+  textEffect?: import('../utils/animation/textEffects').TextEffect;
   /** Text: its box, alignment and hiding (`utils/layers/layoutModifiers`). */
   textFit?: TextFitSettings;
   /** Box-like shape: Auto Size, the text layer whose width it follows (`utils/layers/layoutModifiers`). */
@@ -293,6 +323,8 @@ export interface LayerContent {
   repeater?: RepeaterSettings;
   /** Absent = the origin sits on the baseline. See utils/geometry/textOrigin. */
   textOrigin?: import('../utils/geometry/textOrigin').TextOrigin;
+  /** The letter case the text shows (`utils/layers/textCase`); absent = as written. */
+  textCase?: import('../utils/layers/textCase').TextCase;
   imageUrl?: string;
   videoUrl?: string;
   /** V6 same-layer mask stack. */
@@ -305,7 +337,17 @@ export interface LayerContent {
   shadowBlur?: number;
   shadowOffsetX?: number;
   shadowOffsetY?: number;
+  /** Layer effects (`utils/layers/layerEffects`): a blur of the whole layer, an outer glow and a blend mode. */
+  layerBlur?: number;
+  glowColor?: string;
+  glowSize?: number;
+  glowStrength?: number;
+  blendMode?: import('../utils/layers/layerEffects').LayerBlendMode;
+  /** The visible part of the layer, in its local units (`utils/layers/layerCrop`); absent = all of it. */
+  crop?: import('../utils/layers/layerCrop').LayerCrop;
   borderRadius?: number;
+  /** A Polygon layer's corners and inner radius (`utils/geometry/polygonShape`); absent = a pentagon. */
+  polygon?: import('../utils/geometry/polygonShape').PolygonShape;
   /** Stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
   strokeLinejoin?: 'miter' | 'round';
   trimPathEnabled?: boolean;

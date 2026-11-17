@@ -1,4 +1,10 @@
 import type { CharacterPart, Track } from '../../types/animator';
+import { CLOCK_FORMATS } from '../animation/textEffects';
+import { isMotionPathLink } from '../geometry/motionPath';
+import { isPolygonShape } from '../geometry/polygonShape';
+import { isTextCase } from '../layers/textCase';
+import { LAYER_BLEND_MODES } from '../layers/layerEffects';
+import { isLayerCrop } from '../layers/layerCrop';
 import type { SceneData } from '../../types/composition';
 import { isPrototypeSensitiveKey } from './pathSafety';
 import { isSceneCoordinateSystem } from './coordinateMigration';
@@ -230,7 +236,7 @@ const NUMERIC_LAYER_FIELDS = [
   'x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'zIndex',
   'fillOpacity', 'strokeOpacity', 'strokeWidth', 'fontSize',
   'trimPathStart', 'trimPathEnd', 'trimPathOffset',
-  'shadowBlur', 'shadowOffsetX', 'shadowOffsetY', 'borderRadius',
+  'shadowBlur', 'shadowOffsetX', 'shadowOffsetY', 'borderRadius', 'layerBlur', 'glowSize', 'glowStrength',
   'width', 'height', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation',
   'inAnimDuration', 'outAnimDuration',
 ] as const;
@@ -242,7 +248,7 @@ const NUMERIC_LAYER_FIELDS = [
  */
 const STRING_LAYER_FIELDS = [
   'name', 'type', 'fillColor', 'strokeColor', 'fontFamily', 'imageUrl', 'videoUrl',
-  'inAnimPreset', 'outAnimPreset', 'strokeAlignment', 'strokeLinejoin', 'textValue', 'textOrigin',
+  'inAnimPreset', 'outAnimPreset', 'strokeAlignment', 'strokeLinejoin', 'textValue', 'textOrigin', 'textCase', 'glowColor', 'blendMode',
 ] as const;
 
 /** `{ x, y }` lists the geometry helpers read as coordinates. */
@@ -339,6 +345,38 @@ const sharedLayerValueProblem = (record: Record<string, unknown>, path: string, 
       : [];
     const effectError = effectsValidationError(record.effects, owner, maskIds);
     if (effectError) return sceneProblem('KCS_IMPORT_INVALID_EFFECT', `${path}.effects`, effectError, REIMPORT_ACTION);
+  }
+  if (record.blendMode !== undefined && !(LAYER_BLEND_MODES as readonly unknown[]).includes(record.blendMode)) {
+    return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.blendMode`, `${owner} declares a blend mode KCS does not know.`);
+  }
+  if (record.crop !== undefined && !isLayerCrop(record.crop)) {
+    return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.crop`, `${owner} declares a crop that is not a rectangle with a positive width and height.`);
+  }
+  if (record.textEffect !== undefined) {
+    const effect = asRecord(record.textEffect);
+    const count = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+    const timed = effect
+      && (effect.kind === 'typewriter' || effect.kind === 'count')
+      && count(effect.startFrame) && count(effect.durationFrames)
+      && (effect.from === undefined || (typeof effect.from === 'number' && Number.isFinite(effect.from)));
+    const clock = effect
+      && effect.kind === 'clock'
+      && (effect.mode === 'stopwatch' || effect.mode === 'countdown')
+      && count(effect.startFrame)
+      && (effect.seconds === undefined || count(effect.seconds))
+      && typeof effect.format === 'string' && (CLOCK_FORMATS as readonly string[]).includes(effect.format);
+    if (!timed && !clock) {
+      return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.textEffect`, `${owner} declares a text effect that is not a typewriter, a count or a clock with a valid start, length and format.`);
+    }
+  }
+  if (record.textCase !== undefined && !isTextCase(record.textCase)) {
+    return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.textCase`, `${owner} declares a letter case other than "upper".`);
+  }
+  if (record.polygon !== undefined && !isPolygonShape(record.polygon)) {
+    return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.polygon`, `${owner} declares polygon settings that are not 3 to 24 corners with an inner radius from 0.1 to 1.`);
+  }
+  if (record.motionPath !== undefined && !isMotionPathLink(record.motionPath)) {
+    return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.motionPath`, `${owner} declares a motion path that does not name a path layer or has a progress that is not a number.`);
   }
   for (const field of ['matte', 'trackMatte', 'textFit', 'fitToText', 'follow', 'justify', 'repeater'] as const) {
     if (record[field] !== undefined && !asRecord(record[field])) {

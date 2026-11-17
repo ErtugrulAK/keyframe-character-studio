@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlignCenter, AlignLeft, AlignRight } from 'lucide-react';
+import { AlignCenter, AlignLeft, AlignRight, CaseUpper } from 'lucide-react';
 import { useAnimatorSlice } from '../../context/useAnimator';
 import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
 import { SmartNumberInput } from '../Inspector/inputs/SmartNumberInput';
@@ -146,6 +146,18 @@ export const ToolOptionsBar: React.FC = () => {
           </button>
         ))}
       </div>
+      <span className="tool-options-divider" aria-hidden="true" />
+      {/* The text shows in capitals; what is typed stays as typed (`utils/layers/textCase`). */}
+      <button
+        type="button"
+        className={`authoring-toolbar-button tool-options-all-caps${part.textCase === 'upper' ? ' active' : ''}`}
+        aria-label="All caps"
+        aria-pressed={part.textCase === 'upper'}
+        title="All caps: show the text in capitals (the text you type is kept as typed)"
+        onClick={() => handlePartPropChange('textCase', part.textCase === 'upper' ? undefined : 'upper')}
+      >
+        <CaseUpper />
+      </button>
     </div>
   );
 };

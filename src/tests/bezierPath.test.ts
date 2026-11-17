@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   areBezierPathsTopologyCompatible,
   buildBezierPathD,
-  buildNormalizedPathD,
   interpolateBezierPath,
   legacyFreeformPointsToPath,
   legacyMaskPointsToPath,
@@ -29,13 +28,14 @@ describe('bezierPath', () => {
     expect(buildBezierPathD(curved)).toContain('C 4 0, 10 4, 10 0');
   });
 
-  it('maps normalized mask coordinates into local SVG coordinates', () => {
+  it('turns legacy mask points into a closed path a mapper can place in local SVG coordinates', () => {
     const path = legacyMaskPointsToPath([
       { x: 0, y: 0 },
       { x: 1, y: 0 },
       { x: 1, y: 1 },
     ]);
-    expect(buildNormalizedPathD(path, 200, 100)).toBe('M -100 -50 L 100 -50 L 100 50 Z');
+    const toLocal = (point: { x: number; y: number }) => ({ x: (point.x - 0.5) * 200, y: (point.y - 0.5) * 100 });
+    expect(buildBezierPathD(path, toLocal)).toBe('M -100 -50 L 100 -50 L 100 50 Z');
   });
 
   it('normalizes malformed handles without hiding valid vertices', () => {

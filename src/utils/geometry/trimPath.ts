@@ -1,5 +1,6 @@
 import type { AnimationTrackData, BodyPartType, CharacterPart } from '../../types/animator';
 import { interpolateChannel } from '../animation/defaults';
+import { sequenceIdOf } from '../animation/sequenceId';
 
 interface ResolvedTrimPath {
   enabled: boolean;
@@ -22,6 +23,7 @@ const TRIM_PATH_ELIGIBLE_TYPES: ReadonlySet<BodyPartType> = new Set([
   'custom_circle',
   'custom_triangle',
   'custom_star',
+  'custom_polygon',
   'custom_diamond',
   'custom_parallelogram',
   'custom_capsule',
@@ -73,7 +75,7 @@ export const evaluateTrimPath = (
   const base = resolveTrimPath(part);
   if (!track?.channels) return base;
   const filter = (channel: 'trimPathStart' | 'trimPathEnd' | 'trimPathOffset') =>
-    (track.channels[channel] || []).filter((kf) => (kf.templateId || 'Sequence') === templateId);
+    (track.channels[channel] || []).filter((kf) => sequenceIdOf(kf) === templateId);
 
   const startKfs = filter('trimPathStart');
   const endKfs = filter('trimPathEnd');

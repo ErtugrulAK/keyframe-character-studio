@@ -15,6 +15,8 @@
  *   - proceduralAnimation.ts (Step 4 Phase A)
  */
 
+import { resolveDisplayedText } from './textEffects';
+import { applyTextCase } from '../layers/textCase';
 import type { CharacterPart, CustomMotionPreset, AnimationTrackData, LayerMask } from '../../types/animator';
 import type {
   EvaluatedFrame,
@@ -53,6 +55,8 @@ export function evaluateFrame(
   customPresets: CustomMotionPreset[],
   frameOverrides?: Record<string, number>,
   sequenceId: string = 'Sequence',
+  /** The timeline's frame rate: a clock text turns frames into seconds with it. */
+  fps = 30,
 ): EvaluatedFrame {
   // ── Stage 1 & 2: Animation + Hierarchy ────────────────────────────
   // evaluateTransform handles keyframe interpolation + parent-child.
@@ -126,7 +130,7 @@ export function evaluateFrame(
       },
       opacity: finalOpacity,
       visible,
-      content: extractContent(layer, trim, masks, evaluateTrackMatte(layer.trackMatte, track, layerFrame, sequenceId || 'Sequence')),
+      content: extractContent(layer, trim, masks, evaluateTrackMatte(layer.trackMatte, track, layerFrame, sequenceId || 'Sequence'), layerFrame, fps),
       zIndex: layer.zIndex,
     });
   }
@@ -143,6 +147,8 @@ function extractContent(
   trim: ReturnType<typeof evaluateTrimPath>,
   masks?: LayerMask[],
   trackMatte: CharacterPart['trackMatte'] = layer.trackMatte,
+  frame = 0,
+  fps = 30,
 ): LayerContent {
   return {
     fillColor: layer.fillColor,
@@ -158,6 +164,9 @@ function extractContent(
     trackMatte,
     effects: layer.effects,
     textValue: layer.textValue,
+    // The one text-over-time authority; renderers draw this and keep no clock.
+    ...(layer.textEffect && (layer.textValue || layer.textEffect.kind === 'clock') ? { displayedText: resolveDisplayedText(applyTextCase(layer.textValue ?? '', layer.textCase), layer.textEffect, frame, fps) } : {}),
+    ...(layer.textCase !== undefined ? { textCase: layer.textCase } : {}),
     fontSize: layer.fontSize,
     fontFamily: layer.fontFamily,
     ...(layer.textOrigin !== undefined ? { textOrigin: layer.textOrigin } : {}),
@@ -169,7 +178,12 @@ function extractContent(
     shadowBlur: layer.shadowBlur,
     shadowOffsetX: layer.shadowOffsetX,
     shadowOffsetY: layer.shadowOffsetY,
+    ...(layer.layerBlur !== undefined ? { layerBlur: layer.layerBlur } : {}),
+    ...(layer.glowColor !== undefined ? { glowColor: layer.glowColor, glowSize: layer.glowSize, glowStrength: layer.glowStrength } : {}),
+    ...(layer.blendMode !== undefined ? { blendMode: layer.blendMode } : {}),
+    ...(layer.crop ? { crop: layer.crop } : {}),
     borderRadius: layer.borderRadius,
+    ...(layer.polygon ? { polygon: layer.polygon } : {}),
     strokeLinejoin: layer.strokeLinejoin,
     trimPathEnabled: trim.isModern ? trim.enabled : undefined,
     trimPathStart: trim.isModern ? trim.start : undefined,

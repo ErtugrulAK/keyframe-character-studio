@@ -33,6 +33,7 @@ import {
 import { planPartDeletion } from '../utils/layers/partDeletion';
 import { evaluateLayerMasks } from '../utils/animation/evaluateLayerMasks';
 import { lockedLayersRefusal } from '../utils/layers/layerLocks';
+import { sequenceIdOf } from '../utils/animation/sequenceId';
 
 interface UseTimelineOptions {
   setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>;
@@ -89,6 +90,8 @@ export const useTimeline = ({
 }: UseTimelineOptions) => {
   const [timelineZoom, setTimelineZoom] = useState<number>(18); // px per frame
   const [showGrid, setShowGrid] = useState<boolean>(true);
+  // Broadcast safe areas (EBU R95), an editor guide like the grid; off by default.
+  const [showSafeAreas, setShowSafeAreas] = useState<boolean>(false);
   // Canvas presentation state only: never serialized with the scene.
   const [showCoordinateOverlay, setShowCoordinateOverlay] = useState<boolean>(true);
 
@@ -435,7 +438,7 @@ export const useTimeline = ({
     const scope = activeTemplateId || 'Sequence';
     const track = tracks.find((candidate) => candidate.partId === partId);
     const channel = layerMaskPathChannel(maskId);
-    const keyframes = (track?.maskPathChannels?.[channel] ?? []).filter((keyframe) => (keyframe.templateId || 'Sequence') === scope);
+    const keyframes = (track?.maskPathChannels?.[channel] ?? []).filter((keyframe) => sequenceIdOf(keyframe) === scope);
     if (keyframes.length > 0 && track) {
       const exact = keyframes.find((keyframe) => keyframe.frame === currentFrame);
       if (exact) {
@@ -594,7 +597,7 @@ export const useTimeline = ({
     if (channel.endsWith(':path')) {
       const maskId = channel.slice(0, -':path'.length);
       const part = characterParts.find((candidate) => candidate.id === track.partId);
-      const inScope = (track.maskPathChannels?.[channel as LayerMaskPathChannel] ?? []).filter((k) => (k.templateId || 'Sequence') === scope);
+      const inScope = (track.maskPathChannels?.[channel as LayerMaskPathChannel] ?? []).filter((k) => sequenceIdOf(k) === scope);
       const displayed = part ? evaluateLayerMasks(part, track, currentFrame, scope)?.find((mask) => mask.id === maskId) : undefined;
       if (!part || !displayed || inScope.length === 0) return;
       setTracks((prev) => clearMaskPathAnimationMutator(prev, trackId, channel as LayerMaskPathChannel, scope));
@@ -604,7 +607,7 @@ export const useTimeline = ({
       return;
     }
     const store = (channel.includes(':') ? track.maskChannels : track.channels) as Record<string, PropertyKeyframe[]> | undefined;
-    const inScopeKeys = (store?.[channel] ?? []).filter((k) => (k.templateId || 'Sequence') === scope);
+    const inScopeKeys = (store?.[channel] ?? []).filter((k) => sequenceIdOf(k) === scope);
     if (inScopeKeys.length === 0) return;
     const part = characterParts.find((candidate) => candidate.id === track.partId);
     if (!part) return;
@@ -621,6 +624,8 @@ export const useTimeline = ({
     setTimelineZoom,
     showGrid,
     setShowGrid,
+    showSafeAreas,
+    setShowSafeAreas,
     showCoordinateOverlay,
     setShowCoordinateOverlay,
     deletePart,

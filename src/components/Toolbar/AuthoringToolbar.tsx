@@ -68,6 +68,7 @@ const SHAPE_TOOLS: Array<{ type: BodyPartType; label: string }> = [
   { type: 'custom_diamond', label: 'Rhombus' },
   { type: 'custom_parallelogram', label: 'Parallelogram' },
   { type: 'custom_star', label: 'Star' },
+  { type: 'custom_polygon', label: 'Polygon' },
 ];
 
 /**

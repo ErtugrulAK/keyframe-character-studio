@@ -1,6 +1,7 @@
 import type { CharacterPart } from '../../types/animator';
 import { getTextMetrics } from './bounds';
 import { textBaselineOffset } from './textOrigin';
+import { applyTextCase } from '../layers/textCase';
 
 /**
  * Text outline tracing — the geometry a Boolean operand needs for a text layer
@@ -380,7 +381,7 @@ const traceText = (text: string, fontSize: number, fontFamily: string): OutlineP
  * traced (see the module note). Cached per text, family and size.
  */
 export const getTextOutlinePolygons = (part: CharacterPart): OutlinePolygon[] | null => {
-  const text = normalizeSvgText(part.textValue ?? '');
+  const text = normalizeSvgText(applyTextCase(part.textValue ?? '', part.textCase));
   if (!text) return null;
   const fontSize = part.fontSize || 24;
   const fontFamily = part.fontFamily || 'Outfit';

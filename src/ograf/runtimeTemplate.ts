@@ -1,12 +1,12 @@
 import type { SceneData } from '../types/composition';
-import type { OGrafPublicColorField, OGrafPublicImageField, OGrafPublicTextField } from './types';
+import type { OGrafPublicColorField, OGrafPublicImageField, OGrafPublicTextField, OGrafPublicToggleField, OGrafPublicNumberField, OGrafPublicPresetField, OGrafPublicClockField } from './types';
 import { TEXT_BOX_CENTRE_EM } from '../utils/geometry/textOrigin';
 import { trackMatteRenderParameters } from './trackMatteMarkup';
 import { sceneStepMarkers, stepEndFrames } from '../utils/animation/stepMarkers';
 import {
   runtimeCompareByStackingOrder,
   runtimeDescribePaint,
-  runtimeDescribeText, runtimeLayoutModifiers, runtimeTrackMatteMarkup,
+  runtimeDescribeText, runtimeLayoutModifiers, runtimeTextEffects, runtimeLayerEffects, runtimeMotionPath, runtimePolygonShape, runtimeLayerCrop, runtimeTrackMatteMarkup,
   runtimeGraphicFactory,
   runtimeResolveShapeAppearance,
   runtimeResolveMatteSource,
@@ -48,6 +48,10 @@ export function generateGraphicModule(
   colorFields: OGrafPublicColorField[] = [],
   imageReferences: Record<string, string> = {},
   fontReferences: Record<string, string | Array<{ path: string; unicodeRange?: string; fontWeight?: string }>> = {},
+  toggleFields: OGrafPublicToggleField[] = [],
+  numberFields: OGrafPublicNumberField[] = [],
+  presetField?: OGrafPublicPresetField,
+  clockFields: OGrafPublicClockField[] = [],
 ): string {
   const bindings = {
     text: Object.fromEntries(textFields.map((field) => [field.id, { layerId: field.layerId, property: 'textValue' }])),
@@ -55,12 +59,15 @@ export function generateGraphicModule(
       layerId: field.layerId,
       property: 'imageUrl',
       allowedValues: field.options || (field.defaultValue ? [field.defaultValue] : []),
+      ...(field.any ? { any: true } : {}),
     }])),
     color: Object.fromEntries(colorFields.map((field) => [field.id, { layerId: field.layerId, property: field.property }])),
+    toggle: Object.fromEntries(toggleFields.map((field) => [field.id, { layerId: field.layerId, property: 'operatorHidden' }])),
+    number: Object.fromEntries(numberFields.map((field) => [field.id, { layerId: field.layerId, property: 'textValue' }])),
   };
 
   return `const SCENE = ${JSON.stringify(withTrackMatteRender(sceneData))};
-const PUBLIC_BINDINGS = { text: Object.fromEntries(${JSON.stringify(Object.entries(bindings.text))}), image: Object.fromEntries(${JSON.stringify(Object.entries(bindings.image))}), color: Object.fromEntries(${JSON.stringify(Object.entries(bindings.color))}) };
+const PUBLIC_BINDINGS = { text: Object.fromEntries(${JSON.stringify(Object.entries(bindings.text))}), image: Object.fromEntries(${JSON.stringify(Object.entries(bindings.image))}), color: Object.fromEntries(${JSON.stringify(Object.entries(bindings.color))}), toggle: Object.fromEntries(${JSON.stringify(Object.entries(bindings.toggle))}), number: Object.fromEntries(${JSON.stringify(Object.entries(bindings.number))})${presetField ? `, preset: { id: ${JSON.stringify(presetField.id)}, values: Object.fromEntries(${JSON.stringify(Object.entries(presetField.values))}) }` : ''}, clock: Object.fromEntries(${JSON.stringify(clockFields.map((field) => [field.id, { layerId: field.layerId, property: 'liveClockSeconds' }]))}) };
 const IMAGE_REFERENCES = Object.fromEntries(${JSON.stringify(Object.entries(imageReferenceLookup(imageReferences)))});
 const FONT_REFERENCES = Object.fromEntries(${JSON.stringify(Object.entries(fontReferences))});
 // The runtime is one self-contained factory (src/ograf/runtime/graphicRuntime.ts),
@@ -81,6 +88,11 @@ const RUNTIME = (${runtimeGraphicFactory()})({
   describePaint: ${runtimeDescribePaint()},
   describeText: ${runtimeDescribeText()},
   layout: ${runtimeLayoutModifiers()},
+  textEffects: ${runtimeTextEffects()},
+  layerEffects: ${runtimeLayerEffects()},
+  motionPath: ${runtimeMotionPath()},
+  polygonShape: ${runtimePolygonShape()},
+  layerCrop: ${runtimeLayerCrop()},
   trackMatteMarkup: ${runtimeTrackMatteMarkup()},
   stepEnds: ${JSON.stringify(stepEndFrames(sceneStepMarkers(sceneData), sceneData.totalFrames))},
 });

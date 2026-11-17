@@ -8,6 +8,39 @@ How a version is cut is described in [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+- File > New from Template… opens a ready-made graphic (lower third, corner bug, scoreboard, title card or a blank canvas) at the chosen size and frame rate, fitted in view.
+- Text over time (Inspector → TEXT EFFECTS → ANIMATE TEXT): a text can type itself out, count up to its number, or run as a stopwatch or a countdown; the same in the editor, the GIF and the exported OGraf graphic.
+- Motion paths (Inspector → MOTION PATH): a layer follows a pen-drawn path layer by the path's length, optionally turning with the direction of travel; its progress is a timeline row (Motion Path › Progress) and plays the same in OGraf.
+- Layer effects: glow (colour, size, strength), layer blur and blend modes (Multiply, Screen, Overlay, Darken, Lighten, Add) beside the drop shadow.
+- Crop (Inspector → CROP): trim what a layer shows from each side without moving or scaling it.
+- Replace Image keeps the layer, its animation and its width.
+- A view bar on the stage: the real zoom percentage, Fit, 1:1, zoom presets, action-safe and title-safe guides, and an artboard backdrop (dark, light, checkerboard or a picture; editor only).
+- Timeline: type a time into the playhead field (frames, seconds or timecode), Ctrl+Left / Ctrl+Right jump to the previous / next keyframe, and K keys the transform of every selected layer.
+- Edit > History… lists the undo steps by name ("Move Alpha", "Delete 2 layers", "Add keyframe on Logo"); a click goes straight to that step, and the later steps stay for redo until a new edit replaces them.
+- Double-click a text on the canvas to type into it where it stands: the field uses the text's own font and on-screen size, the drawing follows every keystroke, Enter or a click elsewhere keeps the edit as one undo step, and Escape puts the text back.
+- Template tabs are kept across a reload: the tab list, which one is open, and every closed tab's layers, sequences, frame rate and canvas size come back. The open tab is still saved where it always was; the other tabs go to a second browser key (`KCS_WORKSPACE_V1`), written only when there is more than one tab, so a one-tab project is stored exactly as before. A damaged tab is left out and its copy kept; tabs saved by a newer build are left untouched.
+- A Polygon shape in the shape tool: Corners (3 to 24) and Inner radius (below 100 % makes a star) in the Appearance card. The settings change the outline, never the layer's size, and the editor, the static SVG and the OGraf graphic draw the same corners. The fixed Star and Triangle are unchanged.
+- All caps for a text (the options bar): the text shows in capitals while what was typed is kept as typed, so an OGraf operator's input comes out in capitals too. Its frame, matte, Auto Size and text effects use the capitals, and the editor, the static SVG and the OGraf graphic agree. The letters are capitalised the same on every machine (in Turkish, "i" becomes "I").
+- Filter properties in the Inspector shows only the cards that hold what you type ("glow", "rotation", "matte").
+- Retime a step (right-click the timeline ruler): the menu names the step under the pointer (between step markers, or the whole sequence when there are none) and its length. A new length stretches or squeezes that step's keyframes from its start, moves every later keyframe and marker by the difference and lengthens or shortens the sequence, as one undo step. Curves keep their shape. It is refused, with nothing changed, when two keys of a layer would land on one frame or a locked layer would move. Times stored on a layer in seconds (text effects, text stagger) are not moved.
+- Escape closes the timeline's right-click menus (keyframe, paste, lane and ruler) without also clearing the selection.
+- PLAYOUT card (Inspector): mark a layer "Operator can show / hide" and the exported OGraf graphic gets an on/off field ("Show <layer>", on by default) that hides the layer and its children on air. A Track Matte source is not offered. The editor always draws the layer.
+- PLAYOUT counter: a text that is a whole number can be marked "Number with +1 / -1 buttons"; the exported OGraf graphic gets a number field for it and two buttons (OGraf custom actions) that count it up and down on air, also in a frame-by-frame render.
+- File > Playout Presets…: named sets of values (texts, counters, show/hide) in a table, one column per preset, started from the current values. The exported OGraf graphic gets one "Preset" choice that sets a whole column at once; None leaves the fields as typed. Each value is stored on its layer, so every change is one undo step.
+- PLAYOUT: an image layer can be marked "Operator can pick any image". The exported field becomes a picture chooser (`file-path/image-path`) and the graphic accepts an http(s) or file address, a Windows path, a PNG / JPEG / GIF / WebP data address or a relative path; anything else is refused. The export check warns that such a picture is not in the package. Off (the default), only packaged images are accepted, as before.
+- PLAYOUT: a text with a Stopwatch or Countdown can be a "Clock run by the operator". On air it waits at its start value and gets Start, Pause and Reset buttons (OGraf custom actions); a frame-by-frame render takes the button times from its schedule. The time is shown in the clock's own format; the editor still runs the clock along the timeline.
+- Text Box V ALIGN (Inspector → MODIFIERS): when a text shrinks to fit its width, its top, middle or bottom stays where the full-size text had it (an OGraf operator's long name no longer drifts off its bar). "As placed" keeps the layer's own origin, as before; the same in the editor, the static SVG and the OGraf graphic.
+- Help names the editor version (from package.json), for bug reports.
+- Shortcuts: Page Up / Page Down step the playhead one frame (ten with Shift), Home / End go to the first / last frame (a focused list or mask point keeps its own Home / End), and Ctrl+Shift+A deselects every layer. All are in Help > Keyboard Shortcuts.
+- Timeline right-click: Copy Easing / Paste Easing move only a keyframe's curve (a custom curve or a handle pair travels as the same cubic; values and timing stay), and Add Keyframe Here on an empty spot of a Position, Rotation, Scale, Opacity or matte lane adds a key with the value the layer has at that frame and the easing of the segment it splits.
+
+### Fixed
+- Importing an older project file into a new tab no longer loses the frame rate and canvas size of the tab it leaves, and the new tab starts with its own undo history.
+- The drop shadow is drawn in the static SVG, the GIF and the OGraf graphic; it used to show only in the editor.
+- The media store works on an `http://` LAN address (a built-in SHA-256 where the browser offers none).
+- The Text tool's preview draws only the text's frame, with no shaded area.
+
 ## [1.1.0-rc.7] - 2026-11-13
 
 The seventh release candidate of 1.1.0: rc.6 with layout modifiers, keyed

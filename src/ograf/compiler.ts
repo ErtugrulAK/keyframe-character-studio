@@ -80,7 +80,7 @@ interface OGrafManifestCompilation {
 
 export function compileOGrafManifest(sceneData: SceneData, options: OGrafExportOptions = {}): OGrafManifestCompilation {
   const validated = validateSceneForOGraf(sceneData, options);
-  const publicFields = [...validated.publicTextFields, ...validated.publicImageFields, ...validated.publicColorFields];
+  const publicFields = [...validated.publicTextFields, ...validated.publicImageFields, ...validated.publicColorFields, ...validated.publicToggleFields, ...validated.publicNumberFields, ...(validated.publicPresetField ? [validated.publicPresetField] : []), ...validated.publicClockFields];
   const diagnostics = [...validated.diagnostics, ...collectCompilerDiagnostics(options, publicFields)];
   const stepEnds = stepEndFrames(sceneStepMarkers(sceneData), sceneData.totalFrames);
   const manifest: OGrafManifest = {
@@ -101,6 +101,22 @@ export function compileOGrafManifest(sceneData: SceneData, options: OGrafExportO
       { type: 'updateAction', duration: 0 },
     ],
     schema: validated.publicStateSchema,
+    // A counter's +1 / -1 buttons. The id names the field and the step, as
+    // the runtime's customAction reads it.
+    // A clock's Start / Pause / Reset, the same way.
+    ...(validated.publicNumberFields.length + validated.publicClockFields.length > 0 ? {
+      customActions: [
+        ...validated.publicNumberFields.flatMap((field) => [
+          { id: `add:${field.id}:1`, name: `${field.title || field.id} +1`, description: `Adds one to ${field.title || field.id}.`, schema: null },
+          { id: `add:${field.id}:-1`, name: `${field.title || field.id} -1`, description: `Takes one from ${field.title || field.id}.`, schema: null },
+        ]),
+        ...validated.publicClockFields.flatMap((field) => [
+          { id: `clock:${field.id}:start`, name: `${field.title}: Start`, description: `Starts (or continues) ${field.title}.`, schema: null },
+          { id: `clock:${field.id}:pause`, name: `${field.title}: Pause`, description: `Stops ${field.title} where it is.`, schema: null },
+          { id: `clock:${field.id}:reset`, name: `${field.title}: Reset`, description: `Puts ${field.title} back to its start value.`, schema: null },
+        ]),
+      ],
+    } : {}),
     ...(options.description?.trim() ? { description: options.description.trim() } : {}),
     ...(options.emitRenderRequirements === false ? {} : {
       renderRequirements: [{

@@ -245,7 +245,7 @@ test('the popover stays inside the viewport and never moves the authored world',
   expect(box!.y + box!.height).toBeLessThanOrEqual(viewport!.height);
 
   // The Effects paint sits at the bottom of the sidebar: its popover must still fit.
-  await swatch(page, 'SHADOW / GLOW COLOR').click();
+  await swatch(page, 'SHADOW COLOR').click();
   const bottomBox = await popover(page).boundingBox();
   expect(bottomBox!.y).toBeGreaterThanOrEqual(0);
   expect(bottomBox!.y + bottomBox!.height).toBeLessThanOrEqual(viewport!.height);

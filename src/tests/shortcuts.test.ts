@@ -68,6 +68,10 @@ describe('shortcut keymap', () => {
       'mask-edit: arrowleft (mask-point-nudge over nudge-selection)',
       'mask-edit: arrowright (mask-point-nudge over nudge-selection)',
       'mask-edit: arrowup (mask-point-nudge over nudge-selection)',
+      // Round 6: a focused mask point keeps Home / End for its first / last
+      // point; elsewhere they move the playhead to the first / last frame.
+      'mask-edit: end (mask-point-ends over go-to-end)',
+      'mask-edit: home (mask-point-ends over go-to-start)',
     ]);
   });
 

@@ -131,11 +131,11 @@ export type ShortcutScope = 'global' | 'canvas' | 'timeline' | 'layers' | 'drawi
 export type ShortcutCommandId =
   | 'tool-select' | 'tool-pan'
   | 'create-rectangle' | 'create-circle' | 'create-text' | 'tool-pen'
-  | 'select-all' | 'group-layers' | 'ungroup-layers'
+  | 'select-all' | 'deselect-all' | 'group-layers' | 'ungroup-layers'
   | 'rotate-ccw' | 'rotate-cw' | 'flip-horizontal' | 'flip-vertical' | 'nudge-selection'
   | 'undo' | 'redo' | 'copy' | 'paste' | 'duplicate' | 'delete-selection' | 'cancel-gesture' | 'context-menu'
-  | 'keyframe-select' | 'keyframe-walk' | 'easy-ease' | 'marquee-cancel'
-  | 'play-pause' | 'zoom-in' | 'zoom-out'
+  | 'keyframe-select' | 'keyframe-walk' | 'easy-ease' | 'marquee-cancel' | 'keyframe-previous' | 'keyframe-next' | 'key-transform'
+  | 'play-pause' | 'frame-previous' | 'frame-next' | 'go-to-start' | 'go-to-end' | 'zoom-in' | 'zoom-out'
   | 'mask-point-next' | 'mask-point-previous' | 'mask-point-nudge' | 'mask-point-ends' | 'mask-point-type' | 'mask-point-focus'
   | 'draw-finish' | 'draw-undo-point' | 'draw-discard'
   | 'layer-walk' | 'layer-expand' | 'layer-select' | 'layer-rename' | 'layer-move-up' | 'layer-move-down' | 'layer-nest' | 'layer-unparent'
@@ -172,6 +172,7 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
   { id: 'tool-select', label: 'Select tool', category: 'selection', gestures: ['v'], scope: 'global' },
   { id: 'tool-pan', label: 'Pan tool', category: 'selection', gestures: ['h'], scope: 'global' },
   { id: 'select-all', label: 'Select all layers', category: 'selection', gestures: ['mod+a'], scope: 'global' },
+  { id: 'deselect-all', label: 'Deselect all layers', category: 'selection', gestures: ['mod+shift+a'], scope: 'global', detail: 'Clicking empty stage space does the same.' },
 
   { id: 'create-rectangle', label: 'Rectangle', category: 'create', gestures: ['r'], scope: 'global', detail: 'Then drag on the stage to place it.' },
   { id: 'create-circle', label: 'Ellipse', category: 'create', gestures: ['o'], scope: 'global', detail: 'Then drag on the stage to place it; hold the toolbar button for Circle.' },
@@ -254,9 +255,16 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
   { id: 'keyframe-select', label: 'Select the focused keyframe', category: 'timeline', gestures: ['enter', 'space'], scope: 'timeline', detail: 'With a keyframe diamond focused: selects it and moves the playhead to it.' },
   { id: 'keyframe-walk', label: 'Walk focus along the lane', category: 'timeline', gestures: ['arrowleft', 'arrowright'], scope: 'timeline', detail: 'With a keyframe diamond focused.' },
   { id: 'easy-ease', label: 'Easy Ease the selected keyframes', category: 'timeline', gestures: ['f9'], scope: 'global', detail: 'Ease In-Out on every selected keyframe group, as one undo step. Right-click a keyframe for Linear, Ease In, Ease Out and Hold.' },
+  { id: 'key-transform', label: 'Key the transform of the selected layers', category: 'timeline', gestures: ['k'], scope: 'global', detail: 'A keyframe for every transform property at the playhead, as one undo step. The + on a layer row does the same for that layer.' },
+  { id: 'keyframe-previous', label: 'Go to the previous keyframe', category: 'timeline', gestures: ['mod+arrowleft'], scope: 'global', detail: 'Of the selected layers, or of every layer when nothing is selected.' },
+  { id: 'keyframe-next', label: 'Go to the next keyframe', category: 'timeline', gestures: ['mod+arrowright'], scope: 'global', detail: 'Of the selected layers, or of every layer when nothing is selected.' },
   { id: 'marquee-cancel', label: 'Cancel a timeline marquee', category: 'timeline', gestures: ['escape'], scope: 'timeline', detail: 'While a marquee drag is in flight it restores the selection it started from.' },
 
   { id: 'play-pause', label: 'Play / pause', category: 'view', gestures: ['space'], scope: 'global' },
+  { id: 'frame-previous', label: 'Go back one frame', category: 'timeline', gestures: ['pageup', 'shift+pageup'], scope: 'global', detail: 'Shift steps 10 frames. Not while a list, menu or mask point has the keyboard.' },
+  { id: 'frame-next', label: 'Go forward one frame', category: 'timeline', gestures: ['pagedown', 'shift+pagedown'], scope: 'global', detail: 'Shift steps 10 frames. Not while a list, menu or mask point has the keyboard.' },
+  { id: 'go-to-start', label: 'Go to the first frame', category: 'timeline', gestures: ['home'], scope: 'global', detail: 'Not while a list, menu or mask point has the keyboard (there Home is the first row or point).' },
+  { id: 'go-to-end', label: 'Go to the last frame', category: 'timeline', gestures: ['end'], scope: 'global', detail: 'Not while a list, menu or mask point has the keyboard (there End is the last row or point).' },
   { id: 'zoom-in', label: 'Zoom in', category: 'view', gestures: ['plus', '='], scope: 'canvas' },
   { id: 'zoom-out', label: 'Zoom out', category: 'view', gestures: ['-'], scope: 'canvas' },
 
@@ -317,6 +325,8 @@ const KEY_LABELS: Record<string, string> = {
   f2: 'F2',
   home: 'Home',
   end: 'End',
+  pageup: 'Page Up',
+  pagedown: 'Page Down',
 };
 
 const SHIFT_IMPLICIT_KEYS = ['?', 'plus'];

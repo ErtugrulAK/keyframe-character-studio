@@ -4,8 +4,6 @@ import { useAnimator } from '../../context/useAnimator';
 import { useEditorContextMenu } from '../../context/editorContextMenu';
 import type { BezierPath, CharacterPart, Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
-import { parseElementDropPayload } from '../../utils/editor/elementDropPayload';
-import { getPartBounds } from '../../utils/geometry/bounds';
 import type { CornerBounds } from '../../utils/geometry/cornerResize';
 import {
   CORNER_BY_SCALE_MODE,
@@ -46,7 +44,7 @@ import {
   stageCropHandleCenters,
   stageSpaceToEditorRect,
 } from '../../utils/geometry/stageCrop';
-import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageFitScale, getTextCreationProps, type StageBox, type StageCameraView } from '../../utils/geometry/viewportMath';
+import { clampZoom, clientToCameraPoint, fitArtboardZoomLevel, zoomLevelForScale, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageFitScale, getTextCreationProps, type StageBox, type StageCameraView } from '../../utils/geometry/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter, type CoordinatePoint } from '../../utils/geometry/projectCoordinates';
 import { REFIT_UNTOUCHED_CAMERA_COMMAND, REMEASURE_STAGE_BOX_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT } from '../../utils/editor/workspaceLayout';
 import { normalizeFreeformPoints } from '../../utils/geometry/freeform';
@@ -59,6 +57,11 @@ import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
 import { CanvasCoordinateOverlay } from './overlays/CanvasCoordinateOverlay';
 import { leaveStage, rememberStagePointer } from '../../utils/editor/stagePointer';
 import { CanvasCoordinateReadout } from './overlays/CanvasCoordinateReadout';
+import { StageZoomControl } from './overlays/StageZoomControl';
+import { SafeAreaOverlay } from './overlays/SafeAreaOverlay';
+import { useArtboardBackdrop } from '../../hooks/useArtboardBackdrop';
+import { useStageWheelZoom } from '../../hooks/useStageWheelZoom';
+import { useStageDrop } from '../../hooks/useStageDrop';
 import { FreeformTangentOverlay } from './overlays/FreeformTangentOverlay';
 import { isFreeformTangentOverlayEligible } from '../../utils/geometry/freeformTangentEligibility';
 import { ShapeCreationPreview } from './ShapeCreationPreview';
@@ -70,6 +73,7 @@ import { evaluateLayerMasks } from '../../utils/animation/evaluateLayerMasks';
 import { resolveMaskEditBlock, resolveMaskPathFrame } from '../../utils/geometry/maskPathEditing';
 import { StagePartLayers } from './StagePartLayers';
 import { EditTargetStrip } from './overlays/EditTargetStrip';
+import { CanvasTextEditor } from './overlays/CanvasTextEditor';
 import { resolveEditTarget } from '../../utils/layers/editTarget';
 import { Sparkles } from 'lucide-react';
 import './StageCanvas.css';
@@ -130,12 +134,15 @@ export const StageCanvas: React.FC = () => {
     addCustomPart,
     updatePartMedia,
     showGrid,
+    showSafeAreas,
+    setShowSafeAreas,
     showCoordinateOverlay,
     snapEnabled,
     cropMode,
     cropRegion,
     setCropRegion,
     totalFrames,
+    fps,
     projectResolution,
     coordinateSystem,
     appMode,
@@ -185,6 +192,8 @@ export const StageCanvas: React.FC = () => {
    * outside it, Escape or another selection closes them.
    */
   const [pathEditPartId, setPathEditPartId] = useState<string | null>(null);
+  /** The text layer being typed into on the canvas (double-click a text). */
+  const [textEditPartId, setTextEditPartId] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const { openContextMenu } = useEditorContextMenu();
@@ -1063,56 +1072,7 @@ export const StageCanvas: React.FC = () => {
     };
   }, [isDragging, handleMouseMove, handlePointerUp, handlePointerCancel]);
 
-  /**
-   * Wheel zoom, smooth: the step follows the wheel's own distance (a trackpad
-   * pinch sends many small ones, a mouse notch one larger), and every wheel
-   * event of one animation frame is applied together, so the stage renders
-   * once per frame however fast the events come.
-   */
-  const pendingWheelRef = useRef<{ deltaY: number; clientX: number; clientY: number; frame: number | null }>({ deltaY: 0, clientX: 0, clientY: 0, frame: null });
-  const handleWheel = useCallback((e: WheelEvent) => {
-    e.preventDefault();
-    if (!containerRef.current || !cameraViewRef.current || appMode === 'broadcast') return;
-    const pending = pendingWheelRef.current;
-    // Lines and pages count as about 40 and 800 pixels.
-    pending.deltaY += e.deltaY * (e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? 800 : 1);
-    pending.clientX = e.clientX;
-    pending.clientY = e.clientY;
-    if (pending.frame !== null) return;
-    pending.frame = requestAnimationFrame(() => {
-      pending.frame = null;
-      const view = cameraViewRef.current;
-      const deltaY = Math.max(-600, Math.min(600, pending.deltaY));
-      pending.deltaY = 0;
-      if (!view || deltaY === 0) return;
-      const currentZoom = zoomRef.current;
-      // 100 px of wheel (one mouse notch) is a 1.16x step.
-      const nextZoom = clampZoom(currentZoom * Math.exp(-deltaY * 0.0015));
-      if (nextZoom === currentZoom) return;
-      zoomRef.current = nextZoom;
-      setZoomLevel(nextZoom);
-      setCameraView({
-        baseScale: view.baseScale,
-        center: getCursorAnchoredCameraCenter({
-          view,
-          clientX: pending.clientX,
-          clientY: pending.clientY,
-          zoom: currentZoom,
-          nextZoom,
-        }),
-      });
-    });
-  }, [appMode]);
-  useEffect(() => () => {
-    const frame = pendingWheelRef.current.frame;
-    if (frame !== null) cancelAnimationFrame(frame);
-  }, []);
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    return () => container.removeEventListener('wheel', handleWheel);
-  }, [handleWheel]);
+  useStageWheelZoom({ containerRef, cameraViewRef, zoomRef, appMode, setZoomLevel, setCameraView });
 
   useEffect(() => {
     const handleViewportCommand = (event: Event) => {
@@ -1155,6 +1115,10 @@ export const StageCanvas: React.FC = () => {
         flushSync(() => applyStageBox(box, false));
         return;
       }
+      if (type === 'fit-artboard') {
+        fitArtboardRef.current();
+        return;
+      }
       if (type !== 'zoom-in' && type !== 'zoom-out') return;
       const nextZoom = clampZoom(zoomRef.current * (type === 'zoom-in' ? 1.1 : 0.9));
       setZoomLevel(nextZoom);
@@ -1163,108 +1127,36 @@ export const StageCanvas: React.FC = () => {
     return () => window.removeEventListener(WORKSPACE_LAYOUT_COMMAND_EVENT, handleViewportCommand);
   }, [applyStageBox, readStageBox]);
 
-  const [isDropTargetHover, setIsDropTargetHover] = useState<boolean>(false);
-  const handleDragOverStage = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-    if (!isDropTargetHover) setIsDropTargetHover(true);
+  const artboardBackdrop = useArtboardBackdrop();
+
+  /** The zoom bar: a zoom level for a screen scale (1 = 100 %), and Fit, which also centres the artboard. */
+  const setZoomFromBar = (nextZoom: number) => {
+    zoomRef.current = nextZoom;
+    setZoomLevel(nextZoom);
+  };
+  const zoomToScale = (scale: number) => {
+    const view = cameraViewRef.current;
+    if (view) setZoomFromBar(zoomLevelForScale(scale, view.baseScale));
+  };
+  const fitArtboardInView = () => {
+    const view = cameraViewRef.current;
+    const box = readStageBox() ?? stageBoxRef.current;
+    if (!view || !box) return;
+    setZoomFromBar(fitArtboardZoomLevel(box, projectResolution, view.baseScale));
+    setCameraView((current) => (current
+      ? { ...current, center: snapToDevicePixel({ x: box.left + box.width / 2, y: box.top + box.height / 2 }) }
+      : current));
   };
 
-  const handleDragLeaveStage = () => {
-    setIsDropTargetHover(false);
-  };
+  // The viewport command listener is bound once; it reaches the latest Fit through this ref.
+  const fitArtboardRef = useRef(fitArtboardInView);
+  useEffect(() => {
+    fitArtboardRef.current = fitArtboardInView;
+  });
 
-  const handleDropStage = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (appMode === 'broadcast') return;
-    setIsDropTargetHover(false);
-
-    const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-
-    // Handle Files (Canva-style Masking or New Media)
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      const isVideo = file.type.startsWith('video/');
-      const isImage = file.type.startsWith('image/');
-
-      if (isVideo || isImage) {
-        // Which shape the drop landed on has to be decided now: the transfer's
-        // file list is emptied as soon as the handler returns.
-        const dropX = Math.round(svgX - EDITOR_CAMERA_CENTER.x);
-        const dropY = Math.round(svgY - EDITOR_CAMERA_CENTER.y);
-        let targetShapeId = null;
-        for (let i = characterParts.length - 1; i >= 0; i--) {
-          const part = characterParts[i];
-          const transform = getComputedTransform(part.id, currentFrame);
-
-          const dx = svgX - (EDITOR_CAMERA_CENTER.x + transform.x);
-          const dy = svgY - (EDITOR_CAMERA_CENTER.y + transform.y);
-          const rad = -transform.rotation * Math.PI / 180;
-          const localX = dx * Math.cos(rad) - dy * Math.sin(rad);
-          const localY = dx * Math.sin(rad) + dy * Math.cos(rad);
-          const unscaledX = localX / Math.abs(transform.scaleX || 1);
-          const unscaledY = localY / Math.abs(transform.scaleY || 1);
-
-          const { halfW, halfH } = getPartBounds(part, transform);
-
-          if (Math.abs(unscaledX) <= halfW && Math.abs(unscaledY) <= halfH) {
-            // Only mask if it's a shape type
-            if (part.type === 'custom_rect' || part.type === 'custom_card' || part.type === 'custom_banner') {
-              targetShapeId = part.id;
-              break;
-            }
-          }
-        }
-
-        // A `blob:` URL belongs to this document only: persisting one left the
-        // saved project pointing at an address that dies with the page, so the
-        // media came back as a broken image after a reload. The Media drawer
-        // already stores self-contained data URLs, so a drop uses that same
-        // durable form and keeps the file's bytes in the document.
-        const reader = new FileReader();
-        reader.onload = () => {
-          const url = reader.result;
-          if (typeof url !== 'string') {
-            showToast(`"${file.name}" could not be read.`, 'error');
-            return;
-          }
-          if (targetShapeId) {
-            updatePartMedia(targetShapeId, url, isVideo ? 'video' : 'image');
-          } else {
-            // Drop in empty area -> create new media part
-            addCustomPart(isVideo ? 'custom_video' : 'custom_image', file.name, {
-              baseTransform: { x: dropX, y: dropY, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
-              ...(isVideo ? { videoUrl: url } : { imageUrl: url }),
-            });
-          }
-        };
-        reader.onerror = () => showToast(`"${file.name}" could not be read.`, 'error');
-        reader.readAsDataURL(file);
-        return;
-      }
-    }
-
-    // Handle UI Panel JSON drops. The payload rides an attacker-creatable MIME
-    // type, so elementDropPayload.ts is the single authority that narrows it;
-    // anything it refuses changes nothing in the document.
-    const rawData = e.dataTransfer.getData('application/json');
-    if (!rawData) return;
-    const dropPayload = parseElementDropPayload(rawData);
-    if (!dropPayload) {
-      console.warn("Invalid drop payload");
-      return;
-    }
-    addCustomPart(dropPayload.type, dropPayload.name, {
-      baseTransform: {
-        x: Math.round(svgX - EDITOR_CAMERA_CENTER.x),
-        y: Math.round(svgY - EDITOR_CAMERA_CENTER.y),
-        rotation: 0,
-        scaleX: 1,
-        scaleY: 1,
-        opacity: 1,
-      },
-    });
-  };
+  const { isDropTargetHover, handleDragOverStage, handleDragLeaveStage, handleDropStage } = useStageDrop({
+    appMode, clientToSVG, characterParts, currentFrame, getComputedTransform, showToast, updatePartMedia, addCustomPart,
+  });
 
   const sortedParts = useMemo(() => stackingOrder(characterParts), [characterParts]);
   // What the stage paints: the layers laid out by their modifiers (text boxes,
@@ -1515,6 +1407,7 @@ export const StageCanvas: React.FC = () => {
   if (pathEditSelection !== selectedPartId) {
     setPathEditSelection(selectedPartId);
     if (pathEditPartId && pathEditPartId !== selectedPartId) setPathEditPartId(null);
+    if (textEditPartId && textEditPartId !== selectedPartId) setTextEditPartId(null);
   }
   useEffect(() => {
     if (!pathEditPartId) return undefined;
@@ -1541,6 +1434,7 @@ export const StageCanvas: React.FC = () => {
   /**
    * Double-click edit modes, with the Select tool:
    * - a freeform path opens its points;
+   * - a text opens for typing;
    * - a Boolean result opens its operands (they can be selected and moved);
    * - a layer with a mask opens the mask on the canvas.
    * A double-click outside the layer being edited, or on it again, closes the
@@ -1582,6 +1476,17 @@ export const StageCanvas: React.FC = () => {
       setPathEditPartId(part.id);
       return true;
     }
+    // A text is typed into where it stands (its mask, if any, opens from the Inspector).
+    if (part.type === 'custom_text') {
+      const refusal = lockedLayersRefusal(characterParts, tracks, [part.id]);
+      if (refusal) {
+        showToast(refusal, 'error');
+        return true;
+      }
+      handleSelectPart(part.id);
+      setTextEditPartId(part.id);
+      return true;
+    }
     if (part.masks?.length) {
       handleSelectPart(part.id);
       const refusal = enterMaskEditing(part.id, part.masks[part.masks.length - 1].id);
@@ -1595,10 +1500,11 @@ export const StageCanvas: React.FC = () => {
    * The second press of a double-click (the browser's click count): the first
    * press already selected and may have re-drawn the layer, so the browser's
    * own dblclick event is not reliable here. A double-click inside an open path
-   * or mask belongs to that overlay (it adds a point or switches its type).
+   * or mask belongs to that overlay (it adds a point or switches its type), and
+   * one in the open text field selects a word there.
    */
   const handleStageMouseDownCapture = (event: React.MouseEvent) => {
-    const inEditOverlay = (event.target as Element).closest('[data-testid="freeform-tangent-overlay"], [data-testid="mask-path-overlay"]');
+    const inEditOverlay = (event.target as Element).closest('[data-testid="freeform-tangent-overlay"], [data-testid="mask-path-overlay"], [data-testid="canvas-text-editor"]');
     if (event.button === 0 && event.detail === 2 && !inEditOverlay && handleStageDoubleClick(event)) {
       event.stopPropagation();
       event.preventDefault();
@@ -1702,9 +1608,33 @@ export const StageCanvas: React.FC = () => {
                 y={artY}
                 width={projectResolution.width}
                 height={projectResolution.height}
-                fill="var(--bg-darkest)"
+                fill={appMode === 'broadcast' || artboardBackdrop.kind === 'dark' || artboardBackdrop.kind === 'image'
+                  ? 'var(--bg-darkest)'
+                  : artboardBackdrop.kind === 'light' ? '#f4f4f4' : 'url(#artboard-checker)'}
                 filter="url(#artboard-shadow)"
+                data-backdrop={appMode === 'broadcast' ? undefined : artboardBackdrop.kind}
               />
+              {appMode !== 'broadcast' && artboardBackdrop.kind === 'checker' && (
+                <defs>
+                  <pattern id="artboard-checker" width={40} height={40} patternUnits="userSpaceOnUse" x={artX} y={artY}>
+                    <rect width={40} height={40} fill="#d9d9d9" />
+                    <rect width={20} height={20} fill="#ffffff" />
+                    <rect x={20} y={20} width={20} height={20} fill="#ffffff" />
+                  </pattern>
+                </defs>
+              )}
+              {appMode !== 'broadcast' && artboardBackdrop.kind === 'image' && artboardBackdrop.imageUrl && (
+                <image
+                  data-testid="artboard-backdrop-image"
+                  href={artboardBackdrop.imageUrl}
+                  x={artX}
+                  y={artY}
+                  width={projectResolution.width}
+                  height={projectResolution.height}
+                  preserveAspectRatio="xMidYMid slice"
+                  pointerEvents="none"
+                />
+              )}
 
               {/* Grid & Origin Axes Overlay */}
               <CanvasGridOverlay
@@ -1728,6 +1658,7 @@ export const StageCanvas: React.FC = () => {
                 activeTemplateId={activeTemplateId}
                 currentFrame={currentFrame}
                 totalFrames={totalFrames}
+                fps={fps}
                 tracks={fittedLayers.tracks}
                 selectedPartId={selectedPartId}
                 selectedPartIds={selectedPartIds}
@@ -1891,6 +1822,10 @@ export const StageCanvas: React.FC = () => {
                 fillRule="evenodd"
                 pointerEvents="none"
               />
+
+              {appMode !== 'broadcast' && showSafeAreas && (
+                <SafeAreaOverlay artX={artX} artY={artY} width={projectResolution.width} height={projectResolution.height} />
+              )}
 
               {/* Artboard Border Outline */}
               <rect
@@ -2209,6 +2144,23 @@ export const StageCanvas: React.FC = () => {
         }
         return <EditTargetStrip target={editTarget} testId="edit-target-strip" />;
       })()}
+
+      {appMode !== 'broadcast' && textEditPartId && textEditPartId === selectedPartId && (
+        <CanvasTextEditor key={textEditPartId} partId={textEditPartId} onClose={() => setTextEditPartId(null)} />
+      )}
+
+      {appMode !== 'broadcast' && cameraScale > 0 && (
+        <StageZoomControl
+          scale={cameraScale}
+          onZoomTo={zoomToScale}
+          onFit={fitArtboardInView}
+          showSafeAreas={showSafeAreas}
+          onToggleSafeAreas={() => setShowSafeAreas(!showSafeAreas)}
+          backdrop={artboardBackdrop.kind}
+          onBackdrop={artboardBackdrop.choose}
+          onBackdropImage={artboardBackdrop.chooseImage}
+        />
+      )}
 
       {appMode !== 'broadcast' && showCoordinateOverlay && selectedTransform && (
         <CanvasCoordinateReadout

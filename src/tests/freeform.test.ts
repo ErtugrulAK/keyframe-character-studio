@@ -6,15 +6,11 @@ import {
   buildFreeformPath,
   freeformVertexToDisplay,
   freeformVertexToLocal,
-  getFreeformBounds,
   getFreeformExtents,
   getFreeformPerimeter,
   getFreeformVertexWorldPositions,
-  hasValidFreeformPoints,
   normalizeFreeformPoints,
-  simplifyFreeformPoints,
   normalizeClosedPoints,
-  MIN_FREEFORM_POINTS,
 } from '../utils/geometry/freeform';
 
 /** A 90°-rotated child inside a container with scaleX 2 — the sheared nesting. */
@@ -62,23 +58,6 @@ describe('freeform utils', () => {
     });
   });
 
-  describe('getFreeformBounds', () => {
-    it('computes symmetric half extents from the bounding box', () => {
-      const { halfW, halfH } = getFreeformBounds([
-        { x: 10, y: -10 },
-        { x: 30, y: -10 },
-        { x: 30, y: 10 },
-        { x: 10, y: 10 },
-      ]);
-      expect(halfW).toBe(10);
-      expect(halfH).toBe(10);
-    });
-
-    it('falls back to a default for empty input', () => {
-      expect(getFreeformBounds([])).toEqual({ halfW: 32, halfH: 32 });
-    });
-  });
-
   describe('getFreeformExtents', () => {
     it('finds the min/max of the points', () => {
       const ext = getFreeformExtents([
@@ -108,19 +87,6 @@ describe('freeform utils', () => {
     });
   });
 
-  describe('hasValidFreeformPoints', () => {
-    it('requires at least 3 points', () => {
-      expect(hasValidFreeformPoints(undefined)).toBe(false);
-      expect(hasValidFreeformPoints([])).toBe(false);
-      expect(hasValidFreeformPoints([{ x: 0, y: 0 }, { x: 1, y: 1 }])).toBe(false);
-      expect(hasValidFreeformPoints([{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 2 }])).toBe(true);
-    });
-
-    it('exports a sensible minimum constant', () => {
-      expect(MIN_FREEFORM_POINTS).toBe(3);
-    });
-  });
-
   describe('normalizeFreeformPoints', () => {
     it('shifts the bounding box center to the origin', () => {
       const { points, centerX, centerY } = normalizeFreeformPoints([
@@ -137,32 +103,6 @@ describe('freeform utils', () => {
         { x: 10, y: 10 },
         { x: -10, y: 10 },
       ]);
-    });
-  });
-
-  describe('simplifyFreeformPoints', () => {
-    it('thins consecutive points closer than the minimum distance', () => {
-      const simplified = simplifyFreeformPoints(
-        [
-          { x: 0, y: 0 },
-          { x: 1, y: 0 },
-          { x: 2, y: 0 },
-          { x: 10, y: 0 },
-          { x: 10, y: 0 }, // duplicate
-          { x: 10, y: 5 },
-        ],
-        3
-      );
-      expect(simplified).toEqual([
-        { x: 0, y: 0 },
-        { x: 10, y: 0 },
-        { x: 10, y: 5 },
-      ]);
-    });
-
-    it('returns empty array for empty input and keeps single points', () => {
-      expect(simplifyFreeformPoints([])).toEqual([]);
-      expect(simplifyFreeformPoints([{ x: 1, y: 1 }])).toEqual([{ x: 1, y: 1 }]);
     });
   });
 

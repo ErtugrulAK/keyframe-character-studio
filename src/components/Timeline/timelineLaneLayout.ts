@@ -2,6 +2,7 @@ import { layerMaskChannel, layerMaskPathChannel, type AnimationChannel, type Tra
 import { CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/animation/channelKeyframeGroups';
 import { hasChannelDataForTemplate } from '../../utils/editor/timelineMetrics';
+import { sequenceIdOf } from '../../utils/animation/sequenceId';
 
 /**
  * The timeline lane layout as DATA.
@@ -48,6 +49,8 @@ export interface LaneContext {
   trimPath?: boolean;
   /** The layer has a Track Matte (its feather and strength can be keyed). */
   trackMatte?: boolean;
+  /** The layer follows a motion path (its progress can be keyed). */
+  motionPath?: boolean;
   /**
    * Show only the properties that animate (their keys change the value), like
    * After Effects' U: groups with no animating member are left out.
@@ -56,12 +59,13 @@ export interface LaneContext {
 }
 
 export const laneContextOf = (
-  part: { masks?: readonly { id: string; name: string }[]; trimPathEnabled?: boolean; trackMatte?: unknown } | undefined,
+  part: { masks?: readonly { id: string; name: string }[]; trimPathEnabled?: boolean; trackMatte?: unknown; motionPath?: unknown } | undefined,
   animatedOnly = false,
 ): LaneContext => ({
   masks: part?.masks?.map((mask) => ({ id: mask.id, name: mask.name })) ?? [],
   trimPath: part?.trimPathEnabled === true,
   trackMatte: Boolean(part?.trackMatte),
+  motionPath: Boolean(part?.motionPath),
   ...(animatedOnly ? { animatedOnly: true } : {}),
 });
 
@@ -94,7 +98,7 @@ const isAnimating = (track: Track, value: AnimationChannel): boolean => {
   const keys = (source ?? []) as Array<{ value: unknown; templateId?: string }>;
   const firstOf = new Map<string, string>();
   for (const key of keys) {
-    const template = key.templateId || 'Sequence';
+    const template = sequenceIdOf(key);
     const valueKey = JSON.stringify(key.value);
     const first = firstOf.get(template);
     if (first === undefined) firstOf.set(template, valueKey);
@@ -110,6 +114,7 @@ const isAnimating = (track: Track, value: AnimationChannel): boolean => {
  *   Trim Paths › Start, End, Offset          — only when the layer uses it
  *   Masks › <mask name> › Path, Feather, Opacity, Expansion
  *   Track Matte › Feather, Strength, Gradient Angle — only with a Track Matte
+ *   Motion Path › Progress                   — only when the layer follows a path
  *   Transform › Position › X, Y · Scale › X, Y · Rotation · Opacity
  * A group whose properties all lack keys still shows (it is where a key is
  * added), unless the Animated Only view is on.
@@ -146,6 +151,8 @@ export const resolveLaneRows = (track: Track, isGroupExpanded: GroupExpanded, co
   }
   const matteKeyed = MATTE_CHANNELS.some((value) => (track.channels?.[value]?.length ?? 0) > 0);
   if (context.trackMatte || matteKeyed) group('matte', 'Track Matte', true, MATTE_CHANNELS);
+  const pathKeyed = (track.channels?.motionPathProgress?.length ?? 0) > 0;
+  if (context.motionPath || pathKeyed) group('motionPath', 'Motion Path', true, ['motionPathProgress']);
   group('transform', 'Transform', true, [
     { group: 'position', label: 'Position', defaultExpanded: true, channels: ['x', 'y'] },
     { group: 'scale', label: 'Scale', defaultExpanded: false, channels: ['scaleX', 'scaleY'] },
@@ -170,7 +177,7 @@ interface LaneKeyframe {
   centerY: number;
 }
 
-const templateOf = (keyframe: { templateId?: string }): string => keyframe.templateId || 'Sequence';
+const templateOf = (keyframe: { templateId?: string }): string => sequenceIdOf(keyframe);
 
 /**
  * Every keyframe glyph one track's lanes show, with the id the diamond carries:

@@ -29,6 +29,7 @@ import { useSelection } from '../hooks/useSelection';
 import { usePlayback } from '../hooks/usePlayback';
 import { duplicateKeyframeGroup as duplicateKeyframeGroupTrack } from '../utils/animation/keyframeDuplicate';
 import { setKeyframeGroupEasing as setKeyframeGroupEasingTrack } from '../utils/animation/keyframeEasing';
+import { retimeFrame, retimeSection, sectionAt } from '../utils/animation/sectionRetime';
 import { pasteKeyframeGroupData, type KeyframeCopyPayload } from '../utils/animation/keyframeCopyPaste';
 import { useHistory, type HistoryDocumentState } from '../hooks/useHistory';
 import { useBroadcast } from '../hooks/useBroadcast';
@@ -57,6 +58,7 @@ import { useMaskEditing, type MaskDrawSession, type MaskDrawShape, type MaskEdit
 import { createLayerGroupingActions } from '../hooks/useLayerGrouping';
 import { createVectorArrangeActions } from '../hooks/useVectorArrangeAuthoring';
 import { createStageCropActions } from '../hooks/useStageCropAuthoring';
+import { resolveSceneAdjacentKeyframeFrame } from '../utils/editor/keyframeNavigation';
 import type { StageCropRect } from '../utils/geometry/stageCrop';
 import { resolveOutermostGroupAncestor } from '../utils/layers/layerGrouping';
 import { selectAllLayers } from '../utils/layers/layerSelection';
@@ -67,6 +69,9 @@ import { collectOwnedDeletionIds, describeDeletionScope, matteDependentsOfDeleti
 import type { ImportResult } from '../utils/persistence/importValidation';
 import type { PathOrderCommand } from '../utils/geometry/maskPathOrder';
 import { lockedLayerIds, lockedLayerNames, lockedLayersMessage, lockedMaskChanges, lockedMasksMessage, lockedPartChanges, lockedTrackChanges, type LockedMaskHit } from '../utils/layers/layerLocks';
+
+/** The longest a sequence may get (the timeline's DURATION field allows the same). */
+const MAX_SEQUENCE_SECONDS = 40;
 
 /** One confirmation the editor asks before a non-obvious edit. */
 export interface ConfirmationRequest {
@@ -121,6 +126,9 @@ export interface AnimatorContextType {
   setTimelineZoom: (zoom: number | ((prev: number) => number)) => void;
   showGrid: boolean;
   setShowGrid: (show: boolean) => void;
+  /** The broadcast safe-area guides on the stage (editor only, never exported). */
+  showSafeAreas: boolean;
+  setShowSafeAreas: (show: boolean) => void;
   showCoordinateOverlay: boolean;
   setShowCoordinateOverlay: (show: boolean) => void;
 
@@ -157,6 +165,14 @@ export interface AnimatorContextType {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  /** What each undo step did, oldest first (`utils/editor/historyLabels`); the first is where the history starts. */
+  historySteps: string[];
+  /** The step the scene is on now. */
+  historyIndex: number;
+  /** Go straight to a step (the History list); does nothing while an unfinished drawing owns Undo. */
+  jumpToHistoryStep: (index: number) => void;
+  /** An unfinished drawing owns Undo/Redo, so the list cannot be used until it is finished. */
+  historyLocked: boolean;
   /** An unfinished drawing claims Undo/Redo while it is open (null releases it). */
   registerDraftHistory: (owner: DraftHistoryOwner | null) => void;
   startBatchInteraction: () => void;
@@ -222,6 +238,8 @@ export interface AnimatorContextType {
   updateMotionTemplateDuration: (id: string, durationFrames: number) => void;
   /** Sets a sequence's OGraf step markers (`utils/animation/stepMarkers`). */
   setMotionTemplateStepMarkers: (id: string, markers: number[]) => void;
+  /** Retimes the step that holds `frame` to `length` frames (one undo step); false when refused or unchanged. */
+  retimeStep: (frame: number, length: number) => boolean;
   renamePartAndTrack: (partId: string, newName: string) => void;
   reorderParts: (dragIndex: number, hoverIndex: number) => void;
   deletePart: (partId: string) => void;
@@ -236,8 +254,8 @@ export interface AnimatorContextType {
   // Duplicate the keyframe frame-group at `frame` of `trackId` (27A pure helper)
   duplicateKeyframeGroup: (trackId: string, frame: number) => void;
   duplicateKeyframeGroupAt: (trackId: string, sourceFrame: number, targetFrame: number) => boolean;
-  /** Quick easing: the keyframe group at `frame` of `trackId` in the active sequence. One undo entry. */
-  setKeyframeGroupEasing: (trackId: string, frame: number, easing: EasingType) => void;
+  /** Quick easing: the keyframe group at `frame` of `trackId` in the active sequence; `controlPoints` sets a custom curve (Paste Easing). One undo entry. */
+  setKeyframeGroupEasing: (trackId: string, frame: number, easing: EasingType, controlPoints?: [number, number, number, number]) => void;
   // Paste a copied keyframe frame-group onto `trackId` at `frame` (28A pure helper)
   pasteKeyframeClipboard: (trackId: string, frame: number, payload: KeyframeCopyPayload) => void;
   applyMotionTransition: (partId: string, transitionType: string) => void;
@@ -477,6 +495,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [projectResolution, setProjectResolution] = useState<{ width: number; height: number }>({ width: 1920, height: 1080 });
   const templateSwitchedRef = useRef<() => void>(() => undefined);
   const {
+    templateCanvasStore,
     setTemplateCanvasStore,
     projectTemplates,
     setProjectTemplates,
@@ -560,6 +579,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setTimelineZoom,
     showGrid,
     setShowGrid,
+    showSafeAreas,
+    setShowSafeAreas,
     showCoordinateOverlay,
     setShowCoordinateOverlay,
     deletePart,
@@ -650,6 +671,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const {
     undo,
     redo,
+    jumpTo,
+    historySteps,
+    historyIndex,
     canUndo,
     canRedo,
     startBatchInteraction,
@@ -825,6 +849,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     redo();
   }, [draftHistory, redo]);
+  const jumpToHistoryStep = useCallback((index: number) => {
+    if (!draftHistory) jumpTo(index);
+  }, [draftHistory, jumpTo]);
 
   const { pathVertex, selectPathVertex, convertToEditablePath: convertShapeToPath, setPartPath, deleteSelectedPathVertex } = usePathEditing({
     characterParts,
@@ -978,19 +1005,55 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Quick easing (timeline menu, F9): the keyframe groups of the active
   // sequence through the pure helper, as ONE undo entry.
-  const easeKeyframeGroups = useCallback((framesByTrack: ReadonlyMap<string, number[]>, easing: EasingType): boolean => {
+  const easeKeyframeGroups = useCallback((framesByTrack: ReadonlyMap<string, number[]>, easing: EasingType, controlPoints?: [number, number, number, number]): boolean => {
     if (framesByTrack.size === 0) return false;
     startBatchInteraction();
     editSetTracks((prev) => prev.map((track) => {
       const frames = framesByTrack.get(track.id);
-      return frames ? setKeyframeGroupEasingTrack(track, frames, activeTemplateId, easing).track : track;
+      return frames ? setKeyframeGroupEasingTrack(track, frames, activeTemplateId, easing, controlPoints).track : track;
     }));
     endBatchInteraction();
     return true;
   }, [activeTemplateId, editSetTracks, startBatchInteraction, endBatchInteraction]);
-  const setKeyframeGroupEasing = useCallback((trackId: string, frame: number, easing: EasingType) => {
-    easeKeyframeGroups(new Map([[trackId, [frame]]]), easing);
+  const setKeyframeGroupEasing = useCallback((trackId: string, frame: number, easing: EasingType, controlPoints?: [number, number, number, number]) => {
+    easeKeyframeGroups(new Map([[trackId, [frame]]]), easing, controlPoints);
   }, [easeKeyframeGroups]);
+  /**
+   * The step that holds `frame`, retimed to `length` frames
+   * (`utils/animation/sectionRetime`): its keys stretch from its start, later
+   * keys and markers move, the sequence's length follows. Keys, markers and
+   * length change in ONE undo step; a refusal changes nothing and says why.
+   */
+  const retimeStep = useCallback((frame: number, length: number): boolean => {
+    const template = motionTemplates.find((candidate) => candidate.id === activeTemplateId);
+    const durationFrames = template?.durationFrames ?? totalFrames;
+    const section = sectionAt(template?.stepMarkers, durationFrames, Math.round(frame));
+    const result = retimeSection({
+      tracks, templateId: activeTemplateId, markers: template?.stepMarkers, durationFrames, section, length,
+      maxDurationFrames: Math.round(MAX_SEQUENCE_SECONDS * fps),
+    });
+    if (!result.ok) {
+      const name = result.trackId ? tracks.find((track) => track.id === result.trackId)?.name : undefined;
+      showToast(
+        result.reason === 'collision'
+          ? `That length is too short: two keyframes of ${name ?? 'a layer'} would land on the same frame.`
+          : result.reason === 'locked'
+            ? `${name ?? 'A layer'} is locked; unlock it to retime this step.`
+            : `A step is at least 1 frame, and a sequence at most ${MAX_SEQUENCE_SECONDS} s.`,
+        'info',
+      );
+      return false;
+    }
+    if (!result.changed) return false;
+    startBatchInteraction();
+    editSetTracks(result.tracks);
+    updateMotionTemplateDuration(activeTemplateId, result.durationFrames);
+    setMotionTemplateStepMarkers(activeTemplateId, result.markers);
+    setTotalFrames(result.durationFrames);
+    setCurrentFrame(retimeFrame(Math.round(currentFrame), section.start, section.end, Math.round(length)));
+    endBatchInteraction();
+    return true;
+  }, [motionTemplates, activeTemplateId, totalFrames, currentFrame, tracks, fps, showToast, startBatchInteraction, editSetTracks, updateMotionTemplateDuration, setMotionTemplateStepMarkers, setTotalFrames, setCurrentFrame, endBatchInteraction]);
   /** F9 — Easy Ease on the frames of the selected keyframes. */
   const easySelectedKeyframes = useCallback((): boolean => {
     if (selectedKeyframeIds.length === 0) return false;
@@ -1011,6 +1074,37 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [easeKeyframeGroups, selectedKeyframeIds, tracks]);
 
   useKeyboardShortcuts({
+    keySelectedTransforms: () => {
+      const selected = new Set(selectedPartIds);
+      const keyable = tracks.filter((track) => selected.has(track.partId) && !track.locked);
+      if (keyable.length === 0) return false;
+      startBatchInteraction();
+      keyable.forEach((track) => addKeyframeToTrack(track.id, currentFrame));
+      endBatchInteraction();
+      return true;
+    },
+    stepFrame: (delta) => {
+      const next = Math.max(0, Math.min(totalFrames, Math.round(currentFrame) + delta));
+      if (next === currentFrame) return false;
+      setCurrentFrame(next);
+      return true;
+    },
+    goToFrameEdge: (edge) => {
+      const next = edge === 'start' ? 0 : totalFrames;
+      if (next === currentFrame) return false;
+      setCurrentFrame(next);
+      return true;
+    },
+    deselectAllLayers: () => {
+      setSelectedPartIds([]);
+      setSelectedPartId(null);
+    },
+    jumpToAdjacentKeyframe: (direction) => {
+      const frame = resolveSceneAdjacentKeyframeFrame({ tracks, parts: characterParts, activeTemplateId, partIds: selectedPartIds, frame: currentFrame, direction });
+      if (frame === null) return false;
+      setCurrentFrame(frame);
+      return true;
+    },
     easySelectedKeyframes,
     toggleSelectionLock,
     unlockAllLayers,
@@ -1126,6 +1220,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setIsPlaying,
     requestHistoryBaseline: requestBaselineReset,
     onRestoreRefused: (message) => showToast(message, 'error'),
+    projectTemplates,
+    templateCanvasStore,
+    onProjectTemplateSwitched: () => templateSwitchedRef.current(),
   });
 
 
@@ -1234,6 +1331,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setTimelineZoom,
     showGrid,
     setShowGrid,
+    showSafeAreas,
+    setShowSafeAreas,
     showCoordinateOverlay,
     setShowCoordinateOverlay,
     lastSavedAt,
@@ -1252,6 +1351,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     redo: draftAwareRedo,
     canUndo: draftHistory ? draftHistory.canUndo : canUndo,
     canRedo: draftHistory ? draftHistory.canRedo : canRedo,
+    historySteps,
+    historyIndex,
+    jumpToHistoryStep,
+    historyLocked: Boolean(draftHistory),
     registerDraftHistory,
     startBatchInteraction,
     endBatchInteraction,
@@ -1367,6 +1470,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     deleteMotionTemplate,
     updateMotionTemplateDuration,
     setMotionTemplateStepMarkers,
+    retimeStep,
   };
   // The same value as a subscription source: `useAnimatorSlice` readers
   // render only when the fields they read change, not on every frame. It is

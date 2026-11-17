@@ -21,6 +21,8 @@
  * runs while another tab may still hold a medium in its undo history.
  */
 
+import { sha256Hex } from './sha256';
+
 export const ASSET_REF_PREFIX = 'kcs-asset:';
 
 /** Media fields of a scene layer that can hold a data URL. */
@@ -44,11 +46,6 @@ const ASSET_REF_PATTERN = /kcs-asset:sha256-[0-9a-f]{64}/gu;
 export const isAssetRef = (value: unknown): value is string => typeof value === 'string' && value.startsWith(ASSET_REF_PREFIX);
 
 const isExternalizable = (value: unknown): value is string => typeof value === 'string' && value.startsWith('data:') && value.length >= MIN_EXTERNAL_LENGTH;
-
-const sha256Hex = async (text: string): Promise<string> => {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-};
 
 type SceneLike = { layers?: Array<Record<string, unknown>> };
 
@@ -185,7 +182,9 @@ const DB_NAME = 'kcs-assets';
 const STORE = 'assets';
 
 export const createIndexedDbAssetBackend = (factory: IDBFactory | undefined = globalThis.indexedDB): AssetBackend | null => {
-  if (!factory || typeof crypto === 'undefined' || !crypto.subtle) return null;
+  // No `crypto.subtle` (an http:// LAN address) is fine: references are hashed in
+  // plain JavaScript there, with the same digest (`sha256`).
+  if (!factory) return null;
   let opened: Promise<IDBDatabase> | null = null;
   const db = () => {
     opened ??= new Promise((resolve, reject) => {

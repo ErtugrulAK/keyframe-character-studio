@@ -28,6 +28,8 @@ export type OGrafDiagnosticCode =
   | 'OGRAF_INVALID_PROJECT'
   | 'OGRAF_INVALID_PUBLIC_FIELD'
   | 'OGRAF_INVALID_MAIN'
+  /** An image layer takes any picture from the playout: that picture is not in the package. */
+  | 'OGRAF_OPERATOR_IMAGE_ANY'
   /** Colour correction is drawn by the editor and GIF, not yet by the OGraf runtime. */
   | 'OGRAF_UNSUPPORTED_COLOR_CORRECTION'
   /** An effect-only mask would cut the layer in the OGraf runtime (it reads every mask as alpha). */
@@ -83,6 +85,8 @@ export interface OGrafPublicImageField {
   id: string;
   title?: string;
   defaultValue?: string;
+  /** The operator may give any safe image address (`utils/layers/operatorImage`), not only `options`. */
+  any?: boolean;
   options?: string[];
   layerId: string;
 }
@@ -92,6 +96,52 @@ export interface OGrafPublicColorField {
   defaultValue?: string;
   layerId: string;
   property: 'fillColor' | 'strokeColor';
+}
+
+/** A whole number the playout operator sets or counts with +1 / -1 buttons (`gddType: integer`). */
+export interface OGrafPublicNumberField {
+  id: string;
+  title?: string;
+  defaultValue: number;
+  layerId: string;
+}
+
+/** A clock the playout operator starts, pauses and resets (customActions `clock:<id>:start|pause|reset`). */
+export interface OGrafPublicClockField {
+  id: string;
+  title: string;
+  layerId: string;
+}
+
+/** What one preset sets on one layer. */
+export interface OGrafPresetEntry {
+  layerId: string;
+  text?: string;
+  show?: boolean;
+}
+
+/** The playout preset choice (`gddType: select`): '' = none, else one of `names`. */
+export interface OGrafPublicPresetField {
+  id: string;
+  title: string;
+  names: string[];
+  values: Record<string, OGrafPresetEntry[]>;
+}
+
+/** A button in the playout (OGraf `customActions`); `schema: null` = it takes no parameters. */
+export interface OGrafCustomAction {
+  id: string;
+  name: string;
+  description?: string;
+  schema: null;
+}
+
+/** A show/hide switch for the playout operator (`gddType: boolean`); hiding a layer hides its children. */
+export interface OGrafPublicToggleField {
+  id: string;
+  title?: string;
+  defaultValue: boolean;
+  layerId: string;
 }
 
 export interface OGrafPublicStateSchema {
@@ -139,6 +189,8 @@ export interface OGrafManifest {
   /** How long the normal (animated) actions take, in milliseconds. */
   actionDurations: Array<{ type: 'playAction' | 'stopAction' | 'updateAction'; duration: number }>;
   schema: OGrafPublicStateSchema;
+  /** The playout buttons; absent when the graphic has none. */
+  customActions?: OGrafCustomAction[];
   /** Added by the browser export when it could render the preview image. */
   thumbnails?: Array<{ file: string; resolution: { width: number; height: number } }>;
   renderRequirements?: Array<{
@@ -209,5 +261,9 @@ export interface ValidatedOGrafScene {
   publicTextFields: OGrafPublicTextField[];
   publicImageFields: OGrafPublicImageField[];
   publicColorFields: OGrafPublicColorField[];
+  publicToggleFields: OGrafPublicToggleField[];
+  publicNumberFields: OGrafPublicNumberField[];
+  publicPresetField?: OGrafPublicPresetField;
+  publicClockFields: OGrafPublicClockField[];
   canCompile: boolean;
 }

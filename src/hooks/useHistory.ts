@@ -1,7 +1,8 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import type { CharacterPart, MotionTemplate, Track } from '../types/animator';
 import type { SceneCoordinateSystem } from '../types/composition';
 import { deepFreeze, structurallyEqual } from '../utils/persistence/historySnapshot';
+import { describeHistory } from '../utils/editor/historyLabels';
 
 /**
  * The document-level authoring state a scene replacement carries.
@@ -317,9 +318,55 @@ export const useHistory = ({
     }
   }, [endBatchInteraction, setTracks, setCharacterParts, setMotionTemplates, restoreDocumentState, restoreSelection]);
 
+  /**
+   * Go straight to the state after step `index` (0 = where the history
+   * starts): the History list's click. It restores exactly what that many
+   * undos or redos would leave on screen, in one render, and like them it
+   * keeps the steps after it for redo until a new edit replaces them. The
+   * selection follows the same rule as undo/redo: going back puts back what
+   * the next step started from, going forward what the target step left.
+   */
+  const jumpTo = useCallback((index: number) => {
+    if (isBatchInteractingRef.current) {
+      endBatchInteraction();
+    }
+    const idx = historyIndexRef.current;
+    const stack = historyRef.current;
+    if (!Number.isInteger(index) || index < 0 || index >= stack.length || index === idx) return;
+    const targetState = stack[index];
+    isUndoRedoRef.current = true;
+    setTracks(targetState.tracks);
+    setCharacterParts(targetState.characterParts);
+    if (setMotionTemplates && targetState.motionTemplates) {
+      setMotionTemplates(targetState.motionTemplates);
+    }
+    if (targetState.document) restoreDocumentState(targetState.document);
+    if (restoreSelection) {
+      if (index < idx) {
+        const around = selectionAroundRef.current.get(stack[index + 1]);
+        const left = selectionAroundRef.current.get(stack[idx])?.after;
+        if (around?.before && shouldRestoreSelection(targetState.characterParts, left)) restoreSelection(around.before);
+      } else {
+        const around = selectionAroundRef.current.get(targetState);
+        const left = selectionAroundRef.current.get(stack[idx + 1])?.before;
+        if (around?.after && shouldRestoreSelection(targetState.characterParts, left)) restoreSelection(around.after);
+      }
+    }
+    setHistoryIndex(index);
+    historyIndexRef.current = index;
+  }, [endBatchInteraction, setTracks, setCharacterParts, setMotionTemplates, restoreDocumentState, restoreSelection]);
+
+  /** What each step did (`utils/editor/historyLabels`), named once per snapshot. */
+  const labelCacheRef = useRef(new WeakMap<object, string>());
+  // oxlint-disable-next-line react/refs
+  const historySteps = useMemo(() => describeHistory(history, labelCacheRef.current), [history]);
+
   return {
     undo,
     redo,
+    jumpTo,
+    historySteps,
+    historyIndex,
     canUndo,
     canRedo,
     startBatchInteraction,

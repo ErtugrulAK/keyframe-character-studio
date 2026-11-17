@@ -8,6 +8,10 @@ import { StyleClonerSection } from './style/StyleClonerSection';
 import { StyleParticleSection } from './style/StyleParticleSection';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
 import { ColorCorrectionCard } from './style/ColorCorrectionCard';
+import { ReplaceImageCard } from './style/ReplaceImageCard';
+import { LayerCropCard } from './style/LayerCropCard';
+import { MotionPathCard } from './style/MotionPathCard';
+import { OperatorControlCard } from './style/OperatorControlCard';
 import type { ColorCorrectionEffect, LayerMask } from '../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../types/composition';
 import { StyleMatteSection } from './style/StyleMatteSection';
@@ -39,6 +43,8 @@ interface StyleTabProps {
   /** Evaluated Trim Path at the current frame; the fields must show what the stage draws. */
   evaluatedTrim?: { start: number; end: number; offset: number };
   onUpdateTrimChannel?: (channel: TrimPathChannel, value: number) => void;
+  /** Writes the motion path progress at the current frame (`updateCurrentPropertyChannel`). */
+  onUpdateMotionPathProgress?: (value: number) => void;
   /** The keyframe buttons of the Track Matte's FEATHER and STRENGTH. */
   matteChannelKeys?: MatteChannelKeys;
   /** Opens/closes ONE undo entry around a completed color pointer gesture. */
@@ -88,6 +94,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   onSelectMatteTarget,
   evaluatedTrim,
   onUpdateTrimChannel,
+  onUpdateMotionPathProgress,
   matteChannelKeys,
   onColorInteractionStart,
   onColorInteractionEnd,
@@ -137,6 +144,20 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         onColorInteractionStart={onColorInteractionStart}
         onColorInteractionEnd={onColorInteractionEnd}
       />
+      {selectedPart.type !== 'mograph_cloner' && selectedPart.type !== 'particle_system' && !selectedPart.isGroup && (
+        <LayerCropCard part={selectedPart} onPartPropChange={handlePartPropChange} readOnlyReason={colorCorrection?.readOnlyReason ?? undefined} />
+      )}
+      {selectedPart.type !== 'mograph_cloner' && selectedPart.type !== 'particle_system' && !selectedPart.isGroup && (
+        <MotionPathCard
+          part={selectedPart}
+          characterParts={characterParts}
+          onPartPropChange={handlePartPropChange}
+          onUpdateProgress={onUpdateMotionPathProgress}
+        />
+      )}
+      {selectedPart.type === 'custom_image' && (
+        <ReplaceImageCard part={selectedPart} readOnlyReason={colorCorrection?.readOnlyReason ?? undefined} />
+      )}
       {colorCorrection && selectedPart.type === 'custom_image' && (
         <ColorCorrectionCard
           part={selectedPart}
@@ -160,6 +181,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
       )}
       <StyleClonerSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
       <StyleParticleSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
+      <OperatorControlCard part={selectedPart} characterParts={characterParts} onPartPropChange={handlePartPropChange} />
     </>
   );
   // The Masks tab: layer masks, Track Matte, legacy clip matte.

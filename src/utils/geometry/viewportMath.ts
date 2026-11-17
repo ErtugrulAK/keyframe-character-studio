@@ -45,29 +45,6 @@ export const getStageFitScale = (
   viewBox: { width: number; height: number },
 ): number => Math.min(width / viewBox.width, height / viewBox.height) || 1;
 
-interface StageCameraTransformInput {
-  view: StageCameraView;
-  stage: StageBox;
-  zoom: number;
-  viewBox: { width: number; height: number };
-}
-
-/**
- * CSS transform applied to the stage SVG. `transform-origin` is the element
- * centre, so the translate is plain screen pixels and the scale divides out the
- * layout fit — the rendered magnification stays `zoom * baseScale`.
- */
-export const getStageCameraTransform = ({
-  view,
-  stage,
-  zoom,
-  viewBox,
-}: StageCameraTransformInput): { translateX: number; translateY: number; scale: number } => ({
-  translateX: view.center.x - (stage.left + stage.width / 2),
-  translateY: view.center.y - (stage.top + stage.height / 2),
-  scale: (zoom * view.baseScale) / getStageFitScale(stage, viewBox),
-});
-
 interface ClientToCameraPointInput {
   view: StageCameraView;
   clientX: number;
@@ -305,3 +282,19 @@ export const getPartsInMarquee = (
   });
   return selected;
 };
+
+/**
+ * The zoom level that shows the stage at `scale` screen pixels per project
+ * pixel (1 = 100 %, the 1:1 view). The camera's magnification is
+ * `zoom * baseScale`, so the level is the ratio, kept inside the zoom range.
+ */
+export const zoomLevelForScale = (scale: number, baseScale: number): number =>
+  clampZoom(baseScale > 0 ? scale / baseScale : 1);
+
+/** The zoom level that fits the whole artboard in the stage box, with a margin on each side. */
+export const fitArtboardZoomLevel = (
+  stage: { width: number; height: number },
+  artboard: { width: number; height: number },
+  baseScale: number,
+  margin = 0.9,
+): number => zoomLevelForScale(Math.min(stage.width / artboard.width, stage.height / artboard.height) * margin, baseScale);

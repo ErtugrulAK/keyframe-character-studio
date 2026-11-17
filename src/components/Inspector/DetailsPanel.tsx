@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { InspectorFilterContext } from './inspectorFilter';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useAnimator } from '../../context/useAnimator';
 import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
@@ -24,6 +25,7 @@ import {
   Lock,
   MousePointerClick,
 } from 'lucide-react';
+import { sequenceIdOf } from '../../utils/animation/sequenceId';
 
 /** The Details tabs: what the layer looks like, what cuts it, how it relates and animates. */
 type DetailsTab = 'properties' | 'masks' | 'layer';
@@ -106,6 +108,7 @@ export const DetailsPanel: React.FC = () => {
    */
   const [detailsTab, setDetailsTab] = useRetainedUiState<DetailsTab>('inspector.details-tab', 'properties');
   const [tabPointer, setTabPointer] = useState(false);
+  const [propertyFilter, setPropertyFilter] = useState('');
   // An effect-only mask (drawing it, or editing it after the draw) belongs to
   // Color Correction, so it keeps the Properties tab.
   const editsEffectMask = sessionTarget?.kind === 'drawing-mask'
@@ -141,7 +144,7 @@ export const DetailsPanel: React.FC = () => {
     ? (() => {
       const scope = activeTemplateId || 'Sequence';
       const control = (channel: 'matteFeather' | 'matteStrength' | 'matteGradientAngle', shown: number) => {
-        const keys = (selectedTrack.channels?.[channel] ?? []).filter((key) => (key.templateId || 'Sequence') === scope);
+        const keys = (selectedTrack.channels?.[channel] ?? []).filter((key) => sequenceIdOf(key) === scope);
         const atFrame = keys.find((key) => key.frame === currentFrame);
         return {
           state: atFrame ? 'key' as const : keys.length > 0 ? 'animated' as const : 'off' as const,
@@ -223,8 +226,8 @@ export const DetailsPanel: React.FC = () => {
     const scope = activeTemplateId || 'Sequence';
     const track = tracks.find((t) => t.partId === selectedPartId);
     if (!track) return 0;
-    const channelKeys = Object.values(track.channels ?? {}).reduce((sum, keys) => sum + keys.filter((k) => (k.templateId || 'Sequence') === scope).length, 0);
-    return channelKeys + (track.keyframes ?? []).filter((k) => (k.templateId || 'Sequence') === scope).length;
+    const channelKeys = Object.values(track.channels ?? {}).reduce((sum, keys) => sum + keys.filter((k) => sequenceIdOf(k) === scope).length, 0);
+    return channelKeys + (track.keyframes ?? []).filter((k) => sequenceIdOf(k) === scope).length;
   })();
 
   const handleClearAnimation = () => {
@@ -248,6 +251,8 @@ export const DetailsPanel: React.FC = () => {
   };
 
   return (
+    // "Filter properties…" reaches every card of the open tab (`inspectorFilter`).
+    <InspectorFilterContext.Provider value={propertyFilter}>
     <div className="details-container">
       {/* 1. Header Bar */}
       <div className="details-header">
@@ -264,7 +269,15 @@ export const DetailsPanel: React.FC = () => {
             <span className="actor-main-name" title={selectedPart.name}>{selectedPart.name}</span>
             <span className="actor-type-label">{layerTypeLabel(selectedPart)}</span>
           </div>
-
+          <input
+            type="search"
+            className="input-control details-filter-input"
+            aria-label="Filter properties"
+            placeholder="Filter properties…"
+            value={propertyFilter}
+            onChange={(event) => setPropertyFilter(event.target.value)}
+            onKeyDown={(event) => { if (event.key === 'Escape' && propertyFilter) { event.stopPropagation(); setPropertyFilter(''); } }}
+          />
         </div>
       ) : (
         <div className="details-empty-state">
@@ -349,6 +362,7 @@ export const DetailsPanel: React.FC = () => {
               handlePartColorChange={handlePartColorChange}
               evaluatedTrim={evaluatedTrim}
               onUpdateTrimChannel={updateCurrentPropertyChannel}
+              onUpdateMotionPathProgress={(value) => updateCurrentPropertyChannel('motionPathProgress', value)}
               maskEditTargetId={maskEditTarget?.ownerPartId === selectedPart.id ? maskEditTarget.maskId : null}
               onEditMaskOnCanvas={(maskId) => {
                 const refusal = enterMaskEditing(selectedPart.id, maskId);
@@ -408,6 +422,7 @@ export const DetailsPanel: React.FC = () => {
               handlePartColorChange={handlePartColorChange}
               evaluatedTrim={evaluatedTrim}
               onUpdateTrimChannel={updateCurrentPropertyChannel}
+              onUpdateMotionPathProgress={(value) => updateCurrentPropertyChannel('motionPathProgress', value)}
               maskEditTargetId={maskEditTarget?.ownerPartId === selectedPart.id ? maskEditTarget.maskId : null}
               onEditMaskOnCanvas={(maskId) => {
                 const refusal = enterMaskEditing(selectedPart.id, maskId);
@@ -477,5 +492,6 @@ export const DetailsPanel: React.FC = () => {
         }}
       />
     </div>
+    </InspectorFilterContext.Provider>
   );
 };

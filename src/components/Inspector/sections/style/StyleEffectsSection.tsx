@@ -3,6 +3,7 @@ import type { CharacterPart } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { CompactColorControl } from './CompactColorControl';
 import { StyleCard } from './StyleCard';
+import { LayerEffectsControls } from './LayerEffectsControls';
 
 interface StyleEffectsSectionProps {
   selectedPart: CharacterPart;
@@ -49,7 +50,7 @@ export const StyleEffectsSection: React.FC<StyleEffectsSectionProps> = ({
       {/* The shadow colour carries no alpha channel, so the picker omits the
           alpha controls rather than exposing a dead slider. */}
       <CompactColorControl
-        label="SHADOW / GLOW COLOR"
+        label="SHADOW COLOR"
         value={selectedPart.shadowColor || lastColor}
         fallback={DEFAULT_SHADOW_COLOR}
         onColorChange={(value) => onPartPropChange('shadowColor', value)}
@@ -65,5 +66,11 @@ export const StyleEffectsSection: React.FC<StyleEffectsSectionProps> = ({
       )}
     </div>
   );
-  return embedded ? controls : <StyleCard title="EFFECTS" collapsible retainKey="effects">{controls}</StyleCard>;
+  const allControls = (
+    <>
+      {controls}
+      <LayerEffectsControls selectedPart={selectedPart} onPartPropChange={onPartPropChange} onColorInteractionStart={onColorInteractionStart} onColorInteractionEnd={onColorInteractionEnd} />
+    </>
+  );
+  return embedded ? allControls : <StyleCard title="EFFECTS" collapsible retainKey="effects">{allControls}</StyleCard>;
 };

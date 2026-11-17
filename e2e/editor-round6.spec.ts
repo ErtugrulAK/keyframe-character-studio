@@ -3,8 +3,10 @@
  * undo keeping the selection, the live marquee preview and Shift/Alt applying
  * the moment they are pressed.
  */
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { armTool } from './fixtures/toolbarTools';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -119,7 +121,9 @@ test('the Text tool places nothing on a plain click, and its preview fits the bo
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   await page.mouse.move(to.x, to.y, { steps: 6 });
-  const area = (await page.getByTestId('text-creation-area').boundingBox())!;
+  // QA 2026-11-13 (qa23): only the text's dashed frame is drawn, no shaded area.
+  await expect(page.getByTestId('text-creation-area')).toHaveCount(0);
+  const area = { x: from.x, y: from.y, width: to.x - from.x, height: to.y - from.y };
   const ink = (await page.getByTestId('text-creation-preview').boundingBox())!;
   expect(ink.x).toBeGreaterThanOrEqual(area.x - 1);
   expect(ink.x + ink.width).toBeLessThanOrEqual(area.x + area.width + 1);
@@ -206,4 +210,710 @@ test('Alt on a corner handle scales about the centre', async ({ page }) => {
   expect(Math.abs(Number(layer.y))).toBeLessThan(1);
   expect(Number(layer.scaleX)).toBeCloseTo(1.5, 1);
   expect(Number(layer.scaleY)).toBeCloseTo(50 / 30, 1);
+});
+
+test('K keys the transform of every selected layer as one undo step', async ({ page }) => {
+  // Round 6 (OGraf Studio review, "Key transform"): one key for the selection.
+  await seed(page, [rect('a', 'Alpha', -150, 0), rect('b', 'Beta', 150, 0)]);
+  await page.locator('[role="tree"] [data-layer-id="a"]').click();
+  await page.locator('[role="tree"] [data-layer-id="b"]').click({ modifiers: ['Shift'] });
+  await page.locator('.stage-canvas-container').hover();
+  await page.keyboard.press('k');
+  const keyed = async () => {
+    await savedLayers(page);
+    return page.evaluate((key) => (JSON.parse(localStorage.getItem(key) ?? '{}').tracks as Array<{ partId: string; channels: Record<string, Array<{ frame: number }>> }>)
+      .map((track) => [track.partId, (track.channels.x ?? []).map((k) => k.frame)]), STORAGE_KEY);
+  };
+  expect(await keyed()).toEqual([['a', [0]], ['b', [0]]]);
+  await page.keyboard.press('Control+z');
+  expect(await keyed()).toEqual([['a', []], ['b', []]]);
+});
+
+test('the zoom bar shows and sets the real zoom, 1:1 and Fit', async ({ page }) => {
+  // Round 6 (OGraf Studio review): a zoom bar; 100 % is one project pixel per screen pixel.
+  await seed(page);
+  const artboard = page.locator('rect.canvas-bg[filter]');
+  const width = async () => (await artboard.boundingBox())!.width;
+  await page.getByRole('combobox', { name: 'Zoom presets' }).selectOption('25');
+  await expect.poll(width).toBeCloseTo(1920 * 0.25, 0);
+  await expect(page.getByRole('textbox', { name: 'Zoom percentage' })).toHaveValue('25%');
+  await page.getByRole('group', { name: 'Zoom and guides' }).getByRole('button', { name: 'Actual size (1:1)' }).click();
+  await expect.poll(width).toBeCloseTo(1920, 0);
+  const field = page.getByRole('textbox', { name: 'Zoom percentage' });
+  await field.fill('40');
+  await field.press('Enter');
+  await expect.poll(width).toBeCloseTo(1920 * 0.4, 0);
+  await page.getByRole('group', { name: 'Zoom and guides' }).getByRole('button', { name: 'Fit the artboard' }).click();
+  const stage = await stageBox(page);
+  await expect.poll(async () => {
+    const box = (await artboard.boundingBox())!;
+    return box.x >= stage.x && box.y >= stage.y && box.x + box.width <= stage.x + stage.width && box.y + box.height <= stage.y + stage.height
+      && Math.abs(box.x + box.width / 2 - (stage.x + stage.width / 2)) < 2;
+  }).toBe(true);
+});
+
+test('the safe-area guides frame 93 % and 90 % of the artboard, and are off by default', async ({ page }) => {
+  // Round 6 (OGraf Studio review): EBU R95 action-safe and title-safe guides.
+  await seed(page);
+  await expect(page.getByTestId('stage-safe-areas')).toHaveCount(0);
+  await page.getByRole('group', { name: 'Zoom and guides' }).getByRole('button', { name: 'Toggle safe areas' }).click();
+  const artboard = (await page.locator('rect.canvas-bg[filter]').boundingBox())!;
+  const action = (await page.getByTestId('safe-area-action').boundingBox())!;
+  const title = (await page.getByTestId('safe-area-title').boundingBox())!;
+  expect(action.width / artboard.width).toBeCloseTo(0.93, 2);
+  expect(title.height / artboard.height).toBeCloseTo(0.9, 2);
+  expect(action.x + action.width / 2).toBeCloseTo(artboard.x + artboard.width / 2, 0);
+});
+
+test('Replace Image swaps the picture and keeps the layer, its animation and its width', async ({ page }) => {
+  // Round 6 (OGraf Studio review): replace an image without rebuilding the layer.
+  const pixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  await seed(page, [{ id: 'img', name: 'Photo', type: 'custom_image', x: 100, y: -40, rotation: 15, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, width: 100, height: 100, imageUrl: pixel }]);
+  await page.evaluate((key) => {
+    const doc = JSON.parse(localStorage.getItem(key) ?? '{}');
+    doc.tracks[0].channels = { x: [{ id: 'kx', frame: 0, value: 100, easing: 'linear', templateId: 'Sequence' }, { id: 'kx2', frame: 30, value: 300, easing: 'linear', templateId: 'Sequence' }] };
+    localStorage.setItem(key, JSON.stringify(doc));
+  }, STORAGE_KEY);
+  await page.reload();
+  await page.locator('[role="tree"] [data-layer-id="img"]').click();
+  const wide = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 40;
+    canvas.height = 20;
+    const context = canvas.getContext('2d')!;
+    context.fillStyle = '#3080ff';
+    context.fillRect(0, 0, 40, 20);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  await page.getByRole('button', { name: 'Expand IMAGE' }).click();
+  await expect(page.getByRole('button', { name: 'Replace Image…' })).toBeVisible();
+  await page.getByTestId('replace-image-input').setInputFiles({ name: 'wide.png', mimeType: 'image/png', buffer: Buffer.from(wide, 'base64') });
+  await expect.poll(async () => (await savedLayers(page)).find((layer) => layer.id === 'img')?.height).toBe(50);
+  const layer = (await savedLayers(page)).find((candidate) => candidate.id === 'img')!;
+  expect(layer.width).toBe(100);
+  expect(layer.rotation).toBe(15);
+  expect(String(layer.imageUrl)).not.toBe(pixel);
+  const keys = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').tracks[0].channels.x.map((k: { frame: number; value: number }) => [k.frame, k.value]), STORAGE_KEY);
+  expect(keys).toEqual([[0, 100], [30, 300]]);
+  await page.keyboard.press('Control+z');
+  await expect.poll(async () => (await savedLayers(page)).find((candidate) => candidate.id === 'img')?.height).toBe(100);
+});
+
+test('New from Template opens a ready-made lower third, fitted in view, in the empty tab', async ({ page }) => {
+  // Round 6 (OGraf Studio review): start from a ready-made graphic.
+  await seed(page);
+  await page.getByRole('menubar').getByRole('menuitem', { name: 'File' }).click();
+  await page.getByRole('menuitem', { name: 'New from Template…' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New from Template' });
+  await dialog.getByRole('combobox', { name: 'Frame rate' }).selectOption('25');
+  await dialog.getByRole('button', { name: /^Lower Third/ }).click();
+  await expect(dialog).toHaveCount(0);
+  for (const name of ['Bar', 'Accent', 'Name', 'Title']) {
+    await expect(page.locator('.actor-node', { has: page.locator('.actor-name', { hasText: new RegExp(`^${name}$`) }) })).toHaveCount(1);
+  }
+  // The empty tab took the graphic and its name (no second tab).
+  await expect(page.locator('.header-tab.active')).toContainText('Lower Third');
+  await expect(page.locator('.header-tab:not(.add-tab)')).toHaveCount(1);
+  // The five-second sequence at 25 fps.
+  await expect(page.locator('.timecode-total')).toHaveText('/ 00:05:00');
+  // Seek past the entrance: the bar hugs the name (narrower than its authored 820 px) and holds the text.
+  const field = page.getByRole('textbox', { name: 'Current time' });
+  await field.fill('2s');
+  await field.press('Enter');
+  const box = async (id: string) => (await page.locator(`.stage-canvas-container [data-part-id="${id}"]`).first().boundingBox())!;
+  await expect.poll(async () => {
+    const [bar, name] = [await box('bar'), await box('title')];
+    return bar.x <= name.x && bar.x + bar.width >= name.x + name.width && bar.width < name.width * 2;
+  }).toBe(true);
+  // The whole artboard is in view.
+  const stage = await stageBox(page);
+  const artboard = (await page.locator('rect.canvas-bg[filter]').boundingBox())!;
+  expect(artboard.x).toBeGreaterThanOrEqual(stage.x);
+  expect(artboard.x + artboard.width).toBeLessThanOrEqual(stage.x + stage.width);
+});
+
+test('a text types itself out, set in the Inspector and kept after a reload', async ({ page }) => {
+  // Round 6 (OGraf Studio review): text effects over time.
+  await seed(page, [{ id: 't', name: 'Score', type: 'custom_text', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, textValue: 'HELLO WORLD', fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' }]);
+  await page.locator('[role="tree"] [data-layer-id="t"]').click();
+  const expand = page.getByRole('button', { name: 'Expand TEXT EFFECTS' });
+  if (await expand.count()) await expand.click();
+  await page.getByLabel('ANIMATE TEXT').selectOption('typewriter');
+  const drawn = page.locator('.stage-canvas-container [data-part-id="t"] text').first();
+  const seek = async (time: string) => {
+    const field = page.getByRole('textbox', { name: 'Current time' });
+    await field.fill(time);
+    await field.press('Enter');
+  };
+  // One second at 30 fps: half way, HELLO is shown and the rest holds its place, transparent.
+  const width = (await drawn.boundingBox())!.width;
+  await seek('15f');
+  await expect(drawn.locator('[data-text-effect-hidden]')).toHaveText(' WORLD');
+  expect(await drawn.evaluate((node) => node.firstChild?.textContent)).toBe('HELLO');
+  expect(Math.abs((await drawn.boundingBox())!.width - width)).toBeLessThan(2);
+  await seek('1s');
+  await expect(drawn.locator('[data-text-effect-hidden]')).toHaveCount(0);
+
+  // Kept by the autosave and after a reload.
+  const saved = (await savedLayers(page)).find((layer) => layer.id === 't') as unknown as { textEffect: unknown };
+  expect(saved.textEffect).toEqual({ kind: 'typewriter', startFrame: 0, durationFrames: 30 });
+  await page.reload();
+  await page.locator('[role="tree"] [data-layer-id="t"]').click();
+  await seek('15f');
+  await expect(page.locator('.stage-canvas-container [data-part-id="t"] [data-text-effect-hidden]')).toHaveText(' WORLD');
+
+});
+
+test('a countdown text counts down on the timeline and holds at zero', async ({ page }) => {
+  await seed(page, [{ id: 'c', name: 'Clock', type: 'custom_text', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, textValue: 'Text', fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' }]);
+  await page.locator('[role="tree"] [data-layer-id="c"]').click();
+  const expand = page.getByRole('button', { name: 'Expand TEXT EFFECTS' });
+  if (await expand.count()) await expand.click();
+  await page.getByLabel('ANIMATE TEXT').selectOption('countdown');
+  const drawn = page.locator('.stage-canvas-container [data-part-id="c"] text').first();
+  const seek = async (time: string) => {
+    const field = page.getByRole('textbox', { name: 'Current time' });
+    await field.fill(time);
+    await field.press('Enter');
+  };
+  await seek('0');
+  await expect(drawn).toHaveText('01:00');
+  await seek('1s');
+  await expect(drawn).toHaveText('00:59');
+  // The text was given the starting reading, so the layer is laid out at that size.
+  expect((await savedLayers(page)).find((layer) => layer.id === 'c')?.textValue).toBe('01:00');
+});
+
+test('the artboard backdrop can be light, a checkerboard or a picture, and is remembered', async ({ page }) => {
+  // Round 6 (OGraf Studio review): judge a graphic on light, checker or real footage.
+  await seed(page);
+  const artboard = page.locator('rect.canvas-bg[filter]');
+  const backdrop = page.getByRole('combobox', { name: 'Artboard backdrop' });
+  await expect(artboard).toHaveAttribute('data-backdrop', 'dark');
+  await backdrop.selectOption('light');
+  await expect(artboard).toHaveAttribute('fill', '#f4f4f4');
+  await backdrop.selectOption('checker');
+  await expect(artboard).toHaveAttribute('fill', 'url(#artboard-checker)');
+  await expect(page.locator('pattern#artboard-checker')).toHaveCount(1);
+
+  const picture = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 18;
+    const context = canvas.getContext('2d')!;
+    context.fillStyle = '#2a6';
+    context.fillRect(0, 0, 32, 18);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  await page.getByTestId('artboard-backdrop-input').setInputFiles({ name: 'footage.png', mimeType: 'image/png', buffer: Buffer.from(picture, 'base64') });
+  await expect(page.getByTestId('artboard-backdrop-image')).toHaveCount(1);
+  await expect(backdrop).toHaveValue('image');
+
+  // A picture is for this session; light or checker is remembered in this browser.
+  await backdrop.selectOption('light');
+  await page.reload();
+  await expect(page.locator('rect.canvas-bg[filter]')).toHaveAttribute('fill', '#f4f4f4');
+  // Never part of the scene.
+  const saved = await page.evaluate((key) => localStorage.getItem(key) ?? '', STORAGE_KEY);
+  expect(saved).not.toContain('backdrop');
+});
+
+test('Filter properties keeps only the matching Inspector cards, opened', async ({ page }) => {
+  // Round 6 (OGraf Studio review): find a property without opening every card.
+  await seed(page, [rect('a', 'Alpha', 0, 0)]);
+  await page.locator('[role="tree"] [data-layer-id="a"]').click();
+  const filter = page.getByRole('searchbox', { name: 'Filter properties' });
+  const titles = page.locator('.details-container .inspector-section-title');
+  await expect(titles.filter({ hasText: /^TRANSFORM$/ })).toHaveCount(1);
+  await filter.fill('glow');
+  await expect(titles.filter({ hasText: /^TRANSFORM$/ })).toHaveCount(0);
+  // The glow lives under the appearance's effects: shown, open.
+  await expect(page.getByLabel('Glow Enabled')).toBeVisible();
+  await filter.press('Escape');
+  await expect(filter).toHaveValue('');
+  await expect(titles.filter({ hasText: /^TRANSFORM$/ })).toHaveCount(1);
+});
+
+test('a layer follows a drawn path: linked in the Inspector, walking it on the timeline, kept after a reload', async ({ page }) => {
+  // Round 6: motion path. A straight 400-unit path from (-200, 0) to (200, 0).
+  const road = {
+    id: 'road', name: 'Road', type: 'custom_freeform', x: -200, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1,
+    fillColor: '#000000', fillEnabled: false, strokeColor: '#ffffff', strokeEnabled: true, strokeWidth: 4,
+    path: { version: 1, coordinateSpace: 'local', closed: false, points: [{ id: 'p0', x: 0, y: 0, kind: 'corner' }, { id: 'p1', x: 400, y: 0, kind: 'corner' }] },
+  };
+  const ball = { id: 'ball', name: 'Ball', type: 'custom_circle', x: 300, y: 300, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 2, fillColor: '#22d3ee', strokeColor: '#000000', width: 40, height: 40 };
+  await seed(page, [road, ball]);
+  await page.locator('[role="tree"] [data-layer-id="ball"]').click();
+  await page.getByRole('button', { name: 'Expand MOTION PATH' }).click();
+  await page.getByLabel('Follow path').selectOption('road');
+
+  const centre = async () => {
+    const box = await page.locator('.stage-canvas-container [data-part-id="ball"]').first().boundingBox();
+    if (!box) throw new Error('no ball');
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+  const seek = async (time: string) => {
+    const field = page.getByRole('textbox', { name: 'Current time' });
+    await field.fill(time);
+    await field.press('Enter');
+  };
+  const expectAt = async (x: number, y: number) => {
+    const want = await screenOf(page, x, y);
+    await expect.poll(async () => Math.abs((await centre()).x - want.x)).toBeLessThan(1.5);
+    expect(Math.abs((await centre()).y - want.y)).toBeLessThan(1.5);
+  };
+  await seek('0');
+  await expectAt(-200, 0);
+  await seek('2s');
+  await expectAt(200, 0);
+  // The link is saved with the scene and walks the same after a reload.
+  expect((await savedLayers(page)).find((layer) => layer.id === 'ball')?.motionPath).toMatchObject({ sourcePartId: 'road' });
+  await page.reload();
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  await seek('2s');
+  await expectAt(200, 0);
+});
+
+test('History lists the undo steps by name; a click goes to that step and a new edit replaces the later ones', async ({ page }) => {
+  await seed(page, [rect('a', 'Alpha', -200, 0), rect('b', 'Beta', 200, 0)]);
+  const tree = page.locator('[role="tree"]');
+  await tree.locator('[data-layer-id="a"]').click();
+  await page.keyboard.press('Delete');
+  await expect(tree.locator('[data-layer-id="a"]')).toHaveCount(0);
+  // Drag Beta on the stage: one move, one step.
+  const from = await screenOf(page, 200, 0);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 40, from.y + 30, { steps: 5 });
+  await page.mouse.up();
+
+  await page.getByRole('menubar', { name: 'Editor menu' }).getByRole('menuitem', { name: 'Edit', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'History…' }).click();
+  const panel = page.getByRole('dialog', { name: 'History' });
+  const steps = panel.locator('.history-step-label');
+  await expect(steps).toHaveText(['Start', 'Delete Alpha', 'Move Beta']);
+  await expect(panel.locator('.history-step[aria-current="step"]')).toHaveText(/Move Beta/);
+
+  // Back to the start: Alpha is there again; the later steps wait, dimmed, for redo.
+  await panel.getByRole('button', { name: /Start/ }).click();
+  await expect(tree.locator('[data-layer-id="a"]')).toHaveCount(1);
+  await expect(panel.locator('.history-step.undone')).toHaveCount(2);
+  // Forward again in one click, then back one and edit: the step after is replaced.
+  await panel.getByRole('button', { name: /Move Beta/ }).click();
+  await expect(tree.locator('[data-layer-id="a"]')).toHaveCount(0);
+  await panel.getByRole('button', { name: /Delete Alpha/ }).click();
+  await tree.locator('[data-layer-id="b"]').click();
+  await page.keyboard.press('Delete');
+  await expect(steps).toHaveText(['Start', 'Delete Alpha', 'Delete Beta']);
+  await panel.getByRole('button', { name: 'Close history' }).click();
+  await expect(panel).toHaveCount(0);
+});
+
+test('a double-click on a text types into it on the canvas: Enter keeps it as one undo step, Escape puts it back', async ({ page }) => {
+  await seed(page, [{ id: 't', name: 'Title', type: 'custom_text', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, textValue: 'HELLO', fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' }]);
+  const drawn = page.locator('.stage-canvas-container [data-part-id="t"] text').first();
+  const field = page.getByTestId('canvas-text-editor');
+  const open = async () => {
+    const box = (await drawn.boundingBox())!;
+    // Two presses a hand's width apart in time, as a person double-clicks.
+    await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height / 2, { delay: 40 });
+    await expect(field).toBeFocused();
+  };
+
+  await open();
+  // The field stands on the text, with its content selected: typing replaces it.
+  await expect(field).toHaveValue('HELLO');
+  // (Selecting the text opened its options bar, which resized the stage: the field follows.)
+  await expect.poll(async () => {
+    const text = (await drawn.boundingBox())!;
+    const over = (await field.boundingBox())!;
+    return Math.max(Math.abs(over.x + over.width / 2 - (text.x + text.width / 2)), Math.abs(over.y + over.height / 2 - (text.y + text.height / 2)));
+  }).toBeLessThan(3);
+  await page.keyboard.type('GOAL 2-1');
+  // The drawing follows every keystroke.
+  await expect(drawn).toHaveText('GOAL 2-1');
+  await page.keyboard.press('Enter');
+  await expect(field).toHaveCount(0);
+  await expect(page.locator('[role="tree"] [data-layer-id="t"]')).toHaveAttribute('aria-selected', 'true');
+  expect((await savedLayers(page)).find((layer) => layer.id === 't')!.textValue).toBe('GOAL 2-1');
+
+  // The whole edit is one undo step.
+  await page.keyboard.press('Control+z');
+  await expect(drawn).toHaveText('HELLO');
+  await page.keyboard.press('Control+Shift+z');
+  await expect(drawn).toHaveText('GOAL 2-1');
+
+  // Escape puts the text back and leaves nothing to undo; the layer stays selected.
+  await open();
+  await page.keyboard.type('OOPS');
+  await expect(drawn).toHaveText('OOPS');
+  await page.keyboard.press('Escape');
+  await expect(field).toHaveCount(0);
+  await expect(drawn).toHaveText('GOAL 2-1');
+  await expect(page.locator('[role="tree"] [data-layer-id="t"]')).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Control+z');
+  await expect(drawn).toHaveText('HELLO');
+
+  // A click elsewhere on the canvas keeps what was typed.
+  await page.keyboard.press('Control+Shift+z');
+  await open();
+  await page.keyboard.type('FINAL');
+  const stage = await stageBox(page);
+  await page.mouse.click(stage.x + 40, stage.y + stage.height - 40);
+  await expect(field).toHaveCount(0);
+  await expect(drawn).toHaveText('FINAL');
+});
+
+test('template tabs come back after a reload, the open one still open, a closed tab\'s picture kept by reference', async ({ page }) => {
+  // A noisy picture, large enough to be stored by reference (small ones stay inline):
+  // the closed tab's picture goes to the media store and the saved tabs name it.
+  await page.goto('/');
+  const png = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 48;
+    canvas.height = 48;
+    const context = canvas.getContext('2d')!;
+    const pixels = context.createImageData(48, 48);
+    let seedValue = 7;
+    for (let index = 0; index < pixels.data.length; index += 1) {
+      seedValue = (seedValue * 48271) % 2147483647;
+      pixels.data[index] = index % 4 === 3 ? 255 : seedValue % 256;
+    }
+    context.putImageData(pixels, 0, 0);
+    return canvas.toDataURL('image/png');
+  });
+  expect(png.length).toBeGreaterThan(2048);
+  await seed(page, [
+    rect('a', 'Alpha', -200, 0),
+    { id: 'pic', name: 'Picture', type: 'custom_image', x: 200, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 2, width: 200, height: 200, imageUrl: png, fillColor: '#ffffff', strokeColor: '#000000' },
+  ]);
+  const tree = page.locator('[role="tree"]');
+  await page.getByTitle('Create New Template').click();
+  await page.getByPlaceholder('Template name (e.g. LowerThird_v2)...').fill('Score');
+  await page.getByRole('button', { name: 'Create Template', exact: true }).click();
+  await expect(tree.locator('[data-layer-id="a"]')).toHaveCount(0);
+  await armTool(page, 'Rectangle');
+  const stage = await stageBox(page);
+  await page.mouse.move(stage.x + stage.width / 2 - 40, stage.y + stage.height / 2 - 30);
+  await page.mouse.down();
+  await page.mouse.move(stage.x + stage.width / 2 + 40, stage.y + stage.height / 2 + 30, { steps: 4 });
+  await page.mouse.up();
+  await expect(tree.locator('[data-layer-id]')).toHaveCount(1);
+  await savedLayers(page);
+
+  const workspace = await page.evaluate(() => localStorage.getItem('KCS_WORKSPACE_V1'));
+  expect(workspace).not.toBeNull();
+  expect(workspace).not.toContain('data:image');
+
+  await page.reload();
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  const tabs = page.locator('.header-template-tabs .header-tab:not(.add-tab) > span');
+  await expect(tabs).toHaveText(['Template', 'Score']);
+  await expect(page.locator('.header-tab.active > span')).toHaveText('Score');
+  await expect(tree.locator('[data-layer-id]')).toHaveCount(1);
+  await page.getByTitle('Template: Template').click();
+  await expect(tree.locator('[data-layer-id="a"]')).toHaveCount(1);
+  await expect(page.locator('.stage-canvas-container [data-part-id="pic"] image').first()).toHaveAttribute('href', /^data:image\/png/);
+});
+
+test('a Polygon from the shape tool: its corners and inner radius change the outline, not the size, and are kept after a reload', async ({ page }) => {
+  await seed(page, []);
+  await armTool(page, 'Polygon');
+  const stage = await stageBox(page);
+  await page.mouse.move(stage.x + stage.width / 2 - 60, stage.y + stage.height / 2 - 60);
+  await page.mouse.down();
+  await page.mouse.move(stage.x + stage.width / 2 + 60, stage.y + stage.height / 2 + 60, { steps: 4 });
+  await page.mouse.up();
+  const layer = page.locator('[role="tree"] [data-layer-id]');
+  await expect(layer).toHaveCount(1);
+  const id = (await layer.getAttribute('data-layer-id'))!;
+  const outline = page.locator(`.stage-canvas-container [data-part-id="${id}"] polygon`).last();
+  const corners = async () => (await outline.getAttribute('points'))!.trim().split(/\s+/u).length;
+  // A new Polygon is a pentagon.
+  await expect.poll(corners).toBe(5);
+  const size = (await outline.boundingBox())!;
+
+  await layer.click();
+  const expand = page.getByRole('button', { name: 'Expand APPEARANCE' });
+  if (await expand.count()) await expand.click();
+  await page.locator('#appearance-polygon-corners').fill('6');
+  await expect.poll(corners).toBe(6);
+  await page.locator('#appearance-polygon-inner').fill('50');
+  await expect.poll(corners).toBe(12);
+  // The same box: the settings never resize the layer.
+  const after = (await outline.boundingBox())!;
+  expect(Math.abs(after.width - size.width)).toBeLessThan(2);
+  expect(Math.abs(after.height - size.height)).toBeLessThan(2);
+
+  // One undo step per setting.
+  await page.keyboard.press('Control+z');
+  await expect.poll(corners).toBe(6);
+  await page.keyboard.press('Control+Shift+z');
+  await expect.poll(corners).toBe(12);
+
+  const saved = (await savedLayers(page)).find((entry) => entry.id === id) as unknown as { polygon: unknown };
+  expect(saved.polygon).toEqual({ sides: 6, innerRatio: 0.5 });
+  await page.reload();
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  await expect.poll(corners).toBe(12);
+});
+
+test('All caps shows a text in capitals and keeps what was typed; one undo step, kept after a reload', async ({ page }) => {
+  await seed(page, [{ id: 't', name: 'Title', type: 'custom_text', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, textValue: 'Goal for Ankara', fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' }]);
+  await page.locator('[role="tree"] [data-layer-id="t"]').click();
+  const drawn = page.locator('.stage-canvas-container [data-part-id="t"] text').first();
+  const caps = page.getByRole('toolbar', { name: 'Text options' }).getByRole('button', { name: 'All caps' });
+  const typed = page.getByRole('toolbar', { name: 'Text options' }).getByLabel('Text content');
+  const width = (await drawn.boundingBox())!.width;
+
+  await caps.click();
+  await expect(caps).toHaveAttribute('aria-pressed', 'true');
+  await expect(drawn).toHaveText('GOAL FOR ANKARA');
+  // What was typed stays as typed; the selection frame follows the wider capitals.
+  await expect(typed).toHaveValue('Goal for Ankara');
+  expect((await drawn.boundingBox())!.width).toBeGreaterThan(width);
+
+  await page.keyboard.press('Control+z');
+  await expect(drawn).toHaveText('Goal for Ankara');
+  await page.keyboard.press('Control+Shift+z');
+  await expect(drawn).toHaveText('GOAL FOR ANKARA');
+
+  const saved = (await savedLayers(page)).find((layer) => layer.id === 't')!;
+  expect(saved.textValue).toBe('Goal for Ankara');
+  expect(saved.textCase).toBe('upper');
+  await page.reload();
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  await expect(drawn).toHaveText('GOAL FOR ANKARA');
+});
+
+test('Copy / Paste Easing moves only the curve, and Add Keyframe Here keys a lane without changing the motion', async ({ page }) => {
+  // Round 6 (OGraf Studio review): the timeline right-click menu.
+  await page.goto('/');
+  const kf = (id: string, frame: number, value: number, easing = 'linear') => ({ id, frame, value, easing });
+  await page.evaluate(([key, value]) => { localStorage.clear(); localStorage.setItem(key, value); }, [STORAGE_KEY, JSON.stringify({
+    version: 1, coordinateSystem: 'project-unit-center-v1', width: 1920, height: 1080, fps: 30, totalFrames: 60,
+    layers: [rect('a', 'Alpha', 0, -100), rect('b', 'Beta', 0, 100)],
+    tracks: [
+      { id: 'track-a', partId: 'a', name: 'Alpha', color: '#22d3ee', visible: true, locked: false, expanded: false, keyframes: [], channels: { x: [kf('a0', 0, 0, 'easeOut'), kf('a30', 30, 300)] } },
+      { id: 'track-b', partId: 'b', name: 'Beta', color: '#22d3ee', visible: true, locked: false, expanded: false, keyframes: [], channels: { x: [kf('b0', 0, 0), kf('b30', 30, 300)] } },
+    ],
+  })] as const);
+  await page.reload();
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  const savedX = async (partId: string) => {
+    await savedLayers(page);
+    return page.evaluate(([key, id]) => (JSON.parse(localStorage.getItem(key) ?? '{}').tracks as Array<{ partId: string; channels: { x: Array<{ frame: number; value: number; easing: string }> } }>)
+      .find((track) => track.partId === id)!.channels.x.map((k) => [k.frame, Math.round(k.value), k.easing]), [STORAGE_KEY, partId] as [string, string]);
+  };
+
+  await page.locator('.keyframe-diamond[data-keyframe-id="a0"]').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Copy Easing' }).click();
+  await page.locator('.keyframe-diamond[data-keyframe-id="b0"]').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Paste Easing' }).click();
+  expect(await savedX('b')).toEqual([[0, 0, 'easeOut'], [30, 300, 'linear']]);
+  await page.keyboard.press('Control+z');
+  expect(await savedX('b')).toEqual([[0, 0, 'linear'], [30, 300, 'linear']]);
+
+  // Beta's X lane, frame 15: halfway along a linear 0 → 300 segment.
+  await page.getByRole('button', { name: 'Expand properties of Beta' }).click();
+  const lane = page.locator('[data-owner-part-id="b"] .ue-channel-lane[data-lane-channel="x"]');
+  const box = (await lane.boundingBox())!;
+  const frameX = await page.locator('.keyframe-diamond[data-keyframe-id="b30"]').evaluate((el) => {
+    const r = el.getBoundingClientRect(); return r.left + r.width / 2;
+  });
+  const zeroX = await page.locator('.keyframe-diamond[data-keyframe-id="b0"]').evaluate((el) => {
+    const r = el.getBoundingClientRect(); return r.left + r.width / 2;
+  });
+  await page.mouse.click((zeroX + frameX) / 2, box.y + box.height / 2, { button: 'right' });
+  await page.getByRole('menuitem', { name: 'Add Keyframe Here' }).click();
+  expect(await savedX('b')).toEqual([[0, 0, 'linear'], [15, 150, 'linear'], [30, 300, 'linear']]);
+});
+
+test('Playout presets: add from current values, edit a value, show it in the editor, one undo step each', async ({ page }) => {
+  // OGraf live controls, step 3: one choice in the playout sets many values.
+  const textLayer = (id: string, name: string, textValue: string, y: number) => ({ id, name, type: 'custom_text', x: 0, y, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, textValue, fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' });
+  await seed(page, [textLayer('h', 'Home', 'Home team', -100), textLayer('a', 'Away', 'Away team', 100)]);
+  await page.getByRole('menubar').getByRole('menuitem', { name: 'File' }).click();
+  await page.getByRole('menuitem', { name: 'Playout Presets…' }).click();
+  const panel = page.getByRole('dialog', { name: 'Playout presets' });
+  await expect(panel).toBeVisible();
+
+  await panel.getByLabel('New preset name').fill('Game 1');
+  await panel.getByRole('button', { name: 'Add preset from current values' }).click();
+  const homeCell = panel.getByLabel('Home in Game 1', { exact: true });
+  await expect(homeCell).toHaveValue('Home team');
+  const saved = async () => (await savedLayers(page)).find((layer) => layer.id === 'h') as unknown as { textValue: string; operatorPresets?: Array<{ name: string; text?: string }> };
+  expect((await saved()).operatorPresets).toEqual([{ name: 'Game 1', text: 'Home team' }]);
+
+  await homeCell.fill('Chiefs');
+  await homeCell.press('Enter');
+  expect((await saved()).operatorPresets).toEqual([{ name: 'Game 1', text: 'Chiefs' }]);
+
+  await panel.getByRole('button', { name: 'Show Game 1 in the editor' }).click();
+  expect((await saved()).textValue).toBe('Chiefs');
+  await page.keyboard.press('Control+z');
+  expect((await saved()).textValue).toBe('Home team');
+  expect((await saved()).operatorPresets).toEqual([{ name: 'Game 1', text: 'Chiefs' }]);
+
+  await panel.getByRole('button', { name: 'Delete preset Game 1' }).click();
+  expect((await saved()).operatorPresets).toBeUndefined();
+});
+
+test('PLAYOUT: an image layer can take any picture from the playout, and says what that means', async ({ page }) => {
+  // OGraf live controls, step 4: opt-in, per image layer.
+  const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  await seed(page, [{ id: 'p', name: 'Photo', type: 'custom_image', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, imageUrl: png, width: 100, height: 100, fillColor: '#ffffff', strokeColor: 'none' }]);
+  await page.locator('[role="tree"] [data-layer-id="p"]').click();
+  await openDetailsTab(page, 'Properties');
+  const expand = page.getByRole('button', { name: 'Expand PLAYOUT', exact: true });
+  if (await expand.count()) await expand.click();
+  await expect(page.getByText('Off: the operator can only choose among the images packaged with the graphic.')).toBeVisible();
+  const any = page.getByLabel('Operator can pick any image', { exact: true });
+  await any.check();
+  await expect(page.getByText(/It is not in the package, so it must be reachable where the graphic plays/)).toBeVisible();
+  expect((await savedLayers(page)).find((layer) => layer.id === 'p')!.operatorImageAny).toBe(true);
+  await page.keyboard.press('Control+z');
+  await expect(any).not.toBeChecked();
+});
+
+test('PLAYOUT: a stopwatch text can be run by the operator; a plain text says what it needs', async ({ page }) => {
+  // OGraf live controls, step 5: Start / Pause / Reset buttons on air.
+  const base = { type: 'custom_text', x: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' };
+  await seed(page, [
+    { ...base, id: 'c', name: 'Match clock', y: -100, textValue: '', textEffect: { kind: 'clock', mode: 'stopwatch', startFrame: 0, format: 'mm:ss' } },
+    { ...base, id: 't', name: 'Title', y: 100, textValue: 'Final' },
+  ]);
+  const open = async (id: string) => {
+    await page.locator(`[role="tree"] [data-layer-id="${id}"]`).click();
+    await openDetailsTab(page, 'Properties');
+    const expand = page.getByRole('button', { name: 'Expand PLAYOUT', exact: true });
+    if (await expand.count()) await expand.click();
+    return page.getByLabel('Operator starts and stops this clock', { exact: true });
+  };
+  await expect(await open('t')).toBeDisabled();
+  await expect(page.getByText('Needs a Stopwatch or Countdown (TEXT EFFECTS › ANIMATE TEXT).')).toBeVisible();
+
+  const clock = await open('c');
+  await clock.check();
+  await expect(page.getByText(/On air it waits at its start value until Start/)).toBeVisible();
+  expect((await savedLayers(page)).find((layer) => layer.id === 'c')!.operatorClock).toBe(true);
+  await page.keyboard.press('Control+z');
+  await expect(clock).not.toBeChecked();
+});
+
+test('PLAYOUT: a whole-number text can be a counter; other text says why not', async ({ page }) => {
+  // OGraf live controls, step 2: a number field with +1 / -1 buttons in the playout.
+  const textLayer = (id: string, name: string, textValue: string, y: number) => ({ id, name, type: 'custom_text', x: 0, y, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, textValue, fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' });
+  await seed(page, [textLayer('s', 'Home score', '0', -100), textLayer('w', 'Words', 'Final', 100)]);
+  const open = async (id: string) => {
+    await page.locator(`[role="tree"] [data-layer-id="${id}"]`).click();
+    await openDetailsTab(page, 'Properties');
+    const expand = page.getByRole('button', { name: 'Expand PLAYOUT', exact: true });
+    if (await expand.count()) await expand.click();
+    return page.getByLabel('Operator can count this number', { exact: true });
+  };
+
+  const words = await open('w');
+  await expect(words).toBeDisabled();
+  await expect(page.getByText(/The text must be a whole number/)).toBeVisible();
+
+  const score = await open('s');
+  await expect(score).toBeEnabled();
+  await score.check();
+  await expect(page.getByText('Exported as the number "Home score" with "+1" and "-1" buttons.')).toBeVisible();
+  expect((await savedLayers(page)).find((layer) => layer.id === 's')!.operatorCounter).toBe(true);
+  await page.keyboard.press('Control+z');
+  await expect(score).not.toBeChecked();
+});
+
+test('PLAYOUT: the operator show/hide switch is one undo step, saved, and refused for a Track Matte source', async ({ page }) => {
+  // OGraf live controls, step 1: the mark that makes a layer an on/off field in the playout.
+  await seed(page, [rect('a', 'Alpha', 0, 0), { ...rect('m', 'Masked', 0, 0), trackMatte: { enabled: true, sourceLayerId: 'a', mode: 'alpha' } }, rect('b', 'Beta', 0, 200)]);
+  const open = async (id: string) => {
+    await page.locator(`[role="tree"] [data-layer-id="${id}"]`).click();
+    await openDetailsTab(page, 'Properties');
+    const expand = page.getByRole('button', { name: 'Expand PLAYOUT', exact: true });
+    if (await expand.count()) await expand.click();
+    return page.getByLabel('Operator can show or hide this layer', { exact: true });
+  };
+
+  // A matte source is not offered.
+  await expect(await open('a')).toBeDisabled();
+
+  const beta = await open('b');
+  await expect(beta).toBeEnabled();
+  await beta.check();
+  await expect(page.getByText('Exported as "Show Beta", on by default.')).toBeVisible();
+  expect((await savedLayers(page)).find((layer) => layer.id === 'b')!.operatorToggle).toBe(true);
+
+  await page.keyboard.press('Control+z');
+  await expect(beta).not.toBeChecked();
+  expect((await savedLayers(page)).find((layer) => layer.id === 'b')!.operatorToggle).toBeUndefined();
+
+  await page.keyboard.press('Control+y');
+  await expect(beta).toBeChecked();
+  await savedLayers(page);
+  await page.reload();
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  await expect(await open('b')).toBeChecked();
+});
+
+test('Escape closes a timeline right-click menu and leaves the selection alone', async ({ page }) => {
+  // One level per Escape: the open menu is what the press cancels, not the selected layer.
+  await page.goto('/');
+  await page.evaluate(([key, value]) => { localStorage.clear(); localStorage.setItem(key, value); }, [STORAGE_KEY, JSON.stringify({
+    version: 1, coordinateSystem: 'project-unit-center-v1', width: 1920, height: 1080, fps: 30, totalFrames: 60,
+    layers: [rect('a', 'Alpha', 0, 0)],
+    tracks: [
+      { id: 'track-a', partId: 'a', name: 'Alpha', color: '#22d3ee', visible: true, locked: false, expanded: false, keyframes: [], channels: { x: [{ id: 'a0', frame: 0, value: 0, easing: 'linear' }, { id: 'a30', frame: 30, value: 300, easing: 'linear' }] } },
+    ],
+  })] as const);
+  await page.reload();
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  const row = page.locator('[role="tree"] [data-layer-id="a"]');
+  await row.click();
+  await expect(row).toHaveAttribute('aria-selected', 'true');
+
+  await page.locator('.keyframe-diamond[data-keyframe-id="a0"]').click({ button: 'right' });
+  const item = page.getByRole('menuitem', { name: 'Copy Easing' });
+  await expect(item).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(item).toBeHidden();
+  await expect(row).toHaveAttribute('aria-selected', 'true');
+});
+
+test('Page Up / Page Down step the playhead, Home / End go to the first / last frame, Ctrl+Shift+A deselects', async ({ page }) => {
+  // Round 6 (OGraf Studio review): the shortcuts a broadcast editor expects.
+  await seed(page, [rect('a', 'Alpha', 0, 0)]);
+  await page.getByRole('button', { name: 'Show the time in frames' }).click();
+  const field = page.getByRole('textbox', { name: 'Current time' });
+  await page.locator('.stage-canvas-container').click({ position: { x: 10, y: 10 } });
+  await page.keyboard.press('End');
+  await expect(field).toHaveValue(/^60/);
+  await page.keyboard.press('PageUp');
+  await expect(field).toHaveValue(/^59/);
+  await page.keyboard.press('Shift+PageUp');
+  await expect(field).toHaveValue(/^49/);
+  await page.keyboard.press('PageDown');
+  await expect(field).toHaveValue(/^50/);
+  await page.keyboard.press('Home');
+  await expect(field).toHaveValue(/^0/);
+  await page.locator('[role="tree"] [data-layer-id="a"]').click();
+  await expect(page.locator('[role="tree"] [data-layer-id="a"]')).toHaveAttribute('aria-selected', 'true');
+  await page.locator('.stage-canvas-container').hover();
+  await page.keyboard.press('Control+Shift+A');
+  await expect(page.locator('[role="tree"] [data-layer-id="a"]')).toHaveAttribute('aria-selected', 'false');
+});
+
+test('Help names the editor version, and Deselect shows its shortcut', async ({ page }) => {
+  await seed(page, [rect('a', 'Alpha', 0, 0)]);
+  const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
+  const bar = page.getByRole('menubar', { name: 'Editor menu' });
+  await bar.getByRole('menuitem', { name: 'Help', exact: true }).click();
+  const line = page.getByRole('menuitem', { name: /^Keyframe Character Studio / });
+  await expect(line).toBeDisabled();
+  await expect(line).toHaveText(`Keyframe Character Studio ${version}`);
+  await page.keyboard.press('Escape');
+  await bar.getByRole('menuitem', { name: 'Edit', exact: true }).click();
+  await expect(page.getByRole('menuitem', { name: /^Deselect/ })).toContainText('Ctrl+Shift+A');
 });

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { PropertyKeyframe, Track } from '../types/animator';
 import { effectiveSegmentAuthority } from '../utils/animation/defaults';
-import { setKeyframeGroupEasing } from '../utils/animation/keyframeEasing';
+import { readKeyframeGroupEasing, setKeyframeGroupEasing } from '../utils/animation/keyframeEasing';
+import { interpolateChannel } from '../utils/animation/defaults';
 
 const key = (id: string, frame: number, extra: Partial<PropertyKeyframe> = {}): PropertyKeyframe => ({ id, frame, value: frame, easing: 'linear', ...extra });
 
@@ -56,5 +57,46 @@ describe('setKeyframeGroupEasing', () => {
     const after = setKeyframeGroupEasing(before, [0, 10], 'Sequence', 'easeInOut').track;
     expect(after.channels!.x.map((k) => k.easing)).toEqual(['easeInOut', 'easeInOut', 'linear']);
     expect((after.maskChannels as Record<string, PropertyKeyframe[]>)['m1:maskOffsetX'][0].easing).toBe('easeInOut');
+  });
+});
+
+describe('Copy / Paste Easing', () => {
+  it('reads the one curve the keys at a frame start with', () => {
+    const before = track({ x: [key('x0', 0, { easing: 'easeOut' }), key('x30', 30)], y: [key('y0', 0, { easing: 'easeOut' }), key('y30', 30)] });
+    expect(readKeyframeGroupEasing(before, 0, 'Sequence')).toEqual({ easing: 'easeOut' });
+    expect(readKeyframeGroupEasing(before, 15, 'Sequence')).toBeNull();
+  });
+
+  it('gives no curve when the channels at the frame disagree', () => {
+    const before = track({ x: [key('x0', 0, { easing: 'easeOut' }), key('x30', 30)], y: [key('y0', 0, { easing: 'easeIn' }), key('y30', 30)] });
+    expect(readKeyframeGroupEasing(before, 0, 'Sequence')).toBeNull();
+  });
+
+  it('carries a temporal handle pair as the same cubic, so the pasted segment plays exactly the copied one', () => {
+    const source = track({ x: [
+      key('a', 0, { easing: 'bezier', bezierOut: { x: 0.8, y: 0.1 } }),
+      key('b', 30, { value: 300, bezierIn: { x: 0.2, y: 0.9 } }),
+    ] });
+    const curve = readKeyframeGroupEasing(source, 0, 'Sequence');
+    expect(curve).toEqual({ easing: 'bezier', controlPoints: [0.8, 0.1, 0.2, 0.9] });
+    const target = track({ x: [key('c', 0, { value: 0 }), key('d', 30, { value: 300 })] });
+    const pasted = setKeyframeGroupEasing(target, [0], 'Sequence', curve!.easing, curve!.controlPoints).track;
+    for (const frame of [3, 9, 15, 21, 27]) {
+      expect(interpolateChannel(pasted.channels!.x, frame, 0)).toBeCloseTo(interpolateChannel(source.channels!.x, frame, 0), 6);
+    }
+  });
+
+  it('pasting control points replaces the segment curve and leaves values and frames alone', () => {
+    const target = track({ x: [key('c', 0, { value: 5 }), key('d', 30, { value: 50, bezierIn: { x: 0.5, y: 0.5 } })] });
+    const after = setKeyframeGroupEasing(target, [0], 'Sequence', 'cubic_bezier', [0.1, 0.2, 0.3, 0.4]).track.channels!.x;
+    expect(after.map((k) => [k.id, k.frame, k.value])).toEqual([['c', 0, 5], ['d', 30, 50]]);
+    expect(after[0].bezierControlPoints).toEqual([0.1, 0.2, 0.3, 0.4]);
+    expect(after[1].bezierIn).toBeUndefined();
+    expect(effectiveSegmentAuthority(after[0], after[1])).toBe('controlPoints');
+  });
+
+  it('a hold copies as a hold', () => {
+    const before = track({ x: [key('a', 0, { easing: 'hold', bezierControlPoints: [0, 0, 1, 1] }), key('b', 30)] });
+    expect(readKeyframeGroupEasing(before, 0, 'Sequence')).toEqual({ easing: 'hold' });
   });
 });

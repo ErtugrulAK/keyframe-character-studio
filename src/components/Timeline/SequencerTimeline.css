@@ -1535,3 +1535,74 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   color: var(--kcs-accent);
   background: rgba(73, 141, 231, 0.18);
 }
+
+/* The playhead time is a field: type 25, 25f, 1.5s, 500ms or a timecode. */
+.timeline-header .timecode-input {
+  width: 74px;
+  min-width: 0;
+  padding: 1px 4px;
+  border: 1px solid transparent;
+  border-radius: var(--kcs-radius-control);
+  background: transparent;
+  font-family: var(--font-main);
+}
+.timeline-header .timecode-input:hover {
+  border-color: var(--kcs-border-default);
+}
+.timeline-header .timecode-input:focus {
+  outline: none;
+  border-color: var(--kcs-accent);
+  background: var(--kcs-bg-timeline);
+  text-align: left;
+}
+.timecode-mode-toggle {
+  min-width: 22px;
+  height: 18px;
+  padding: 0 4px;
+  border: 1px solid var(--kcs-border-default);
+  border-radius: var(--kcs-radius-control);
+  background: transparent;
+  color: var(--kcs-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.timecode-mode-toggle:hover {
+  color: var(--kcs-text-primary);
+}
+
+/* Retime step: the ruler's right-click menu. */
+.timeline-retime-menu {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.timeline-retime-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--kcs-text-primary);
+}
+.timeline-retime-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--kcs-text-muted);
+}
+.timeline-retime-row .duration-input {
+  width: 64px;
+  height: 24px;
+  padding: 0 4px;
+  background: var(--kcs-bg-input);
+  border: 1px solid var(--kcs-border-default);
+  border-radius: var(--kcs-radius-control);
+  color: var(--kcs-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.timeline-retime-hint {
+  margin: 0;
+  max-width: 220px;
+  font-size: 10.5px;
+  color: var(--kcs-text-muted);
+}

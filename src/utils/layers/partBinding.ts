@@ -83,11 +83,6 @@ export const selectionHasChainRelation = (parts: CharacterPart[], ids: readonly 
   return [...selected].some((id) => relationshipAncestorIds(parts, id).some((ancestor) => selected.has(ancestor)));
 };
 
-export const isRelationshipChainRelated = (parts: CharacterPart[], aId: string, bId: string): boolean => (
-  aId !== bId
-  && (relationshipAncestorIds(parts, aId).includes(bId) || relationshipAncestorIds(parts, bId).includes(aId))
-);
-
 /**
  * Bond the given parts to each other, dropping each one's links to parts outside
  * the group (a layer belongs to one bond at a time) and clearing any bond the

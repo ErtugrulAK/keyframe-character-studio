@@ -1,5 +1,9 @@
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import { readFileSync } from 'node:fs'
+
+/** The version Help shows (`__KCS_VERSION__`), read from package.json so a release bump carries it. */
+const kcsVersion = (JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }).version
 
 /**
  * DEV FRESHNESS CONTRACT — the dev entry DOCUMENT is never stored anywhere
@@ -42,6 +46,9 @@ export const devDocumentFreshness = (): Plugin => ({
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), devDocumentFreshness()],
+  define: {
+    __KCS_VERSION__: JSON.stringify(kcsVersion),
+  },
   server: {
     host: true,
   },

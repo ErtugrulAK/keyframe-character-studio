@@ -26,6 +26,11 @@ import { createGraphicRuntime } from './runtime/graphicRuntime';
 import { createShapeAppearance } from '../utils/layers/shapeAppearance';
 import { describePaint, describeText } from '../utils/layers/drawDescriptor';
 import { createLayoutModifiers, SHAPE_EXTENTS } from '../utils/layers/layoutModifiers';
+import { createTextEffects } from '../utils/animation/textEffects';
+import { createMotionPath } from '../utils/geometry/motionPath';
+import { createPolygonShape } from '../utils/geometry/polygonShape';
+import { createLayerEffects } from '../utils/layers/layerEffects';
+import { createLayerCrop } from '../utils/layers/layerCrop';
 import { createTrackMatteMarkup, SHAPE_BOUNDS } from './trackMatteMarkup';
 import { matteContentBlurBox } from '../utils/layers/matte';
 
@@ -68,6 +73,21 @@ export const runtimeDescribeText = (): string => sourceOf(describeText as (...ar
 export const runtimeTrackMatteMarkup = (): string => `(${sourceOf(createTrackMatteMarkup as (...args: never[]) => unknown)})(${JSON.stringify(SHAPE_BOUNDS)}, ${sourceOf(matteContentBlurBox as (...args: never[]) => unknown)})`;
 
 export const runtimeLayoutModifiers = (): string => `(${sourceOf(createLayoutModifiers as (...args: never[]) => unknown)})(${JSON.stringify(SHAPE_EXTENTS)})`;
+
+/** Text over time (typewriter, count): the editor's own rules, as an expression that evaluates to them. */
+export const runtimeTextEffects = (): string => `(${sourceOf(createTextEffects as (...args: never[]) => unknown)})()`;
+
+/** The motion path measure: where a follower sits, as an expression that evaluates to it. */
+export const runtimeMotionPath = (): string => `(${sourceOf(createMotionPath as (...args: never[]) => unknown)})()`;
+
+/** The Polygon shape's outline: the editor's own corners, as an expression that evaluates to them. */
+export const runtimePolygonShape = (): string => `(${sourceOf(createPolygonShape as (...args: never[]) => unknown)})()`;
+
+/** Drop shadow, glow, blur and blend mode: the editor's own filter, as an expression that evaluates to it. */
+export const runtimeLayerEffects = (): string => `(${sourceOf(createLayerEffects as (...args: never[]) => unknown)})()`;
+
+/** The layer crop: the editor's own clip, as an expression that evaluates to it. */
+export const runtimeLayerCrop = (): string => `(${sourceOf(createLayerCrop as (...args: never[]) => unknown)})()`;
 
 /**
  * The graphic runtime factory itself. Like the affine algebra it is one

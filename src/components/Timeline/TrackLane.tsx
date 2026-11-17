@@ -1,12 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import type { EasingType, Track, TrackChannel, AnimationChannel, LayerMaskChannel, LayerMaskPathChannel, PropertyKeyframe, PathKeyframe, Transform } from '../../types/animator';
-import { QUICK_EASINGS } from '../../utils/animation/keyframeEasing';
+import { QUICK_EASINGS, type SegmentCurve } from '../../utils/animation/keyframeEasing';
 import type { KeyframeCopyPayload } from '../../utils/animation/keyframeCopyPaste';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, KEYFRAME_DRAG_THRESHOLD_PX, KEYFRAME_GLYPH_GAP_PX, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/animation/channelKeyframeGroups';
 import { hasChannelDataForTemplate, resolveConnectorSegments } from '../../utils/editor/timelineMetrics';
 import { resolveLaneRows, type LaneContext } from './timelineLaneLayout';
 import { usePointerMenuPlacement } from '../../hooks/usePointerMenuPlacement';
+import { useDismissFloatingMenu } from '../../hooks/useDismissFloatingMenu';
+import { sequenceIdOf } from '../../utils/animation/sequenceId';
 
 interface TrackLaneProps {
   track: Track;
@@ -54,8 +56,26 @@ interface TrackLaneProps {
   kfClipboard: KeyframeCopyPayload | null;
   onCopyKeyframes: (trackId: string, frame: number) => void;
   onPasteKeyframes: (trackId: string, frame: number) => void;
+  /** The curve Copy Easing took (timeline-local, not persisted), or null. */
+  easingClipboard: SegmentCurve | null;
+  onCopyEasing: (trackId: string, frame: number) => void;
+  /** Puts the copied curve on the keyframe group at `frame` (one undo entry). */
+  onPasteEasing: (trackId: string, frame: number) => void;
+  /** Whether the keys at `frame` share one curve (Copy Easing is offered only then). */
+  canCopyEasing: (trackId: string, frame: number) => boolean;
+  /** Adds a key on `channel` at `frame` holding the value the layer has there, so the motion is unchanged. */
+  onInsertChannelKeyframe: (trackId: string, channel: AnimationChannel, partId: string, frame: number) => void;
   onFrameFromClientX: (clientX: number) => number;
 }
+
+/**
+ * The property lanes that offer "Add Keyframe Here": the channels whose value
+ * at any frame is the evaluated one (`resolveAuthoredLocalTransform`, the
+ * matte at that frame), so a key inserted there leaves the motion as it was.
+ * Mask, Trim Path and path-progress keys are added at the playhead from their
+ * row's "+" instead.
+ */
+const INSERTABLE_CHANNELS: ReadonlySet<AnimationChannel> = new Set<AnimationChannel>(['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'matteFeather', 'matteStrength']);
 
 /**
  * One track's lane group in the timeline grid: the parent lane with composite
@@ -157,6 +177,11 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
   kfClipboard,
   onCopyKeyframes,
   onPasteKeyframes,
+  easingClipboard,
+  onCopyEasing,
+  onPasteEasing,
+  canCopyEasing,
+  onInsertChannelKeyframe,
   onFrameFromClientX,
 }) => {
   const isTrackExpanded = track.expanded === true;
@@ -173,16 +198,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
   } | null>(null);
   const kfMenuRef = useRef<HTMLDivElement | null>(null);
   const kfMenuPlacement = usePointerMenuPlacement(kfMenuRef, kfMenu);
-  useEffect(() => {
-    if (!kfMenu) return;
-    const handleGlobalClick = (e: MouseEvent) => {
-      if (kfMenuRef.current && !kfMenuRef.current.contains(e.target as Node)) {
-        setKfMenu(null);
-      }
-    };
-    window.addEventListener('mousedown', handleGlobalClick);
-    return () => window.removeEventListener('mousedown', handleGlobalClick);
-  }, [kfMenu]);
+  useDismissFloatingMenu(kfMenuRef, kfMenu !== null, () => setKfMenu(null));
   const openKfMenu = (e: React.MouseEvent, frame: number, onDelete: () => void) => {
     e.preventDefault();
     e.stopPropagation();
@@ -196,21 +212,25 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
   const [pasteMenu, setPasteMenu] = useState<{ frame: number; x: number; y: number } | null>(null);
   const pasteMenuRef = useRef<HTMLDivElement | null>(null);
   const pasteMenuPlacement = usePointerMenuPlacement(pasteMenuRef, pasteMenu);
-  useEffect(() => {
-    if (!pasteMenu) return;
-    const handleGlobalClick = (e: MouseEvent) => {
-      if (pasteMenuRef.current && !pasteMenuRef.current.contains(e.target as Node)) {
-        setPasteMenu(null);
-      }
-    };
-    window.addEventListener('mousedown', handleGlobalClick);
-    return () => window.removeEventListener('mousedown', handleGlobalClick);
-  }, [pasteMenu]);
+  useDismissFloatingMenu(pasteMenuRef, pasteMenu !== null, () => setPasteMenu(null));
   const openPasteMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!kfClipboard) return; // no clipboard → no paste action offered
     setPasteMenu({ frame: onFrameFromClientX(e.clientX), x: e.clientX, y: e.clientY });
+  };
+
+  // "Add Keyframe Here" on an empty spot of a property lane: the exact
+  // right-clicked frame, through the same mouse→frame conversion as Paste.
+  const [laneMenu, setLaneMenu] = useState<{ channel: AnimationChannel; frame: number; x: number; y: number } | null>(null);
+  const laneMenuRef = useRef<HTMLDivElement | null>(null);
+  const laneMenuPlacement = usePointerMenuPlacement(laneMenuRef, laneMenu);
+  useDismissFloatingMenu(laneMenuRef, laneMenu !== null, () => setLaneMenu(null));
+  const openLaneMenu = (e: React.MouseEvent, channel: AnimationChannel) => {
+    if (!INSERTABLE_CHANNELS.has(channel) || track.locked) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setLaneMenu({ channel, frame: onFrameFromClientX(e.clientX), x: e.clientX, y: e.clientY });
   };
 
   const activeTmpl = activeTemplateId || 'Sequence';
@@ -220,7 +240,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
   const resolvedChannels = resolveTrackChannels(track, basePose);
   const useCanonical = hasChannelDataForTemplate(track, activeTmpl);
   const groups = groupChannelKeyframesByFrame(resolvedChannels, activeTmpl);
-  const activeKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
+  const activeKfs = (track.keyframes || []).filter((k) => sequenceIdOf(k) === activeTmpl);
   const sortedKfs = [...activeKfs].sort((a, b) => a.frame - b.frame);
   const selectedKeyframeIdSet = new Set(selectedKeyframeIds);
   /** Client X of the press that is still in flight, to tell a click from a drag. */
@@ -279,7 +299,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
         : ch.includes(':')
           ? track.maskChannels?.[ch as LayerMaskChannel]
           : resolvedChannels[ch as TrackChannel];
-      for (const keyframe of source ?? []) if ((keyframe.templateId || 'Sequence') === activeTmpl) frames.add(keyframe.frame);
+      for (const keyframe of source ?? []) if (sequenceIdOf(keyframe) === activeTmpl) frames.add(keyframe.frame);
     }
     return [...frames].sort((a, b) => a - b);
   };
@@ -297,10 +317,10 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
         ? track.maskChannels?.[ch as LayerMaskChannel]
         : resolvedChannels[ch as TrackChannel];
     const chKfs = [...(source ?? [])]
-      .filter((keyframe) => (keyframe.templateId || 'Sequence') === activeTmpl)
+      .filter((keyframe) => sequenceIdOf(keyframe) === activeTmpl)
       .sort((a, b) => a.frame - b.frame) as (PropertyKeyframe | PathKeyframe)[];
     return (
-      <div key={ch} className="ue-channel-lane" data-lane-channel={ch} style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }}>
+      <div key={ch} className="ue-channel-lane" data-lane-channel={ch} onContextMenu={(e) => openLaneMenu(e, ch)} style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }}>
         {chKfs.length > 0 && resolveConnectorSegments(
           chKfs.map((keyframe) => keyframe.frame),
           frameWidth,
@@ -548,6 +568,39 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
             Duplicate Keyframes
           </button>
           <div className="editor-context-menu-separator" role="separator" />
+          <button
+            type="button"
+            role="menuitem"
+            aria-label="Copy Easing"
+            disabled={!canCopyEasing(kfMenu.trackId, kfMenu.frame)}
+            title={canCopyEasing(kfMenu.trackId, kfMenu.frame)
+              ? 'Copy the easing curve that starts at this frame'
+              : 'The keyframes at this frame use different easings, so there is no single curve to copy'}
+            className="timeline-menu-item editor-context-menu-item"
+            onClick={() => {
+              onCopyEasing(kfMenu.trackId, kfMenu.frame);
+              setKfMenu(null);
+            }}
+          >
+            Copy Easing
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            aria-label="Paste Easing"
+            disabled={!easingClipboard}
+            title={easingClipboard
+              ? 'Give the keyframes at this frame the copied easing curve; their values and timing stay'
+              : 'Copy Easing from a keyframe first'}
+            className="timeline-menu-item editor-context-menu-item"
+            onClick={() => {
+              onPasteEasing(kfMenu.trackId, kfMenu.frame);
+              setKfMenu(null);
+            }}
+          >
+            Paste Easing
+          </button>
+          <div className="editor-context-menu-separator" role="separator" />
           {QUICK_EASINGS.map(({ easing, label }) => (
             <button
               key={easing}
@@ -577,6 +630,31 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
             }}
           >
             Delete Keyframe
+          </button>
+        </div>
+      )}
+
+      {/* Add Keyframe Here — an empty spot of a property lane */}
+      {laneMenu && (
+        <div
+          ref={laneMenuRef}
+          role="menu"
+          aria-label="Property lane actions"
+          className="editor-context-menu timeline-context-menu"
+          style={{ position: 'fixed', left: laneMenuPlacement?.left ?? laneMenu.x, top: laneMenuPlacement?.top ?? laneMenu.y, zIndex: 1000, minWidth: 160 }}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            aria-label="Add Keyframe Here"
+            title={`Add a keyframe at frame ${laneMenu.frame} with the value the layer has there; the motion stays the same`}
+            className="timeline-menu-item editor-context-menu-item"
+            onClick={() => {
+              onInsertChannelKeyframe(track.id, laneMenu.channel, track.partId, laneMenu.frame);
+              setLaneMenu(null);
+            }}
+          >
+            Add Keyframe Here
           </button>
         </div>
       )}

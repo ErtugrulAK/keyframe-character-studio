@@ -13,6 +13,8 @@ import type { WorldTransform } from '../../types/composition';
 import { interpolateTransform, interpolateChannel, lowerBound, sortedKeyframes } from './defaults';
 import { PART_ANCHOR_OFFSETS } from '../editor/constants';
 import { affineOfTransform, composeAffine, composeWorldTransform, withWorldAffine } from '../geometry/containerMath';
+import { followMotionPath, measureMotionPath, type MotionPathTable } from '../geometry/motionPath';
+import { resolveFreeformPath } from '../geometry/freeform';
 
 /**
  * The pose a layer owns WITHOUT any timeline animation: exactly the base the
@@ -86,6 +88,35 @@ const sceneIndexOf = (layers: CharacterPart[], tracks: AnimationTrackData[]): Sc
   return index;
 };
 
+/** A path layer's measured outline, once per (immutable) part object. */
+const measuredPaths = new WeakMap<CharacterPart, MotionPathTable | null>();
+const measuredPathOf = (part: CharacterPart): MotionPathTable | null => {
+  if (!measuredPaths.has(part)) measuredPaths.set(part, measureMotionPath(resolveFreeformPath(part)));
+  return measuredPaths.get(part) ?? null;
+};
+
+/** The parent a layer is placed in (a container or a boolean group), if any. */
+const placementParentOf = (part: CharacterPart): string | undefined => part.parentId ?? part.booleanGroupId;
+
+/**
+ * The path layer a part follows, when the link can be honoured: it is enabled,
+ * names another freeform layer with an outline to follow, and both are placed
+ * in the same parent (so the path's own transform maps straight into the
+ * follower's local space). Anything else follows nothing, and the layer keeps
+ * its own position, like a Track Matte whose source is missing.
+ */
+export const resolveMotionPathSource = (
+  part: CharacterPart,
+  parts: ReadonlyMap<string, CharacterPart>,
+): CharacterPart | undefined => {
+  const link = part.motionPath;
+  if (!link || link.enabled === false) return undefined;
+  const source = parts.get(link.sourcePartId);
+  if (!source || source.id === part.id || source.type !== 'custom_freeform') return undefined;
+  if (placementParentOf(source) !== placementParentOf(part)) return undefined;
+  return source;
+};
+
 /**
  * One scene's transform evaluator. Lookups go through an index instead of a
  * scan per layer and per parent level, and a world pose is computed once per
@@ -105,27 +136,63 @@ export const createTransformEvaluator = (
   const visiting = new Set<string>();
   let cycleHits = 0;
 
+  const following = new Set<string>();
+
+  /**
+   * A layer's pose in its parent's space: its channels over its authored pose,
+   * then its motion path, then its anchor.
+   *
+   * A layer that follows a path takes its position from the path at the
+   * keyed progress, carried through the path layer's own local pose; its own
+   * position keys add on top as an offset from its authored position, so an
+   * extra wiggle keyed on X still shows. Orient adds the direction of travel
+   * to its rotation. A chain of followers resolves through this same function;
+   * a loop of them (an invalid scene) leaves the second visit unpathed.
+   */
+  const localPose = (partId: string, frame: number): Transform => {
+    const part = index.parts.get(partId);
+    const track = index.tracks.get(partId);
+    // A layer with no animation track still inherits its parent: only the
+    // keyframe evaluation is skipped here, never the hierarchy resolution.
+    // Returning early left a static child at its local transform while the same
+    // child with an (empty) track was placed correctly.
+    const baseTransform = authoredBasePose(part);
+    let pose = track ? evaluateKeyframes(track, baseTransform, frame, activeTmpl) : baseTransform;
+
+    const source = part && !following.has(partId) ? resolveMotionPathSource(part, index.parts) : undefined;
+    const table = source ? measuredPathOf(source) : null;
+    if (part?.motionPath && source && table) {
+      following.add(partId);
+      const sourcePose = localPose(source.id, frame);
+      following.delete(partId);
+      const keys = keyframesOfTemplate(track?.channels?.motionPathProgress, activeTmpl);
+      const fallback = part.motionPath.progress ?? 0;
+      const progress = keys.length > 0 ? interpolateChannel(keys, frame, fallback) : fallback;
+      const onPath = followMotionPath(table, affineOfTransform(sourcePose), progress);
+      pose = {
+        ...pose,
+        x: onPath.x + (pose.x - baseTransform.x),
+        y: onPath.y + (pose.y - baseTransform.y),
+        rotation: pose.rotation + (part.motionPath.orient === true ? onPath.angle : 0),
+      };
+    }
+
+    if (part && part.anchor && part.anchor !== 'none') {
+      const ox = part.anchorOffsetX ?? 0;
+      const oy = part.anchorOffsetY ?? 0;
+      const offsets = PART_ANCHOR_OFFSETS[part.anchor] || PART_ANCHOR_OFFSETS.none;
+      pose = { ...pose, x: offsets.ax + ox, y: offsets.ay + oy };
+    }
+    return pose;
+  };
+
   const evaluate = (currentPartId: string, frame: number): WorldTransform => {
     const key = `${currentPartId}@${frame}`;
     const known = memo.get(key);
     if (known) return known;
     const hitsBefore = cycleHits;
     const part = index.parts.get(currentPartId);
-    const track = index.tracks.get(currentPartId);
-    // A layer with no animation track still inherits its parent: only the
-    // keyframe evaluation is skipped here, never the hierarchy resolution.
-    // Returning early left a static child at its local transform while the same
-    // child with an (empty) track was placed correctly.
-    const baseTransform = authoredBasePose(part);
-    const rawTransform = track ? evaluateKeyframes(track, baseTransform, frame, activeTmpl) : baseTransform;
-    let finalComputed = rawTransform;
-
-    if (part && part.anchor && part.anchor !== 'none') {
-      const ox = part.anchorOffsetX ?? 0;
-      const oy = part.anchorOffsetY ?? 0;
-      const offsets = PART_ANCHOR_OFFSETS[part.anchor] || PART_ANCHOR_OFFSETS.none;
-      finalComputed = { ...rawTransform, x: offsets.ax + ox, y: offsets.ay + oy };
-    }
+    let finalComputed = localPose(currentPartId, frame);
     if (visiting.has(currentPartId)) {
       cycleHits += 1;
       return finalComputed;

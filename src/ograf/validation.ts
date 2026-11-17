@@ -6,12 +6,17 @@ import {
   type OGrafExportDiagnostic,
   type OGrafExportOptions,
   type OGrafPublicColorField,
+  type OGrafPublicToggleField,
+  type OGrafPublicNumberField,
+  type OGrafPublicPresetField,
   type OGrafPublicImageField,
   type OGrafPublicTextField,
   type OGrafPublicStateSchema,
   type ValidatedOGrafScene,
 } from './types';
 import { resolveOGrafPublicControls } from './publicControls';
+import { COUNTER_LIMIT } from '../utils/layers/operatorCounter';
+import { OPERATOR_IMAGE_EXTENSIONS } from '../utils/layers/operatorImage';
 import { describeOGrafValueForDiagnostics } from './diagnostics';
 import { resolveMatteSource } from '../utils/layers/matte';
 const SUPPORTED_LAYER_TYPES: Record<string, true> = {
@@ -20,6 +25,7 @@ const SUPPORTED_LAYER_TYPES: Record<string, true> = {
   custom_circle: true,
   custom_triangle: true,
   custom_star: true,
+  custom_polygon: true,
   custom_diamond: true,
   custom_parallelogram: true,
   custom_capsule: true,
@@ -223,13 +229,13 @@ function validateLayerInput(layer: SceneLayer, diagnostics: OGrafExportDiagnosti
   validateFiniteFields(
     record,
     ['fillOpacity', 'strokeWidth', 'strokeOpacity', 'trimPathStart', 'trimPathEnd', 'trimPathOffset',
-      'shadowBlur', 'shadowOffsetX', 'shadowOffsetY', 'borderRadius', 'fontSize', 'width', 'height',
+      'shadowBlur', 'shadowOffsetX', 'shadowOffsetY', 'layerBlur', 'glowSize', 'glowStrength', 'borderRadius', 'fontSize', 'width', 'height',
       'inAnimDuration', 'outAnimDuration'],
     diagnostics,
     layer,
     'layer',
   );
-  for (const field of ['id', 'name', 'type', 'fillColor', 'strokeColor', 'textValue', 'fontFamily', 'textOrigin', 'imageUrl', 'videoUrl']) {
+  for (const field of ['id', 'name', 'type', 'fillColor', 'strokeColor', 'textValue', 'fontFamily', 'textOrigin', 'textCase', 'imageUrl', 'videoUrl']) {
     if (record[field] !== undefined && typeof record[field] !== 'string') {
       invalidProject(diagnostics, `Layer field "${field}" must be a string.`, layer, 'layer');
     }
@@ -330,12 +336,14 @@ function validatePublicFields(
   textFields: OGrafPublicTextField[],
   imageFields: OGrafPublicImageField[],
   colorFields: OGrafPublicColorField[],
+  toggleFields: OGrafPublicToggleField[],
+  numberFields: OGrafPublicNumberField[],
   layers: SceneLayer[],
   diagnostics: OGrafExportDiagnostic[],
 ): void {
   const ids = new Set<string>();
   const layerIds = new Set(layers.map((layer) => layer.id));
-  for (const field of [...textFields, ...imageFields, ...colorFields]) {
+  for (const field of [...textFields, ...imageFields, ...colorFields, ...toggleFields, ...numberFields]) {
     if (isPrototypeSensitiveKey(field.id)
       || !field.id
       || ids.has(field.id)
@@ -547,6 +555,9 @@ function createPublicStateSchema(
   textFields: OGrafPublicTextField[],
   imageFields: OGrafPublicImageField[],
   colorFields: OGrafPublicColorField[],
+  toggleFields: OGrafPublicToggleField[],
+  numberFields: OGrafPublicNumberField[],
+  presetField: OGrafPublicPresetField | undefined,
   assets: OGrafAssetPlan[],
 ): OGrafPublicStateSchema {
   const properties: Record<string, Record<string, unknown>> = Object.create(null);
@@ -564,6 +575,17 @@ function createPublicStateSchema(
   const packagedImageValues = assets.filter((asset) => asset.kind === 'image').map((asset) => asset.packagedPath);
   for (const field of imageFields) {
     if (isPrototypeSensitiveKey(field.id)) continue;
+    if (field.any) {
+      // GDD: a picture the operator picks; the playout shows its own file / address chooser.
+      properties[field.id] = {
+        type: 'string',
+        gddType: 'file-path/image-path',
+        gddOptions: { extensions: OPERATOR_IMAGE_EXTENSIONS },
+        ...(field.title ? { title: field.title, label: field.title } : {}),
+        ...(field.defaultValue !== undefined ? { default: field.defaultValue } : {}),
+      };
+      continue;
+    }
     // GDD: a choice among the packaged images; an image path does not name the graphic.
     properties[field.id] = {
       type: 'string',
@@ -584,6 +606,41 @@ function createPublicStateSchema(
       hidden: true,
       ...(field.title ? { title: field.title, label: field.title } : {}),
       ...(field.defaultValue !== undefined ? { default: field.defaultValue.toLowerCase() } : {}),
+    };
+  }
+  for (const field of toggleFields) {
+    if (isPrototypeSensitiveKey(field.id)) continue;
+    // GDD: an on/off switch in the playout UI.
+    properties[field.id] = {
+      type: 'boolean',
+      gddType: 'boolean',
+      ...(field.title ? { title: field.title, label: field.title } : {}),
+      default: field.defaultValue,
+    };
+  }
+  for (const field of numberFields) {
+    if (isPrototypeSensitiveKey(field.id)) continue;
+    // GDD: a whole number; the +1 / -1 buttons are the manifest's customActions.
+    properties[field.id] = {
+      type: 'integer',
+      gddType: 'integer',
+      minimum: -COUNTER_LIMIT,
+      maximum: COUNTER_LIMIT,
+      ...(field.title ? { title: field.title, label: field.title } : {}),
+      default: field.defaultValue,
+    };
+  }
+  if (presetField && !isPrototypeSensitiveKey(presetField.id)) {
+    // GDD: one choice; '' leaves every field as the operator set it.
+    properties[presetField.id] = {
+      type: 'string',
+      gddType: 'select',
+      title: presetField.title,
+      label: presetField.title,
+      description: 'Sets the values saved in the chosen preset. Choose None to use the fields as typed.',
+      enum: ['', ...presetField.names],
+      gddOptions: { labels: Object.fromEntries([['', 'None'], ...presetField.names.map((name) => [name, name])]) },
+      default: '',
     };
   }
   return { type: 'object', properties, additionalProperties: false };
@@ -667,7 +724,18 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
   }
   validateLayerHierarchy(sceneData.layers || [], diagnostics);
   const publicControls = resolveOGrafPublicControls(sceneData, options, assets);
-  validatePublicFields(publicControls.textFields, publicControls.imageFields, publicControls.colorFields, sceneData.layers || [], diagnostics);
+  validatePublicFields(publicControls.textFields, publicControls.imageFields, publicControls.colorFields, publicControls.toggleFields, publicControls.numberFields, sceneData.layers || [], diagnostics);
+  for (const field of publicControls.imageFields.filter((candidate) => candidate.any)) {
+    const layer = (sceneData.layers || []).find((candidate) => candidate.id === field.layerId);
+    diagnostics.push({
+      code: 'OGRAF_OPERATOR_IMAGE_ANY',
+      severity: 'WARNING',
+      message: `Image "${describeOGrafValueForDiagnostics(layer?.name || field.layerId)}" takes any picture the playout gives it; that picture is not part of the package and must be reachable where the graphic plays.`,
+      layerId: field.layerId,
+      ...(layer?.name ? { layerName: layer.name } : {}),
+      feature: 'public-state',
+    });
+  }
   const layerById = new Map((sceneData.layers || []).map((layer) => [layer.id, layer]));
   const relationships = new Map<string, string>();
   for (const layer of sceneData.layers || []) {
@@ -728,6 +796,9 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
     publicControls.textFields,
     publicControls.imageFields,
     publicControls.colorFields,
+    publicControls.toggleFields,
+    publicControls.numberFields,
+    publicControls.presetField,
     assets,
   );
   return {
@@ -738,6 +809,10 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
     publicTextFields: publicControls.textFields,
     publicImageFields: publicControls.imageFields,
     publicColorFields: publicControls.colorFields,
+    publicToggleFields: publicControls.toggleFields,
+    publicNumberFields: publicControls.numberFields,
+    publicClockFields: publicControls.clockFields,
+    ...(publicControls.presetField ? { publicPresetField: publicControls.presetField } : {}),
     canCompile: diagnostics.every((item) => item.severity !== 'ERROR'),
   };
 }

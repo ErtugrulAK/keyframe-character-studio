@@ -18,6 +18,7 @@ const track = (partId: string, overrides: Partial<Track> = {}): Track => ({
 
 const ctx = {
   undo: vi.fn(), redo: vi.fn(), canUndo: false, canRedo: true,
+  historySteps: ['Start', 'Add Alpha', 'Move Alpha'], historyIndex: 1, jumpToHistoryStep: vi.fn(), historyLocked: false,
   copySelectedPart: vi.fn(), pasteCopiedPart: vi.fn(), duplicateSelectedPart: vi.fn(), duplicateMirrored: vi.fn(),
   clipboardData: null as null | { part: CharacterPart },
   pasteAnimationOntoSelected: vi.fn(),
@@ -26,6 +27,9 @@ const ctx = {
   characterParts: [] as CharacterPart[], tracks: [] as Track[],
   convertToEditablePath: vi.fn(), resetSelectedTransforms: vi.fn(), setLayersLocked: vi.fn(), toggleTrackEditVisibility: vi.fn(),
   openShortcutReference: vi.fn(), reorderParts: vi.fn(),
+  projectResolution: { width: 1920, height: 1080 }, fps: 30,
+  importProject: vi.fn((_json: string, _name?: string) => ({ ok: true, diagnostics: [] })),
+  addProjectTemplate: vi.fn(), renameProjectTemplate: vi.fn(), activeProjectTemplateId: 'tab-1', showToast: vi.fn(),
 };
 const contextMenu = { selectAll: vi.fn(), deleteSelection: vi.fn() };
 
@@ -77,17 +81,60 @@ describe('MenuBar', () => {
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
-  it('File holds only what the header and toolbar do not: the library and project settings', () => {
+  it('File holds only what the header and toolbar do not: templates, the library, project settings and playout presets', () => {
     // QA 2026-11-13: File repeated the header's new template, Import, the four
-    // Export rows and Reset, and the toolbar's media button.
+    // Export rows and Reset, and the toolbar's media button. Round 6 added
+    // New from Template… (ready-made graphics; the header's + stays blank) and
+    // Playout Presets… (project-wide OGraf presets; no other control opens them).
     render(<MenuBar />);
     const rows = within(openMenu('File')).getAllByRole('menuitem').map((row) => row.textContent?.trim());
-    expect(rows).toEqual(['Library…', 'Project Settings…']);
+    expect(rows).toEqual(['New from Template…', 'Library…', 'Project Settings…', 'Playout Presets…']);
+  });
+
+  it('New from Template opens a recipe in the empty tab, named after it', () => {
+    ctx.characterParts = [];
+    render(<MenuBar />);
+    fireEvent.click(within(openMenu('File')).getByRole('menuitem', { name: 'New from Template…' }));
+    const dialog = screen.getByRole('dialog', { name: 'New from Template' });
+    fireEvent.click(within(dialog).getByRole('button', { name: /^Lower Third/ }));
+    expect(ctx.addProjectTemplate).not.toHaveBeenCalled();
+    expect(ctx.renameProjectTemplate).toHaveBeenCalledWith('tab-1', 'Lower Third');
+    const [json, name] = ctx.importProject.mock.calls[0];
+    expect(name).toBe('Lower Third');
+    expect(JSON.parse(json)).toMatchObject({ width: 1920, height: 1080, fps: 30 });
+    expect(screen.queryByRole('dialog', { name: 'New from Template' })).toBeNull();
+  });
+
+  it('New from Template opens in a new tab when the open one has layers, at the chosen size and rate', () => {
+    ctx.characterParts = [part('a')];
+    render(<MenuBar />);
+    fireEvent.click(within(openMenu('File')).getByRole('menuitem', { name: 'New from Template…' }));
+    const dialog = screen.getByRole('dialog', { name: 'New from Template' });
+    fireEvent.change(within(dialog).getByRole('combobox', { name: 'Canvas size' }), { target: { value: '1' } });
+    fireEvent.change(within(dialog).getByRole('combobox', { name: 'Frame rate' }), { target: { value: '50' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: /^Scoreboard/ }));
+    expect(ctx.addProjectTemplate).toHaveBeenCalledWith('Scoreboard');
+    expect(ctx.renameProjectTemplate).not.toHaveBeenCalled();
+    expect(JSON.parse(ctx.importProject.mock.calls[0][0])).toMatchObject({ width: 1280, height: 720, fps: 50, totalFrames: 250 });
   });
 
   it('View has no Broadcast row (the header switch owns it)', () => {
     render(<MenuBar />);
     expect(within(openMenu('View')).queryByRole('menuitem', { name: /Broadcast/ })).toBeNull();
+  });
+
+  it('Edit > History… opens the step list; a click goes to that step', () => {
+    render(<MenuBar />);
+    fireEvent.click(within(openMenu('Edit')).getByRole('menuitem', { name: 'History…' }));
+    const panel = screen.getByRole('dialog', { name: 'History' });
+    const steps = within(panel).getAllByRole('button').filter((button) => button.classList.contains('history-step'));
+    expect(steps.map((step) => step.textContent)).toEqual(['0Start', '1Add Alpha', '2Move Alpha']);
+    expect(steps[1].getAttribute('aria-current')).toBe('step');
+    expect(steps[2].classList.contains('undone')).toBe(true);
+    fireEvent.click(steps[0]);
+    expect(ctx.jumpToHistoryStep).toHaveBeenCalledWith(0);
+    fireEvent.keyDown(panel, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'History' })).toBeNull();
   });
 
   it('Project Settings opens its dialog', () => {
@@ -134,6 +181,7 @@ describe('MenuBar', () => {
     expect(activeRow()).toContain('Timeline');
     // Enter runs the active row and closes the menu.
     openMenu('File');
+    fireEvent.keyDown(bar(), { key: 'ArrowDown' });
     fireEvent.keyDown(bar(), { key: 'ArrowDown' });
     expect(activeRow()).toContain('Project Settings');
     fireEvent.keyDown(bar(), { key: 'Enter' });

@@ -31,7 +31,7 @@ describe('StyleEffectsSection compact editor', () => {
 
     const disclosure = screen.getByRole('button', { name: 'Expand EFFECTS' });
     expect(disclosure).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByText('SHADOW / GLOW COLOR')).toBeNull();
+    expect(screen.queryByText('SHADOW COLOR')).toBeNull();
     expect(onPartPropChange).not.toHaveBeenCalled();
   });
 
@@ -60,7 +60,7 @@ describe('StyleEffectsSection compact editor', () => {
     expect(onPartPropChange).toHaveBeenNthCalledWith(2, 'shadowOffsetX', -8);
     expect(onPartPropChange).toHaveBeenNthCalledWith(3, 'shadowOffsetY', 10);
 
-    const colorSwatch = screen.getByRole('button', { name: 'SHADOW / GLOW COLOR Color Preview' });
+    const colorSwatch = screen.getByRole('button', { name: 'SHADOW COLOR Color Preview' });
     expect(screen.queryByRole('dialog')).toBeNull();
     fireEvent.click(colorSwatch);
     const colorInput = document.querySelector('.rgba-picker-hex input') as HTMLInputElement;

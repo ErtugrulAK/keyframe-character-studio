@@ -7,7 +7,6 @@ import { describe, expect, it } from 'vitest';
 import type { BezierPath, CharacterPart } from '../types/animator';
 import {
   createEllipseMaskPath,
-  createPolygonMaskPath,
   createRectangleMaskPath,
   deleteMaskVertex,
   insertMaskVertex,
@@ -56,11 +55,6 @@ describe('WP-03 mask creation', () => {
     }
   });
 
-  it('closes a pen polygon through the clicked points', () => {
-    const path = createPolygonMaskPath('normalized', [{ x: 0.1, y: 0.1 }, { x: 0.5, y: 0.9 }, { x: 0.9, y: 0.1 }]);
-    expect(path.closed).toBe(true);
-    expect(path.points.map((point) => point.kind)).toEqual(['corner', 'corner', 'corner']);
-  });
 });
 
 describe('WP-03 whole-path transforms', () => {

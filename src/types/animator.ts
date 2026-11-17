@@ -242,13 +242,13 @@ export interface PathKeyframe {
 }
 
 // Channel keys match Transform property names
-export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity' | 'maskOffsetX' | 'maskOffsetY' | 'maskScale' | 'maskRotation' | 'trimPathStart' | 'trimPathEnd' | 'trimPathOffset' | 'matteFeather' | 'matteStrength' | 'matteGradientAngle';
+export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity' | 'maskOffsetX' | 'maskOffsetY' | 'maskScale' | 'maskRotation' | 'trimPathStart' | 'trimPathEnd' | 'trimPathOffset' | 'matteFeather' | 'matteStrength' | 'matteGradientAngle' | 'motionPathProgress';
 
 export type LayerMaskChannelProperty = 'opacity' | 'feather' | 'expansion';
 export type LayerMaskChannel = `${string}:${LayerMaskChannelProperty}`;
 export type LayerMaskPathChannel = `${string}:path`;
 export type AnimationChannel = TrackChannel | LayerMaskChannel | LayerMaskPathChannel;
-export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation', 'trimPathStart', 'trimPathEnd', 'trimPathOffset', 'matteFeather', 'matteStrength', 'matteGradientAngle'];
+export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation', 'trimPathStart', 'trimPathEnd', 'trimPathOffset', 'matteFeather', 'matteStrength', 'matteGradientAngle', 'motionPathProgress'];
 
 export const layerMaskChannel = (maskId: string, property: LayerMaskChannelProperty): LayerMaskChannel =>
   `${maskId}:${property}`;
@@ -298,8 +298,10 @@ export interface EditorTrackState {
 export type Track = AnimationTrackData & EditorTrackState;
 
 
-export type BodyPartType = 
+export type BodyPartType =
   | 'custom_star'
+  /** Corners and inner radius set on the layer (`polygon`, `utils/geometry/polygonShape`). */
+  | 'custom_polygon'
   | 'custom_circle'
   | 'custom_box'
   | 'custom_rect'
@@ -425,6 +427,12 @@ export interface CharacterPart {
   baseTransform: Transform;
   textValue?: string;
   fontSize?: number;
+  /** Text: a typewriter or a counting number over time (`utils/animation/textEffects`). */
+  textEffect?: import('../utils/animation/textEffects').TextEffect;
+  /** Follows a path layer's outline over time (`utils/geometry/motionPath`). */
+  motionPath?: import('../utils/geometry/motionPath').MotionPathLink;
+  /** A Polygon layer's corners and inner radius (`utils/geometry/polygonShape`); absent = a pentagon. */
+  polygon?: import('../utils/geometry/polygonShape').PolygonShape;
   /** Text: its box, alignment and hiding (`utils/layers/layoutModifiers`). */
   textFit?: TextFitSettings;
   /** Box-like shape: Auto Size, the text layer whose width it follows (`utils/layers/layoutModifiers`). */
@@ -450,6 +458,14 @@ export interface CharacterPart {
   shadowBlur?: number;
   shadowOffsetX?: number;
   shadowOffsetY?: number;
+  /** Layer effects (`utils/layers/layerEffects`): a blur of the whole layer, an outer glow and a blend mode. */
+  layerBlur?: number;
+  glowColor?: string;
+  glowSize?: number;
+  glowStrength?: number;
+  blendMode?: import('../utils/layers/layerEffects').LayerBlendMode;
+  /** The visible part of the layer, in its local units (`utils/layers/layerCrop`); absent = all of it. */
+  crop?: import('../utils/layers/layerCrop').LayerCrop;
   borderRadius?: number;
   /** Stroke corner join of a path layer; absent = 'round' (a Pen drawing). A shape converted to a path keeps its sharp 'miter' corners. */
   strokeLinejoin?: 'miter' | 'round';
@@ -503,6 +519,18 @@ export interface CharacterPart {
 
   /** Where the text's origin sits: absent = on the baseline (every older text). See utils/geometry/textOrigin. */
   textOrigin?: import('../utils/geometry/textOrigin').TextOrigin;
+  /** The letter case the text shows (`utils/layers/textCase`); absent = as written. */
+  textCase?: import('../utils/layers/textCase').TextCase;
+  /** OGraf: the playout operator can show and hide this layer, with its children (`ograf/publicControls`). Absent = no control. */
+  operatorToggle?: boolean;
+  /** OGraf: a text the playout operator sets as a number and counts with +1 / -1 buttons (`utils/layers/operatorCounter`). */
+  operatorCounter?: boolean;
+  /** OGraf: the text's clock effect waits on air until the playout operator presses Start (Pause and Reset too). */
+  operatorClock?: boolean;
+  /** OGraf: the playout operator may give this image layer any picture, not only packaged ones (`utils/layers/operatorImage`). */
+  operatorImageAny?: boolean;
+  /** OGraf: this layer's value in each playout preset (`utils/layers/operatorPresets`). */
+  operatorPresets?: import('../utils/layers/operatorPresets').OperatorPresetValue[];
 
   // ── Feature 3: Text Stagger Animation ──
   textAnimMode?: TextAnimMode;

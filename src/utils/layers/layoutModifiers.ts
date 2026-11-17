@@ -5,7 +5,8 @@
  * - Text box (`textFit`, text): the text keeps its size up to `maxWidth`, then
  *   shrinks down to `minScale`, then is squeezed, so it never leaves its box;
  *   `maxLength` caps its characters (also the OGraf field's limit); `align`
- *   makes the layer's x its left or right edge instead of its centre;
+ *   makes the layer's x its left or right edge instead of its centre, and
+ *   `verticalAlign` keeps its top, middle or bottom in place as it shrinks;
  *   `hideWhenEmpty` hides it (and every shape that sizes to it) when it is empty.
  * - Auto size (`fitToText`, box-like shapes): the width is the text's width
  *   plus `padding` on each side, between `minWidth` and `maxWidth`; a text that
@@ -34,6 +35,7 @@ import type { BodyPartType } from '../../types/animator';
 import { getShapeGeometry } from '../geometry/shapeGeometry';
 
 export type HorizontalAlign = 'left' | 'center' | 'right';
+export type VerticalAlign = 'top' | 'middle' | 'bottom';
 
 export interface TextFitSettings {
   /** The widest the text may be, in scene pixels at the layer's own scale; absent = no limit. */
@@ -44,6 +46,12 @@ export interface TextFitSettings {
   maxLength?: number;
   /** Which point of the text the layer's x is: its left edge, centre (default) or right edge. */
   align?: HorizontalAlign;
+  /**
+   * The edge that stays in place when the text shrinks to fit: its top, its
+   * middle or its bottom. Absent keeps the layer's own origin (the box centre,
+   * or the baseline of a baseline-origin text), as before.
+   */
+  verticalAlign?: VerticalAlign;
   /** An empty text is hidden, with every shape that sizes to it. */
   hideWhenEmpty?: boolean;
 }
@@ -168,6 +176,8 @@ interface LayoutLayer {
   parentId?: string;
   isGroup?: boolean;
   textValue?: string;
+  /** The letter case the text shows (`utils/layers/textCase`): capitals are measured as capitals. */
+  textCase?: string;
   fontSize?: number;
   fontFamily?: string;
   /** Where a text's origin sits: on its baseline (absent) or its box centre (`utils/geometry/textOrigin`). */
@@ -286,6 +296,14 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
       adjustment.dx = (adjustment.dx || 0) + distance * Math.cos(angle);
       adjustment.dy = (adjustment.dy || 0) + distance * Math.sin(angle);
     };
+    /** Moves a layer along its own y axis (turned with it; positive = down). */
+    const shiftAcross = (layer: LayoutLayer, distance: number) => {
+      if (!distance) return;
+      const angle = (pose(layer).rotation * Math.PI) / 180;
+      const adjustment = adjust(layer.id);
+      adjustment.dx = (adjustment.dx || 0) - distance * Math.sin(angle);
+      adjustment.dy = (adjustment.dy || 0) + distance * Math.cos(angle);
+    };
     const parentOf = (layer: LayoutLayer) => layer.parentId || '';
 
     const sizers = layers.filter((layer) => layer.fitToText && typeof layer.fitToText.textLayerId === 'string' && sizableWidth(layer.type) !== undefined);
@@ -303,7 +321,9 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
         textWidths[layer.id] = 0;
         continue;
       }
-      const authoredText = layer.textValue || 'TEXT';
+      // The letters it shows (`utils/layers/textCase`; repeated, not imported:
+      // the OGraf runtime embeds this factory's own source).
+      const authoredText = layer.textCase === 'upper' ? (layer.textValue || 'TEXT').toUpperCase() : layer.textValue || 'TEXT';
       const text = limitLength(authoredText, own && own.maxLength);
       const fontSize = positive(layer.fontSize) || 24;
       const fontFamily = layer.fontFamily || 'Outfit';
@@ -334,6 +354,15 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
       if (size !== fontSize) adjust(layer.id).fontSize = size;
       if (squeeze !== 1) adjust(layer.id).scaleXFactor = squeeze;
       shiftAlong(layer, (alignSign(own && own.align) * width) / 2);
+      // The edge that stays where the full-size text had it. Its offset from
+      // the origin is `anchorEm` em (negative = above); the em shrank from
+      // `fontSize` to `size`, so the origin moves by the difference.
+      const vertical = own && own.verticalAlign;
+      if (size !== fontSize && (vertical === 'top' || vertical === 'middle' || vertical === 'bottom')) {
+        const centreEm = layer.textOrigin === 'center' ? 0 : -TEXT_BOX_CENTRE_EM;
+        const anchorEm = centreEm + (vertical === 'top' ? -TEXT_HALF_HEIGHT_EM : vertical === 'bottom' ? TEXT_HALF_HEIGHT_EM : 0);
+        shiftAcross(layer, anchorEm * (fontSize - size) * (Math.abs(pose(layer).scaleY) || 1));
+      }
     }
 
     // 2. Shapes sized to a text.
@@ -417,7 +446,8 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
       const scale = Math.abs(pose(layer).scaleX * ((adjustment && adjustment.scaleXFactor) || 1));
       if (layer.type === 'custom_text') {
         let width = textWidths[layer.id];
-        if (width === undefined) width = measure(layer.textValue || 'TEXT', positive(layer.fontSize) || 24, layer.fontFamily || 'Outfit') * Math.abs(pose(layer).scaleX);
+        const shown = layer.textCase === 'upper' ? (layer.textValue || 'TEXT').toUpperCase() : layer.textValue || 'TEXT';
+        if (width === undefined) width = measure(shown, positive(layer.fontSize) || 24, layer.fontFamily || 'Outfit') * Math.abs(pose(layer).scaleX);
         return { minX: -width / 2, maxX: width / 2 };
       }
       if (layer.isGroup) {
@@ -762,7 +792,7 @@ export function createLayoutModifiers(shapeExtents: ShapeExtents) {
 
 /** The extent of every shape type with static geometry. */
 export const SHAPE_EXTENTS: ShapeExtents = (() => {
-  const types: BodyPartType[] = ['custom_star', 'custom_circle', 'custom_box', 'custom_rect', 'custom_triangle', 'custom_parallelogram', 'custom_banner', 'custom_capsule', 'custom_diamond', 'custom_card'];
+  const types: BodyPartType[] = ['custom_star', 'custom_polygon', 'custom_circle', 'custom_box', 'custom_rect', 'custom_triangle', 'custom_parallelogram', 'custom_banner', 'custom_capsule', 'custom_diamond', 'custom_card'];
   const extents: ShapeExtents = {};
   for (const type of types) {
     const geometry = getShapeGeometry(type);

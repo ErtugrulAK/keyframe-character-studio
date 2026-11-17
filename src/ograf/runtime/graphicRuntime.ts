@@ -20,6 +20,11 @@ import type { createWorldAffineAlgebra, WorldAffine } from '../../utils/geometry
 import type { createShapeAppearance } from '../../utils/layers/shapeAppearance';
 import type { describePaint, describeText } from '../../utils/layers/drawDescriptor';
 import type { createTrackMatteMarkup, TrackMatteGradientInput } from '../trackMatteMarkup';
+import type { createTextEffects, DisplayedText, TextEffect } from '../../utils/animation/textEffects';
+import type { createMotionPath, MotionPathLink } from '../../utils/geometry/motionPath';
+import type { createPolygonShape } from '../../utils/geometry/polygonShape';
+import type { createLayerEffects, LayerBlendMode } from '../../utils/layers/layerEffects';
+import type { createLayerCrop, LayerCrop } from '../../utils/layers/layerCrop';
 import type { createLayoutModifiers, FitToTextSettings, FollowSettings, JustifySettings, LookAtSettings, RepeaterSettings, TextFitSettings } from '../../utils/layers/layoutModifiers';
 
 export interface RuntimePoint {
@@ -81,11 +86,19 @@ export interface RuntimeLayer {
   scaleY: number;
   opacity: number;
   visible?: boolean;
+  /** Hidden by the operator's show/hide switch (runtime state only, never authored). */
+  operatorHidden?: boolean;
+  /** The seconds an operator-run clock shows (runtime state only); absent = the timeline drives the clock. */
+  liveClockSeconds?: number;
   parentId?: string;
   booleanGroupId?: string;
+  /** Follows a path layer's outline (`utils/geometry/motionPath`). */
+  motionPath?: MotionPathLink;
   width?: number;
   height?: number;
   borderRadius?: number;
+  /** A Polygon layer's corners and inner radius (`utils/geometry/polygonShape`). */
+  polygon?: { sides?: number; innerRatio?: number };
   path?: RuntimePath;
   points?: RuntimePoint[];
   strokeLinejoin?: string;
@@ -97,10 +110,24 @@ export interface RuntimeLayer {
   strokeOpacity?: number;
   strokeWidth?: number;
   strokeAlignment?: string;
+  shadowColor?: string;
+  shadowBlur?: number;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  layerBlur?: number;
+  glowColor?: string;
+  glowSize?: number;
+  glowStrength?: number;
+  blendMode?: LayerBlendMode;
+  crop?: LayerCrop;
   textValue?: string;
+  /** A typewriter or a count over time (`utils/animation/textEffects`). */
+  textEffect?: TextEffect;
   fontSize?: number;
   fontFamily?: string;
   textOrigin?: string;
+  /** The letter case the text shows (`utils/layers/textCase`). */
+  textCase?: string;
   imageUrl?: string;
   trimPathEnabled?: boolean;
   trimPathStart?: number;
@@ -142,6 +169,14 @@ export interface RuntimeBinding {
   layerId: string;
   property: string;
   allowedValues?: string[];
+  /** Image: any safe picture address is accepted, not only `allowedValues`. */
+  any?: boolean;
+}
+
+/** The playout preset choice: what each preset sets on which layer. */
+export interface RuntimePresetBinding {
+  id: string;
+  values: Record<string, Array<{ layerId: string; text?: string; show?: boolean }>>;
 }
 
 export type RuntimeFontFace = string | { path: string; unicodeRange?: string; fontWeight?: string };
@@ -161,6 +196,8 @@ export interface EvaluatedRuntimeLayer extends RuntimeLayer {
   trimPathEnd: number;
   trimPathOffset: number;
   masks: EvaluatedRuntimeMask[];
+  /** What the text shows at this frame (`utils/animation/textEffects`), as in the editor. */
+  displayedText?: DisplayedText;
 }
 
 export interface RuntimeActionResult {
@@ -171,7 +208,8 @@ export interface RuntimeActionResult {
 
 export interface GraphicRuntimeEnvironment {
   scene: RuntimeScene;
-  bindings: { text: Record<string, RuntimeBinding>; image: Record<string, RuntimeBinding>; color: Record<string, RuntimeBinding> };
+  /** `toggle`: the operator's show/hide switches; `number`: counter texts. Absent in a package written before them. */
+  bindings: { text: Record<string, RuntimeBinding>; image: Record<string, RuntimeBinding>; color: Record<string, RuntimeBinding>; toggle?: Record<string, RuntimeBinding>; number?: Record<string, RuntimeBinding>; preset?: RuntimePresetBinding; clock?: Record<string, RuntimeBinding> };
   imageReferences: Record<string, string>;
   fontReferences: Record<string, RuntimeFontFace | RuntimeFontFace[]>;
   /** The package module's own URL; packaged relative paths resolve against it. */
@@ -193,6 +231,16 @@ export interface GraphicRuntimeEnvironment {
   describeText: typeof describeText;
   /** Layout modifiers: text boxes, auto size, follow, justify, repeater (`utils/layers/layoutModifiers`). */
   layout: ReturnType<typeof createLayoutModifiers>;
+  /** Text over time: typewriter and count (`utils/animation/textEffects`), the editor's own rules. */
+  textEffects: ReturnType<typeof createTextEffects>;
+  /** Drop shadow, glow, blur and blend mode (`utils/layers/layerEffects`), the editor's own filter. */
+  layerEffects: ReturnType<typeof createLayerEffects>;
+  /** Where a layer that follows a path sits (`utils/geometry/motionPath`), the editor's own measure. */
+  motionPath: ReturnType<typeof createMotionPath>;
+  /** The Polygon shape's outline (`utils/geometry/polygonShape`), the editor's own corners. */
+  polygonShape: ReturnType<typeof createPolygonShape>;
+  /** The layer crop (`utils/layers/layerCrop`), the editor's own clip. */
+  layerCrop: ReturnType<typeof createLayerCrop>;
   /** The Track Matte mask, as the editor draws it (`ograf/trackMatteMarkup`). */
   trackMatteMarkup: ReturnType<typeof createTrackMatteMarkup>;
   /**
@@ -217,7 +265,12 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     describePaint,
     describeText,
     layout,
+    textEffects,
+    layerEffects,
+    layerCrop,
     trackMatteMarkup,
+    motionPath,
+    polygonShape,
   } = environment;
   const STEP_ENDS = environment.stepEnds && environment.stepEnds.length > 0 ? environment.stepEnds : [SCENE.totalFrames];
   /** The frame a step starts on: 0, then the previous step's end. */
@@ -565,6 +618,8 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
   const PRIMITIVE_EXTENTS: Record<string, [number, number]> = {
     custom_circle: [30, 30], custom_box: [30, 30], custom_rect: [60, 30], custom_capsule: [50, 20],
     custom_triangle: [35, 35], custom_diamond: [35, 35], custom_star: [35, 35], custom_parallelogram: [85, 30],
+    // Whatever its corners, a Polygon fills this box (`utils/geometry/polygonShape`).
+    custom_polygon: [35, 35],
   };
 
   /**
@@ -576,7 +631,9 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     if (layer.type === 'custom_image') return [(layer.width || 180) / 2, (layer.height || 120) / 2];
     if (layer.type !== 'custom_text') return null;
     const size = layer.fontSize || 24;
-    const text = String(layer.textValue || 'TEXT');
+    const written = String(layer.textValue || 'TEXT');
+    // Capitals are wider: measure the letters it shows (`utils/layers/textCase`).
+    const text = layer.textCase === 'upper' ? written.toUpperCase() : written;
     const measured = layout.measureTextWidth(text, size, layer.fontFamily || 'Outfit');
     const width = Math.max(measured * 1.25, Array.from(text).length * size * 0.9);
     return [width / 2 + size, size * 2];
@@ -617,11 +674,13 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
   function evaluateScene(scene: RuntimeScene, frame: number): EvaluatedRuntimeLayer[] {
     const transforms: Record<string, RuntimeWorldTransform> = Object.create(null);
     const visiting = new Set<string>();
-    const evaluateTransform = (layer: RuntimeLayer): RuntimeWorldTransform => {
-      if (Object.prototype.hasOwnProperty.call(transforms, layer.id)) return transforms[layer.id];
+    const following = new Set<string>();
+    // A layer's pose in its parent's space, with its motion path, as the
+    // editor's `localPose` (utils/animation/evaluateTransform) resolves it.
+    const localPose = (layer: RuntimeLayer): RuntimeWorldTransform => {
       const track = scene.tracks.find((item) => item.partId === layer.id);
       const channels = track && track.channels ? track.channels : {};
-      let result: RuntimeWorldTransform = {
+      const pose: RuntimeWorldTransform = {
         x: channelValue(channels.x, frame, layer.x),
         y: channelValue(channels.y, frame, layer.y),
         rotation: channelValue(channels.rotation, frame, layer.rotation),
@@ -629,6 +688,29 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
         scaleY: channelValue(channels.scaleY, frame, layer.scaleY),
         opacity: channelValue(channels.opacity, frame, layer.opacity),
       };
+      const link = layer.motionPath;
+      if (!link || link.enabled === false || following.has(layer.id)) return pose;
+      const source = scene.layers.find((item) => item.id === link.sourcePartId);
+      if (!source || source.id === layer.id || source.type !== 'custom_freeform') return pose;
+      if ((source.parentId || source.booleanGroupId) !== (layer.parentId || layer.booleanGroupId)) return pose;
+      const outline = source.path || (source.points ? { closed: true, points: source.points } : undefined);
+      const table = motionPath.measure(outline as Parameters<typeof motionPath.measure>[0]);
+      if (!table) return pose;
+      following.add(layer.id);
+      const sourcePose = localPose(source);
+      following.delete(layer.id);
+      const fallback = typeof link.progress === 'number' ? link.progress : 0;
+      const onPath = motionPath.follow(table, affineOfTransform(sourcePose), channelValue(channels.motionPathProgress, frame, fallback));
+      return {
+        ...pose,
+        x: onPath.x + (pose.x - layer.x),
+        y: onPath.y + (pose.y - layer.y),
+        rotation: pose.rotation + (link.orient === true ? onPath.angle : 0),
+      };
+    };
+    const evaluateTransform = (layer: RuntimeLayer): RuntimeWorldTransform => {
+      if (Object.prototype.hasOwnProperty.call(transforms, layer.id)) return transforms[layer.id];
+      let result: RuntimeWorldTransform = localPose(layer);
       if (visiting.has(layer.id)) return result;
       visiting.add(layer.id);
       if (layer.parentId || layer.booleanGroupId) {
@@ -644,6 +726,16 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       transforms[layer.id] = result;
       return result;
     };
+    // The operator's show/hide switch hides a layer and everything under it.
+    const layerById = new Map(scene.layers.map((item) => [item.id, item]));
+    const hiddenByOperator = (layer: RuntimeLayer): boolean => {
+      let current: RuntimeLayer | undefined = layer;
+      for (let depth = 0; current && depth <= scene.layers.length; depth += 1) {
+        if (current.operatorHidden) return true;
+        current = current.parentId ? layerById.get(current.parentId) : undefined;
+      }
+      return false;
+    };
     return stackingOrder(scene.layers).map((layer) => {
       const track = scene.tracks.find((item) => item.partId === layer.id);
       const channels = track && track.channels ? track.channels : {};
@@ -651,13 +743,23 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       const evaluated = {
         ...layer,
         transform: transformValue,
-        visible: layer.visible !== false,
-        opacity: layer.visible === false ? 0 : clamp(transformValue.opacity, 0, 1),
+        visible: layer.visible !== false && !hiddenByOperator(layer),
+        opacity: layer.visible === false || hiddenByOperator(layer) ? 0 : clamp(transformValue.opacity, 0, 1),
         trimPathEnabled: layer.trimPathEnabled,
         trimPathStart: channelValue(channels.trimPathStart, frame, layer.trimPathStart === undefined ? 0 : layer.trimPathStart),
         trimPathEnd: channelValue(channels.trimPathEnd, frame, layer.trimPathEnd === undefined ? 1 : layer.trimPathEnd),
         trimPathOffset: channelValue(channels.trimPathOffset, frame, layer.trimPathOffset || 0),
       } as EvaluatedRuntimeLayer;
+      if (layer.textEffect && (layer.textValue || layer.textEffect.kind === 'clock')) {
+        const written = layer.textValue || '';
+        // The letter case it shows (`utils/layers/textCase`), before the effect reveals it.
+        // An operator-run clock shows its own elapsed time, through the same rule:
+        // the frame that many seconds after the clock's start.
+        const effectFrame = layer.textEffect.kind === 'clock' && typeof layer.liveClockSeconds === 'number'
+          ? layer.textEffect.startFrame + layer.liveClockSeconds * scene.fps
+          : frame;
+        evaluated.displayedText = textEffects.resolveDisplayedText(layer.textCase === 'upper' ? written.toUpperCase() : written, layer.textEffect, effectFrame, scene.fps);
+      }
       // A keyed Track Matte feather / strength / gradient angle, as the editor
       // evaluates it (`evaluateTrackMatte`): the channel over the packaged value.
       const render = layer.trackMatte && layer.trackMatte.render;
@@ -711,6 +813,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     if (layer.type === 'custom_box') return '<rect x="-30" y="-30" width="60" height="60" rx="' + (layer.borderRadius ?? 0) + '"' + attrs + ' />';
     if (layer.type === 'custom_rect') return '<rect x="-60" y="-30" width="120" height="60" rx="' + (layer.borderRadius ?? 0) + '"' + attrs + ' />';
     if (layer.type === 'custom_capsule') return '<rect x="-50" y="-20" width="100" height="40" rx="20"' + attrs + ' />';
+    if (layer.type === 'custom_polygon') return '<polygon points="' + polygonShape.pointsAttribute(layer.polygon) + '"' + attrs + ' />';
     const points: Record<string, string> = {
       custom_triangle: '0,-35 35,25 -35,25',
       custom_diamond: '0,-35 35,0 0,35 -35,0',
@@ -724,6 +827,13 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
    * A text layer's glyphs, painted as the editor paints them. A silhouette
    * caller (matte, clip) passes the paint that replaces the layer's own.
    */
+  /** The characters a text draws: its effect's result (the rest kept in place, transparent), else the text. */
+  function textContent(layer: RuntimeLayer, written: string): string {
+    const shown = (layer as EvaluatedRuntimeLayer).displayedText;
+    if (!shown) return escapeXml(written);
+    return escapeXml(shown.shown) + (shown.hidden ? '<tspan fill-opacity="0" stroke-opacity="0">' + escapeXml(shown.hidden) + '</tspan>' : '');
+  }
+
   function text(layer: RuntimeLayer, silhouette?: { fill: string; stroke: string }): string {
     const paint = describePaint(resolveShapeAppearance(layer));
     const glyphs = describeText(layer, layer.textOrigin === 'center' ? (layer.fontSize || 24) * textBoxCentreEm : 0);
@@ -740,7 +850,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       'font-size': glyphs.fontSize,
       'font-weight': glyphs.fontWeight,
       'font-family': glyphs.fontFamily,
-    }) + '>' + escapeXml(glyphs.text) + '</text>';
+    }) + '>' + textContent(layer, glyphs.text) + '</text>';
   }
 
   function image(layer: RuntimeLayer, imageReferences: Record<string, string>, props: SvgAttributes): string {
@@ -914,7 +1024,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
           feather: relation.render.feather,
           strength: relation.render.strength,
           gradient: relation.render.gradient,
-          source: { type: source.type, points: source.points, width: source.width, height: source.height, fontSize: source.fontSize, textValue: source.textValue },
+          source: { type: source.type, points: source.points, width: source.width, height: source.height, fontSize: source.fontSize, textValue: source.textCase === 'upper' && source.textValue ? source.textValue.toUpperCase() : source.textValue },
           transform: transform(scene, source),
           affine: { a: affine.a, b: affine.b, c: affine.c, d: affine.d, e: affine.e + scene.width / 2, f: affine.f + scene.height / 2 },
           silhouette: (fill) => silhouette(source, IMAGE_REFERENCES, fill),
@@ -989,13 +1099,21 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
   function renderLayer(scene: RuntimeScene, layer: EvaluatedRuntimeLayer, maskMap: Record<string, string[]>, matteId: string | undefined, hidden: boolean): string {
     if (hidden || !layer.visible || layer.opacity <= 0) return '';
     const body = layer.type === 'custom_text' ? text(layer) : layer.type === 'custom_image' ? image(layer, IMAGE_REFERENCES, {}) : renderShape(layer);
-    let inner = '<g transform="' + transform(scene, layer) + '">' + body + '</g>';
+    // Drop shadow, glow and blur, as the editor draws them (`utils/layers/layerEffects`).
+    const effectsId = runtimeId('kcs-fx', layer.id);
+    const effects = layerEffects.layerFilterMarkup(layer, effectsId);
+    // The crop trims the content in its own units, before the effects (`utils/layers/layerCrop`).
+    const cropId = runtimeId('kcs-crop', layer.id);
+    const crop = layerCrop.cropClipMarkup(layer.crop, cropId);
+    const croppedBody = crop ? '<defs>' + crop + '</defs><g clip-path="url(#' + cropId + ')">' + body + '</g>' : body;
+    let inner = '<g transform="' + transform(scene, layer) + '"' + (effects ? ' filter="url(#' + effectsId + ')"' : '') + '>' + (effects ? '<defs>' + effects + '</defs>' : '') + croppedBody + '</g>';
+    const blend = layerEffects.layerBlendMode(layer);
     const ids = (maskMap[layer.id] || []).concat(matteId ? [matteId] : []);
     ids.slice().reverse().forEach((id) => {
       inner = '<g mask="url(#' + id + ')">' + inner + '</g>';
     });
     const clip = layer.matte && (layer.matte.mode || 'clip') === 'clip' ? ' clip-path="url(#' + runtimeId('kcs-clip', layer.matte.sourcePartId) + ')"' : '';
-    return '<g data-layer-id="' + escapeXml(layer.id) + '" data-z-index="' + layer.zIndex + '" opacity="' + layer.opacity + '"' + clip + '>' + inner + '</g>';
+    return '<g data-layer-id="' + escapeXml(layer.id) + '" data-z-index="' + layer.zIndex + '" opacity="' + layer.opacity + '"' + clip + (blend ? ' style="mix-blend-mode:' + blend + '"' : '') + '>' + inner + '</g>';
   }
 
   /**
@@ -1059,6 +1177,11 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     declare _schedule: ScheduledAction[];
     declare _svg: Element | null;
     declare _fitted: RuntimeScene | null;
+    /** Operator-run clocks: elapsed time banked while paused, and when the running stretch began (ms). */
+    declare _clocks: Record<string, { running: boolean; bankedMs: number; startedAt: number }>;
+    declare _clockTimer: ReturnType<typeof setInterval> | null;
+    /** Non-real-time: the scheduled time being drawn (ms); null = the wall clock. */
+    declare _clockNow: number | null;
 
     _cancel(): void {
       this._token += 1;
@@ -1084,6 +1207,44 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       this._schedule = [];
       this._svg = null;
       this._fitted = null;
+      this._clocks = {};
+      this._clockTimer = null;
+      this._clockNow = null;
+    }
+
+    /** Start / Pause / Reset of an operator-run clock at `now` (ms); an error result when the id names no clock. */
+    _clockAction(id: string, now: number): RuntimeActionResult | undefined {
+      const match = /^clock:(.+):(start|pause|reset)$/u.exec(id);
+      const field = match ? match[1] : '';
+      if (!match || !PUBLIC_BINDINGS.clock || !Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.clock, field)) return { statusCode: 400, statusMessage: 'Unknown custom action: ' + id };
+      const clock = this._clocks[field] || (this._clocks[field] = { running: false, bankedMs: 0, startedAt: now });
+      if (match[2] === 'start' && !clock.running) {
+        clock.running = true;
+        clock.startedAt = now;
+      } else if (match[2] === 'pause' && clock.running) {
+        clock.bankedMs += Math.max(0, now - clock.startedAt);
+        clock.running = false;
+      } else if (match[2] === 'reset') {
+        clock.bankedMs = 0;
+        clock.startedAt = now;
+      }
+      return undefined;
+    }
+
+    /** Redraws a few times a second while a clock runs on air; stops when none does. */
+    _syncClockTimer(): void {
+      const running = this._clockNow === null && Object.keys(this._clocks).some((key) => this._clocks[key].running);
+      if (running && this._clockTimer === null && typeof setInterval === 'function') {
+        this._clockTimer = setInterval(() => this._render(), 200);
+      } else if (!running && this._clockTimer !== null) {
+        clearInterval(this._clockTimer);
+        this._clockTimer = null;
+      }
+    }
+
+    _resetClocks(): void {
+      this._clocks = {};
+      this._syncClockTimer();
     }
 
     /** Lays the scene out again (text boxes, auto size, follow, justify, repeater) for the current data and loaded fonts. */
@@ -1096,6 +1257,14 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
      * their own, written once; only the SVG is replaced per frame.
      */
     _render(): void {
+      // Operator-run clocks show their own time (stopped at their start until Start).
+      const now = this._clockNow === null ? Date.now() : this._clockNow;
+      const target = this._fitted || this._scene;
+      for (const field of Object.keys(PUBLIC_BINDINGS.clock || {})) {
+        const layer = target.layers.find((item) => item.id === PUBLIC_BINDINGS.clock![field].layerId);
+        const clock = this._clocks[field];
+        if (layer) layer.liveClockSeconds = clock ? (clock.bankedMs + (clock.running ? Math.max(0, now - clock.startedAt) : 0)) / 1000 : 0;
+      }
       const markup = renderScene(this._fitted || this._scene, this._currentFrame, this._stopped, false);
       if (!this._svg || this._svg.parentNode !== this) {
         this.innerHTML = '<style>' + fontStyles() + '</style>' + markup;
@@ -1122,7 +1291,33 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
 
     _applyData(data: Record<string, unknown> | undefined): RuntimeActionResult | undefined {
       if (!data || typeof data !== 'object') return undefined;
+      // A chosen preset is applied after the other fields, so it wins over them.
+      let preset: Array<{ layerId: string; text?: string; show?: boolean }> | undefined;
       for (const key of Object.keys(data)) {
+        if (PUBLIC_BINDINGS.preset && key === PUBLIC_BINDINGS.preset.id) {
+          const name = data[key];
+          if (name === '') continue;
+          if (typeof name !== 'string' || !Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.preset.values, name)) return { statusCode: 400, statusMessage: 'Unknown preset: ' + String(name) };
+          preset = PUBLIC_BINDINGS.preset.values[name];
+          continue;
+        }
+        const toggle = PUBLIC_BINDINGS.toggle && Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.toggle, key) ? PUBLIC_BINDINGS.toggle[key] : undefined;
+        if (toggle) {
+          const target = this._scene.layers.find((item) => item.id === toggle.layerId);
+          if (!target || typeof data[key] !== 'boolean') return { statusCode: 400, statusMessage: 'Show/hide value must be true or false: ' + key };
+          target.operatorHidden = data[key] === false;
+          continue;
+        }
+        const counter = PUBLIC_BINDINGS.number && Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.number, key) ? PUBLIC_BINDINGS.number[key] : undefined;
+        if (counter) {
+          const target = this._scene.layers.find((item) => item.id === counter.layerId);
+          const raw = data[key];
+          // The editor's rule (`utils/layers/operatorCounter`): a whole number up to six digits.
+          const count = typeof raw === 'number' ? raw : typeof raw === 'string' && /^-?\d{1,6}$/u.test(raw.trim()) ? Number(raw.trim()) : NaN;
+          if (!target || !Number.isInteger(count) || Math.abs(count) > 999999) return { statusCode: 400, statusMessage: 'Number value must be a whole number: ' + key };
+          target.textValue = String(count);
+          continue;
+        }
         const binding = (Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.text, key) && PUBLIC_BINDINGS.text[key])
           || (Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.image, key) && PUBLIC_BINDINGS.image[key])
           || (Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.color, key) && PUBLIC_BINDINGS.color[key]);
@@ -1130,6 +1325,20 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
         const layer = this._scene.layers.find((item) => item.id === binding.layerId);
         const value = data[key];
         if (!layer || typeof value !== 'string') return { statusCode: 400, statusMessage: 'Invalid public field value: ' + key };
+        const packaged = binding.allowedValues ? binding.allowedValues.includes(value) && Object.prototype.hasOwnProperty.call(IMAGE_REFERENCES, value) && Boolean(IMAGE_REFERENCES[value]) : false;
+        if (binding.property === 'imageUrl' && binding.any && !packaged) {
+          // The editor's rule (`utils/layers/operatorImage`): only an address that can name a picture.
+          const text = value.trim();
+          let address: string | undefined;
+          if (!text || text.length > 2000000 || /[\s"'<>`]/u.test(text)) address = undefined;
+          else if (/^https?:\/\/[^/]/iu.test(text) || /^file:\/\//iu.test(text)) address = text;
+          else if (/^data:image\/(?:png|jpeg|gif|webp);base64,[A-Za-z0-9+/]+={0,2}$/iu.test(text)) address = text;
+          else if (/^[a-z]:[\\/]/iu.test(text)) address = 'file:///' + text.replace(/\\/gu, '/');
+          else if (!/^[a-z][a-z0-9+.-]*:/iu.test(text) && !text.startsWith('//') && !text.startsWith('\\')) address = text;
+          if (!address) return { statusCode: 400, statusMessage: 'Image value is not a picture address: ' + key };
+          layer.imageUrl = address;
+          continue;
+        }
         if (binding.property === 'imageUrl' && (!binding.allowedValues!.includes(value) || !Object.prototype.hasOwnProperty.call(IMAGE_REFERENCES, value) || !IMAGE_REFERENCES[value])) {
           return { statusCode: 400, statusMessage: 'Image value is not a packaged asset: ' + key };
         }
@@ -1137,6 +1346,12 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
           return { statusCode: 400, statusMessage: 'Color value must be a #rrggbb value: ' + key };
         }
         layer[binding.property] = value;
+      }
+      for (const entry of preset || []) {
+        const target = this._scene.layers.find((item) => item.id === entry.layerId);
+        if (!target) continue;
+        if (typeof entry.text === 'string') target.textValue = entry.text;
+        if (typeof entry.show === 'boolean') target.operatorHidden = !entry.show;
       }
       return undefined;
     }
@@ -1148,6 +1363,8 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       this._scene = JSON.parse(JSON.stringify(SCENE));
       const error = this._applyData(params && params.data);
       if (error) return error;
+      this._clockNow = renderType === 'non-realtime' ? 0 : null;
+      this._resetClocks();
       this._loadData = params && params.data ? JSON.parse(JSON.stringify(params.data)) : undefined;
       this._schedule = [];
       this._currentFrame = 0;
@@ -1166,6 +1383,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
 
     async dispose(): Promise<RuntimeActionResult> {
       this._cancel();
+      this._resetClocks();
       this._scene = JSON.parse(JSON.stringify(SCENE));
       this._fitted = null;
       this._stopped = false;
@@ -1239,8 +1457,34 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       return { statusCode: 200 };
     }
 
-    async customAction(): Promise<RuntimeActionResult> {
-      return { statusCode: 400, statusMessage: 'No custom actions supported' };
+    /** Steps a counter for the button `add:<number field>:<step>`; an error result when the id names no counter. */
+    _stepCounter(id: string): RuntimeActionResult | undefined {
+      const match = /^add:(.+):(-?1)$/u.exec(id);
+      const field = match ? match[1] : '';
+      const binding = match && PUBLIC_BINDINGS.number && Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.number, field) ? PUBLIC_BINDINGS.number[field] : undefined;
+      const target = binding ? this._scene.layers.find((item) => item.id === binding.layerId) : undefined;
+      if (!match || !target) return { statusCode: 400, statusMessage: 'Unknown custom action: ' + id };
+      const current = Number(String(target.textValue || '0').trim()) || 0;
+      target.textValue = String(Math.max(-999999, Math.min(999999, current + Number(match[2]))));
+      return undefined;
+    }
+
+    /** A counter's +1 / -1 button (the manifest's customActions). */
+    async customAction(params?: { id?: string }): Promise<RuntimeActionResult> {
+      const id = params && typeof params.id === 'string' ? params.id : '';
+      if (id.startsWith('clock:')) {
+        const failed = this._clockAction(id, this._clockNow === null ? Date.now() : this._clockNow);
+        if (failed) return failed;
+        this._syncClockTimer();
+        this._render();
+        return { statusCode: 200 };
+      }
+      const error = this._stepCounter(id);
+      if (error) return error;
+      this._cancel();
+      this._refit();
+      this._render();
+      return { statusCode: 200 };
     }
 
     /** Non-real-time: stores the actions to run at their timestamps (ms); replaces any earlier schedule. */
@@ -1264,6 +1508,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       this._cancel();
       this._scene = JSON.parse(JSON.stringify(SCENE));
       this._applyData(this._loadData);
+      this._clocks = {};
       const fps = this._scene.fps;
       const end = this._scene.totalFrames;
       let frame = 0;
@@ -1307,6 +1552,10 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
           }
         } else if (entry.action.type === 'updateAction') {
           this._applyData(actionParams.data);
+        } else if (entry.action.type === 'customAction') {
+          const id = typeof (actionParams as { id?: unknown }).id === 'string' ? (actionParams as { id: string }).id : '';
+          if (id.startsWith('clock:')) this._clockAction(id, entry.timestamp);
+          else this._stepCounter(id);
         }
       }
       advance(time);
@@ -1314,6 +1563,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       this._currentFrame = frame;
       this._currentStep = step;
       this._stopped = stopped;
+      this._clockNow = time;
       this._render();
       return { statusCode: 200 };
     }

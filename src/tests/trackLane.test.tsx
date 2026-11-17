@@ -64,6 +64,11 @@ function renderLane(track: Track) {
     kfClipboard: null,
     onCopyKeyframes: vi.fn(),
     onPasteKeyframes: vi.fn(),
+    easingClipboard: null,
+    onCopyEasing: vi.fn(),
+    onPasteEasing: vi.fn(),
+    canCopyEasing: vi.fn(() => true),
+    onInsertChannelKeyframe: vi.fn(),
     onFrameFromClientX: vi.fn(() => 30),
   };
   const utils = render(<TrackLane {...props} track={{ ...track, expanded: true }} />);
@@ -486,6 +491,44 @@ function trackLaneBaseProps(track: Track) {
     kfClipboard: null,
     onCopyKeyframes: vi.fn(),
     onPasteKeyframes: vi.fn(),
+    easingClipboard: null,
+    onCopyEasing: vi.fn(),
+    onPasteEasing: vi.fn(),
+    canCopyEasing: vi.fn(() => true),
+    onInsertChannelKeyframe: vi.fn(),
     onFrameFromClientX: vi.fn(() => 30),
   };
 }
+
+describe('Copy / Paste Easing and Add Keyframe Here', () => {
+  test('Paste Easing waits for a copied curve; Copy Easing is off when the keys disagree', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const props = { ...trackLaneBaseProps(track), canCopyEasing: vi.fn(() => false) };
+    const { container } = render(<TrackLane {...props} />);
+    fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
+    expect((screen.getByRole('menuitem', { name: 'Copy Easing' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('menuitem', { name: 'Paste Easing' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  test('Paste Easing targets the right-clicked frame of this track', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const props = { ...trackLaneBaseProps(track), easingClipboard: { easing: 'easeOut' as const } };
+    const { container } = render(<TrackLane {...props} />);
+    fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Paste Easing' }));
+    expect(props.onPasteEasing).toHaveBeenCalledWith('trk_1', 25);
+    expect(screen.queryByRole('menu', { name: 'Keyframe actions' })).toBeNull();
+  });
+
+  test('Add Keyframe Here keys the right-clicked lane at the clicked frame, and is not offered on a locked layer', () => {
+    const track = { ...makeTrack({ channels: { x: [pk('x0', 0, 1)] } }), expanded: true };
+    const props = trackLaneBaseProps(track);
+    const { container, rerender } = render(<TrackLane {...props} />);
+    fireEvent.contextMenu(container.querySelector('.ue-channel-lane[data-lane-channel="x"]')!);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Add Keyframe Here' }));
+    expect(props.onInsertChannelKeyframe).toHaveBeenCalledWith('trk_1', 'x', 'part_1', 30);
+    rerender(<TrackLane {...props} track={{ ...track, locked: true }} />);
+    fireEvent.contextMenu(container.querySelector('.ue-channel-lane[data-lane-channel="x"]')!);
+    expect(screen.queryByRole('menuitem', { name: 'Add Keyframe Here' })).toBeNull();
+  });
+});

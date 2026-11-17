@@ -1783,3 +1783,26 @@ html:not([data-input-modality="keyboard"]) :is(input, select, textarea, [role="m
 html:not([data-input-modality="keyboard"]) .kcs-inline-rename:focus {
   border-color: transparent;
 }
+
+/* TEXT EFFECTS: animate text (typewriter, count) above the shadow. */
+.text-effect-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.text-effect-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.layer-effects-row {
+  margin-top: 8px;
+}
+
+/* Inspector: Filter properties… under the layer name. */
+.details-filter-input {
+  width: 100%;
+  margin-top: 6px;
+  height: 26px;
+}

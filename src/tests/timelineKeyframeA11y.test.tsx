@@ -55,6 +55,11 @@ function renderLane(track: Track, options: { selectedKeyframeIds?: string[]; exp
       kfClipboard={null}
       onCopyKeyframes={vi.fn()}
       onPasteKeyframes={vi.fn()}
+      easingClipboard={null}
+      onCopyEasing={vi.fn()}
+      onPasteEasing={vi.fn()}
+      canCopyEasing={() => true}
+      onInsertChannelKeyframe={vi.fn()}
       onFrameFromClientX={vi.fn()}
     />,
   );

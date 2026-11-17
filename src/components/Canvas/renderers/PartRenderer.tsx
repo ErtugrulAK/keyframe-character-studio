@@ -1,4 +1,6 @@
 import React from 'react';
+import { hasLayerFilter, layerBlendMode, layerFilterMarkup } from '../../../utils/layers/layerEffects';
+import { cropClipMarkup, isLayerCrop, layerCropId } from '../../../utils/layers/layerCrop';
 import type { CharacterPart } from '../../../types/animator';
 import type { EvaluatedLayer } from '../../../types/composition';
 import { renderShapePart } from './parts/ShapePartRenderers';
@@ -103,6 +105,7 @@ const PartContentView: React.FC<PartContentProps> = ({ part, content, booleanCon
     shadowOffsetX: content.shadowOffsetX ?? part.shadowOffsetX,
     shadowOffsetY: content.shadowOffsetY ?? part.shadowOffsetY,
     borderRadius: content.borderRadius ?? part.borderRadius,
+    polygon: content.polygon ?? part.polygon,
     trimPathEnabled: content.trimPathEnabled ?? part.trimPathEnabled,
     trimPathStart: content.trimPathStart ?? part.trimPathStart,
     trimPathEnd: content.trimPathEnd ?? part.trimPathEnd,
@@ -113,7 +116,7 @@ const PartContentView: React.FC<PartContentProps> = ({ part, content, booleanCon
   };
 
   if (rp.type === 'custom_video' || rp.type === 'custom_image') return <>{renderMediaPart({ part: rp, fill, stroke, isSelected })}</>;
-  if (rp.type === 'custom_text' || rp.type === 'mograph_cloner') return <>{renderTextOrClonerPart({ part: rp, fill, stroke, isSelected, currentFrame: frame })}</>;
+  if (rp.type === 'custom_text' || rp.type === 'mograph_cloner') return <>{renderTextOrClonerPart({ part: rp, fill, stroke, isSelected, currentFrame: frame, displayedText: content.displayedText })}</>;
   return <>{renderShapePart({ part: rp, fill, stroke, isSelected, isGhost })}</>;
 };
 
@@ -122,7 +125,9 @@ const sameContentFields = (a: EvaluatedLayer['content'], b: EvaluatedLayer['cont
   if (a === b) return true;
   const keys = Object.keys(a) as (keyof EvaluatedLayer['content'])[];
   if (keys.length !== Object.keys(b).length) return false;
-  return keys.every((key) => Object.is(a[key], b[key]));
+  return keys.every((key) => Object.is(a[key], b[key])
+    // A text effect's result is a fresh object every frame: equal when it shows the same characters.
+    || (key === 'displayedText' && a.displayedText?.shown === b.displayedText?.shown && a.displayedText?.hidden === b.displayedText?.hidden));
 };
 
 const PartContent = React.memo(PartContentView, (prev, next) => (
@@ -157,7 +162,10 @@ const PartRendererView: React.FC<PartRendererProps> = ({
   if (!el.visible) return null;
 
   const finalOpacity = isGhost ? 0.35 : el.opacity;
-  const filterId = !isGhost && el.content.shadowColor ? `drop-shadow-${part.id}` : undefined;
+  // Drop shadow, glow and blur: the one filter every renderer draws (`utils/layers/layerEffects`).
+  const filterId = !isGhost && hasLayerFilter(el.content) ? `drop-shadow-${part.id}` : undefined;
+  const blendMode = isGhost ? null : layerBlendMode(el.content);
+  const cropId = isLayerCrop(el.content.crop) ? layerCropId('layer-crop', part.id) : undefined;
   const pathContent = (
     <PartContent
       part={part}
@@ -197,20 +205,14 @@ const PartRendererView: React.FC<PartRendererProps> = ({
       style={{ opacity: finalOpacity, cursor: isGhost ? 'default' : 'pointer', filter: filterId ? `url(#${filterId})` : undefined, pointerEvents: isLocked || copy ? 'none' : undefined }}
       {...(copy ? {} : layerPointerHandlers)}
     >
-      <defs>
-        {!copy && !isGhost && el.content.shadowColor && (
-          <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow
-              dx={el.content.shadowOffsetX || 0}
-              dy={el.content.shadowOffsetY || 4}
-              stdDeviation={el.content.shadowBlur || 8}
-              floodColor={el.content.shadowColor || 'rgba(0,0,0,0.5)'}
-              floodOpacity="0.85"
-            />
-          </filter>
-        )}
-      </defs>
-      {pathContent}
+      {!copy && filterId ? <defs dangerouslySetInnerHTML={{ __html: layerFilterMarkup(el.content, filterId) }} /> : <defs />}
+      {cropId ? (
+        // The crop trims the content in its own units, before the effects (`utils/layers/layerCrop`).
+        <>
+          {!copy && <defs dangerouslySetInnerHTML={{ __html: cropClipMarkup(el.content.crop, cropId) }} />}
+          <g clipPath={`url(#${cropId})`} data-layer-crop="">{pathContent}</g>
+        </>
+      ) : pathContent}
     </g>
   );
   /*
@@ -255,6 +257,7 @@ const PartRendererView: React.FC<PartRendererProps> = ({
       // transformed content group.
       clipPath={matteClipPathId ? `url(#${matteClipPathId})` : undefined}
       mask={matteMaskId ? `url(#${matteMaskId})` : undefined}
+      style={blendMode ? { mixBlendMode: blendMode as React.CSSProperties['mixBlendMode'] } : undefined}
     >
       {maskedContent}
     </g>

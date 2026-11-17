@@ -2,13 +2,12 @@
  * M5 — SequencerTimeline canonical channel integration tests
  *
  * Verifies the pure helpers extracted from SequencerTimeline:
- *   - computeMaxFrame (timeline length across legacy + channels)
  *   - hasChannelDataForTemplate / resolveCurveSegment
  *   - bezier edits land on channel keyframes via the dual mutator
  */
 
 import { describe, test, expect } from 'vitest';
-import { computeMaxFrame, hasChannelDataForTemplate, resolveAdjacentKeyframeFrame, resolveChannelKeyframeFrames, resolveConnectorSegments, resolveCurveSegment, resolveLayerKeyframeFrames } from '../utils/editor/timelineMetrics';
+import { hasChannelDataForTemplate, resolveAdjacentKeyframeFrame, resolveChannelKeyframeFrames, resolveConnectorSegments, resolveCurveSegment, resolveLayerKeyframeFrames } from '../utils/editor/timelineMetrics';
 import { updateKeyframeBezierPointsMutator } from '../utils/animation/trackMutations';
 import type { Track, TrackChannel, PropertyKeyframe, Keyframe } from '../types/animator';
 
@@ -37,48 +36,6 @@ const pk = (id: string, frame: number, value: number, templateId = 'Sequence'): 
 
 const lkf = (id: string, frame: number): Keyframe =>
   ({ id, frame, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }, easing: 'linear' }) as Keyframe;
-
-describe('M5 — computeMaxFrame', () => {
-
-  test('1: legacy maxFrame preserved', () => {
-    const tracks = [makeTrack('a', { keyframes: [lkf('k1', 0), lkf('k2', 90)] })];
-    expect(computeMaxFrame(tracks)).toBe(90);
-  });
-
-  test('2: channel-only track maxFrame correct', () => {
-    const tracks = [makeTrack('a', { channels: { x: [pk('x1', 0), pk('x2', 140)] } })];
-    expect(computeMaxFrame(tracks)).toBe(140);
-  });
-
-  test('3: channel frame beyond legacy wins', () => {
-    const tracks = [makeTrack('a', {
-      keyframes: [lkf('k1', 60)],
-      channels: { opacity: [pk('o1', 180)] },
-    })];
-    expect(computeMaxFrame(tracks)).toBe(180);
-  });
-
-  test('4: multiple channels at same frame counted once (max is single value)', () => {
-    const tracks = [makeTrack('a', {
-      channels: { x: [pk('x1', 120)], y: [pk('y1', 120)], opacity: [pk('o1', 120)] },
-    })];
-    expect(computeMaxFrame(tracks)).toBe(120);
-  });
-
-  test('5: max across tracks and templates (existing behavior)', () => {
-    const tracks = [
-      makeTrack('a', { channels: { x: [pk('x1', 60, 0, 'Sequence')] } }),
-      makeTrack('b', { channels: { x: [pk('x1', 200, 0, 'Outro')] } }),
-    ];
-    expect(computeMaxFrame(tracks)).toBe(200);
-  });
-
-  test('6: empty tracks / undefined channels → 0, no crash', () => {
-    expect(computeMaxFrame([])).toBe(0);
-    const noChannels = { id: 'a', partId: 'p', name: 'a', color: '#000', keyframes: [], visible: true, locked: false } as Track;
-    expect(computeMaxFrame([noChannels])).toBe(0);
-  });
-});
 
 describe('M5 — hasChannelDataForTemplate / updateKeyframeBezierPointsMutator', () => {
 

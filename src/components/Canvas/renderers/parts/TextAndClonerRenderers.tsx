@@ -3,6 +3,7 @@ import type { CharacterPart } from '../../../../types/animator';
 import { resolveShapeAppearance } from '../../../../utils/layers/shapeAppearance';
 import { textBaselineOffset } from '../../../../utils/geometry/textOrigin';
 import { describePaint, describeText } from '../../../../utils/layers/drawDescriptor';
+import type { DisplayedText } from '../../../../utils/animation/textEffects';
 
 interface TextAndClonerProps {
   part: CharacterPart;
@@ -10,9 +11,11 @@ interface TextAndClonerProps {
   stroke: string;
   isSelected: boolean;
   currentFrame: number;
+  /** What the text shows at this frame (evaluation's text effect); absent = the text as written. */
+  displayedText?: DisplayedText;
 }
 
-export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, currentFrame }: TextAndClonerProps): React.ReactNode => {
+export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, currentFrame, displayedText }: TextAndClonerProps): React.ReactNode => {
   if (part.type === 'custom_text') {
     const glyphs = describeText(part, textBaselineOffset(part));
     const textStr = glyphs.text;
@@ -93,7 +96,13 @@ export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, current
             fontWeight={glyphs.fontWeight}
             fontFamily={glyphs.fontFamily}
           >
-            {textStr}
+            {displayedText ? (
+              <>
+                {displayedText.shown}
+                {/* The rest of a typing text holds its place, so the line does not move. */}
+                {displayedText.hidden && <tspan fillOpacity={0} strokeOpacity={0} data-text-effect-hidden="">{displayedText.hidden}</tspan>}
+              </>
+            ) : textStr}
           </text>
         </g>
       );

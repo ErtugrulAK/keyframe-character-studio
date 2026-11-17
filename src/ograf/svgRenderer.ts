@@ -10,7 +10,10 @@ import { resolveMatteSource } from '../utils/layers/matte';
 import { stackingOrder } from '../utils/layers/stackingOrder';
 import { getShapeGeometry, polygonPointsToString } from '../utils/geometry/shapeGeometry';
 import { resolveShapeAppearance } from '../utils/layers/shapeAppearance';
+import { applyTextCase } from '../utils/layers/textCase';
 import { describePaint, describeText } from '../utils/layers/drawDescriptor';
+import { layerBlendMode, layerFilterMarkup } from '../utils/layers/layerEffects';
+import { cropClipMarkup, layerCropId } from '../utils/layers/layerCrop';
 import { getTrimPathDashProps, resolveTrimPath } from '../utils/geometry/trimPath';
 import { affineTrsReading, worldAffineOf } from '../utils/geometry/containerMath';
 import type { OGrafEvaluatedScene } from './evaluation';
@@ -62,7 +65,7 @@ function attributes(values: SvgAttributes): string {
 }
 
 function renderGeometry(type: string, content: LayerContent, props: SvgAttributes = {}): string {
-  const geometry = getShapeGeometry(type as Parameters<typeof getShapeGeometry>[0]);
+  const geometry = getShapeGeometry(type as Parameters<typeof getShapeGeometry>[0], content);
   if (type === 'custom_freeform') {
     const path = content.path
       ? buildBezierPathD(content.path)
@@ -105,7 +108,10 @@ function renderText(layer: EvaluatedLayer, props: SvgAttributes = {}): string {
   const strokeColor = stroke === undefined ? paint.stroke : String(stroke);
   const fillColor = fill === undefined ? paint.fill : String(fill);
   const resolvedFillOpacity = fillOpacity === undefined ? paint.fillOpacity : Number(fillOpacity);
-  return `<text x="0" y="${svgNumber(glyphs.y)}" text-anchor="middle" fill="${escapeXml(fillColor || 'none')}" fill-opacity="${svgNumber(resolvedFillOpacity ?? 1)}" stroke="${escapeXml(strokeColor || 'none')}" stroke-opacity="${svgNumber(paint.strokeOpacity)}" stroke-width="${svgNumber(paint.strokeWidth)}" paint-order="stroke" font-size="${svgNumber(glyphs.fontSize)}" font-weight="${glyphs.fontWeight}" font-family="${escapeXml(glyphs.fontFamily)}"${attributes(rest)}>${escapeXml(glyphs.text)}</text>`;
+  return `<text x="0" y="${svgNumber(glyphs.y)}" text-anchor="middle" fill="${escapeXml(fillColor || 'none')}" fill-opacity="${svgNumber(resolvedFillOpacity ?? 1)}" stroke="${escapeXml(strokeColor || 'none')}" stroke-opacity="${svgNumber(paint.strokeOpacity)}" stroke-width="${svgNumber(paint.strokeWidth)}" paint-order="stroke" font-size="${svgNumber(glyphs.fontSize)}" font-weight="${glyphs.fontWeight}" font-family="${escapeXml(glyphs.fontFamily)}"${attributes(rest)}>${content.displayedText
+    // A text effect: what it shows at this frame, the rest kept in place, transparent (as the editor draws it).
+    ? `${escapeXml(content.displayedText.shown)}${content.displayedText.hidden ? `<tspan fill-opacity="0" stroke-opacity="0">${escapeXml(content.displayedText.hidden)}</tspan>` : ''}`
+    : escapeXml(glyphs.text)}</text>`;
 }
 
 function renderImage(layer: EvaluatedLayer, options: OGrafSvgRenderOptions, props: SvgAttributes = {}): string {
@@ -325,7 +331,7 @@ function renderTrackMatteDefinition(scene: OGrafEvaluatedScene, target: Evaluate
         mode: relationship.mode,
         inverted: relationship.inverted,
         ...trackMatteRenderParameters(relationship.trackMatte, source.type),
-        source: { type: source.type, points: source.content.points, width: source.content.width, height: source.content.height, fontSize: source.content.fontSize, textValue: source.content.textValue },
+        source: { type: source.type, points: source.content.points, width: source.content.width, height: source.content.height, fontSize: source.content.fontSize, textValue: source.content.textValue === undefined ? undefined : applyTextCase(source.content.textValue, source.content.textCase) },
         transform: layerTransform(scene, source),
         affine: { ...affine, e: affine.e + scene.width / 2, f: affine.f + scene.height / 2 },
         silhouette: (fill) => renderLayerContent(source, options, { fill, stroke: 'none', 'fill-opacity': 1 }),
@@ -421,12 +427,20 @@ function renderLayer(scene: OGrafEvaluatedScene, layer: EvaluatedLayer, options:
   const clip = clipSourceId && (relationship?.mode === undefined && (legacyMatte?.mode === 'clip' || (!relationship && Boolean(legacyMatte))))
     ? ` clip-path="url(#kcs-clip-${safeSvgId(clipSourceId)})"` : '';
   const allMaskIds = [...maskIds, ...(matteId ? [matteId] : [])];
-  const transformedBody = mixColorCorrection(`<g transform="${layerTransform(scene, layer)}">${body}</g>`, correction);
+  // Drop shadow, glow and blur on the transformed content, as the stage draws them (`utils/layers/layerEffects`).
+  const effectsId = `kcs-fx-${safeSvgId(layer.id)}`;
+  const effects = layerFilterMarkup(layer.content, effectsId);
+  // The crop trims the content in its own units, before the effects (`utils/layers/layerCrop`).
+  const cropId = layerCropId('kcs-crop', layer.id);
+  const crop = cropClipMarkup(layer.content.crop, cropId);
+  const croppedBody = crop ? `<defs>${crop}</defs><g clip-path="url(#${cropId})">${body}</g>` : body;
+  const transformedBody = mixColorCorrection(`<g transform="${layerTransform(scene, layer)}"${effects ? ` filter="url(#${effectsId})"` : ''}>${effects ? `<defs>${effects}</defs>` : ''}${croppedBody}</g>`, correction);
+  const blend = layerBlendMode(layer.content);
   const maskedBody = allMaskIds.reduceRight(
     (content, id) => `<g mask="url(#${escapeXml(id)})">${content}</g>`,
     transformedBody,
   );
-  return `<g data-layer-id="${escapeXml(layer.id)}" data-z-index="${layer.zIndex}" opacity="${layer.opacity}"${clip}>${maskedBody}</g>`;
+  return `<g data-layer-id="${escapeXml(layer.id)}" data-z-index="${layer.zIndex}" opacity="${layer.opacity}"${clip}${blend ? ` style="mix-blend-mode:${blend}"` : ''}>${maskedBody}</g>`;
 }
 
 export function renderOGrafSvg(scene: OGrafEvaluatedScene, options: OGrafSvgRenderOptions = {}): string {

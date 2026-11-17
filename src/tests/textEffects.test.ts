@@ -1,0 +1,94 @@
+import { describe, expect, it } from 'vitest';
+import { parseSingleNumber, resolveDisplayedText, type TextEffect } from '../utils/animation/textEffects';
+
+const typewriter: TextEffect = { kind: 'typewriter', startFrame: 10, durationFrames: 10 };
+const count = (from?: number): TextEffect => ({ kind: 'count', startFrame: 0, durationFrames: 30, from });
+const at = (text: string, effect: TextEffect | undefined, frame: number) => resolveDisplayedText(text, effect, frame);
+
+describe('typewriter', () => {
+  it('reveals the characters over its duration and keeps the rest as hidden text', () => {
+    expect(at('HELLO WORLD', typewriter, 0)).toEqual({ shown: '', hidden: 'HELLO WORLD' });
+    expect(at('HELLO WORLD', typewriter, 15)).toEqual({ shown: 'HELLO', hidden: ' WORLD' });
+    expect(at('HELLO WORLD', typewriter, 20)).toEqual({ shown: 'HELLO WORLD', hidden: '' });
+    expect(at('HELLO WORLD', typewriter, 99)).toEqual({ shown: 'HELLO WORLD', hidden: '' });
+  });
+
+  it('never splits a character made of several code points', () => {
+    const text = 'İ👍🏽é';
+    for (let frame = 10; frame <= 20; frame += 1) {
+      const { shown, hidden } = at(text, typewriter, frame);
+      expect(shown + hidden).toBe(text);
+      expect(['', 'İ', 'İ👍🏽', 'İ👍🏽é']).toContain(shown);
+    }
+  });
+
+  it('shows everything at once when its duration is zero', () => {
+    expect(at('ABC', { kind: 'typewriter', startFrame: 5, durationFrames: 0 }, 5)).toEqual({ shown: 'ABC', hidden: '' });
+  });
+});
+
+describe('count', () => {
+  it('counts the one number from 0 to the written value and lands on it exactly', () => {
+    expect(at('87 %', count(), 0).shown).toBe('0 %');
+    const middle = Number(at('87 %', count(), 15).shown.replace(' %', ''));
+    expect(middle).toBeGreaterThan(43);
+    expect(middle).toBeLessThan(87);
+    expect(at('87 %', count(), 30).shown).toBe('87 %');
+  });
+
+  it('keeps decimals, separators, signs and the words around the number', () => {
+    expect(at('€3,50', count(), 0).shown).toBe('€0,00');
+    expect(at('1.250 oy', count(), 0).shown).toBe('0 oy');
+    expect(at('1.250 oy', count(1000), 1).shown).toMatch(/^1\.\d{3} oy$/);
+    expect(at('Total: 1,234,567.5', count(1_000_000), 1).shown).toMatch(/^Total: 1,\d{3},\d{3}\.\d$/);
+    expect(at('Score 007', count(), 0).shown).toBe('Score 000');
+    expect(at('-12 °C', count(), 30).shown).toBe('-12 °C');
+    expect(at('-12 °C', count(), 0).shown).toBe('0 °C');
+  });
+
+  it('counts down when it starts above the written value', () => {
+    expect(at('0', count(10), 0).shown).toBe('10');
+    expect(at('0', count(10), 30).shown).toBe('0');
+  });
+
+  it('leaves a text with no number or several numbers as written', () => {
+    expect(at('GOAL!', count(), 0).shown).toBe('GOAL!');
+    expect(at('12:34', count(), 0).shown).toBe('12:34');
+  });
+});
+
+describe('reading the number', () => {
+  it('tells thousands from decimals', () => {
+    expect(parseSingleNumber('1.250')?.value).toBe(1250);
+    expect(parseSingleNumber('1,250')?.value).toBe(1250);
+    expect(parseSingleNumber('3,50')?.value).toBe(3.5);
+    expect(parseSingleNumber('3.5')?.value).toBe(3.5);
+    expect(parseSingleNumber('1.250,75')?.value).toBe(1250.75);
+    expect(parseSingleNumber('1 250 000')?.value).toBe(1_250_000);
+  });
+});
+
+it('a text without an effect is shown as written', () => {
+  expect(at('Hello', undefined, 5)).toEqual({ shown: 'Hello', hidden: '' });
+});
+
+describe('clock', () => {
+  const stopwatch = (format: 'mm:ss' | 'hh:mm:ss' | 'ss' | 'mm:ss.t'): TextEffect => ({ kind: 'clock', mode: 'stopwatch', startFrame: 10, format });
+  const countdown: TextEffect = { kind: 'clock', mode: 'countdown', startFrame: 0, seconds: 90, format: 'mm:ss' };
+
+  it('a stopwatch counts the seconds since its start at the timeline rate, holding zero before it', () => {
+    expect(at('', stopwatch('mm:ss'), 0).shown).toBe('00:00');
+    expect(resolveDisplayedText('', stopwatch('mm:ss'), 10 + 25 * 75, 25).shown).toBe('01:15');
+    expect(resolveDisplayedText('', stopwatch('hh:mm:ss'), 10 + 30 * 3725, 30).shown).toBe('01:02:05');
+    expect(resolveDisplayedText('', stopwatch('ss'), 10 + 50 * 7, 50).shown).toBe('7');
+    expect(resolveDisplayedText('', stopwatch('mm:ss.t'), 10 + 15, 30).shown).toBe('00:00.5');
+  });
+
+  it('a countdown shows its full length until a second has passed and stops at zero', () => {
+    expect(resolveDisplayedText('', countdown, 0, 30).shown).toBe('01:30');
+    expect(resolveDisplayedText('', countdown, 1, 30).shown).toBe('01:30');
+    expect(resolveDisplayedText('', countdown, 30, 30).shown).toBe('01:29');
+    expect(resolveDisplayedText('', countdown, 30 * 90, 30).shown).toBe('00:00');
+    expect(resolveDisplayedText('', countdown, 30 * 200, 30).shown).toBe('00:00');
+  });
+});

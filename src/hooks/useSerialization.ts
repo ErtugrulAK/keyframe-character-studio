@@ -12,6 +12,14 @@ import { DEFAULT_SCENE_COORDINATE_SYSTEM, isSceneCoordinateSystem, migrateSceneC
 import { normalizeMotionTemplates } from '../utils/animation/motionTemplates';
 import { migrateSceneLayerV6 } from '../utils/persistence/v6Migration';
 import { ASSET_REF_PREFIX, createAssetStore, createIndexedDbAssetBackend, startAssetSession, type AssetLockManager } from '../utils/persistence/assetStore';
+import {
+  buildWorkspaceRecord,
+  parseWorkspaceRecord,
+  WORKSPACE_REFUSED_STORAGE_KEY,
+  WORKSPACE_STORAGE_KEY,
+} from '../utils/persistence/workspacePersistence';
+import type { ProjectTemplate } from '../types/animator';
+import { DEFAULT_NEW_TAB_FPS, DEFAULT_TEMPLATE_RESOLUTION, type TemplateCanvas } from './useTemplates';
 
 /**
  * Narrowing helpers for the legacy document's optional fields. The import
@@ -52,6 +60,7 @@ import { normalizeBezierPath } from '../utils/geometry/bezierPath';
 import { SCENE_VERSION_WITH_EFFECTS, sceneUsesEffectFeatures } from '../utils/layers/colorCorrection';
 import { validateImportedDocument, type ImportResult } from '../utils/persistence/importValidation';
 import { DEFAULT_AUTOSAVE_SECONDS, readAutosaveSeconds, writeAutosaveSeconds } from '../utils/persistence/autosaveInterval';
+import { sanitizePresetValues } from '../utils/layers/operatorPresets';
 const noopSetCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>> = () => undefined;
 // A module-level stable default: a per-render inline default would join the
 // restore effect's dependencies and re-arm the one-shot sync on every render.
@@ -117,6 +126,8 @@ function toSceneData(
     masks: p.masks,
     trackMatte: p.trackMatte,
     ...(p.textFit ? { textFit: { ...p.textFit } } : {}),
+    ...(p.textEffect ? { textEffect: { ...p.textEffect } } : {}),
+    ...(p.motionPath ? { motionPath: { ...p.motionPath } } : {}),
     ...(p.fitToText ? { fitToText: cloneFitToText(p.fitToText) } : {}),
     ...(p.follow ? { follow: { ...p.follow } } : {}),
     ...(p.lookAt ? { lookAt: { ...p.lookAt } } : {}),
@@ -147,6 +158,7 @@ function toSceneData(
     ...(p.trimPathEnd !== undefined ? { trimPathEnd: p.trimPathEnd } : {}),
     ...(p.trimPathOffset !== undefined ? { trimPathOffset: p.trimPathOffset } : {}),
     borderRadius: p.borderRadius,
+    ...(p.polygon ? { polygon: { ...p.polygon } } : {}),
     ...(p.strokeLinejoin !== undefined ? { strokeLinejoin: p.strokeLinejoin } : {}),
     width: p.width,
     height: p.height,
@@ -157,12 +169,22 @@ function toSceneData(
     fontSize: p.fontSize,
     fontFamily: p.fontFamily,
     ...(p.textOrigin !== undefined ? { textOrigin: p.textOrigin } : {}),
+    ...(p.textCase !== undefined ? { textCase: p.textCase } : {}),
+    ...(p.operatorToggle ? { operatorToggle: true } : {}),
+    ...(p.operatorCounter ? { operatorCounter: true } : {}),
+    ...(p.operatorClock ? { operatorClock: true } : {}),
+    ...(p.operatorImageAny ? { operatorImageAny: true } : {}),
+    ...(p.operatorPresets?.length ? { operatorPresets: p.operatorPresets.map((entry) => ({ ...entry })) } : {}),
     imageUrl: p.imageUrl,
     videoUrl: p.videoUrl,
     shadowColor: p.shadowColor,
     shadowBlur: p.shadowBlur,
     shadowOffsetX: p.shadowOffsetX,
     shadowOffsetY: p.shadowOffsetY,
+    ...(p.layerBlur !== undefined ? { layerBlur: p.layerBlur } : {}),
+    ...(p.glowColor !== undefined ? { glowColor: p.glowColor, glowSize: p.glowSize, glowStrength: p.glowStrength } : {}),
+    ...(p.blendMode !== undefined ? { blendMode: p.blendMode } : {}),
+    ...(p.crop ? { crop: { ...p.crop } } : {}),
     inAnimPreset: p.inAnimPreset,
     outAnimPreset: p.outAnimPreset,
     inAnimDuration: p.inAnimDuration,
@@ -222,24 +244,26 @@ function toSceneData(
   };
 }
 
+/** What a SceneData becomes in the editor, read without touching any state. */
+interface ReadScene {
+  parts: CharacterPart[];
+  tracks: Track[];
+  /** Absent: the scene declares no sequences (the current ones are kept). */
+  templates?: MotionTemplate[];
+  activeTemplateId?: string;
+  fps?: number;
+  totalFrames?: number;
+  resolution?: { width: number; height: number };
+  coordinateSystem: SceneCoordinateSystem;
+  /** Every id the scene uses, for the id counter. */
+  ids: string[];
+}
+
 /**
- * Import SceneData into current editor state.
- * Returns true on success.
+ * Reads a validated SceneData into editor parts, tracks and settings. Pure:
+ * everything an import can throw on happens here, before any state changes.
  */
-function fromSceneData(
-  scene: SceneData,
-  defaultName: string,
-  setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>,
-  setTracks: React.Dispatch<React.SetStateAction<Track[]>>,
-  setFps: React.Dispatch<React.SetStateAction<number>>,
-  setTotalFrames: React.Dispatch<React.SetStateAction<number>>,
-  setProjectResolution: React.Dispatch<React.SetStateAction<{ width: number; height: number }>>,
-  setCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>>,
-  setLastSavedAt: React.Dispatch<React.SetStateAction<Date | null>>,
-  setSceneTitle: React.Dispatch<React.SetStateAction<string>>,
-  setMotionTemplates: React.Dispatch<React.SetStateAction<MotionTemplate[]>>,
-  setActiveTemplateId: React.Dispatch<React.SetStateAction<string>>,
-): boolean {
+function readSceneData(scene: SceneData): ReadScene {
   const parts: CharacterPart[] = scene.layers.map(l => migrateSceneLayerV6(l)).map(l => ({
     id: l.id,
     name: l.name,
@@ -258,6 +282,8 @@ function fromSceneData(
     masks: l.masks,
     trackMatte: l.trackMatte,
     ...(l.textFit && typeof l.textFit === 'object' ? { textFit: { ...l.textFit } } : {}),
+    ...(l.textEffect && typeof l.textEffect === 'object' ? { textEffect: { ...l.textEffect } } : {}),
+    ...(l.motionPath && typeof l.motionPath === 'object' ? { motionPath: { ...l.motionPath } } : {}),
     ...(l.fitToText && typeof l.fitToText === 'object' && typeof l.fitToText.textLayerId === 'string' ? { fitToText: cloneFitToText(l.fitToText) } : {}),
     ...(l.follow && typeof l.follow === 'object' && typeof l.follow.targetLayerId === 'string' ? { follow: { ...l.follow } } : {}),
     ...(l.lookAt && typeof l.lookAt === 'object' && typeof l.lookAt.targetLayerId === 'string' ? { lookAt: { ...l.lookAt } } : {}),
@@ -285,7 +311,12 @@ function fromSceneData(
     shadowBlur: l.shadowBlur,
     shadowOffsetX: l.shadowOffsetX,
     shadowOffsetY: l.shadowOffsetY,
+    ...(l.layerBlur !== undefined ? { layerBlur: l.layerBlur } : {}),
+    ...(l.glowColor !== undefined ? { glowColor: l.glowColor, glowSize: l.glowSize, glowStrength: l.glowStrength } : {}),
+    ...(l.blendMode !== undefined ? { blendMode: l.blendMode } : {}),
+    ...(l.crop && typeof l.crop === 'object' ? { crop: { ...l.crop } } : {}),
     borderRadius: l.borderRadius,
+    ...(l.polygon && typeof l.polygon === 'object' ? { polygon: { ...l.polygon } } : {}),
     ...(l.strokeLinejoin === 'miter' || l.strokeLinejoin === 'round' ? { strokeLinejoin: l.strokeLinejoin } : {}),
     width: l.width,
     height: l.height,
@@ -301,6 +332,14 @@ function fromSceneData(
     ...(l.trimPathOffset !== undefined ? { trimPathOffset: l.trimPathOffset } : {}),
     fontFamily: l.fontFamily,
     ...(l.textOrigin !== undefined ? { textOrigin: l.textOrigin } : {}),
+    ...(l.textCase !== undefined ? { textCase: l.textCase } : {}),
+    // Only a real `true` turns the control on; anything else in a file is no control.
+    ...(l.operatorToggle === true ? { operatorToggle: true } : {}),
+    ...(l.operatorCounter === true ? { operatorCounter: true } : {}),
+    ...(l.operatorClock === true ? { operatorClock: true } : {}),
+    ...(l.operatorImageAny === true ? { operatorImageAny: true } : {}),
+    // Presets come from a file: only well-formed entries are kept.
+    ...((() => { const presets = sanitizePresetValues(l.operatorPresets); return presets ? { operatorPresets: presets } : {}; })()),
     // BUG #3 fix: restore exported procedural animation config
     // (SceneLayer defines these; computeProceduralDelta consumes them).
     inAnimPreset: l.inAnimPreset,
@@ -373,11 +412,6 @@ function fromSceneData(
         ? scene.activeTemplateId
         : templates[0]?.id || 'Sequence')
     : undefined;
-  const nextFps = scene.fps;
-  const nextTotalFrames = scene.totalFrames;
-  const nextResolution = scene.width && scene.height ? { width: scene.width, height: scene.height } : undefined;
-  const nextName = (defaultName || '').trim();
-  // Initialize ID counter from all IDs
   const allIds: string[] = [];
   parts.forEach(p => allIds.push(p.id));
   trks.forEach(t => {
@@ -386,22 +420,100 @@ function fromSceneData(
     Object.values(t.channels || {}).forEach((channel) => channel.forEach((keyframe) => allIds.push(keyframe.id)));
   });
   (scene.motionTemplates || []).forEach((template) => allIds.push(template.id));
-  initializeIdCounter(allIds);
+  return {
+    parts,
+    tracks: trks,
+    ...(templates ? { templates } : {}),
+    ...(nextActiveTemplateId ? { activeTemplateId: nextActiveTemplateId } : {}),
+    ...(scene.fps ? { fps: scene.fps } : {}),
+    ...(scene.totalFrames ? { totalFrames: scene.totalFrames } : {}),
+    ...(scene.width && scene.height ? { resolution: { width: scene.width, height: scene.height } } : {}),
+    coordinateSystem: scene.coordinateSystem ?? DEFAULT_SCENE_COORDINATE_SYSTEM,
+    ids: allIds,
+  };
+}
 
-  setCharacterParts(parts);
-  setTracks(trks);
-  if (nextFps) setFps(nextFps);
-  if (nextTotalFrames) setTotalFrames(nextTotalFrames);
-  if (nextResolution) setProjectResolution(nextResolution);
-  setCoordinateSystem(scene.coordinateSystem ?? DEFAULT_SCENE_COORDINATE_SYSTEM);
+/**
+ * A closed tab's stored scene as the tab store holds it (`useTemplates`): the
+ * tab opens at its own rate, size and sequence when it is switched to.
+ */
+function templateCanvasFromScene(scene: SceneData): { canvas: TemplateCanvas; ids: string[] } {
+  const read = readSceneData(scene);
+  const templates = read.templates ?? normalizeMotionTemplates(DEFAULT_MOTION_TEMPLATES);
+  return {
+    canvas: {
+      characterParts: read.parts,
+      tracks: read.tracks,
+      motionTemplates: templates,
+      activeTemplateId: read.activeTemplateId ?? templates[0]?.id ?? 'Sequence',
+      coordinateSystem: read.coordinateSystem,
+      ...(read.fps ? { fps: read.fps } : {}),
+      ...(read.resolution ? { projectResolution: read.resolution } : {}),
+    },
+    ids: read.ids,
+  };
+}
+
+/** A closed tab's canvas as the SceneData stored for it (the open tab is saved from editor state). */
+function sceneFromTemplateCanvas(canvas: TemplateCanvas, name: string): SceneData {
+  const templates = normalizeMotionTemplates(canvas.motionTemplates);
+  const duration = (templates.find((template) => template.id === canvas.activeTemplateId) ?? templates[0])?.durationFrames ?? 60;
+  const scene = toSceneData(
+    canvas.characterParts,
+    canvas.tracks,
+    canvas.fps ?? DEFAULT_NEW_TAB_FPS,
+    duration,
+    canvas.projectResolution ?? DEFAULT_TEMPLATE_RESOLUTION,
+    canvas.coordinateSystem ?? DEFAULT_SCENE_COORDINATE_SYSTEM,
+    name,
+    templates,
+    canvas.activeTemplateId,
+  );
+  scene.name = name;
+  return scene;
+}
+
+/**
+ * Import SceneData into current editor state.
+ * Returns true on success.
+ */
+function fromSceneData(
+  scene: SceneData,
+  defaultName: string,
+  setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>,
+  setTracks: React.Dispatch<React.SetStateAction<Track[]>>,
+  setFps: React.Dispatch<React.SetStateAction<number>>,
+  setTotalFrames: React.Dispatch<React.SetStateAction<number>>,
+  setProjectResolution: React.Dispatch<React.SetStateAction<{ width: number; height: number }>>,
+  setCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>>,
+  setLastSavedAt: React.Dispatch<React.SetStateAction<Date | null>>,
+  setSceneTitle: React.Dispatch<React.SetStateAction<string>>,
+  setMotionTemplates: React.Dispatch<React.SetStateAction<MotionTemplate[]>>,
+  setActiveTemplateId: React.Dispatch<React.SetStateAction<string>>,
+  extraIds: readonly string[] = [],
+): boolean {
+  // Everything the scene can make this function throw is derived BEFORE the first
+  // state update: an import that cannot be applied is refused by the caller
+  // (`importProject`) without having replaced part of the current project.
+  const read = readSceneData(scene);
+  const nextName = (defaultName || '').trim();
+  // Initialize ID counter from all IDs (and those of the closed tabs restored with it).
+  initializeIdCounter([...read.ids, ...extraIds]);
+
+  setCharacterParts(read.parts);
+  setTracks(read.tracks);
+  if (read.fps) setFps(read.fps);
+  if (read.totalFrames) setTotalFrames(read.totalFrames);
+  if (read.resolution) setProjectResolution(read.resolution);
+  setCoordinateSystem(read.coordinateSystem);
   // BUG #2 fix: restore the exported scene name as editor sceneTitle.
   // Empty/missing name keeps the current/default title (no-op).
   if (nextName) {
     setSceneTitle(nextName);
   }
-  if (templates) {
-    setMotionTemplates(templates);
-    if (nextActiveTemplateId) setActiveTemplateId(nextActiveTemplateId);
+  if (read.templates) {
+    setMotionTemplates(read.templates);
+    if (read.activeTemplateId) setActiveTemplateId(read.activeTemplateId);
   }
   setLastSavedAt(new Date());
 
@@ -447,7 +559,21 @@ interface UseSerializationOptions {
    * so the next autosave cannot destroy it.
    */
   onRestoreRefused?: (message: string) => void;
+  /**
+   * The template tabs (their order and names) and the scenes of the tabs not
+   * on screen. With both given, the tabs are kept across a reload in a second
+   * key (`utils/persistence/workspacePersistence`); without them only the open
+   * scene is saved, as before tabs were kept.
+   */
+  projectTemplates?: ProjectTemplate[];
+  templateCanvasStore?: Record<string, TemplateCanvas>;
+  /** Another tab is now on screen (an imported legacy project opens in a new tab). */
+  onProjectTemplateSwitched?: () => void;
 }
+
+/** Between the open scene and the saved tabs in the "what is saved" comparison (neither JSON can hold it raw). */
+const DOCUMENT_PART_SEPARATOR = '\u0000';
+const documentKeyOf = (sceneJson: string, workspaceJson: string | null): string => `${sceneJson}${DOCUMENT_PART_SEPARATOR}${workspaceJson ?? ''}`;
 
 /** Where a saved scene the restore refused is kept, so a later autosave cannot overwrite the only copy. */
 export const AUTOSAVE_REFUSED_STORAGE_KEY = `${AUTOSAVE_STORAGE_KEY}_REFUSED`;
@@ -586,6 +712,9 @@ export const useSerialization = ({
   setIsPlaying,
   requestHistoryBaseline = noopRequestHistoryBaseline,
   onRestoreRefused,
+  projectTemplates,
+  templateCanvasStore,
+  onProjectTemplateSwitched,
 }: UseSerializationOptions): UseSerializationApi => {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
@@ -617,6 +746,14 @@ export const useSerialization = ({
   // detected conflict latches autosavePausedRef: nothing writes until reload.
   const [autosaveConflict, setAutosaveConflict] = useState<boolean>(false);
   const storageKnownRef = useRef<string | null>(null);
+  // The same discipline for the saved tabs (`WORKSPACE_STORAGE_KEY`): what this
+  // tab last read or wrote there. A record this build cannot read (damaged, or
+  // from a newer build) is never written over or removed: the tabs key is then
+  // left alone for the whole session.
+  const workspaceKnownRef = useRef<string | null>(null);
+  const workspaceForeignRef = useRef<boolean>(false);
+  // The serialized document (open scene + saved tabs, `documentKeyOf`) this
+  // tab settled to at boot or wrote last.
   const settledSaveRef = useRef<string | null>(null);
   const autosavePausedRef = useRef<boolean>(false);
   const restoreDecidedRef = useRef<boolean>(false);
@@ -626,6 +763,12 @@ export const useSerialization = ({
   useEffect(() => {
     onRestoreRefusedRef.current = onRestoreRefused;
   }, [onRestoreRefused]);
+  // The tab setters the one-shot restore calls, read the same way: a caller
+  // passing a new function each render must not re-run the restore.
+  const tabSettersRef = useRef({ setProjectTemplates, setTemplateCanvasStore, setActiveProjectTemplateIdState });
+  useEffect(() => {
+    tabSettersRef.current = { setProjectTemplates, setTemplateCanvasStore, setActiveProjectTemplateIdState };
+  }, [setProjectTemplates, setTemplateCanvasStore, setActiveProjectTemplateIdState]);
 
   // The SAFE-01 read-compare-write runs as one critical section
   // inside the Web Lock named after the guarded key. manualPendingRef keeps a
@@ -662,7 +805,8 @@ export const useSerialization = ({
 
   // 1. Initial Load: Restore from LocalStorage (SceneData v1 or legacy AnimationProject)
   useEffect(() => {
-    const applySavedScene = (saved: string) => {
+    /** Applies the open scene; true when it was. `extraIds`: the restored closed tabs' ids, for the id counter. */
+    const applySavedScene = (saved: string, extraIds: readonly string[]): boolean => {
       try {
         // The autosave payload goes through the same boundary as an imported
         // document: a corrupted or tampered entry is reported and skipped
@@ -679,12 +823,12 @@ export const useSerialization = ({
             kept = false;
           }
           onRestoreRefusedRef.current?.(`The saved scene could not be opened: ${reason?.message ?? 'it is not a valid scene'}${kept ? ' A copy was kept in this browser.' : ''}`);
-          return;
+          return false;
         }
 
         if (validation.document.kind === 'scene') {
           const scene = validation.document.scene;
-          const applied = fromSceneData(scene, scene.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
+          const applied = fromSceneData(scene, scene.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState, extraIds);
           if (applied) {
             // oxlint-disable-next-line react/set-state-in-effect -- startup restore is a one-shot sync with storage
             setRestoredFromLocalStorage(true);
@@ -692,7 +836,7 @@ export const useSerialization = ({
             requestHistoryBaseline();
             restoreAppliedRef.current = true;
           }
-          return;
+          return applied;
         }
 
         // Legacy AnimationProject format (backward compat)
@@ -703,7 +847,7 @@ export const useSerialization = ({
           localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
           // This tab legitimately deleted the key; that deletion is its own last-known write.
           storageKnownRef.current = null;
-          return;
+          return false;
         }
         const savedResolution = readProjectResolution(parsed.projectResolution);
         const migratedTracks = parsed.tracks.map(migrateTrack);
@@ -726,7 +870,7 @@ export const useSerialization = ({
         for (const template of legacyMotionTemplates ?? []) {
           allIds.push(template.id);
         }
-        initializeIdCounter(allIds);
+        initializeIdCounter([...allIds, ...extraIds]);
         // From here to the baseline request the block is pure setter dispatch:
         // a successful legacy startup restore is all-or-nothing (N1), and the
         // baseline request is the final statement of the success path.
@@ -743,9 +887,67 @@ export const useSerialization = ({
         // The restored legacy scene is the baseline, not an undoable edit.
         requestHistoryBaseline();
         restoreAppliedRef.current = true;
+        return true;
       } catch (e) {
         console.warn('[AutoSave] Failed to restore saved state', e);
+        return false;
       }
+    };
+
+    /**
+     * Applies the saved tabs: the list, which one is open, and the closed
+     * tabs' scenes, each through the scene import boundary on its own. A tab
+     * whose scene is refused is left out (its copy kept); the others open.
+     * Returns the ids the closed tabs use, or null when nothing was applied.
+     */
+    const applySavedWorkspace = (
+      workspace: Extract<ReturnType<typeof parseWorkspaceRecord>, { ok: true }>,
+      sceneTexts: ReadonlyMap<string, string>,
+      openSceneName: string | undefined,
+    ): string[] | null => {
+      const store: Record<string, TemplateCanvas> = {};
+      const ids: string[] = [];
+      const tabs: ProjectTemplate[] = [];
+      const refused: Array<{ id: string; name: string; scene: string }> = [];
+      for (const tab of workspace.tabs) {
+        const text = sceneTexts.get(tab.id);
+        if (text === undefined) {
+          // The open tab, or a tab never filled: it opens empty, as it would have.
+          tabs.push(tab.id === workspace.activeTabId && openSceneName ? { ...tab, name: openSceneName } : tab);
+          continue;
+        }
+        const validation = validateImportedDocument(text);
+        if (!validation.ok || validation.document.kind !== 'scene') {
+          refused.push({ ...tab, scene: workspace.sceneTexts.get(tab.id) ?? text });
+          continue;
+        }
+        try {
+          const read = templateCanvasFromScene(validation.document.scene);
+          store[tab.id] = read.canvas;
+          ids.push(...read.ids);
+          tabs.push(tab);
+        } catch {
+          refused.push({ ...tab, scene: workspace.sceneTexts.get(tab.id) ?? text });
+        }
+      }
+      if (refused.length > 0) {
+        let kept = false;
+        try {
+          localStorage.setItem(WORKSPACE_REFUSED_STORAGE_KEY, JSON.stringify({ refusedAt: new Date().toISOString(), tabs: refused }));
+          kept = true;
+        } catch {
+          kept = false;
+        }
+        const names = refused.map((tab) => `"${tab.name}"`).join(', ');
+        onRestoreRefusedRef.current?.(`${refused.length === 1 ? 'A saved tab' : `${refused.length} saved tabs`} could not be opened: ${names}.${kept ? ' A copy was kept in this browser.' : ''}`);
+      }
+      const tabSetters = tabSettersRef.current;
+      tabSetters.setProjectTemplates(tabs);
+      tabSetters.setTemplateCanvasStore(store);
+      tabSetters.setActiveProjectTemplateIdState(workspace.activeTabId);
+      const openTab = tabs.find((tab) => tab.id === workspace.activeTabId);
+      if (openTab) setSceneTitleState(openTab.name);
+      return ids;
     };
 
     let saved: string | null;
@@ -753,35 +955,81 @@ export const useSerialization = ({
       saved = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
     } catch (e) {
       console.warn('[AutoSave] Failed to restore saved state', e);
+      // Nothing can be compared against: the tabs key is not touched either.
+      workspaceForeignRef.current = true;
       restoreDecidedRef.current = true;
       return;
     }
     // Whatever is in the key at boot — applied, refused, or absent — is what
     // this tab last observed; every later write compares against it (SAFE-01).
     storageKnownRef.current = saved;
-    if (saved === null || !saved.includes(ASSET_REF_PREFIX)) {
+
+    // The saved tabs. A record this build cannot read stays as it is, unused.
+    let savedWorkspace: string | null = null;
+    try {
+      savedWorkspace = localStorage.getItem(WORKSPACE_STORAGE_KEY);
+    } catch {
+      workspaceForeignRef.current = true;
+    }
+    workspaceKnownRef.current = savedWorkspace;
+    const workspace = savedWorkspace === null ? null : parseWorkspaceRecord(savedWorkspace);
+    if (workspace && !workspace.ok) {
+      workspaceForeignRef.current = true;
+      console.warn('[Storage] The saved tabs were left as they are:', workspace.reason);
+    }
+    const readableWorkspace = workspace?.ok ? workspace : null;
+    const openSceneName = (() => {
+      if (!saved || !readableWorkspace) return undefined;
+      try {
+        return readOptionalString((JSON.parse(saved) as { name?: unknown }).name) || undefined;
+      } catch {
+        return undefined;
+      }
+    })();
+
+    const applyAll = (scene: string | null, sceneTexts: ReadonlyMap<string, string>) => {
+      const workspaceIds = readableWorkspace ? applySavedWorkspace(readableWorkspace, sceneTexts, openSceneName) : null;
+      const sceneApplied = scene ? applySavedScene(scene, workspaceIds ?? []) : false;
+      if (workspaceIds && !sceneApplied) {
+        // The tabs came back without an open scene (none saved, or refused):
+        // still a restore, and still not an undoable edit.
+        initializeIdCounter(workspaceIds);
+        setRestoredFromLocalStorage(true);
+        requestHistoryBaseline();
+        restoreAppliedRef.current = true;
+      }
+    };
+
+    const workspaceTexts = readableWorkspace?.sceneTexts ?? new Map<string, string>();
+    const namesMedia = (saved?.includes(ASSET_REF_PREFIX) ?? false)
+      || [...workspaceTexts.values()].some((text) => text.includes(ASSET_REF_PREFIX));
+    if (!namesMedia) {
       restoreDecidedRef.current = true;
-      if (saved) applySavedScene(saved);
+      if (saved || readableWorkspace) applyAll(saved, workspaceTexts);
       return;
     }
-    // The saved scene names stored media: resolve them before it goes through
+    // The saved scenes name stored media: resolve them before they go through
     // the import boundary. Until then the restore is undecided, so the settle
     // capture and every save wait. A medium whose bytes are missing keeps its
     // reference (the layer shows no image) and is never dropped from storage.
-    const savedScene = saved;
-    let cancelled = false;
-    void assetStore.internalize(savedScene)
+    const resolveMedia = (text: string) => assetStore.internalize(text)
       .catch((error: unknown) => {
         console.warn('[Assets] Stored media could not be read', error);
-        return { json: savedScene, missing: [] as string[] };
-      })
-      .then(({ json, missing }) => {
-        if (cancelled) return;
-        if (missing.length > 0) console.warn(`[Assets] ${missing.length} stored medium(s) not found; their layers keep the reference.`);
-        restoreDecidedRef.current = true;
-        applySavedScene(json);
-        setSettleEpoch((epoch) => epoch + 1);
+        return { json: text, missing: [] as string[] };
       });
+    const savedScene = saved;
+    let cancelled = false;
+    void Promise.all([
+      savedScene === null ? Promise.resolve(null) : resolveMedia(savedScene),
+      Promise.all([...workspaceTexts].map(async ([id, text]) => [id, await resolveMedia(text)] as const)),
+    ]).then(([scene, tabScenes]) => {
+      if (cancelled) return;
+      const missing = (scene?.missing.length ?? 0) + tabScenes.reduce((total, [, resolved]) => total + resolved.missing.length, 0);
+      if (missing > 0) console.warn(`[Assets] ${missing} stored medium(s) not found; their layers keep the reference.`);
+      restoreDecidedRef.current = true;
+      applyAll(scene?.json ?? null, new Map(tabScenes.map(([id, resolved]) => [id, resolved.json])));
+      setSettleEpoch((epoch) => epoch + 1);
+    });
     return () => {
       cancelled = true;
     };
@@ -810,12 +1058,39 @@ export const useSerialization = ({
     void assetStore.ingest(characterParts as unknown as Array<Record<string, unknown>>);
   }, [assetStore, assetSessionReady, characterParts]);
 
+  // The closed tabs' media too: the saved tabs then name them instead of
+  // carrying their bytes.
+  useEffect(() => {
+    if (!assetSessionReady || !templateCanvasStore) return;
+    const layers = Object.values(templateCanvasStore).flatMap((canvas) => canvas.characterParts);
+    if (layers.length > 0) void assetStore.ingest(layers as unknown as Array<Record<string, unknown>>);
+  }, [assetStore, assetSessionReady, templateCanvasStore]);
+
   // 2. Auto-Save: SceneData format, at most the user's autosave delay after the first unsaved change (SAFE-01 write discipline).
   const buildSceneJson = useCallback((): string => {
     const scene = toSceneData(characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId);
     scene.name = sceneTitle || 'Untitled';
     return JSON.stringify(scene);
   }, [characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId]);
+
+  /**
+   * The saved tabs as stored text, or null when there is nothing to keep
+   * beside the open scene (a single tab, or no tabs given to the hook).
+   */
+  const buildWorkspaceJson = useCallback((): string | null => {
+    if (!projectTemplates || !templateCanvasStore) return null;
+    const scenes: Record<string, unknown> = {};
+    for (const tab of projectTemplates) {
+      if (tab.id === activeProjectTemplateId) continue;
+      const canvas = Object.prototype.hasOwnProperty.call(templateCanvasStore, tab.id) ? templateCanvasStore[tab.id] : undefined;
+      if (canvas) scenes[tab.id] = sceneFromTemplateCanvas(canvas, tab.name);
+    }
+    const record = buildWorkspaceRecord(activeProjectTemplateId, projectTemplates, scenes);
+    return record ? JSON.stringify(record) : null;
+  }, [projectTemplates, templateCanvasStore, activeProjectTemplateId]);
+
+  /** What a save covers: the open scene and the saved tabs, compared as one. */
+  const buildDocumentKey = useCallback((): string => documentKeyOf(buildSceneJson(), buildWorkspaceJson()), [buildSceneJson, buildWorkspaceJson]);
 
   /**
    * Capture the document THIS TAB WAS GIVEN as its idle baseline.
@@ -828,9 +1103,9 @@ export const useSerialization = ({
   useEffect(() => {
     if (settledSaveRef.current !== null || !restoreDecidedRef.current) return;
     if (restoreAppliedRef.current && !restoredFromLocalStorage) return;
-    settledSaveRef.current = buildSceneJson();
+    settledSaveRef.current = buildDocumentKey();
     clearUnsaved();
-  }, [restoredFromLocalStorage, buildSceneJson, settleEpoch, clearUnsaved]);
+  }, [restoredFromLocalStorage, buildDocumentKey, settleEpoch, clearUnsaved]);
 
   /**
    * The first change after a save (or after the boot document settled) starts
@@ -843,7 +1118,7 @@ export const useSerialization = ({
     // save attempt reports it, and a render effect must never throw.
     let same = false;
     try {
-      same = buildSceneJson() === settledSaveRef.current;
+      same = buildDocumentKey() === settledSaveRef.current;
     } catch {
       same = false;
     }
@@ -854,7 +1129,7 @@ export const useSerialization = ({
     // The document changed: the header must say so (an external, committed edit).
     // oxlint-disable-next-line react/set-state-in-effect
     setHasUnsavedChanges(true);
-  }, [buildSceneJson]);
+  }, [buildDocumentKey]);
 
   /** The autosave form of a serialized scene: confirmed media replaced by their references. */
   const storedFormOf = useCallback((json: string): string => {
@@ -862,6 +1137,20 @@ export const useSerialization = ({
     const scene = JSON.parse(json) as SceneData;
     const stored = assetStore.externalize(scene as unknown as { layers?: Array<Record<string, unknown>> });
     return stored === (scene as unknown) ? json : JSON.stringify(stored);
+  }, [assetStore]);
+
+  /** The same for the saved tabs: each closed tab's scene names its stored media. */
+  const storedWorkspaceFormOf = useCallback((json: string): string => {
+    if (!json.includes('"data:')) return json;
+    const record = JSON.parse(json) as { scenes: Record<string, { layers?: Array<Record<string, unknown>> }> };
+    let changed = false;
+    const scenes: typeof record.scenes = {};
+    for (const [id, scene] of Object.entries(record.scenes)) {
+      const stored = assetStore.externalize(scene);
+      if (stored !== scene) changed = true;
+      scenes[id] = stored;
+    }
+    return changed ? JSON.stringify({ ...record, scenes }) : json;
   }, [assetStore]);
 
   /**
@@ -873,30 +1162,57 @@ export const useSerialization = ({
    */
   const casWrite = useCallback((force: boolean): boolean => {
     const nextJson = buildSceneJson();
-    if (!force && nextJson === settledSaveRef.current) return false;
-    // What the key receives: the same scene with its stored media named.
+    const nextWorkspace = buildWorkspaceJson();
+    const nextKey = documentKeyOf(nextJson, nextWorkspace);
+    if (!force && nextKey === settledSaveRef.current) return false;
+    // What the keys receive: the same scenes with their stored media named.
     const storedJson = storedFormOf(nextJson);
+    const storedWorkspace = nextWorkspace === null ? null : storedWorkspaceFormOf(nextWorkspace);
+    const ownsWorkspace = !workspaceForeignRef.current;
     let currentStored: string | null;
+    let currentWorkspace: string | null = null;
     try {
       currentStored = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
+      if (ownsWorkspace) currentWorkspace = localStorage.getItem(WORKSPACE_STORAGE_KEY);
     } catch (e) {
       // Storage unreadable: honest no-op. Tokens untouched, retried next tick.
       setAutosaveError((previous) => previous ?? { kind: 'unavailable', at: Date.now() });
       console.error('[AutoSave] Storage unreadable; the save is deferred', e);
       return false;
     }
-    if (currentStored !== storageKnownRef.current) {
-      // The shared key changed outside this tab since its last read or write:
+    if (currentStored !== storageKnownRef.current || (ownsWorkspace && currentWorkspace !== workspaceKnownRef.current)) {
+      // A shared key changed outside this tab since its last read or write:
       // PAUSE rather than silently overwriting the other session's document.
       autosavePausedRef.current = true;
       setAutosaveConflict(true);
       console.warn('[AutoSave] Paused: the shared project was changed outside this tab. Reload to adopt it, or export this tab to keep its work.');
       return false;
     }
+    const writesWorkspace = ownsWorkspace && storedWorkspace !== currentWorkspace;
     try {
-      localStorage.setItem(AUTOSAVE_STORAGE_KEY, storedJson);
+      // The tabs first, then the open scene. If the scene cannot be written the
+      // tabs go back to what they were, so the two keys never describe two
+      // different moments (the tabs naming one open tab, the scene another's).
+      if (writesWorkspace) {
+        if (storedWorkspace === null) localStorage.removeItem(WORKSPACE_STORAGE_KEY);
+        else localStorage.setItem(WORKSPACE_STORAGE_KEY, storedWorkspace);
+      }
+      try {
+        localStorage.setItem(AUTOSAVE_STORAGE_KEY, storedJson);
+      } catch (error) {
+        if (writesWorkspace) {
+          try {
+            if (currentWorkspace === null) localStorage.removeItem(WORKSPACE_STORAGE_KEY);
+            else localStorage.setItem(WORKSPACE_STORAGE_KEY, currentWorkspace);
+          } catch (rollbackError) {
+            console.error('[AutoSave] The saved tabs could not be put back', rollbackError);
+          }
+        }
+        throw error;
+      }
       storageKnownRef.current = storedJson;
-      settledSaveRef.current = nextJson;
+      if (ownsWorkspace) workspaceKnownRef.current = storedWorkspace;
+      settledSaveRef.current = nextKey;
       setLastSavedAt(new Date());
       setAutosaveError(null);
       clearUnsaved();
@@ -908,7 +1224,7 @@ export const useSerialization = ({
       console.error('[AutoSave] Failed to save project to LocalStorage', e);
       return false;
     }
-  }, [buildSceneJson, clearUnsaved, storedFormOf]);
+  }, [buildSceneJson, buildWorkspaceJson, clearUnsaved, storedFormOf, storedWorkspaceFormOf]);
 
   type LockRunOutcome<T> = { ran: boolean; value?: T };
 
@@ -936,7 +1252,7 @@ export const useSerialization = ({
     // The document went back to what is saved (an undo): nothing is owed.
     // Cheap pre-check outside the grant; the authoritative comparison re-runs
     // inside it.
-    if (buildSceneJson() === settledSaveRef.current) {
+    if (buildDocumentKey() === settledSaveRef.current) {
       clearUnsaved();
       return;
     }
@@ -950,7 +1266,7 @@ export const useSerialization = ({
       .finally(() => {
         if (!unmountedRef.current) setIsSaving(false);
       });
-  }, [buildSceneJson, casWrite, clearUnsaved, runWithAutosaveLock]);
+  }, [buildDocumentKey, casWrite, clearUnsaved, runWithAutosaveLock]);
 
   // One stable clock (it is never re-created by edits, which used to restart a
   // fixed interval on every change and postpone the save while the user kept
@@ -1024,6 +1340,14 @@ export const useSerialization = ({
     } else {
       storageKnownRef.current = adoptedKnown;
     }
+    // The saved tabs are re-observed too (a reset keeps the tabs, and their key).
+    if (!workspaceForeignRef.current) {
+      try {
+        workspaceKnownRef.current = localStorage.getItem(WORKSPACE_STORAGE_KEY);
+      } catch {
+        workspaceKnownRef.current = null;
+      }
+    }
     settledSaveRef.current = null;
     clearUnsaved();
     restoreAppliedRef.current = false;
@@ -1071,7 +1395,8 @@ export const useSerialization = ({
 
         setTemplateCanvasStore((prev: any) => ({
           ...prev,
-          [activeProjectTemplateId]: { characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem },
+          // The tab left keeps its own rate and size, as a tab switch keeps them.
+          [activeProjectTemplateId]: { characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, fps, projectResolution },
           [newId]: { characterParts: importedParts, tracks: importedTracks, motionTemplates: importedMotionTemplates, activeTemplateId: initialSeqId, coordinateSystem: declaredCoordinateSystem },
         }));
 
@@ -1096,12 +1421,15 @@ export const useSerialization = ({
 
         setRestoredFromLocalStorage(false);
         adoptOwnershipAfterReplacement();
+        // Another tab is on screen: a fresh undo baseline and no selection of
+        // the tab left (its ids can name other layers here).
+        onProjectTemplateSwitched?.();
         return { ok: true, diagnostics: validation.diagnostics };
       }
     } catch {
       return { ok: false, diagnostics: [{ code: 'KCS_IMPORT_FAILED', severity: 'error', feature: 'project-import', path: '$', message: 'The document passed validation but could not be applied.', action: 'Re-export the project and import it again.' }] };
     }
-  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setProjectResolution, setCoordinateSystem, setTracks, setCharacterParts, setFps, setTotalFrames, setTemplateCanvasStore, setProjectTemplates, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, adoptOwnershipAfterReplacement]);
+  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, fps, projectResolution, setProjectResolution, setCoordinateSystem, setTracks, setCharacterParts, setFps, setTotalFrames, setTemplateCanvasStore, setProjectTemplates, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, adoptOwnershipAfterReplacement, onProjectTemplateSwitched]);
 
   const resetProject = useCallback(() => {
     setTracks(DEFAULT_TRACKS);
@@ -1206,12 +1534,12 @@ export const useSerialization = ({
     if (manualPendingRef.current) return { safe: false, reason: 'save-in-flight' };
     if (autosaveError !== null) return { safe: false, reason: 'write-failed' };
     try {
-      if (buildSceneJson() !== settledSaveRef.current) return { safe: false, reason: 'unsaved-changes' };
+      if (buildDocumentKey() !== settledSaveRef.current) return { safe: false, reason: 'unsaved-changes' };
     } catch {
       return { safe: false, reason: 'write-failed' };
     }
     return { safe: true, reason: 'clean' };
-  }, [buildSceneJson, autosaveError]);
+  }, [buildDocumentKey, autosaveError]);
 
   // One forced durable write through the existing SAFE-01/02 critical
   // section; resolves true only when the key actually advanced (casWrite's

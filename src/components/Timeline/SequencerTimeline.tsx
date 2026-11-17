@@ -40,6 +40,8 @@ import { TimeRuler } from './TimeRuler';
 import { TrackLane, type KeyframePress } from './TrackLane';
 import { CHANNEL_META, clampPanelSize, TRACK_ROW_HEIGHT, KEYFRAME_DRAG_THRESHOLD_PX, OUTLINER_DEFAULT_WIDTH, OUTLINER_MAX_WIDTH, OUTLINER_MIN_WIDTH, resolveTimelineHeightCeiling, TIMELINE_COLLAPSED_HEIGHT, TIMELINE_DEFAULT_HEIGHT, TIMELINE_EDGE_TRANSITION_MS, TIMELINE_MIN_HEIGHT, resolveOpeningTimelineHeight, shouldOpenTimelineCollapsed } from './timelineConstants';
 import { copyKeyframeGroupData, type KeyframeCopyPayload } from '../../utils/animation/keyframeCopyPaste';
+import { readKeyframeGroupEasing, type SegmentCurve } from '../../utils/animation/keyframeEasing';
+import { RetimeStepMenu, type RetimeStepRequest } from './RetimeStepMenu';
 import { TrackOutlinerRow } from './TrackOutlinerRow';
 import { projectLayerOrdinals } from '../../utils/layers/layerOrdinal';
 import { frameToSeconds, secondsToFrame } from '../../utils/animation/timebase';
@@ -49,7 +51,9 @@ import { useRowWindow, type RowViewport } from '../../hooks/useRowWindow';
 import { useRetainedScrollTop, useRetainedUiState } from '../../hooks/useRetainedUiState';
 import { rowOffsets, type RowWindowSegment } from '../../utils/editor/rowWindow';
 import { edgeScrollStep, laneContextOf, laneGroupHeight, laneKeyframePositions, laneKeyframes, type LaneContext } from './timelineLaneLayout';
+import { TimelineTimeField } from './TimelineTimeField';
 import './SequencerTimeline.css';
+import { sequenceIdOf } from '../../utils/animation/sequenceId';
 
 /**
  * Anything that already owns a pointer gesture may not begin a marquee: a
@@ -173,6 +177,7 @@ export const SequencerTimeline: React.FC = () => {
     deleteMotionTemplate,
     updateMotionTemplateDuration,
     setMotionTemplateStepMarkers,
+    retimeStep,
   } = useAnimator();
   // The rows follow the Layers panel: a parent, then its children under it.
   const layerTree = useMemo(() => orderTracksByLayerTree(characterParts, sceneTracks), [characterParts, sceneTracks]);
@@ -273,6 +278,33 @@ export const SequencerTimeline: React.FC = () => {
       pasteKeyframeClipboard(trackId, frame, kfClipboard);
     },
     [kfClipboard, pasteKeyframeClipboard]
+  );
+  // Timeline-LOCAL easing clipboard (Copy / Paste Easing): only the curve a
+  // keyframe group starts with, never values or frames. Not persisted.
+  const [easingClipboard, setEasingClipboard] = useState<SegmentCurve | null>(null);
+  const handleCopyEasing = useCallback(
+    (trackId: string, frame: number) => {
+      const track = tracks.find((t) => t.id === trackId);
+      if (!track) return;
+      const curve = readKeyframeGroupEasing(track, frame, activeTemplateId || 'Sequence');
+      if (curve) setEasingClipboard(curve); // copy: NO history
+    },
+    [tracks, activeTemplateId]
+  );
+  const handlePasteEasing = useCallback(
+    (trackId: string, frame: number) => {
+      if (!easingClipboard) return;
+      setKeyframeGroupEasing(trackId, frame, easingClipboard.easing, easingClipboard.controlPoints);
+    },
+    [easingClipboard, setKeyframeGroupEasing]
+  );
+  /** Whether the keyframes at `frame` share one curve that Copy Easing can take. */
+  const canCopyEasing = useCallback(
+    (trackId: string, frame: number) => {
+      const track = tracks.find((t) => t.id === trackId);
+      return Boolean(track && readKeyframeGroupEasing(track, frame, activeTemplateId || 'Sequence'));
+    },
+    [tracks, activeTemplateId]
   );
 
   /**
@@ -527,6 +559,8 @@ export const SequencerTimeline: React.FC = () => {
     [motionTemplates, activeTemplateId, activeSequenceDurationFrames],
   );
   const stepMarkerAtPlayhead = activeStepMarkers.includes(Math.round(currentFrame));
+  /* Retime a step: a right-click on the ruler opens `RetimeStepMenu` for the step under the pointer. */
+  const [retimeRequest, setRetimeRequest] = useState<RetimeStepRequest | null>(null);
   const handleToggleStepMarker = () => {
     const frame = Math.round(currentFrame);
     if (stepMarkerAtPlayhead) {
@@ -1061,14 +1095,6 @@ export const SequencerTimeline: React.FC = () => {
     if (timelineGridRef.current) timelineGridRef.current.scrollLeft = 0;
   };
 
-  const formatTimecode = (frame: number, currentFps: number) => {
-    const totalSeconds = Math.floor(frame / currentFps);
-    const subFrames = frame % currentFps;
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}:${String(subFrames).padStart(2, '0')}`;
-  };
-
   /**
    * K1 (D2) — arm / disarm a property (C10: the "+" of an unanimated row, or
    * the row's "Remove all keyframes"). Reading the state decides the flow:
@@ -1089,7 +1115,7 @@ export const SequencerTimeline: React.FC = () => {
     const store = (channel.includes(':')
       ? (channel.endsWith(':path') ? track.maskPathChannels : track.maskChannels)
       : track.channels) as Record<string, { templateId?: string }[]> | undefined;
-    const keyCount = (store?.[channel] ?? []).filter((k) => (k.templateId || 'Sequence') === scope).length;
+    const keyCount = (store?.[channel] ?? []).filter((k) => sequenceIdOf(k) === scope).length;
     const partName = characterParts.find((candidate) => candidate.id === track.partId)?.name ?? track.name;
     const label = channel.includes(':')
       ? (() => {
@@ -1103,8 +1129,13 @@ export const SequencerTimeline: React.FC = () => {
   };
 
   // Add property keyframe at current frame for given channel
-  const handleAddChannelKeyframe = (trackId: string, channel: AnimationChannel, partId: string) => {
-    const transform = resolveAuthoredLocalTransform(partId, currentFrame, { parts: characterParts, worldOf: getComputedTransform });
+  /**
+   * `insert` (Add Keyframe Here) also gives the new key the named easing of the
+   * key before it on that channel, so the segment it splits keeps playing the
+   * way it did; the playhead "+" keeps the default easing.
+   */
+  const handleAddChannelKeyframe = (trackId: string, channel: AnimationChannel, partId: string, frame: number = currentFrame, insert = false) => {
+    const transform = resolveAuthoredLocalTransform(partId, frame, { parts: characterParts, worldOf: getComputedTransform });
     const part = characterParts.find((candidate) => candidate.id === partId);
     const maskValue = (() => {
       if (!channel.includes(':')) return undefined;
@@ -1124,9 +1155,14 @@ export const SequencerTimeline: React.FC = () => {
             ? (part?.trimPathOffset ?? 0)
             : channel === 'matteFeather' || channel === 'matteStrength'
               // The value the stage shows now (keyed or static).
-              ? (part ? channelArmValue(channel, transform, { ...part, trackMatte: evaluateTrackMatte(part.trackMatte, tracks.find((candidate) => candidate.id === trackId), currentFrame, activeTemplateId || 'Sequence') }) : 0)
+              ? (part ? channelArmValue(channel, transform, { ...part, trackMatte: evaluateTrackMatte(part.trackMatte, tracks.find((candidate) => candidate.id === trackId), frame, activeTemplateId || 'Sequence') }) : 0)
               : (transform as unknown as Record<string, number>)[channel] ?? (channel === 'maskScale' ? 1 : 0);
-    addPropertyKeyframe(trackId, channel, currentFrame, val);
+    const inherited = insert && !channel.includes(':')
+      ? (tracks.find((candidate) => candidate.id === trackId)?.channels?.[channel as TrackChannel] ?? [])
+        .filter((keyframe) => sequenceIdOf(keyframe) === (activeTemplateId || 'Sequence') && keyframe.frame < frame)
+        .sort((a, b) => b.frame - a.frame)[0]
+      : undefined;
+    addPropertyKeyframe(trackId, channel, frame, val, inherited && !inherited.bezierControlPoints && !inherited.bezierOut ? inherited.easing : undefined);
   };
 
   // State for sub-group collapsing (e.g., location, rotation, scale)
@@ -1163,6 +1199,7 @@ export const SequencerTimeline: React.FC = () => {
     toggleSubGroup, setCurrentFrame, setSelectedKeyframeId, selectKeyframes, beginKeyframePress, deleteKeyframe,
     deletePropertyKeyframe, deleteKeyframeFrameGroup, updateMaskPathKeyframeFrame, deleteMaskPathKeyframe,
     duplicateKeyframeGroup, setKeyframeGroupEasing, handleCopyKeyframes, handlePasteKeyframes, getFrameFromMouse,
+    handleCopyEasing, handlePasteEasing, canCopyEasing,
   });
   useLayoutEffect(() => {
     rowLatest.current = {
@@ -1171,6 +1208,7 @@ export const SequencerTimeline: React.FC = () => {
       toggleSubGroup, setCurrentFrame, setSelectedKeyframeId, selectKeyframes, beginKeyframePress, deleteKeyframe,
       deletePropertyKeyframe, deleteKeyframeFrameGroup, updateMaskPathKeyframeFrame, deleteMaskPathKeyframe,
       duplicateKeyframeGroup, setKeyframeGroupEasing, handleCopyKeyframes, handlePasteKeyframes, getFrameFromMouse,
+      handleCopyEasing, handlePasteEasing, canCopyEasing,
     };
   });
   const rowActions = useMemo(() => {
@@ -1205,6 +1243,10 @@ export const SequencerTimeline: React.FC = () => {
       onSetKeyframeGroupEasing: (...args: Parameters<typeof setKeyframeGroupEasing>) => latest().setKeyframeGroupEasing(...args),
       onCopyKeyframes: (...args: Parameters<typeof handleCopyKeyframes>) => latest().handleCopyKeyframes(...args),
       onPasteKeyframes: (...args: Parameters<typeof handlePasteKeyframes>) => latest().handlePasteKeyframes(...args),
+      onCopyEasing: (trackId: string, frame: number) => latest().handleCopyEasing(trackId, frame),
+      onPasteEasing: (trackId: string, frame: number) => latest().handlePasteEasing(trackId, frame),
+      canCopyEasing: (trackId: string, frame: number) => latest().canCopyEasing(trackId, frame),
+      onInsertChannelKeyframe: (trackId: string, channel: AnimationChannel, partId: string, frame: number) => latest().handleAddChannelKeyframe(trackId, channel, partId, frame, true),
       onFrameFromClientX: (clientX: number) => latest().getFrameFromMouse(clientX),
     };
   }, []);
@@ -1426,8 +1468,7 @@ export const SequencerTimeline: React.FC = () => {
         <div className="timeline-header-left timeline-header-band timeline-header-band-timing">
           <div className="timeline-timing-group">
             <Clock size={15} className="timeline-clock-icon" aria-hidden="true" />
-            <span className="timecode-text">{formatTimecode(currentFrame, fps)}</span>
-            <span className="timecode-total">/ {formatTimecode(totalFrames, fps)}</span>
+            <TimelineTimeField currentFrame={currentFrame} totalFrames={totalFrames} fps={fps} onSeek={(frame) => setCurrentFrame(frame)} />
           </div>
           <div className="divider-v" />
           <div className="duration-control-box">
@@ -1465,6 +1506,7 @@ export const SequencerTimeline: React.FC = () => {
               <Scissors size={12} aria-hidden="true" /><span>Crop</span>
             </button>
           </div>
+
         </div>
 
         <div className="timeline-header-center timeline-transport-band">
@@ -1636,7 +1678,19 @@ export const SequencerTimeline: React.FC = () => {
             onSeekFrame={handleRulerKeySeek}
             stepMarkers={activeStepMarkers}
             onRemoveStepMarker={(frame) => setMotionTemplateStepMarkers(activeTemplateId, removeStepMarker(activeStepMarkers, frame, activeSequenceDurationFrames))}
+            onContextMenu={(event) => { event.preventDefault(); setRetimeRequest({ frame: getFrameFromMouse(event.clientX), x: event.clientX, y: event.clientY }); }}
           />
+          {retimeRequest && (
+            <RetimeStepMenu
+              key={`${retimeRequest.frame}:${retimeRequest.x}:${retimeRequest.y}`}
+              request={retimeRequest}
+              stepMarkers={activeStepMarkers}
+              durationFrames={activeSequenceDurationFrames}
+              fps={fps}
+              retimeStep={retimeStep}
+              onClose={() => setRetimeRequest(null)}
+            />
+          )}
 
           {/* Playhead */}
           <div className="playhead-line" data-frame={currentFrame} style={{ left: `${currentFrame * FRAME_WIDTH}px` }}>
@@ -1674,6 +1728,11 @@ export const SequencerTimeline: React.FC = () => {
                 onDuplicateKeyframeGroup={rowActions.onDuplicateKeyframeGroup}
                 onSetKeyframeGroupEasing={rowActions.onSetKeyframeGroupEasing}
                 kfClipboard={kfClipboard}
+                easingClipboard={easingClipboard}
+                onCopyEasing={rowActions.onCopyEasing}
+                onPasteEasing={rowActions.onPasteEasing}
+                canCopyEasing={rowActions.canCopyEasing}
+                onInsertChannelKeyframe={rowActions.onInsertChannelKeyframe}
                 onCopyKeyframes={rowActions.onCopyKeyframes}
                 onPasteKeyframes={rowActions.onPasteKeyframes}
                 onFrameFromClientX={rowActions.onFrameFromClientX}

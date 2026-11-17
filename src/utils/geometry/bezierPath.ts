@@ -138,16 +138,6 @@ export const buildBezierPathD = (
   return pathD;
 };
 
-export const buildNormalizedPathD = (
-  path: BezierPath | undefined,
-  width: number,
-  height: number,
-): string => buildBezierPathD(path, (point) => (
-  path?.coordinateSpace === 'normalized'
-    ? { x: (point.x - 0.5) * width, y: (point.y - 0.5) * height }
-    : point
-));
-
 export const areBezierPathsTopologyCompatible = (
   first: BezierPath | undefined,
   second: BezierPath | undefined,

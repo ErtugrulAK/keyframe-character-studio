@@ -385,3 +385,44 @@ describe('deleting a layer a modifier reads', () => {
     expect(plan.parts.find((part) => part.id === 'bar')!.fitToText).toEqual({ textLayerId: 'sub', padding: 10 });
   });
 });
+
+describe('text box vertical align', () => {
+  // The text box in em (`utils/geometry/bounds` getTextMetrics): half height 0.561, centre 0.346 above the baseline.
+  const HALF = 0.561;
+  const CENTRE = 0.346;
+  // 30 chars = 300 px at size 20; max width 200 -> size 20 * 200/300.
+  const shrunk = 20 * (200 / 300);
+  const fitted = (extra: Record<string, unknown>) => layout([text('x'.repeat(30), extra)]).adjustments.title;
+  /** The y of the text box's top / middle / bottom, origin at y + dy. */
+  const edges = (y: number, size: number, centreOrigin: boolean) => {
+    const centre = y - (centreOrigin ? 0 : CENTRE * size);
+    return { top: centre - HALF * size, middle: centre, bottom: centre + HALF * size };
+  };
+
+  for (const centreOrigin of [true, false]) {
+    for (const edge of ['top', 'middle', 'bottom'] as const) {
+      it(`keeps the ${edge} of a ${centreOrigin ? 'centre' : 'baseline'}-origin text where the full-size text had it`, () => {
+        const adjustment = fitted({ textOrigin: centreOrigin ? 'center' : undefined, textFit: { maxWidth: 200, verticalAlign: edge } });
+        expect(adjustment.fontSize).toBeCloseTo(shrunk);
+        const before = edges(0, 20, centreOrigin)[edge];
+        const after = edges(adjustment.dy ?? 0, shrunk, centreOrigin)[edge];
+        expect(after).toBeCloseTo(before, 6);
+      });
+    }
+  }
+
+  it('moves along the text\'s own turn and its scale', () => {
+    const flat = fitted({ textOrigin: 'center', scaleX: 2, scaleY: 2, textFit: { maxWidth: 400, verticalAlign: 'top' } });
+    const turned = fitted({ textOrigin: 'center', scaleX: 2, scaleY: 2, rotation: 90, textFit: { maxWidth: 400, verticalAlign: 'top' } });
+    expect(flat.dy).toBeCloseTo(-HALF * (20 - shrunk) * 2);
+    // Turned 90°: the text's "up" is the parent's +x.
+    expect(turned.dx).toBeCloseTo(HALF * (20 - shrunk) * 2);
+    expect(turned.dy ?? 0).toBeCloseTo(0);
+  });
+
+  it('changes nothing when the text keeps its size, or without a vertical align', () => {
+    expect(layout([text('Hi', { textFit: { maxWidth: 200, verticalAlign: 'top' } })]).adjustments.title).toBeUndefined();
+    expect(fitted({ textOrigin: 'center', textFit: { maxWidth: 200 } }).dy).toBeUndefined();
+    expect(fitted({ textOrigin: 'center', textFit: { maxWidth: 200, verticalAlign: 'sideways' } }).dy).toBeUndefined();
+  });
+});

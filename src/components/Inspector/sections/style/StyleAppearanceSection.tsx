@@ -8,6 +8,13 @@ import {
 } from '../../../../utils/layers/shapeAppearance';
 import type { StrokeAlignmentControlValue } from '../../../../utils/layers/shapeAppearance';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
+import {
+  DEFAULT_POLYGON_SHAPE,
+  normalizePolygonShape,
+  POLYGON_MAX_SIDES,
+  POLYGON_MIN_INNER_RATIO,
+  POLYGON_MIN_SIDES,
+} from '../../../../utils/geometry/polygonShape';
 import { StyleCard } from './StyleCard';
 import { StyleEffectsSection } from './StyleEffectsSection';
 import { CompactColorControl } from './CompactColorControl';
@@ -67,6 +74,55 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
           />
         </div>
       )}
+      {selectedPart.type === 'custom_polygon' && (() => {
+        // Corners and inner radius change the outline, never the layer's size.
+        const shape = normalizePolygonShape(selectedPart.polygon);
+        const innerPercent = Math.round(shape.innerRatio * 100);
+        return (
+          <>
+            <div className="appearance-group appearance-group-polygon-corners">
+              <div className="appearance-group-header">
+                <label htmlFor="appearance-polygon-corners">CORNERS</label>
+                <span className="appearance-unit-value"><strong>{shape.sides}</strong></span>
+              </div>
+              <input
+                id="appearance-polygon-corners"
+                className="appearance-range"
+                {...rangeGesture}
+                type="range"
+                min={POLYGON_MIN_SIDES}
+                max={POLYGON_MAX_SIDES}
+                value={shape.sides}
+                onChange={(event) => onPartPropChange('polygon', { ...selectedPart.polygon, sides: parseInt(event.target.value, 10) })}
+              />
+            </div>
+            <div className="appearance-group appearance-group-polygon-inner">
+              <div className="appearance-group-header">
+                <label htmlFor="appearance-polygon-inner" title="100 % is a polygon; lower makes a star">INNER RADIUS</label>
+                <span className="appearance-unit-value">
+                  <strong>{innerPercent}</strong>
+                  <span> %</span>
+                </span>
+              </div>
+              <input
+                id="appearance-polygon-inner"
+                className="appearance-range"
+                {...rangeGesture}
+                type="range"
+                min={Math.round(POLYGON_MIN_INNER_RATIO * 100)}
+                max={100}
+                value={innerPercent}
+                onChange={(event) => {
+                  const percent = parseInt(event.target.value, 10);
+                  const { innerRatio: _previous, ...rest } = { ...DEFAULT_POLYGON_SHAPE, ...selectedPart.polygon };
+                  // 100 % is a plain polygon: the field is dropped rather than stored as 1.
+                  onPartPropChange('polygon', percent >= 100 ? rest : { ...rest, innerRatio: percent / 100 });
+                }}
+              />
+            </div>
+          </>
+        );
+      })()}
       {/* Fill and stroke side by side, each a small swatch and its value. */}
       <div className="appearance-paint-row">
       <div className={`appearance-group${selectedPart.fillEnabled === false ? ' is-muted' : ''}`}>

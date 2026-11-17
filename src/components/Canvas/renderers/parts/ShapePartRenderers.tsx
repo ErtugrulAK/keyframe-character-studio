@@ -75,6 +75,7 @@ const renderModernGeometry = (
       return <rect x={g.x} y={g.y} width={g.width} height={g.height} rx={rx} {...props} />;
     }
     case 'custom_star':
+    case 'custom_polygon':
     case 'custom_triangle':
     case 'custom_diamond':
     case 'custom_parallelogram': {
@@ -160,12 +161,13 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, isGhost, trimP
   const strokeToUse = hasStroke ? stroke : (isSelected ? '#4a8fe7' : 'none');
 
   // M11 Step 2A: single source of truth for local-space shape geometry.
-  const geo = getShapeGeometry(part.type);
+  const geo = getShapeGeometry(part.type, part);
 
   if (useModernAppearance) return renderModernShape(renderPart, appearance, geo, getShapeDashProps(renderPart, 0), isGhost);
 
   switch (part.type) {
-    case 'custom_star': {
+    case 'custom_star':
+    case 'custom_polygon': {
       const pts = geo && geo.kind === 'polygon' ? polygonPointsToString(geo.points) : '';
       return (
         <g>

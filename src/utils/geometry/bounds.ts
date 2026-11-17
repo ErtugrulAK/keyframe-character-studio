@@ -4,6 +4,7 @@ import { applyAffine, worldAffineOf, type WorldAffine } from './containerMath';
 import { getShapeGeometry } from './shapeGeometry';
 import { bezierPathExtremePoints } from './bezierPath';
 import { resolveShapeAppearance } from '../layers/shapeAppearance';
+import { applyTextCase } from '../layers/textCase';
 
 type TextMetrics = {
   halfW: number;
@@ -200,7 +201,7 @@ export const getPartLocalBounds = (
     bounds = boundsFromPoints(part.booleanContours.flat());
   }
 
-  const geometry = getShapeGeometry(part.type);
+  const geometry = getShapeGeometry(part.type, part);
   if (!bounds && geometry) {
     if (geometry.kind === 'circle') {
       bounds = boundsFromPoints([
@@ -244,7 +245,7 @@ export const getPartLocalBounds = (
       case 'title': {
         // The frame hugs the letters the user sees (as After Effects does);
         // the em box is the fallback where the glyphs cannot be measured.
-        const text = part.textValue || part.name || 'TEXT';
+        const text = applyTextCase(part.textValue || part.name || 'TEXT', part.textCase);
         const fontSize = part.fontSize || 24;
         const baselineY = textBaselineOffset(part);
         const ink = getTextInkBox(text, fontSize, part.fontFamily);

@@ -18,6 +18,7 @@ export const CHANNEL_META: Record<TrackChannel, { label: string; color: string; 
   matteFeather: { label: 'Matte Feather', shortLabel: 'MF', color: '#f472b6' },
   matteStrength: { label: 'Matte Strength', shortLabel: 'MSt', color: '#fb923c' },
   matteGradientAngle: { label: 'Matte Gradient Angle', shortLabel: 'MA°', color: '#facc15' },
+  motionPathProgress: { label: 'Path Progress', shortLabel: 'PP', color: '#4ade80' },
 };
 
 export const TRACK_ROW_HEIGHT = 30;   // parent track row

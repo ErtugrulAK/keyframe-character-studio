@@ -11,8 +11,10 @@ import {
   normalizeMotionTemplates,
   normalizeSequenceDuration,
 } from '../utils/animation/motionTemplates';
+import { sequenceIdOf } from '../utils/animation/sequenceId';
 
-interface TemplateCanvas {
+/** A template tab that is not on screen: its scene, kept until the tab is opened again. */
+export interface TemplateCanvas {
   characterParts: CharacterPart[];
   tracks: Track[];
   motionTemplates: MotionTemplate[];
@@ -28,7 +30,9 @@ interface TemplateCanvas {
 }
 
 /** The canvas size a new template opens at (the editor's initial size). */
-const DEFAULT_TEMPLATE_RESOLUTION = { width: 1920, height: 1080 } as const;
+export const DEFAULT_TEMPLATE_RESOLUTION = { width: 1920, height: 1080 } as const;
+/** The frame rate a new template opens at. */
+export const DEFAULT_NEW_TAB_FPS = 60;
 
 /** The frame count a template opens at: its active sequence's duration. */
 const activeSequenceDuration = (templates: MotionTemplate[], activeId: string): number | undefined =>
@@ -172,11 +176,11 @@ export const useTemplates = ({
         ): Record<string, T[]> =>
           Object.fromEntries(Object.entries(map ?? {}).map(([channel, keyframes]) => [
             channel,
-            keyframes.filter((keyframe) => (keyframe.templateId || 'Sequence') !== idToDelete),
+            keyframes.filter((keyframe) => sequenceIdOf(keyframe) !== idToDelete),
           ]));
         return {
           ...tr,
-          keyframes: (tr.keyframes || []).filter((k) => (k.templateId || 'Sequence') !== idToDelete),
+          keyframes: (tr.keyframes || []).filter((k) => sequenceIdOf(k) !== idToDelete),
           channels: filterMap(tr.channels) as Track['channels'],
           maskChannels: filterMap(tr.maskChannels),
           maskPathChannels: filterMap(tr.maskPathChannels),
@@ -301,7 +305,7 @@ export const useTemplates = ({
     setCoordinateSystem('project-unit-center-v1');
     setActiveProjectTemplateIdState(newId);
     setSceneTitleState(cleanName);
-    setFps(60); // Strictly default to 60 FPS for new templates
+    setFps(DEFAULT_NEW_TAB_FPS); // Strictly default to 60 FPS for new templates
     // A new template opens at the default canvas size as it opens at the
     // default rate: it used to keep the size of the tab it was made from.
     setProjectResolution?.(DEFAULT_TEMPLATE_RESOLUTION);

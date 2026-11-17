@@ -97,9 +97,6 @@ export const getFreeformExtents = (points: FreeformPoint[]): FreeformExtents => 
   return { minX, minY, maxX, maxY };
 };
 
-export const hasValidFreeformPoints = (points: FreeformPoint[] | undefined): boolean =>
-  Array.isArray(points) && points.length >= MIN_FREEFORM_POINTS;
-
 /**
  * Build an SVG path "d" string from the given points (a closed polygon).
  * Returns '' for degenerate inputs.
@@ -122,20 +119,6 @@ export const normalizeClosedPoints = (points: FreeformPoint[]): FreeformPoint[] 
     return points.slice(0, -1);
   }
   return points;
-};
-
-/**
- * Half-extents of the bounding box around the points.
- * Falls back to a 32x32 default for empty input.
- */
-export const getFreeformBounds = (points: FreeformPoint[]): { halfW: number; halfH: number } => {
-  if (!Array.isArray(points) || points.length === 0) return { halfW: 32, halfH: 32 };
-  const { minX, minY, maxX, maxY } = getFreeformExtents(points);
-  if (!isFinite(minX)) return { halfW: 32, halfH: 32 };
-  return {
-    halfW: Math.max(1, (maxX - minX) / 2),
-    halfH: Math.max(1, (maxY - minY) / 2),
-  };
 };
 
 /**
@@ -171,23 +154,6 @@ export const getFreeformPerimeter = (points: FreeformPoint[]): number => {
     );
   }
   return perimeter;
-};
-
-/**
- * Remove consecutive points that are closer than `minDist` to the previous
- * kept point (used to thin freehand mouse samples and dedupe double-click
- * artifacts). Always keeps the first point.
- */
-export const simplifyFreeformPoints = (points: FreeformPoint[], minDist: number = 3): FreeformPoint[] => {
-  if (!Array.isArray(points) || points.length === 0) return [];
-  const result: FreeformPoint[] = [points[0]];
-  for (let i = 1; i < points.length; i++) {
-    const prev = result[result.length - 1];
-    if (Math.hypot(points[i].x - prev.x, points[i].y - prev.y) >= minDist) {
-      result.push(points[i]);
-    }
-  }
-  return result;
 };
 
 interface FreeformVertexWorld {

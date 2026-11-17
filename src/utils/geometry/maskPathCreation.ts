@@ -61,14 +61,6 @@ export const createEllipseMaskPath = (coordinateSpace: PathCoordinateSpace, from
   };
 };
 
-/** A closed corner polygon through the pen clicks. */
-export const createPolygonMaskPath = (coordinateSpace: PathCoordinateSpace, points: readonly PathPoint[]): BezierPath => ({
-  version: 1,
-  coordinateSpace,
-  closed: true,
-  points: points.map((point, index) => ({ id: vertexId(index), x: point.x, y: point.y, kind: 'corner' })),
-});
-
 /** The fewest vertices a closed mask path keeps (two would enclose no area). */
 export const MIN_CLOSED_MASK_POINTS = 3;
 export const MIN_OPEN_MASK_POINTS = 2;

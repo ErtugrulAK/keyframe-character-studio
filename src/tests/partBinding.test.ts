@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart } from '../types/animator';
-import { bindParts, isRelationshipChainRelated, resolveBondGroup, resolveBoundPartners, unbindPart } from '../utils/layers/partBinding';
+import { bindParts, resolveBondGroup, selectionHasChainRelation, resolveBoundPartners, unbindPart } from '../utils/layers/partBinding';
 
 const part = (id: string, overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id,
@@ -59,22 +59,22 @@ describe('part binding', () => {
   it('detects an ancestor/descendant pair, which would move twice', () => {
     const parts = [part('parent'), part('child', { parentId: 'parent' }), part('grandchild', { parentId: 'child' }), part('free')];
 
-    expect(isRelationshipChainRelated(parts, 'parent', 'child')).toBe(true);
-    expect(isRelationshipChainRelated(parts, 'parent', 'grandchild')).toBe(true);
-    expect(isRelationshipChainRelated(parts, 'child', 'grandchild')).toBe(true);
-    expect(isRelationshipChainRelated(parts, 'parent', 'free')).toBe(false);
-    expect(isRelationshipChainRelated(parts, 'parent', 'parent')).toBe(false);
+    expect(selectionHasChainRelation(parts, ['parent', 'child'])).toBe(true);
+    expect(selectionHasChainRelation(parts, ['parent', 'grandchild'])).toBe(true);
+    expect(selectionHasChainRelation(parts, ['child', 'grandchild'])).toBe(true);
+    expect(selectionHasChainRelation(parts, ['parent', 'free'])).toBe(false);
+    expect(selectionHasChainRelation(parts, ['parent', 'parent'])).toBe(false);
   });
 
   it('treats a boolean group and its operands as one chain', () => {
     const parts = [part('group'), part('operand', { booleanGroupId: 'group' })];
 
-    expect(isRelationshipChainRelated(parts, 'group', 'operand')).toBe(true);
+    expect(selectionHasChainRelation(parts, ['group', 'operand'])).toBe(true);
   });
 
   it('does not loop when a chain is cyclic', () => {
     const parts = [part('a', { parentId: 'b' }), part('b', { parentId: 'a' })];
 
-    expect(isRelationshipChainRelated(parts, 'a', 'b')).toBe(true);
+    expect(selectionHasChainRelation(parts, ['a', 'b'])).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import type { MotionTemplate, PropertyKeyframe, Track } from '../../types/animator';
+import type { MotionTemplate } from '../../types/animator';
 import { generateId } from '../layers/idGenerator';
 import { normalizeStepMarkers } from './stepMarkers';
 
@@ -62,46 +62,3 @@ export const createMotionTemplate = (
   durationFrames: normalizeSequenceDuration(durationFrames),
   description: 'Custom Sequence Timeline',
 });
-
-const matchesTemplate = (templateId: string | undefined, sequenceId: string): boolean =>
-  (templateId || 'Sequence') === sequenceId;
-
-const clonePropertyKeyframe = (keyframe: PropertyKeyframe, sequenceId: string): PropertyKeyframe => ({
-  ...keyframe,
-  id: generateId('pkf'),
-  templateId: sequenceId,
-});
-
-/** Clone only one sequence's authored animation data onto a new sequence ID. */
-export const cloneSequenceAnimation = (tracks: Track[], sourceId: string, targetId: string): Track[] =>
-  tracks.map((track) => {
-    const channels = Object.fromEntries(
-      Object.entries(track.channels || {}).map(([channel, keyframes]) => [
-        channel,
-        [
-          ...(keyframes || []),
-          ...(keyframes || [])
-            .filter((keyframe) => matchesTemplate(keyframe.templateId, sourceId))
-            .map((keyframe) => clonePropertyKeyframe(keyframe, targetId)),
-        ],
-      ]),
-    ) as Track['channels'];
-
-    const keyframes = (track.keyframes || [])
-      .filter((keyframe) => matchesTemplate(keyframe.templateId, sourceId))
-      .map((keyframe) => ({
-        ...keyframe,
-        id: generateId('kf'),
-        templateId: targetId,
-        transform: { ...keyframe.transform },
-      }));
-
-    return {
-      ...track,
-      channels: {
-        ...track.channels,
-        ...channels,
-      },
-      ...(keyframes.length > 0 ? { keyframes: [...(track.keyframes || []), ...keyframes] } : {}),
-    };
-  });

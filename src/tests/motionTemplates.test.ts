@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { MotionTemplate, Track } from '../types/animator';
+import type { MotionTemplate } from '../types/animator';
 import {
-  cloneSequenceAnimation,
   createMotionTemplate,
   normalizeMotionTemplates,
 } from '../utils/animation/motionTemplates';
@@ -29,21 +28,4 @@ describe('motion template metadata', () => {
     expect(created.name).toBe('IN 2');
   });
 
-  it('duplicates only the selected sequence and regenerates keyframe IDs', () => {
-    const tracks = [{
-      id: 'track_1', partId: 'part_1', name: 'Track', color: '#fff', visible: true, locked: false,
-      channels: {
-        x: [
-          { id: 'source-x', frame: 0, value: 10, easing: 'linear', templateId: 'seq_source' },
-          { id: 'other-x', frame: 0, value: 99, easing: 'linear', templateId: 'other' },
-        ],
-      },
-      keyframes: [],
-    }] as unknown as Track[];
-
-    const duplicated = cloneSequenceAnimation(tracks, 'seq_source', 'seq_copy');
-    expect(duplicated[0].channels.x).toHaveLength(3);
-    expect(duplicated[0].channels.x.map((keyframe) => keyframe.templateId)).toEqual(['seq_source', 'other', 'seq_copy']);
-    expect(duplicated[0].channels.x[2].id).not.toBe('source-x');
-  });
 });

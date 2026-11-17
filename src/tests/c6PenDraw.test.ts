@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useFreeformDraw, PEN_DRAG_THRESHOLD_PX } from '../hooks/useFreeformDraw';
-import { addPenAnchor, dedupePenAnchors, dragPenTangent, offsetPenAnchors, penAnchorsToPath } from '../utils/geometry/penDraft';
+import { addPenAnchor, dedupePenAnchors, dragPenTangent, penAnchorsToPath } from '../utils/geometry/penDraft';
 import type { BezierPath } from '../types/animator';
 
 /**
@@ -130,11 +130,10 @@ describe('C6 Pen — click vs drag', () => {
 });
 
 describe('C6 Pen — draft helpers', () => {
-  it('builds a canonical path and re-centres handles with their anchors', () => {
+  it('builds a canonical path that keeps the dragged tangent', () => {
     const anchors = dragPenTangent(addPenAnchor(addPenAnchor([], { x: 10, y: 10 }), { x: 50, y: 10 }), 1, { x: 60, y: 20 });
-    const centred = offsetPenAnchors(anchors, 30, 10);
-    expect(centred[1]).toEqual({ x: 20, y: 0, handleOut: { x: 30, y: 10 }, handleIn: { x: 10, y: -10 } });
-    const path = penAnchorsToPath(centred, 'local', true);
+    expect(anchors[1]).toEqual({ x: 50, y: 10, handleOut: { x: 60, y: 20 }, handleIn: { x: 40, y: 0 } });
+    const path = penAnchorsToPath(anchors, 'local', true);
     expect(path.points.map((point) => point.id)).toEqual(['vertex-0', 'vertex-1']);
     expect(path.points[1].kind).toBe('smooth');
   });

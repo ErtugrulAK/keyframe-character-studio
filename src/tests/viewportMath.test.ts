@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, Transform } from '../types/animator';
 import type { WorldAffine } from '../utils/geometry/containerMath';
-import { clientToCameraPoint, getCursorAnchoredCameraCenter, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox } from '../utils/geometry/viewportMath';
+import { clientToCameraPoint, getCursorAnchoredCameraCenter, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageFitScale } from '../utils/geometry/viewportMath';
 
 const part = (id: string, overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id,
@@ -143,32 +143,13 @@ describe('Canvas Interaction V1 viewport math', () => {
     });
   });
 
-  it('renders a camera point at the same client position when the stage box changes', () => {
-    const view = { center: { x: 600, y: 400 }, baseScale: 0.7 };
-    const viewBox = { width: 600, height: 480 };
-    const zoom = 1.5;
-    const point = { x: 240, y: 180 };
-    const project = (stage: StageBox) => {
-      const transform = getStageCameraTransform({ view, stage, zoom, viewBox });
-      const renderedScale = transform.scale * getStageFitScale(stage, viewBox);
-      return {
-        x: stage.left + stage.width / 2 + transform.translateX + renderedScale * (point.x - viewBox.width / 2),
-        y: stage.top + stage.height / 2 + transform.translateY + renderedScale * (point.y - viewBox.height / 2),
-      };
-    };
 
-    const before = project({ left: 336, top: 79, width: 584, height: 321 });
-    // Inspector closed, then left toolbar collapsed, then timeline collapsed.
-    const wider = project({ left: 336, top: 79, width: 944, height: 321 });
-    const leftShifted = project({ left: 0, top: 79, width: 920, height: 321 });
-    const taller = project({ left: 336, top: 79, width: 584, height: 491 });
-    for (const stage of [wider, leftShifted, taller]) {
-      expect(stage.x).toBeCloseTo(before.x, 10);
-      expect(stage.y).toBeCloseTo(before.y, 10);
-    }
-    // The rendered position is exactly the camera model, not a layout fit.
-    expect(before.x).toBeCloseTo(view.center.x + (point.x - viewBox.width / 2) * view.baseScale * zoom, 10);
-    expect(before.y).toBeCloseTo(view.center.y + (point.y - viewBox.height / 2) * view.baseScale * zoom, 10);
+  it('fits the camera viewBox inside the stage box on its tighter axis', () => {
+    const viewBox = { width: 600, height: 480 };
+    expect(getStageFitScale({ width: 1200, height: 480 }, viewBox)).toBe(1);
+    expect(getStageFitScale({ width: 300, height: 960 }, viewBox)).toBe(0.5);
+    // A stage with no size yet falls back to 1 instead of 0.
+    expect(getStageFitScale({ width: 0, height: 0 }, viewBox)).toBe(1);
   });
 });
 

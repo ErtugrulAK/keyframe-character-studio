@@ -45,29 +45,6 @@ export const getStageFitScale = (
   viewBox: { width: number; height: number },
 ): number => Math.min(width / viewBox.width, height / viewBox.height) || 1;
 
-interface StageCameraTransformInput {
-  view: StageCameraView;
-  stage: StageBox;
-  zoom: number;
-  viewBox: { width: number; height: number };
-}
-
-/**
- * CSS transform applied to the stage SVG. `transform-origin` is the element
- * centre, so the translate is plain screen pixels and the scale divides out the
- * layout fit — the rendered magnification stays `zoom * baseScale`.
- */
-export const getStageCameraTransform = ({
-  view,
-  stage,
-  zoom,
-  viewBox,
-}: StageCameraTransformInput): { translateX: number; translateY: number; scale: number } => ({
-  translateX: view.center.x - (stage.left + stage.width / 2),
-  translateY: view.center.y - (stage.top + stage.height / 2),
-  scale: (zoom * view.baseScale) / getStageFitScale(stage, viewBox),
-});
-
 interface ClientToCameraPointInput {
   view: StageCameraView;
   clientX: number;

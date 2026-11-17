@@ -63,7 +63,7 @@
    * No transition on the camera transform, on purpose.
    *
    * The transform is a *projection* of the camera state and the current stage
-   * box (`getStageCameraTransform`), not an animation of it. Easing it makes the
+   * box (the `cameraTransform` in `StageCanvas.tsx`), not an animation of it. Easing it makes the
    * authored world's screen position a function of time: while a sidebar
    * animates its own width, an eased projection lags the moving stage centre by
    * the layout delta and then slides back, so the scene visibly counter-moves

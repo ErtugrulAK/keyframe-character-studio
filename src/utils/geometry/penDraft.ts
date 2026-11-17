@@ -60,14 +60,6 @@ export const penAnchorsToPath = (anchors: readonly PenAnchor[], coordinateSpace:
   })),
 });
 
-/** Moves every anchor and handle by (-cx, -cy): the draft re-expressed around a centre. */
-export const offsetPenAnchors = (anchors: readonly PenAnchor[], cx: number, cy: number): PenAnchor[] => anchors.map((anchor) => ({
-  x: anchor.x - cx,
-  y: anchor.y - cy,
-  ...(anchor.handleIn ? { handleIn: { x: anchor.handleIn.x - cx, y: anchor.handleIn.y - cy } } : {}),
-  ...(anchor.handleOut ? { handleOut: { x: anchor.handleOut.x - cx, y: anchor.handleOut.y - cy } } : {}),
-}));
-
 /**
  * Drops an anchor that repeats its predecessor (a double-click lands twice) —
  * the only clean-up a Pen drawing gets. Anchors are never simplified away:

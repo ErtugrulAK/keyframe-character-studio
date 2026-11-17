@@ -729,6 +729,31 @@ test('Copy / Paste Easing moves only the curve, and Add Keyframe Here keys a lan
   expect(await savedX('b')).toEqual([[0, 0, 'linear'], [15, 150, 'linear'], [30, 300, 'linear']]);
 });
 
+test('PLAYOUT: a whole-number text can be a counter; other text says why not', async ({ page }) => {
+  // OGraf live controls, step 2: a number field with +1 / -1 buttons in the playout.
+  const textLayer = (id: string, name: string, textValue: string, y: number) => ({ id, name, type: 'custom_text', x: 0, y, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, textValue, fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' });
+  await seed(page, [textLayer('s', 'Home score', '0', -100), textLayer('w', 'Words', 'Final', 100)]);
+  const open = async (id: string) => {
+    await page.locator(`[role="tree"] [data-layer-id="${id}"]`).click();
+    await openDetailsTab(page, 'Properties');
+    const expand = page.getByRole('button', { name: 'Expand PLAYOUT', exact: true });
+    if (await expand.count()) await expand.click();
+    return page.getByLabel('Operator can count this number', { exact: true });
+  };
+
+  const words = await open('w');
+  await expect(words).toBeDisabled();
+  await expect(page.getByText(/The text must be a whole number/)).toBeVisible();
+
+  const score = await open('s');
+  await expect(score).toBeEnabled();
+  await score.check();
+  await expect(page.getByText('Exported as the number "Home score" with "+1" and "-1" buttons.')).toBeVisible();
+  expect((await savedLayers(page)).find((layer) => layer.id === 's')!.operatorCounter).toBe(true);
+  await page.keyboard.press('Control+z');
+  await expect(score).not.toBeChecked();
+});
+
 test('PLAYOUT: the operator show/hide switch is one undo step, saved, and refused for a Track Matte source', async ({ page }) => {
   // OGraf live controls, step 1: the mark that makes a layer an on/off field in the playout.
   await seed(page, [rect('a', 'Alpha', 0, 0), { ...rect('m', 'Masked', 0, 0), trackMatte: { enabled: true, sourceLayerId: 'a', mode: 'alpha' } }, rect('b', 'Beta', 0, 200)]);

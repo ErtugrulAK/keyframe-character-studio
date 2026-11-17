@@ -7,12 +7,14 @@ import {
   type OGrafExportOptions,
   type OGrafPublicColorField,
   type OGrafPublicToggleField,
+  type OGrafPublicNumberField,
   type OGrafPublicImageField,
   type OGrafPublicTextField,
   type OGrafPublicStateSchema,
   type ValidatedOGrafScene,
 } from './types';
 import { resolveOGrafPublicControls } from './publicControls';
+import { COUNTER_LIMIT } from '../utils/layers/operatorCounter';
 import { describeOGrafValueForDiagnostics } from './diagnostics';
 import { resolveMatteSource } from '../utils/layers/matte';
 const SUPPORTED_LAYER_TYPES: Record<string, true> = {
@@ -333,12 +335,13 @@ function validatePublicFields(
   imageFields: OGrafPublicImageField[],
   colorFields: OGrafPublicColorField[],
   toggleFields: OGrafPublicToggleField[],
+  numberFields: OGrafPublicNumberField[],
   layers: SceneLayer[],
   diagnostics: OGrafExportDiagnostic[],
 ): void {
   const ids = new Set<string>();
   const layerIds = new Set(layers.map((layer) => layer.id));
-  for (const field of [...textFields, ...imageFields, ...colorFields, ...toggleFields]) {
+  for (const field of [...textFields, ...imageFields, ...colorFields, ...toggleFields, ...numberFields]) {
     if (isPrototypeSensitiveKey(field.id)
       || !field.id
       || ids.has(field.id)
@@ -551,6 +554,7 @@ function createPublicStateSchema(
   imageFields: OGrafPublicImageField[],
   colorFields: OGrafPublicColorField[],
   toggleFields: OGrafPublicToggleField[],
+  numberFields: OGrafPublicNumberField[],
   assets: OGrafAssetPlan[],
 ): OGrafPublicStateSchema {
   const properties: Record<string, Record<string, unknown>> = Object.create(null);
@@ -596,6 +600,18 @@ function createPublicStateSchema(
     properties[field.id] = {
       type: 'boolean',
       gddType: 'boolean',
+      ...(field.title ? { title: field.title, label: field.title } : {}),
+      default: field.defaultValue,
+    };
+  }
+  for (const field of numberFields) {
+    if (isPrototypeSensitiveKey(field.id)) continue;
+    // GDD: a whole number; the +1 / -1 buttons are the manifest's customActions.
+    properties[field.id] = {
+      type: 'integer',
+      gddType: 'integer',
+      minimum: -COUNTER_LIMIT,
+      maximum: COUNTER_LIMIT,
       ...(field.title ? { title: field.title, label: field.title } : {}),
       default: field.defaultValue,
     };
@@ -681,7 +697,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
   }
   validateLayerHierarchy(sceneData.layers || [], diagnostics);
   const publicControls = resolveOGrafPublicControls(sceneData, options, assets);
-  validatePublicFields(publicControls.textFields, publicControls.imageFields, publicControls.colorFields, publicControls.toggleFields, sceneData.layers || [], diagnostics);
+  validatePublicFields(publicControls.textFields, publicControls.imageFields, publicControls.colorFields, publicControls.toggleFields, publicControls.numberFields, sceneData.layers || [], diagnostics);
   const layerById = new Map((sceneData.layers || []).map((layer) => [layer.id, layer]));
   const relationships = new Map<string, string>();
   for (const layer of sceneData.layers || []) {
@@ -743,6 +759,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
     publicControls.imageFields,
     publicControls.colorFields,
     publicControls.toggleFields,
+    publicControls.numberFields,
     assets,
   );
   return {
@@ -754,6 +771,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
     publicImageFields: publicControls.imageFields,
     publicColorFields: publicControls.colorFields,
     publicToggleFields: publicControls.toggleFields,
+    publicNumberFields: publicControls.numberFields,
     canCompile: diagnostics.every((item) => item.severity !== 'ERROR'),
   };
 }

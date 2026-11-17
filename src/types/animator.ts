@@ -523,6 +523,8 @@ export interface CharacterPart {
   textCase?: import('../utils/layers/textCase').TextCase;
   /** OGraf: the playout operator can show and hide this layer, with its children (`ograf/publicControls`). Absent = no control. */
   operatorToggle?: boolean;
+  /** OGraf: a text the playout operator sets as a number and counts with +1 / -1 buttons (`utils/layers/operatorCounter`). */
+  operatorCounter?: boolean;
 
   // ── Feature 3: Text Stagger Animation ──
   textAnimMode?: TextAnimMode;

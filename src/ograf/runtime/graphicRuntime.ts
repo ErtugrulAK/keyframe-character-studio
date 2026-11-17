@@ -198,8 +198,8 @@ export interface RuntimeActionResult {
 
 export interface GraphicRuntimeEnvironment {
   scene: RuntimeScene;
-  /** `toggle`: the operator's show/hide switches; absent in a package written before them. */
-  bindings: { text: Record<string, RuntimeBinding>; image: Record<string, RuntimeBinding>; color: Record<string, RuntimeBinding>; toggle?: Record<string, RuntimeBinding> };
+  /** `toggle`: the operator's show/hide switches; `number`: counter texts. Absent in a package written before them. */
+  bindings: { text: Record<string, RuntimeBinding>; image: Record<string, RuntimeBinding>; color: Record<string, RuntimeBinding>; toggle?: Record<string, RuntimeBinding>; number?: Record<string, RuntimeBinding> };
   imageReferences: Record<string, string>;
   fontReferences: Record<string, RuntimeFontFace | RuntimeFontFace[]>;
   /** The package module's own URL; packaged relative paths resolve against it. */
@@ -1233,6 +1233,16 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
           target.operatorHidden = data[key] === false;
           continue;
         }
+        const counter = PUBLIC_BINDINGS.number && Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.number, key) ? PUBLIC_BINDINGS.number[key] : undefined;
+        if (counter) {
+          const target = this._scene.layers.find((item) => item.id === counter.layerId);
+          const raw = data[key];
+          // The editor's rule (`utils/layers/operatorCounter`): a whole number up to six digits.
+          const count = typeof raw === 'number' ? raw : typeof raw === 'string' && /^-?\d{1,6}$/u.test(raw.trim()) ? Number(raw.trim()) : NaN;
+          if (!target || !Number.isInteger(count) || Math.abs(count) > 999999) return { statusCode: 400, statusMessage: 'Number value must be a whole number: ' + key };
+          target.textValue = String(count);
+          continue;
+        }
         const binding = (Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.text, key) && PUBLIC_BINDINGS.text[key])
           || (Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.image, key) && PUBLIC_BINDINGS.image[key])
           || (Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.color, key) && PUBLIC_BINDINGS.color[key]);
@@ -1349,8 +1359,26 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       return { statusCode: 200 };
     }
 
-    async customAction(): Promise<RuntimeActionResult> {
-      return { statusCode: 400, statusMessage: 'No custom actions supported' };
+    /** Steps a counter for the button `add:<number field>:<step>`; an error result when the id names no counter. */
+    _stepCounter(id: string): RuntimeActionResult | undefined {
+      const match = /^add:(.+):(-?1)$/u.exec(id);
+      const field = match ? match[1] : '';
+      const binding = match && PUBLIC_BINDINGS.number && Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.number, field) ? PUBLIC_BINDINGS.number[field] : undefined;
+      const target = binding ? this._scene.layers.find((item) => item.id === binding.layerId) : undefined;
+      if (!match || !target) return { statusCode: 400, statusMessage: 'Unknown custom action: ' + id };
+      const current = Number(String(target.textValue || '0').trim()) || 0;
+      target.textValue = String(Math.max(-999999, Math.min(999999, current + Number(match[2]))));
+      return undefined;
+    }
+
+    /** A counter's +1 / -1 button (the manifest's customActions). */
+    async customAction(params?: { id?: string }): Promise<RuntimeActionResult> {
+      const error = this._stepCounter(params && typeof params.id === 'string' ? params.id : '');
+      if (error) return error;
+      this._cancel();
+      this._refit();
+      this._render();
+      return { statusCode: 200 };
     }
 
     /** Non-real-time: stores the actions to run at their timestamps (ms); replaces any earlier schedule. */
@@ -1417,6 +1445,8 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
           }
         } else if (entry.action.type === 'updateAction') {
           this._applyData(actionParams.data);
+        } else if (entry.action.type === 'customAction') {
+          this._stepCounter(typeof (actionParams as { id?: unknown }).id === 'string' ? (actionParams as { id: string }).id : '');
         }
       }
       advance(time);

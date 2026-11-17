@@ -7,13 +7,16 @@ import type {
   OGrafPublicImageField,
   OGrafPublicTextField,
   OGrafPublicToggleField,
+  OGrafPublicNumberField,
 } from './types';
+import { counterUnavailableReason, counterValueOf } from '../utils/layers/operatorCounter';
 
 export interface OGrafPublicControls {
   textFields: OGrafPublicTextField[];
   imageFields: OGrafPublicImageField[];
   colorFields: OGrafPublicColorField[];
   toggleFields: OGrafPublicToggleField[];
+  numberFields: OGrafPublicNumberField[];
 }
 
 function safeName(value: string): string {
@@ -72,6 +75,7 @@ export function resolveOGrafPublicControls(
   const imageFields: OGrafPublicImageField[] = [];
   const colorFields: OGrafPublicColorField[] = [];
   const toggleFields: OGrafPublicToggleField[] = [];
+  const numberFields: OGrafPublicNumberField[] = [];
   const packagedImageOptions = imageOptions(assets);
 
   for (const field of options.publicTextFields || []) {
@@ -98,6 +102,11 @@ export function resolveOGrafPublicControls(
       toggleFields.push({ id: uniqueId('show', layer, used), title: `Show ${layer.name || 'layer'}`, defaultValue: true, layerId: layer.id });
     }
     if (!isPublicLayer(layer, matteSourceIds)) continue;
+    // A counter text is a number field (with +1 / -1 buttons) instead of a text field.
+    if (layer.operatorCounter === true && !counterUnavailableReason(layer) && !textFields.some((field) => field.layerId === layer.id)) {
+      numberFields.push({ id: uniqueId('number', layer, used), title: layer.name || 'Number', defaultValue: counterValueOf(layer.textValue) ?? 0, layerId: layer.id });
+      continue;
+    }
     if (layer.type === 'custom_text' && !textFields.some((field) => field.layerId === layer.id)) {
       textFields.push({
         id: uniqueId('text', layer, used),
@@ -149,5 +158,5 @@ export function resolveOGrafPublicControls(
     if (field.defaultValue !== undefined) field.defaultValue = limitLength(field.defaultValue, field.maxLength);
   }
 
-  return { textFields, imageFields, colorFields, toggleFields };
+  return { textFields, imageFields, colorFields, toggleFields, numberFields };
 }

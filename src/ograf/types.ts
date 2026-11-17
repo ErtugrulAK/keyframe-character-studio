@@ -94,6 +94,22 @@ export interface OGrafPublicColorField {
   property: 'fillColor' | 'strokeColor';
 }
 
+/** A whole number the playout operator sets or counts with +1 / -1 buttons (`gddType: integer`). */
+export interface OGrafPublicNumberField {
+  id: string;
+  title?: string;
+  defaultValue: number;
+  layerId: string;
+}
+
+/** A button in the playout (OGraf `customActions`); `schema: null` = it takes no parameters. */
+export interface OGrafCustomAction {
+  id: string;
+  name: string;
+  description?: string;
+  schema: null;
+}
+
 /** A show/hide switch for the playout operator (`gddType: boolean`); hiding a layer hides its children. */
 export interface OGrafPublicToggleField {
   id: string;
@@ -147,6 +163,8 @@ export interface OGrafManifest {
   /** How long the normal (animated) actions take, in milliseconds. */
   actionDurations: Array<{ type: 'playAction' | 'stopAction' | 'updateAction'; duration: number }>;
   schema: OGrafPublicStateSchema;
+  /** The playout buttons; absent when the graphic has none. */
+  customActions?: OGrafCustomAction[];
   /** Added by the browser export when it could render the preview image. */
   thumbnails?: Array<{ file: string; resolution: { width: number; height: number } }>;
   renderRequirements?: Array<{
@@ -218,5 +236,6 @@ export interface ValidatedOGrafScene {
   publicImageFields: OGrafPublicImageField[];
   publicColorFields: OGrafPublicColorField[];
   publicToggleFields: OGrafPublicToggleField[];
+  publicNumberFields: OGrafPublicNumberField[];
   canCompile: boolean;
 }

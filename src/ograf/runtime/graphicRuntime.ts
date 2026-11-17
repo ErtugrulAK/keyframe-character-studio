@@ -86,6 +86,8 @@ export interface RuntimeLayer {
   scaleY: number;
   opacity: number;
   visible?: boolean;
+  /** Hidden by the operator's show/hide switch (runtime state only, never authored). */
+  operatorHidden?: boolean;
   parentId?: string;
   booleanGroupId?: string;
   /** Follows a path layer's outline (`utils/geometry/motionPath`). */
@@ -196,7 +198,8 @@ export interface RuntimeActionResult {
 
 export interface GraphicRuntimeEnvironment {
   scene: RuntimeScene;
-  bindings: { text: Record<string, RuntimeBinding>; image: Record<string, RuntimeBinding>; color: Record<string, RuntimeBinding> };
+  /** `toggle`: the operator's show/hide switches; absent in a package written before them. */
+  bindings: { text: Record<string, RuntimeBinding>; image: Record<string, RuntimeBinding>; color: Record<string, RuntimeBinding>; toggle?: Record<string, RuntimeBinding> };
   imageReferences: Record<string, string>;
   fontReferences: Record<string, RuntimeFontFace | RuntimeFontFace[]>;
   /** The package module's own URL; packaged relative paths resolve against it. */
@@ -713,6 +716,16 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       transforms[layer.id] = result;
       return result;
     };
+    // The operator's show/hide switch hides a layer and everything under it.
+    const layerById = new Map(scene.layers.map((item) => [item.id, item]));
+    const hiddenByOperator = (layer: RuntimeLayer): boolean => {
+      let current: RuntimeLayer | undefined = layer;
+      for (let depth = 0; current && depth <= scene.layers.length; depth += 1) {
+        if (current.operatorHidden) return true;
+        current = current.parentId ? layerById.get(current.parentId) : undefined;
+      }
+      return false;
+    };
     return stackingOrder(scene.layers).map((layer) => {
       const track = scene.tracks.find((item) => item.partId === layer.id);
       const channels = track && track.channels ? track.channels : {};
@@ -720,8 +733,8 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       const evaluated = {
         ...layer,
         transform: transformValue,
-        visible: layer.visible !== false,
-        opacity: layer.visible === false ? 0 : clamp(transformValue.opacity, 0, 1),
+        visible: layer.visible !== false && !hiddenByOperator(layer),
+        opacity: layer.visible === false || hiddenByOperator(layer) ? 0 : clamp(transformValue.opacity, 0, 1),
         trimPathEnabled: layer.trimPathEnabled,
         trimPathStart: channelValue(channels.trimPathStart, frame, layer.trimPathStart === undefined ? 0 : layer.trimPathStart),
         trimPathEnd: channelValue(channels.trimPathEnd, frame, layer.trimPathEnd === undefined ? 1 : layer.trimPathEnd),
@@ -1213,6 +1226,13 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     _applyData(data: Record<string, unknown> | undefined): RuntimeActionResult | undefined {
       if (!data || typeof data !== 'object') return undefined;
       for (const key of Object.keys(data)) {
+        const toggle = PUBLIC_BINDINGS.toggle && Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.toggle, key) ? PUBLIC_BINDINGS.toggle[key] : undefined;
+        if (toggle) {
+          const target = this._scene.layers.find((item) => item.id === toggle.layerId);
+          if (!target || typeof data[key] !== 'boolean') return { statusCode: 400, statusMessage: 'Show/hide value must be true or false: ' + key };
+          target.operatorHidden = data[key] === false;
+          continue;
+        }
         const binding = (Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.text, key) && PUBLIC_BINDINGS.text[key])
           || (Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.image, key) && PUBLIC_BINDINGS.image[key])
           || (Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.color, key) && PUBLIC_BINDINGS.color[key]);

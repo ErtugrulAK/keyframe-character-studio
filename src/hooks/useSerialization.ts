@@ -169,6 +169,7 @@ function toSceneData(
     fontFamily: p.fontFamily,
     ...(p.textOrigin !== undefined ? { textOrigin: p.textOrigin } : {}),
     ...(p.textCase !== undefined ? { textCase: p.textCase } : {}),
+    ...(p.operatorToggle ? { operatorToggle: true } : {}),
     imageUrl: p.imageUrl,
     videoUrl: p.videoUrl,
     shadowColor: p.shadowColor,
@@ -327,6 +328,8 @@ function readSceneData(scene: SceneData): ReadScene {
     fontFamily: l.fontFamily,
     ...(l.textOrigin !== undefined ? { textOrigin: l.textOrigin } : {}),
     ...(l.textCase !== undefined ? { textCase: l.textCase } : {}),
+    // Only a real `true` turns the control on; anything else in a file is no control.
+    ...(l.operatorToggle === true ? { operatorToggle: true } : {}),
     // BUG #3 fix: restore exported procedural animation config
     // (SceneLayer defines these; computeProceduralDelta consumes them).
     inAnimPreset: l.inAnimPreset,

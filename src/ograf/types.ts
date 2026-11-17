@@ -94,6 +94,14 @@ export interface OGrafPublicColorField {
   property: 'fillColor' | 'strokeColor';
 }
 
+/** A show/hide switch for the playout operator (`gddType: boolean`); hiding a layer hides its children. */
+export interface OGrafPublicToggleField {
+  id: string;
+  title?: string;
+  defaultValue: boolean;
+  layerId: string;
+}
+
 export interface OGrafPublicStateSchema {
   type: 'object';
   properties: Record<string, Record<string, unknown>>;
@@ -209,5 +217,6 @@ export interface ValidatedOGrafScene {
   publicTextFields: OGrafPublicTextField[];
   publicImageFields: OGrafPublicImageField[];
   publicColorFields: OGrafPublicColorField[];
+  publicToggleFields: OGrafPublicToggleField[];
   canCompile: boolean;
 }

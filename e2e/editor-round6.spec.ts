@@ -6,6 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { armTool } from './fixtures/toolbarTools';
+import { openDetailsTab } from './fixtures/inspectorTabs';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -726,6 +727,38 @@ test('Copy / Paste Easing moves only the curve, and Add Keyframe Here keys a lan
   await page.mouse.click((zeroX + frameX) / 2, box.y + box.height / 2, { button: 'right' });
   await page.getByRole('menuitem', { name: 'Add Keyframe Here' }).click();
   expect(await savedX('b')).toEqual([[0, 0, 'linear'], [15, 150, 'linear'], [30, 300, 'linear']]);
+});
+
+test('PLAYOUT: the operator show/hide switch is one undo step, saved, and refused for a Track Matte source', async ({ page }) => {
+  // OGraf live controls, step 1: the mark that makes a layer an on/off field in the playout.
+  await seed(page, [rect('a', 'Alpha', 0, 0), { ...rect('m', 'Masked', 0, 0), trackMatte: { enabled: true, sourceLayerId: 'a', mode: 'alpha' } }, rect('b', 'Beta', 0, 200)]);
+  const open = async (id: string) => {
+    await page.locator(`[role="tree"] [data-layer-id="${id}"]`).click();
+    await openDetailsTab(page, 'Properties');
+    const expand = page.getByRole('button', { name: 'Expand PLAYOUT', exact: true });
+    if (await expand.count()) await expand.click();
+    return page.getByLabel('Operator can show or hide this layer', { exact: true });
+  };
+
+  // A matte source is not offered.
+  await expect(await open('a')).toBeDisabled();
+
+  const beta = await open('b');
+  await expect(beta).toBeEnabled();
+  await beta.check();
+  await expect(page.getByText('Exported as "Show Beta", on by default.')).toBeVisible();
+  expect((await savedLayers(page)).find((layer) => layer.id === 'b')!.operatorToggle).toBe(true);
+
+  await page.keyboard.press('Control+z');
+  await expect(beta).not.toBeChecked();
+  expect((await savedLayers(page)).find((layer) => layer.id === 'b')!.operatorToggle).toBeUndefined();
+
+  await page.keyboard.press('Control+y');
+  await expect(beta).toBeChecked();
+  await savedLayers(page);
+  await page.reload();
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  await expect(await open('b')).toBeChecked();
 });
 
 test('Escape closes a timeline right-click menu and leaves the selection alone', async ({ page }) => {

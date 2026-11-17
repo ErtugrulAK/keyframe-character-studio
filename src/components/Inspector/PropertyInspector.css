@@ -3154,3 +3154,11 @@
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
+
+/* PLAYOUT card: one line saying what the exported switch is called. */
+.operator-control-hint {
+  margin: 4px 0 0;
+  color: var(--text-muted, #a6a6a6);
+  font-size: var(--font-size-caption, 11px);
+  line-height: 1.3;
+}

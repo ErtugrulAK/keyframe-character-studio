@@ -123,6 +123,7 @@ function generatedFiles(
     publicControls.colorFields,
     imageReferences,
     fontReferences,
+    publicControls.toggleFields,
   );
   return [
     { path: `${graphicName}.ograf.json`, kind: 'manifest', status: 'generated', content: `${JSON.stringify(manifest, null, 2)}\n` },

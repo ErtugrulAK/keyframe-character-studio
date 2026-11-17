@@ -6,12 +6,14 @@ import type {
   OGrafPublicColorField,
   OGrafPublicImageField,
   OGrafPublicTextField,
+  OGrafPublicToggleField,
 } from './types';
 
 export interface OGrafPublicControls {
   textFields: OGrafPublicTextField[];
   imageFields: OGrafPublicImageField[];
   colorFields: OGrafPublicColorField[];
+  toggleFields: OGrafPublicToggleField[];
 }
 
 function safeName(value: string): string {
@@ -69,6 +71,7 @@ export function resolveOGrafPublicControls(
   const textFields: OGrafPublicTextField[] = [];
   const imageFields: OGrafPublicImageField[] = [];
   const colorFields: OGrafPublicColorField[] = [];
+  const toggleFields: OGrafPublicToggleField[] = [];
   const packagedImageOptions = imageOptions(assets);
 
   for (const field of options.publicTextFields || []) {
@@ -88,6 +91,12 @@ export function resolveOGrafPublicControls(
   }
 
   for (const layer of layers) {
+    // A show/hide switch is opt-in per layer. A group is saved as not visible
+    // (its children draw themselves), so this does not ask `isPublicLayer`;
+    // a matte source is never offered, because hiding it would change its target.
+    if (layer.operatorToggle === true && !matteSourceIds.has(layer.id)) {
+      toggleFields.push({ id: uniqueId('show', layer, used), title: `Show ${layer.name || 'layer'}`, defaultValue: true, layerId: layer.id });
+    }
     if (!isPublicLayer(layer, matteSourceIds)) continue;
     if (layer.type === 'custom_text' && !textFields.some((field) => field.layerId === layer.id)) {
       textFields.push({
@@ -140,5 +149,5 @@ export function resolveOGrafPublicControls(
     if (field.defaultValue !== undefined) field.defaultValue = limitLength(field.defaultValue, field.maxLength);
   }
 
-  return { textFields, imageFields, colorFields };
+  return { textFields, imageFields, colorFields, toggleFields };
 }

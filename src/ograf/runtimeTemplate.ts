@@ -1,5 +1,5 @@
 import type { SceneData } from '../types/composition';
-import type { OGrafPublicColorField, OGrafPublicImageField, OGrafPublicTextField } from './types';
+import type { OGrafPublicColorField, OGrafPublicImageField, OGrafPublicTextField, OGrafPublicToggleField } from './types';
 import { TEXT_BOX_CENTRE_EM } from '../utils/geometry/textOrigin';
 import { trackMatteRenderParameters } from './trackMatteMarkup';
 import { sceneStepMarkers, stepEndFrames } from '../utils/animation/stepMarkers';
@@ -48,6 +48,7 @@ export function generateGraphicModule(
   colorFields: OGrafPublicColorField[] = [],
   imageReferences: Record<string, string> = {},
   fontReferences: Record<string, string | Array<{ path: string; unicodeRange?: string; fontWeight?: string }>> = {},
+  toggleFields: OGrafPublicToggleField[] = [],
 ): string {
   const bindings = {
     text: Object.fromEntries(textFields.map((field) => [field.id, { layerId: field.layerId, property: 'textValue' }])),
@@ -57,10 +58,11 @@ export function generateGraphicModule(
       allowedValues: field.options || (field.defaultValue ? [field.defaultValue] : []),
     }])),
     color: Object.fromEntries(colorFields.map((field) => [field.id, { layerId: field.layerId, property: field.property }])),
+    toggle: Object.fromEntries(toggleFields.map((field) => [field.id, { layerId: field.layerId, property: 'operatorHidden' }])),
   };
 
   return `const SCENE = ${JSON.stringify(withTrackMatteRender(sceneData))};
-const PUBLIC_BINDINGS = { text: Object.fromEntries(${JSON.stringify(Object.entries(bindings.text))}), image: Object.fromEntries(${JSON.stringify(Object.entries(bindings.image))}), color: Object.fromEntries(${JSON.stringify(Object.entries(bindings.color))}) };
+const PUBLIC_BINDINGS = { text: Object.fromEntries(${JSON.stringify(Object.entries(bindings.text))}), image: Object.fromEntries(${JSON.stringify(Object.entries(bindings.image))}), color: Object.fromEntries(${JSON.stringify(Object.entries(bindings.color))}), toggle: Object.fromEntries(${JSON.stringify(Object.entries(bindings.toggle))}) };
 const IMAGE_REFERENCES = Object.fromEntries(${JSON.stringify(Object.entries(imageReferenceLookup(imageReferences)))});
 const FONT_REFERENCES = Object.fromEntries(${JSON.stringify(Object.entries(fontReferences))});
 // The runtime is one self-contained factory (src/ograf/runtime/graphicRuntime.ts),

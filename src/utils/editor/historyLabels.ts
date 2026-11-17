@@ -36,6 +36,7 @@ const FIELD_GROUPS: ReadonlyArray<readonly [label: string, test: (key: string) =
   ['Change motion path of', (key) => key === 'motionPath'],
   ['Change corners of', (key) => key === 'polygon'],
   ['Crop', (key) => key.startsWith('crop')],
+  ['Change playout control of', (key) => key === 'operatorToggle'],
   ['Change effects of', (key) => key.startsWith('glow') || key.startsWith('shadow') || key.startsWith('dropShadow') || key === 'layerBlur' || key === 'blendMode' || key === 'effects'],
   ['Change trim path of', (key) => key.startsWith('trimPath')],
   ['Change motion of', (key) => key.includes('Preset') || key.includes('Duration') || key.startsWith('animation')],

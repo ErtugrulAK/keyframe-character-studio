@@ -11,6 +11,7 @@ import { ColorCorrectionCard } from './style/ColorCorrectionCard';
 import { ReplaceImageCard } from './style/ReplaceImageCard';
 import { LayerCropCard } from './style/LayerCropCard';
 import { MotionPathCard } from './style/MotionPathCard';
+import { OperatorControlCard } from './style/OperatorControlCard';
 import type { ColorCorrectionEffect, LayerMask } from '../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../types/composition';
 import { StyleMatteSection } from './style/StyleMatteSection';
@@ -180,6 +181,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
       )}
       <StyleClonerSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
       <StyleParticleSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
+      <OperatorControlCard part={selectedPart} characterParts={characterParts} onPartPropChange={handlePartPropChange} />
     </>
   );
   // The Masks tab: layer masks, Track Matte, legacy clip matte.

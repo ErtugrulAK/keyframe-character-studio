@@ -6,6 +6,7 @@ import {
   type OGrafExportDiagnostic,
   type OGrafExportOptions,
   type OGrafPublicColorField,
+  type OGrafPublicToggleField,
   type OGrafPublicImageField,
   type OGrafPublicTextField,
   type OGrafPublicStateSchema,
@@ -331,12 +332,13 @@ function validatePublicFields(
   textFields: OGrafPublicTextField[],
   imageFields: OGrafPublicImageField[],
   colorFields: OGrafPublicColorField[],
+  toggleFields: OGrafPublicToggleField[],
   layers: SceneLayer[],
   diagnostics: OGrafExportDiagnostic[],
 ): void {
   const ids = new Set<string>();
   const layerIds = new Set(layers.map((layer) => layer.id));
-  for (const field of [...textFields, ...imageFields, ...colorFields]) {
+  for (const field of [...textFields, ...imageFields, ...colorFields, ...toggleFields]) {
     if (isPrototypeSensitiveKey(field.id)
       || !field.id
       || ids.has(field.id)
@@ -548,6 +550,7 @@ function createPublicStateSchema(
   textFields: OGrafPublicTextField[],
   imageFields: OGrafPublicImageField[],
   colorFields: OGrafPublicColorField[],
+  toggleFields: OGrafPublicToggleField[],
   assets: OGrafAssetPlan[],
 ): OGrafPublicStateSchema {
   const properties: Record<string, Record<string, unknown>> = Object.create(null);
@@ -585,6 +588,16 @@ function createPublicStateSchema(
       hidden: true,
       ...(field.title ? { title: field.title, label: field.title } : {}),
       ...(field.defaultValue !== undefined ? { default: field.defaultValue.toLowerCase() } : {}),
+    };
+  }
+  for (const field of toggleFields) {
+    if (isPrototypeSensitiveKey(field.id)) continue;
+    // GDD: an on/off switch in the playout UI.
+    properties[field.id] = {
+      type: 'boolean',
+      gddType: 'boolean',
+      ...(field.title ? { title: field.title, label: field.title } : {}),
+      default: field.defaultValue,
     };
   }
   return { type: 'object', properties, additionalProperties: false };
@@ -668,7 +681,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
   }
   validateLayerHierarchy(sceneData.layers || [], diagnostics);
   const publicControls = resolveOGrafPublicControls(sceneData, options, assets);
-  validatePublicFields(publicControls.textFields, publicControls.imageFields, publicControls.colorFields, sceneData.layers || [], diagnostics);
+  validatePublicFields(publicControls.textFields, publicControls.imageFields, publicControls.colorFields, publicControls.toggleFields, sceneData.layers || [], diagnostics);
   const layerById = new Map((sceneData.layers || []).map((layer) => [layer.id, layer]));
   const relationships = new Map<string, string>();
   for (const layer of sceneData.layers || []) {
@@ -729,6 +742,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
     publicControls.textFields,
     publicControls.imageFields,
     publicControls.colorFields,
+    publicControls.toggleFields,
     assets,
   );
   return {
@@ -739,6 +753,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
     publicTextFields: publicControls.textFields,
     publicImageFields: publicControls.imageFields,
     publicColorFields: publicControls.colorFields,
+    publicToggleFields: publicControls.toggleFields,
     canCompile: diagnostics.every((item) => item.severity !== 'ERROR'),
   };
 }

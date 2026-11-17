@@ -7,7 +7,7 @@ import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/
 import { hasChannelDataForTemplate, resolveConnectorSegments } from '../../utils/editor/timelineMetrics';
 import { resolveLaneRows, type LaneContext } from './timelineLaneLayout';
 import { usePointerMenuPlacement } from '../../hooks/usePointerMenuPlacement';
-import { useCloseOnOutsideMouseDown } from '../../hooks/useCloseOnOutsideMouseDown';
+import { useDismissFloatingMenu } from '../../hooks/useDismissFloatingMenu';
 import { sequenceIdOf } from '../../utils/animation/sequenceId';
 
 interface TrackLaneProps {
@@ -198,7 +198,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
   } | null>(null);
   const kfMenuRef = useRef<HTMLDivElement | null>(null);
   const kfMenuPlacement = usePointerMenuPlacement(kfMenuRef, kfMenu);
-  useCloseOnOutsideMouseDown(kfMenuRef, kfMenu !== null, () => setKfMenu(null));
+  useDismissFloatingMenu(kfMenuRef, kfMenu !== null, () => setKfMenu(null));
   const openKfMenu = (e: React.MouseEvent, frame: number, onDelete: () => void) => {
     e.preventDefault();
     e.stopPropagation();
@@ -212,7 +212,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
   const [pasteMenu, setPasteMenu] = useState<{ frame: number; x: number; y: number } | null>(null);
   const pasteMenuRef = useRef<HTMLDivElement | null>(null);
   const pasteMenuPlacement = usePointerMenuPlacement(pasteMenuRef, pasteMenu);
-  useCloseOnOutsideMouseDown(pasteMenuRef, pasteMenu !== null, () => setPasteMenu(null));
+  useDismissFloatingMenu(pasteMenuRef, pasteMenu !== null, () => setPasteMenu(null));
   const openPasteMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -225,7 +225,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
   const [laneMenu, setLaneMenu] = useState<{ channel: AnimationChannel; frame: number; x: number; y: number } | null>(null);
   const laneMenuRef = useRef<HTMLDivElement | null>(null);
   const laneMenuPlacement = usePointerMenuPlacement(laneMenuRef, laneMenu);
-  useCloseOnOutsideMouseDown(laneMenuRef, laneMenu !== null, () => setLaneMenu(null));
+  useDismissFloatingMenu(laneMenuRef, laneMenu !== null, () => setLaneMenu(null));
   const openLaneMenu = (e: React.MouseEvent, channel: AnimationChannel) => {
     if (!INSERTABLE_CHANNELS.has(channel) || track.locked) return;
     e.preventDefault();

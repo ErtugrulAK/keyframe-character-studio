@@ -43,7 +43,7 @@ import { copyKeyframeGroupData, type KeyframeCopyPayload } from '../../utils/ani
 import { readKeyframeGroupEasing, type SegmentCurve } from '../../utils/animation/keyframeEasing';
 import { sectionAt } from '../../utils/animation/sectionRetime';
 import { usePointerMenuPlacement } from '../../hooks/usePointerMenuPlacement';
-import { useCloseOnOutsideMouseDown } from '../../hooks/useCloseOnOutsideMouseDown';
+import { useDismissFloatingMenu } from '../../hooks/useDismissFloatingMenu';
 import { TrackOutlinerRow } from './TrackOutlinerRow';
 import { projectLayerOrdinals } from '../../utils/layers/layerOrdinal';
 import { frameToSeconds, secondsToFrame } from '../../utils/animation/timebase';
@@ -570,7 +570,7 @@ export const SequencerTimeline: React.FC = () => {
   const retimeMenuRef = useRef<HTMLDivElement | null>(null);
   const retimeMenuPlacement = usePointerMenuPlacement(retimeMenuRef, retimeMenu);
   const retimeSectionOf = (frame: number) => sectionAt(activeStepMarkers, activeSequenceDurationFrames, Math.round(frame));
-  useCloseOnOutsideMouseDown(retimeMenuRef, retimeMenu !== null, () => setRetimeMenu(null));
+  useDismissFloatingMenu(retimeMenuRef, retimeMenu !== null, () => setRetimeMenu(null));
   const openRetimeMenu = (clientX: number, clientY: number) => {
     const frame = getFrameFromMouse(clientX);
     const section = retimeSectionOf(frame);

@@ -728,6 +728,30 @@ test('Copy / Paste Easing moves only the curve, and Add Keyframe Here keys a lan
   expect(await savedX('b')).toEqual([[0, 0, 'linear'], [15, 150, 'linear'], [30, 300, 'linear']]);
 });
 
+test('Escape closes a timeline right-click menu and leaves the selection alone', async ({ page }) => {
+  // One level per Escape: the open menu is what the press cancels, not the selected layer.
+  await page.goto('/');
+  await page.evaluate(([key, value]) => { localStorage.clear(); localStorage.setItem(key, value); }, [STORAGE_KEY, JSON.stringify({
+    version: 1, coordinateSystem: 'project-unit-center-v1', width: 1920, height: 1080, fps: 30, totalFrames: 60,
+    layers: [rect('a', 'Alpha', 0, 0)],
+    tracks: [
+      { id: 'track-a', partId: 'a', name: 'Alpha', color: '#22d3ee', visible: true, locked: false, expanded: false, keyframes: [], channels: { x: [{ id: 'a0', frame: 0, value: 0, easing: 'linear' }, { id: 'a30', frame: 30, value: 300, easing: 'linear' }] } },
+    ],
+  })] as const);
+  await page.reload();
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  const row = page.locator('[role="tree"] [data-layer-id="a"]');
+  await row.click();
+  await expect(row).toHaveAttribute('aria-selected', 'true');
+
+  await page.locator('.keyframe-diamond[data-keyframe-id="a0"]').click({ button: 'right' });
+  const item = page.getByRole('menuitem', { name: 'Copy Easing' });
+  await expect(item).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(item).toBeHidden();
+  await expect(row).toHaveAttribute('aria-selected', 'true');
+});
+
 test('Page Up / Page Down step the playhead, Home / End go to the first / last frame, Ctrl+Shift+A deselects', async ({ page }) => {
   // Round 6 (OGraf Studio review): the shortcuts a broadcast editor expects.
   await seed(page, [rect('a', 'Alpha', 0, 0)]);

@@ -16,6 +16,7 @@ import {
 } from './types';
 import { resolveOGrafPublicControls } from './publicControls';
 import { COUNTER_LIMIT } from '../utils/layers/operatorCounter';
+import { OPERATOR_IMAGE_EXTENSIONS } from '../utils/layers/operatorImage';
 import { describeOGrafValueForDiagnostics } from './diagnostics';
 import { resolveMatteSource } from '../utils/layers/matte';
 const SUPPORTED_LAYER_TYPES: Record<string, true> = {
@@ -574,6 +575,17 @@ function createPublicStateSchema(
   const packagedImageValues = assets.filter((asset) => asset.kind === 'image').map((asset) => asset.packagedPath);
   for (const field of imageFields) {
     if (isPrototypeSensitiveKey(field.id)) continue;
+    if (field.any) {
+      // GDD: a picture the operator picks; the playout shows its own file / address chooser.
+      properties[field.id] = {
+        type: 'string',
+        gddType: 'file-path/image-path',
+        gddOptions: { extensions: OPERATOR_IMAGE_EXTENSIONS },
+        ...(field.title ? { title: field.title, label: field.title } : {}),
+        ...(field.defaultValue !== undefined ? { default: field.defaultValue } : {}),
+      };
+      continue;
+    }
     // GDD: a choice among the packaged images; an image path does not name the graphic.
     properties[field.id] = {
       type: 'string',
@@ -713,6 +725,17 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
   validateLayerHierarchy(sceneData.layers || [], diagnostics);
   const publicControls = resolveOGrafPublicControls(sceneData, options, assets);
   validatePublicFields(publicControls.textFields, publicControls.imageFields, publicControls.colorFields, publicControls.toggleFields, publicControls.numberFields, sceneData.layers || [], diagnostics);
+  for (const field of publicControls.imageFields.filter((candidate) => candidate.any)) {
+    const layer = (sceneData.layers || []).find((candidate) => candidate.id === field.layerId);
+    diagnostics.push({
+      code: 'OGRAF_OPERATOR_IMAGE_ANY',
+      severity: 'WARNING',
+      message: `Image "${describeOGrafValueForDiagnostics(layer?.name || field.layerId)}" takes any picture the playout gives it; that picture is not part of the package and must be reachable where the graphic plays.`,
+      layerId: field.layerId,
+      ...(layer?.name ? { layerName: layer.name } : {}),
+      feature: 'public-state',
+    });
+  }
   const layerById = new Map((sceneData.layers || []).map((layer) => [layer.id, layer]));
   const relationships = new Map<string, string>();
   for (const layer of sceneData.layers || []) {

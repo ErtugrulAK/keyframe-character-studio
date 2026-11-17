@@ -26,13 +26,16 @@ const isActiveMatteSource = (part: CharacterPart, characterParts: CharacterPart[
 export const OperatorControlCard: React.FC<OperatorControlCardProps> = ({ part, characterParts, onPartPropChange }) => {
   const toggleId = useId();
   const counterId = useId();
+  const imageId = useId();
+  const isImage = part.type === 'custom_image';
+  const imageAnyOn = isImage && part.operatorImageAny === true;
   const isText = part.type === 'custom_text';
   const counterBlocked = isText ? counterUnavailableReason(part) : undefined;
   const counterOn = part.operatorCounter === true && !counterBlocked;
   const matteSource = isActiveMatteSource(part, characterParts);
   const on = part.operatorToggle === true && !matteSource;
   return (
-    <StyleCard title="PLAYOUT" collapsible retainKey="operator-control" badge={[on ? 'Show/Hide' : '', counterOn ? '+1/-1' : ''].filter(Boolean).join(' · ') || undefined}>
+    <StyleCard title="PLAYOUT" collapsible retainKey="operator-control" badge={[on ? 'Show/Hide' : '', counterOn ? '+1/-1' : '', imageAnyOn ? 'Any image' : ''].filter(Boolean).join(' · ') || undefined}>
       <div className="appearance-group-header">
         <label htmlFor={toggleId}>OPERATOR CAN SHOW / HIDE</label>
         <input
@@ -65,6 +68,26 @@ export const OperatorControlCard: React.FC<OperatorControlCardProps> = ({ part, 
           </div>
           {counterOn && <p className="operator-control-hint">Exported as the number "{part.name || 'Number'}" with "+1" and "-1" buttons.</p>}
           {counterBlocked && <p className="operator-control-hint">{counterBlocked}.</p>}
+        </>
+      )}
+      {isImage && (
+        <>
+          <div className="appearance-group-header">
+            <label htmlFor={imageId}>OPERATOR CAN PICK ANY IMAGE</label>
+            <input
+              id={imageId}
+              type="checkbox"
+              aria-label="Operator can pick any image"
+              checked={imageAnyOn}
+              title="The exported graphic accepts any picture for this layer (a web or file address), not only the packaged images"
+              onChange={(event) => onPartPropChange('operatorImageAny', event.target.checked ? true : undefined)}
+            />
+          </div>
+          <p className="operator-control-hint">
+            {imageAnyOn
+              ? 'The operator can give this layer any picture. It is not in the package, so it must be reachable where the graphic plays.'
+              : 'Off: the operator can only choose among the images packaged with the graphic.'}
+          </p>
         </>
       )}
     </StyleCard>

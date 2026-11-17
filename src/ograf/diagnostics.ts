@@ -102,6 +102,10 @@ const DIAGNOSTIC_REMEDIATIONS: Record<OGrafDiagnosticCode, OGrafDiagnosticRemedi
     title: 'Missing or unusable asset',
     action: `Re-select or re-import the reported file, confirm it still exists on disk, and keep local assets in a trusted dedicated source directory. ${OGRAF_TRUSTED_DIRECTORY_NOTE}`,
   },
+  OGRAF_OPERATOR_IMAGE_ANY: {
+    title: 'Image comes from the playout',
+    action: 'The operator can give this layer any picture. Make sure the picture is reachable where the graphic plays, or clear "Operator can pick any image" in Inspector › PLAYOUT to keep only the packaged images.',
+  },
   OGRAF_ASSET_UNVERIFIED: {
     title: 'Asset not verified',
     action: `Keep the reported asset in a trusted dedicated source directory so packaging can verify it; the generated package cannot fetch it at runtime. ${OGRAF_TRUSTED_DIRECTORY_NOTE}`,

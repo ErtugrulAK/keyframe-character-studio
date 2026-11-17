@@ -167,6 +167,8 @@ export interface RuntimeBinding {
   layerId: string;
   property: string;
   allowedValues?: string[];
+  /** Image: any safe picture address is accepted, not only `allowedValues`. */
+  any?: boolean;
 }
 
 /** The playout preset choice: what each preset sets on which layer. */
@@ -1265,6 +1267,20 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
         const layer = this._scene.layers.find((item) => item.id === binding.layerId);
         const value = data[key];
         if (!layer || typeof value !== 'string') return { statusCode: 400, statusMessage: 'Invalid public field value: ' + key };
+        const packaged = binding.allowedValues ? binding.allowedValues.includes(value) && Object.prototype.hasOwnProperty.call(IMAGE_REFERENCES, value) && Boolean(IMAGE_REFERENCES[value]) : false;
+        if (binding.property === 'imageUrl' && binding.any && !packaged) {
+          // The editor's rule (`utils/layers/operatorImage`): only an address that can name a picture.
+          const text = value.trim();
+          let address: string | undefined;
+          if (!text || text.length > 2000000 || /[\s"'<>`]/u.test(text)) address = undefined;
+          else if (/^https?:\/\/[^/]/iu.test(text) || /^file:\/\//iu.test(text)) address = text;
+          else if (/^data:image\/(?:png|jpeg|gif|webp);base64,[A-Za-z0-9+/]+={0,2}$/iu.test(text)) address = text;
+          else if (/^[a-z]:[\\/]/iu.test(text)) address = 'file:///' + text.replace(/\\/gu, '/');
+          else if (!/^[a-z][a-z0-9+.-]*:/iu.test(text) && !text.startsWith('//') && !text.startsWith('\\')) address = text;
+          if (!address) return { statusCode: 400, statusMessage: 'Image value is not a picture address: ' + key };
+          layer.imageUrl = address;
+          continue;
+        }
         if (binding.property === 'imageUrl' && (!binding.allowedValues!.includes(value) || !Object.prototype.hasOwnProperty.call(IMAGE_REFERENCES, value) || !IMAGE_REFERENCES[value])) {
           return { statusCode: 400, statusMessage: 'Image value is not a packaged asset: ' + key };
         }

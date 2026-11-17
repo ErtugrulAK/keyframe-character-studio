@@ -127,6 +127,7 @@ export function resolveOGrafPublicControls(
           defaultValue,
           options: packagedImageOptions,
           layerId: layer.id,
+          ...(layer.operatorImageAny === true ? { any: true } : {}),
         });
       }
     }

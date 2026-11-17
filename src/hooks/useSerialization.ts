@@ -172,6 +172,7 @@ function toSceneData(
     ...(p.textCase !== undefined ? { textCase: p.textCase } : {}),
     ...(p.operatorToggle ? { operatorToggle: true } : {}),
     ...(p.operatorCounter ? { operatorCounter: true } : {}),
+    ...(p.operatorImageAny ? { operatorImageAny: true } : {}),
     ...(p.operatorPresets?.length ? { operatorPresets: p.operatorPresets.map((entry) => ({ ...entry })) } : {}),
     imageUrl: p.imageUrl,
     videoUrl: p.videoUrl,
@@ -334,6 +335,7 @@ function readSceneData(scene: SceneData): ReadScene {
     // Only a real `true` turns the control on; anything else in a file is no control.
     ...(l.operatorToggle === true ? { operatorToggle: true } : {}),
     ...(l.operatorCounter === true ? { operatorCounter: true } : {}),
+    ...(l.operatorImageAny === true ? { operatorImageAny: true } : {}),
     // Presets come from a file: only well-formed entries are kept.
     ...((() => { const presets = sanitizePresetValues(l.operatorPresets); return presets ? { operatorPresets: presets } : {}; })()),
     // BUG #3 fix: restore exported procedural animation config

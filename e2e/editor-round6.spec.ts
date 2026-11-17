@@ -759,6 +759,23 @@ test('Playout presets: add from current values, edit a value, show it in the edi
   expect((await saved()).operatorPresets).toBeUndefined();
 });
 
+test('PLAYOUT: an image layer can take any picture from the playout, and says what that means', async ({ page }) => {
+  // OGraf live controls, step 4: opt-in, per image layer.
+  const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  await seed(page, [{ id: 'p', name: 'Photo', type: 'custom_image', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, imageUrl: png, width: 100, height: 100, fillColor: '#ffffff', strokeColor: 'none' }]);
+  await page.locator('[role="tree"] [data-layer-id="p"]').click();
+  await openDetailsTab(page, 'Properties');
+  const expand = page.getByRole('button', { name: 'Expand PLAYOUT', exact: true });
+  if (await expand.count()) await expand.click();
+  await expect(page.getByText('Off: the operator can only choose among the images packaged with the graphic.')).toBeVisible();
+  const any = page.getByLabel('Operator can pick any image', { exact: true });
+  await any.check();
+  await expect(page.getByText(/It is not in the package, so it must be reachable where the graphic plays/)).toBeVisible();
+  expect((await savedLayers(page)).find((layer) => layer.id === 'p')!.operatorImageAny).toBe(true);
+  await page.keyboard.press('Control+z');
+  await expect(any).not.toBeChecked();
+});
+
 test('PLAYOUT: a whole-number text can be a counter; other text says why not', async ({ page }) => {
   // OGraf live controls, step 2: a number field with +1 / -1 buttons in the playout.
   const textLayer = (id: string, name: string, textValue: string, y: number) => ({ id, name, type: 'custom_text', x: 0, y, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, textValue, fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' });

@@ -58,6 +58,7 @@ export function generateGraphicModule(
       layerId: field.layerId,
       property: 'imageUrl',
       allowedValues: field.options || (field.defaultValue ? [field.defaultValue] : []),
+      ...(field.any ? { any: true } : {}),
     }])),
     color: Object.fromEntries(colorFields.map((field) => [field.id, { layerId: field.layerId, property: field.property }])),
     toggle: Object.fromEntries(toggleFields.map((field) => [field.id, { layerId: field.layerId, property: 'operatorHidden' }])),

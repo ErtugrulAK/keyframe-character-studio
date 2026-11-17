@@ -28,6 +28,8 @@ export type OGrafDiagnosticCode =
   | 'OGRAF_INVALID_PROJECT'
   | 'OGRAF_INVALID_PUBLIC_FIELD'
   | 'OGRAF_INVALID_MAIN'
+  /** An image layer takes any picture from the playout: that picture is not in the package. */
+  | 'OGRAF_OPERATOR_IMAGE_ANY'
   /** Colour correction is drawn by the editor and GIF, not yet by the OGraf runtime. */
   | 'OGRAF_UNSUPPORTED_COLOR_CORRECTION'
   /** An effect-only mask would cut the layer in the OGraf runtime (it reads every mask as alpha). */
@@ -83,6 +85,8 @@ export interface OGrafPublicImageField {
   id: string;
   title?: string;
   defaultValue?: string;
+  /** The operator may give any safe image address (`utils/layers/operatorImage`), not only `options`. */
+  any?: boolean;
   options?: string[];
   layerId: string;
 }

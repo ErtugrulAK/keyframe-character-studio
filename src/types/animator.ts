@@ -525,6 +525,8 @@ export interface CharacterPart {
   operatorToggle?: boolean;
   /** OGraf: a text the playout operator sets as a number and counts with +1 / -1 buttons (`utils/layers/operatorCounter`). */
   operatorCounter?: boolean;
+  /** OGraf: the playout operator may give this image layer any picture, not only packaged ones (`utils/layers/operatorImage`). */
+  operatorImageAny?: boolean;
   /** OGraf: this layer's value in each playout preset (`utils/layers/operatorPresets`). */
   operatorPresets?: import('../utils/layers/operatorPresets').OperatorPresetValue[];
 

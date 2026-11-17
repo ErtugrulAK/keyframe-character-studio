@@ -525,6 +525,8 @@ export interface CharacterPart {
   operatorToggle?: boolean;
   /** OGraf: a text the playout operator sets as a number and counts with +1 / -1 buttons (`utils/layers/operatorCounter`). */
   operatorCounter?: boolean;
+  /** OGraf: this layer's value in each playout preset (`utils/layers/operatorPresets`). */
+  operatorPresets?: import('../utils/layers/operatorPresets').OperatorPresetValue[];
 
   // ── Feature 3: Text Stagger Animation ──
   textAnimMode?: TextAnimMode;

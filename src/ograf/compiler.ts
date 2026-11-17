@@ -80,7 +80,7 @@ interface OGrafManifestCompilation {
 
 export function compileOGrafManifest(sceneData: SceneData, options: OGrafExportOptions = {}): OGrafManifestCompilation {
   const validated = validateSceneForOGraf(sceneData, options);
-  const publicFields = [...validated.publicTextFields, ...validated.publicImageFields, ...validated.publicColorFields, ...validated.publicToggleFields, ...validated.publicNumberFields];
+  const publicFields = [...validated.publicTextFields, ...validated.publicImageFields, ...validated.publicColorFields, ...validated.publicToggleFields, ...validated.publicNumberFields, ...(validated.publicPresetField ? [validated.publicPresetField] : [])];
   const diagnostics = [...validated.diagnostics, ...collectCompilerDiagnostics(options, publicFields)];
   const stepEnds = stepEndFrames(sceneStepMarkers(sceneData), sceneData.totalFrames);
   const manifest: OGrafManifest = {

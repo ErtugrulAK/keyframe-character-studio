@@ -262,3 +262,77 @@
   color: var(--kcs-text-muted);
 }
 .history-step-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Playout presets (File > Playout Presets…): floats on the right, like History on the left. */
+.playout-presets-panel {
+  left: auto;
+  right: 12px;
+  width: 520px;
+  max-height: min(520px, calc(100vh - 160px));
+}
+.playout-presets-note {
+  margin: 6px 10px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--kcs-text-secondary);
+}
+.playout-presets-table-wrap {
+  overflow: auto;
+  padding: 0 6px 6px;
+}
+.playout-presets-table {
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.playout-presets-table th,
+.playout-presets-table td {
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--kcs-border-subtle);
+  text-align: left;
+  vertical-align: middle;
+}
+.playout-presets-table tbody th {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  color: var(--kcs-text-label);
+}
+.playout-presets-head,
+.playout-presets-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.playout-presets-input {
+  width: 120px;
+  min-width: 0;
+  padding: 2px 4px;
+  font-size: 11px;
+  color: var(--kcs-text-primary);
+  background: var(--kcs-bg-input, var(--kcs-bg-surface));
+  border: 1px solid var(--kcs-border-default);
+  border-radius: 3px;
+}
+.playout-presets-name {
+  font-weight: 600;
+}
+.playout-presets-show {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+.playout-presets-add {
+  display: flex;
+  gap: 6px;
+  padding: 6px 10px 10px;
+  border-top: 1px solid var(--kcs-border-subtle);
+}
+.playout-presets-add-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}

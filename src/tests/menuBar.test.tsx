@@ -81,13 +81,14 @@ describe('MenuBar', () => {
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
-  it('File holds only what the header and toolbar do not: templates, the library and project settings', () => {
+  it('File holds only what the header and toolbar do not: templates, the library, project settings and playout presets', () => {
     // QA 2026-11-13: File repeated the header's new template, Import, the four
     // Export rows and Reset, and the toolbar's media button. Round 6 added
-    // New from Template… (ready-made graphics; the header's + stays blank).
+    // New from Template… (ready-made graphics; the header's + stays blank) and
+    // Playout Presets… (project-wide OGraf presets; no other control opens them).
     render(<MenuBar />);
     const rows = within(openMenu('File')).getAllByRole('menuitem').map((row) => row.textContent?.trim());
-    expect(rows).toEqual(['New from Template…', 'Library…', 'Project Settings…']);
+    expect(rows).toEqual(['New from Template…', 'Library…', 'Project Settings…', 'Playout Presets…']);
   });
 
   it('New from Template opens a recipe in the empty tab, named after it', () => {

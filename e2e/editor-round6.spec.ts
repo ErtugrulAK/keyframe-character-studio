@@ -729,6 +729,36 @@ test('Copy / Paste Easing moves only the curve, and Add Keyframe Here keys a lan
   expect(await savedX('b')).toEqual([[0, 0, 'linear'], [15, 150, 'linear'], [30, 300, 'linear']]);
 });
 
+test('Playout presets: add from current values, edit a value, show it in the editor, one undo step each', async ({ page }) => {
+  // OGraf live controls, step 3: one choice in the playout sets many values.
+  const textLayer = (id: string, name: string, textValue: string, y: number) => ({ id, name, type: 'custom_text', x: 0, y, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, textValue, fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' });
+  await seed(page, [textLayer('h', 'Home', 'Home team', -100), textLayer('a', 'Away', 'Away team', 100)]);
+  await page.getByRole('menubar').getByRole('menuitem', { name: 'File' }).click();
+  await page.getByRole('menuitem', { name: 'Playout Presets…' }).click();
+  const panel = page.getByRole('dialog', { name: 'Playout presets' });
+  await expect(panel).toBeVisible();
+
+  await panel.getByLabel('New preset name').fill('Game 1');
+  await panel.getByRole('button', { name: 'Add preset from current values' }).click();
+  const homeCell = panel.getByLabel('Home in Game 1', { exact: true });
+  await expect(homeCell).toHaveValue('Home team');
+  const saved = async () => (await savedLayers(page)).find((layer) => layer.id === 'h') as unknown as { textValue: string; operatorPresets?: Array<{ name: string; text?: string }> };
+  expect((await saved()).operatorPresets).toEqual([{ name: 'Game 1', text: 'Home team' }]);
+
+  await homeCell.fill('Chiefs');
+  await homeCell.press('Enter');
+  expect((await saved()).operatorPresets).toEqual([{ name: 'Game 1', text: 'Chiefs' }]);
+
+  await panel.getByRole('button', { name: 'Show Game 1 in the editor' }).click();
+  expect((await saved()).textValue).toBe('Chiefs');
+  await page.keyboard.press('Control+z');
+  expect((await saved()).textValue).toBe('Home team');
+  expect((await saved()).operatorPresets).toEqual([{ name: 'Game 1', text: 'Chiefs' }]);
+
+  await panel.getByRole('button', { name: 'Delete preset Game 1' }).click();
+  expect((await saved()).operatorPresets).toBeUndefined();
+});
+
 test('PLAYOUT: a whole-number text can be a counter; other text says why not', async ({ page }) => {
   // OGraf live controls, step 2: a number field with +1 / -1 buttons in the playout.
   const textLayer = (id: string, name: string, textValue: string, y: number) => ({ id, name, type: 'custom_text', x: 0, y, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, textValue, fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' });

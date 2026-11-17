@@ -8,6 +8,7 @@ import {
   type OGrafPublicColorField,
   type OGrafPublicToggleField,
   type OGrafPublicNumberField,
+  type OGrafPublicPresetField,
   type OGrafPublicImageField,
   type OGrafPublicTextField,
   type OGrafPublicStateSchema,
@@ -555,6 +556,7 @@ function createPublicStateSchema(
   colorFields: OGrafPublicColorField[],
   toggleFields: OGrafPublicToggleField[],
   numberFields: OGrafPublicNumberField[],
+  presetField: OGrafPublicPresetField | undefined,
   assets: OGrafAssetPlan[],
 ): OGrafPublicStateSchema {
   const properties: Record<string, Record<string, unknown>> = Object.create(null);
@@ -614,6 +616,19 @@ function createPublicStateSchema(
       maximum: COUNTER_LIMIT,
       ...(field.title ? { title: field.title, label: field.title } : {}),
       default: field.defaultValue,
+    };
+  }
+  if (presetField && !isPrototypeSensitiveKey(presetField.id)) {
+    // GDD: one choice; '' leaves every field as the operator set it.
+    properties[presetField.id] = {
+      type: 'string',
+      gddType: 'select',
+      title: presetField.title,
+      label: presetField.title,
+      description: 'Sets the values saved in the chosen preset. Choose None to use the fields as typed.',
+      enum: ['', ...presetField.names],
+      gddOptions: { labels: Object.fromEntries([['', 'None'], ...presetField.names.map((name) => [name, name])]) },
+      default: '',
     };
   }
   return { type: 'object', properties, additionalProperties: false };
@@ -760,6 +775,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
     publicControls.colorFields,
     publicControls.toggleFields,
     publicControls.numberFields,
+    publicControls.presetField,
     assets,
   );
   return {
@@ -772,6 +788,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
     publicColorFields: publicControls.colorFields,
     publicToggleFields: publicControls.toggleFields,
     publicNumberFields: publicControls.numberFields,
+    ...(publicControls.presetField ? { publicPresetField: publicControls.presetField } : {}),
     canCompile: diagnostics.every((item) => item.severity !== 'ERROR'),
   };
 }

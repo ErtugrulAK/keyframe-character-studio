@@ -169,6 +169,12 @@ export interface RuntimeBinding {
   allowedValues?: string[];
 }
 
+/** The playout preset choice: what each preset sets on which layer. */
+export interface RuntimePresetBinding {
+  id: string;
+  values: Record<string, Array<{ layerId: string; text?: string; show?: boolean }>>;
+}
+
 export type RuntimeFontFace = string | { path: string; unicodeRange?: string; fontWeight?: string };
 
 export type RuntimeWorldTransform = Transform & { affine?: WorldAffine };
@@ -199,7 +205,7 @@ export interface RuntimeActionResult {
 export interface GraphicRuntimeEnvironment {
   scene: RuntimeScene;
   /** `toggle`: the operator's show/hide switches; `number`: counter texts. Absent in a package written before them. */
-  bindings: { text: Record<string, RuntimeBinding>; image: Record<string, RuntimeBinding>; color: Record<string, RuntimeBinding>; toggle?: Record<string, RuntimeBinding>; number?: Record<string, RuntimeBinding> };
+  bindings: { text: Record<string, RuntimeBinding>; image: Record<string, RuntimeBinding>; color: Record<string, RuntimeBinding>; toggle?: Record<string, RuntimeBinding>; number?: Record<string, RuntimeBinding>; preset?: RuntimePresetBinding };
   imageReferences: Record<string, string>;
   fontReferences: Record<string, RuntimeFontFace | RuntimeFontFace[]>;
   /** The package module's own URL; packaged relative paths resolve against it. */
@@ -1225,7 +1231,16 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
 
     _applyData(data: Record<string, unknown> | undefined): RuntimeActionResult | undefined {
       if (!data || typeof data !== 'object') return undefined;
+      // A chosen preset is applied after the other fields, so it wins over them.
+      let preset: Array<{ layerId: string; text?: string; show?: boolean }> | undefined;
       for (const key of Object.keys(data)) {
+        if (PUBLIC_BINDINGS.preset && key === PUBLIC_BINDINGS.preset.id) {
+          const name = data[key];
+          if (name === '') continue;
+          if (typeof name !== 'string' || !Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.preset.values, name)) return { statusCode: 400, statusMessage: 'Unknown preset: ' + String(name) };
+          preset = PUBLIC_BINDINGS.preset.values[name];
+          continue;
+        }
         const toggle = PUBLIC_BINDINGS.toggle && Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.toggle, key) ? PUBLIC_BINDINGS.toggle[key] : undefined;
         if (toggle) {
           const target = this._scene.layers.find((item) => item.id === toggle.layerId);
@@ -1257,6 +1272,12 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
           return { statusCode: 400, statusMessage: 'Color value must be a #rrggbb value: ' + key };
         }
         layer[binding.property] = value;
+      }
+      for (const entry of preset || []) {
+        const target = this._scene.layers.find((item) => item.id === entry.layerId);
+        if (!target) continue;
+        if (typeof entry.text === 'string') target.textValue = entry.text;
+        if (typeof entry.show === 'boolean') target.operatorHidden = !entry.show;
       }
       return undefined;
     }

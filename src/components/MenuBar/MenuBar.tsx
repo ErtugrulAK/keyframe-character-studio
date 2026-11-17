@@ -7,6 +7,7 @@ import { ProjectSettingsDialog } from './ProjectSettingsDialog';
 import { useGraphicLibrary } from './useGraphicLibrary';
 import { useStartRecipes } from './useStartRecipes';
 import { HistoryPanel } from './HistoryPanel';
+import { PlayoutPresetsPanel } from './PlayoutPresetsPanel';
 import { APP_VERSION } from '../../utils/editor/appVersion';
 import './MenuBar.css';
 
@@ -55,6 +56,7 @@ export const MenuBar: React.FC = () => {
   const [activeRow, setActiveRow] = useState(0);
   const [projectSettingsOpen, setProjectSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [presetsOpen, setPresetsOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
   const { openLibrary, dialog: libraryDialog } = useGraphicLibrary();
   const { openStartRecipes, dialog: startRecipeDialog } = useStartRecipes();
@@ -85,7 +87,10 @@ export const MenuBar: React.FC = () => {
       groups: [
         [{ id: 'new-from-template', label: 'New from Template…', run: () => openStartRecipes() }],
         [{ id: 'library', label: 'Library…', run: () => openLibrary() }],
-        [{ id: 'project-settings', label: 'Project Settings…', run: () => setProjectSettingsOpen(true) }],
+        [
+          { id: 'project-settings', label: 'Project Settings…', run: () => setProjectSettingsOpen(true) },
+          { id: 'playout-presets', label: 'Playout Presets…', run: () => setPresetsOpen(true) },
+        ],
       ],
     },
     {
@@ -247,6 +252,7 @@ export const MenuBar: React.FC = () => {
       {startRecipeDialog}
       <ProjectSettingsDialog isOpen={projectSettingsOpen} onClose={() => setProjectSettingsOpen(false)} />
       <HistoryPanel isOpen={historyOpen} onClose={() => setHistoryOpen(false)} />
+      <PlayoutPresetsPanel isOpen={presetsOpen} onClose={() => setPresetsOpen(false)} />
     </div>
   );
 };

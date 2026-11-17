@@ -8,7 +8,9 @@ import type {
   OGrafPublicTextField,
   OGrafPublicToggleField,
   OGrafPublicNumberField,
+  OGrafPublicPresetField,
 } from './types';
+import { presetNames } from '../utils/layers/operatorPresets';
 import { counterUnavailableReason, counterValueOf } from '../utils/layers/operatorCounter';
 
 export interface OGrafPublicControls {
@@ -17,6 +19,7 @@ export interface OGrafPublicControls {
   colorFields: OGrafPublicColorField[];
   toggleFields: OGrafPublicToggleField[];
   numberFields: OGrafPublicNumberField[];
+  presetField?: OGrafPublicPresetField;
 }
 
 function safeName(value: string): string {
@@ -158,5 +161,29 @@ export function resolveOGrafPublicControls(
     if (field.defaultValue !== undefined) field.defaultValue = limitLength(field.defaultValue, field.maxLength);
   }
 
-  return { textFields, imageFields, colorFields, toggleFields, numberFields };
+  // Playout presets: one choice that sets the values each layer stores for it.
+  // An entry only reaches the package for a value the operator could set by hand.
+  const names = presetNames(layers);
+  let presetField: OGrafPublicPresetField | undefined;
+  if (names.length > 0) {
+    const textLayers = new Set(textFields.map((field) => field.layerId));
+    const numberLayers = new Set(numberFields.map((field) => field.layerId));
+    const toggleLayers = new Set(toggleFields.map((field) => field.layerId));
+    const values: OGrafPublicPresetField['values'] = Object.fromEntries(names.map((name) => [name, []]));
+    for (const layer of layers) {
+      for (const entry of layer.operatorPresets ?? []) {
+        const text = entry.text !== undefined && (textLayers.has(layer.id) || (numberLayers.has(layer.id) && counterValueOf(entry.text) !== undefined))
+          ? (numberLayers.has(layer.id) ? String(counterValueOf(entry.text)) : entry.text)
+          : undefined;
+        const show = entry.show !== undefined && toggleLayers.has(layer.id) ? entry.show : undefined;
+        if (text === undefined && show === undefined) continue;
+        values[entry.name].push({ layerId: layer.id, ...(text !== undefined ? { text } : {}), ...(show !== undefined ? { show } : {}) });
+      }
+    }
+    let id = 'preset';
+    for (let suffix = 2; used.has(id); suffix += 1) id = `preset_${suffix}`;
+    used.add(id);
+    presetField = { id, title: 'Preset', names, values };
+  }
+  return { textFields, imageFields, colorFields, toggleFields, numberFields, ...(presetField ? { presetField } : {}) };
 }

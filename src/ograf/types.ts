@@ -102,6 +102,21 @@ export interface OGrafPublicNumberField {
   layerId: string;
 }
 
+/** What one preset sets on one layer. */
+export interface OGrafPresetEntry {
+  layerId: string;
+  text?: string;
+  show?: boolean;
+}
+
+/** The playout preset choice (`gddType: select`): '' = none, else one of `names`. */
+export interface OGrafPublicPresetField {
+  id: string;
+  title: string;
+  names: string[];
+  values: Record<string, OGrafPresetEntry[]>;
+}
+
 /** A button in the playout (OGraf `customActions`); `schema: null` = it takes no parameters. */
 export interface OGrafCustomAction {
   id: string;
@@ -237,5 +252,6 @@ export interface ValidatedOGrafScene {
   publicColorFields: OGrafPublicColorField[];
   publicToggleFields: OGrafPublicToggleField[];
   publicNumberFields: OGrafPublicNumberField[];
+  publicPresetField?: OGrafPublicPresetField;
   canCompile: boolean;
 }

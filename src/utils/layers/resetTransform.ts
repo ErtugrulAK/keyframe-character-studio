@@ -1,4 +1,5 @@
 import type { CharacterPart, HomeTransform, Track, TrackChannel } from '../../types/animator';
+import { sequenceIdOf } from '../animation/sequenceId';
 
 /** The transform channels Reset Transform clears: the ones the TRANSFORM card shows. */
 const TRANSFORM_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'];
@@ -35,7 +36,7 @@ export const resetTransforms = (
     changed = true;
     return { ...part, baseTransform: { ...base, ...home } };
   });
-  const inSequence = (key: { templateId?: string }) => (key.templateId || 'Sequence') === activeTemplateId;
+  const inSequence = (key: { templateId?: string }) => sequenceIdOf(key) === activeTemplateId;
   const nextTracks = tracks.map((track) => {
     if (!chosen.has(track.partId)) return track;
     const hasKeys = TRANSFORM_CHANNELS.some((channel) => track.channels?.[channel]?.some(inSequence))

@@ -4,6 +4,7 @@ import { resolveBoundPartners } from '../utils/layers/partBinding';
 import { generateId } from '../utils/layers/idGenerator';
 import { resolveAuthoredBasePose } from '../utils/animation/channelKeyframeGroups';
 import { migrateLegacyKeyframesToCanonical, migrateTrackLegacyKeyframes } from '../utils/animation/trackMutations';
+import { sequenceIdOf } from '../utils/animation/sequenceId';
 
 interface UseInspectorOptions {
   selectedPartId: string | null;
@@ -79,7 +80,7 @@ export const useInspector = ({
     for (const [prop, channel] of TRANSFORM_TO_CHANNEL) {
       const newVal = newTransform[prop];
       if (typeof newVal !== 'number') continue; // skip undefined + non-numeric (e.g. mask)
-      const tmplKfs = (track.channels?.[channel] || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
+      const tmplKfs = (track.channels?.[channel] || []).filter((k) => sequenceIdOf(k) === activeTmpl);
       if (tmplKfs.length === 0) {
         baseUpdates[prop] = newVal;
       } else {
@@ -94,13 +95,13 @@ export const useInspector = ({
           const channels = { ...tr.channels };
           for (const u of channelUpdates) {
             const list = [...(channels[u.channel] || [])];
-            const frameKf = list.find((k) => k.frame === currentFrame && (k.templateId || 'Sequence') === activeTmpl);
+            const frameKf = list.find((k) => k.frame === currentFrame && sequenceIdOf(k) === activeTmpl);
             if (frameKf) {
               // update value only — easing/bezier/templateId preserved
               channels[u.channel] = list.map((k) => (k.id === frameKf.id ? { ...k, value: u.value } : k));
             } else {
               // add a new keyframe at current frame, reusing the template's easing
-              const templateEasing = list.find((k) => (k.templateId || 'Sequence') === activeTmpl)?.easing || 'easeInOut';
+              const templateEasing = list.find((k) => sequenceIdOf(k) === activeTmpl)?.easing || 'easeInOut';
               channels[u.channel] = [
                 ...list,
                 {
@@ -260,14 +261,14 @@ export const useInspector = ({
     const track = tracks.find((candidate) => candidate.partId === targetPartId);
     if (!track) return;
     const activeTmpl = activeTemplateId || 'Sequence';
-    const channelKeyframes = (track.channels?.[channel] || []).filter((kf) => (kf.templateId || 'Sequence') === activeTmpl);
+    const channelKeyframes = (track.channels?.[channel] || []).filter((kf) => sequenceIdOf(kf) === activeTmpl);
 
     if (channelKeyframes.length > 0) {
       setTracks((prev) => prev.map((candidate) => {
         if (candidate.id !== track.id) return candidate;
         const channels = { ...candidate.channels };
         const list = [...(channels[channel] || [])];
-        const atFrame = list.find((kf) => kf.frame === currentFrame && (kf.templateId || 'Sequence') === activeTmpl);
+        const atFrame = list.find((kf) => kf.frame === currentFrame && sequenceIdOf(kf) === activeTmpl);
         if (atFrame) {
           channels[channel] = list.map((kf) => kf.id === atFrame.id ? { ...kf, value } : kf);
         } else {

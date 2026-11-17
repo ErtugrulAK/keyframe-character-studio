@@ -13,6 +13,7 @@ import { authoredBasePose } from './evaluateTransform';
 import { fillChannelsFromLegacyKeyframes } from './legacyKeyframeConversion';
 import { partIndexOf, relationshipParentId } from '../layers/partBinding';
 import { normalizeFeather, normalizeGradientAngle, normalizeStrength } from '../layers/matte';
+import { sequenceIdOf } from './sequenceId';
 
 const MASK_SCALAR_PROPERTIES = ['opacity', 'feather', 'expansion'] as const;
 /** A per-mask scalar channel (`maskId:opacity|feather|expansion`). Path
@@ -99,7 +100,7 @@ export function groupChannelKeyframesByFrame(
   for (const ch of ANIMATABLE_CHANNELS) {
     const kfs = channels[ch] || [];
     for (const kf of kfs) {
-      if ((kf.templateId || 'Sequence') !== activeTemplateId) continue;
+      if (sequenceIdOf(kf) !== activeTemplateId) continue;
       let group = byFrame.get(kf.frame);
       if (!group) {
         group = { frame: kf.frame, channels: [], keyframes: {}, easing: kf.easing || 'linear' };

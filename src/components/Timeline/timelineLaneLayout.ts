@@ -2,6 +2,7 @@ import { layerMaskChannel, layerMaskPathChannel, type AnimationChannel, type Tra
 import { CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/animation/channelKeyframeGroups';
 import { hasChannelDataForTemplate } from '../../utils/editor/timelineMetrics';
+import { sequenceIdOf } from '../../utils/animation/sequenceId';
 
 /**
  * The timeline lane layout as DATA.
@@ -97,7 +98,7 @@ const isAnimating = (track: Track, value: AnimationChannel): boolean => {
   const keys = (source ?? []) as Array<{ value: unknown; templateId?: string }>;
   const firstOf = new Map<string, string>();
   for (const key of keys) {
-    const template = key.templateId || 'Sequence';
+    const template = sequenceIdOf(key);
     const valueKey = JSON.stringify(key.value);
     const first = firstOf.get(template);
     if (first === undefined) firstOf.set(template, valueKey);
@@ -176,7 +177,7 @@ interface LaneKeyframe {
   centerY: number;
 }
 
-const templateOf = (keyframe: { templateId?: string }): string => keyframe.templateId || 'Sequence';
+const templateOf = (keyframe: { templateId?: string }): string => sequenceIdOf(keyframe);
 
 /**
  * Every keyframe glyph one track's lanes show, with the id the diamond carries:

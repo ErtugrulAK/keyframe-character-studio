@@ -11,6 +11,7 @@
  */
 import type { Track } from '../../types/animator';
 import { normalizeStepMarkers } from './stepMarkers';
+import { sequenceIdOf } from './sequenceId';
 
 export interface SequenceSection {
   /** 0-based, in play order. */
@@ -48,7 +49,7 @@ export const retimeFrame = (frame: number, start: number, end: number, length: n
 
 type Framed = { frame: number; templateId?: string };
 
-const inSequence = (keyframe: Framed, templateId: string): boolean => (keyframe.templateId || 'Sequence') === templateId;
+const inSequence = (keyframe: Framed, templateId: string): boolean => sequenceIdOf(keyframe) === templateId;
 
 export type RetimeRefusal = 'invalid' | 'collision' | 'locked';
 

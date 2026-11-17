@@ -1,5 +1,6 @@
 import type { EasingType, Track, TrackChannel } from '../../types/animator';
 import { TRACK_CHANNELS } from '../../types/animator';
+import { sequenceIdOf } from './sequenceId';
 
 /**
  * The easings the timeline offers as quick commands (keyframe right-click menu,
@@ -36,7 +37,7 @@ type EasedKeyframe = {
   bezierOut?: unknown;
 };
 
-const inTemplate = (keyframe: { templateId?: string }, templateId: string): boolean => (keyframe.templateId || 'Sequence') === templateId;
+const inTemplate = (keyframe: { templateId?: string }, templateId: string): boolean => sequenceIdOf(keyframe) === templateId;
 
 /**
  * One channel's keys with the named easing on the segments that START at

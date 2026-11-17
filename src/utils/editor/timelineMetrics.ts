@@ -9,12 +9,13 @@
 import type { AnimationChannel, LayerMaskChannel, PropertyKeyframe, Track, TrackChannel, Transform } from '../../types/animator';
 import { TRACK_CHANNELS } from '../../types/animator';
 import { resolveTrackChannels } from '../animation/channelKeyframeGroups';
+import { sequenceIdOf } from '../animation/sequenceId';
 
 /** Does the track carry any canonical channel keyframes for the template? */
 export function hasChannelDataForTemplate(track: Track, activeTemplateId: string): boolean {
   if (!track.channels) return false;
   return Object.values(track.channels).some((arr) =>
-    arr.some((k) => (k.templateId || 'Sequence') === activeTemplateId),
+    arr.some((k) => sequenceIdOf(k) === activeTemplateId),
   );
 }
 
@@ -61,7 +62,7 @@ export function resolveCurveSegment(
   currentFrame: number,
 ): CurveSegment | null {
   const list = keyframes
-    .filter((keyframe) => (keyframe.templateId || 'Sequence') === activeTemplateId)
+    .filter((keyframe) => sequenceIdOf(keyframe) === activeTemplateId)
     .sort((a, b) => a.frame - b.frame);
   if (list.length < 2) return null;
 
@@ -90,7 +91,7 @@ const templateKeyframeFrames = (
 ): number[] => {
   const frames = new Set<number>();
   keyframes.forEach((keyframe) => {
-    if ((keyframe.templateId || 'Sequence') === activeTemplateId) frames.add(keyframe.frame);
+    if (sequenceIdOf(keyframe) === activeTemplateId) frames.add(keyframe.frame);
   });
   return [...frames].sort((a, b) => a - b);
 };
@@ -255,7 +256,7 @@ export function resolveCurveTarget(
   selectedKeyframeId: string | null,
 ): CurveTarget | null {
   if (!track) return null;
-  const isActive = (keyframe: { templateId?: string }) => (keyframe.templateId || 'Sequence') === activeTemplateId;
+  const isActive = (keyframe: { templateId?: string }) => sequenceIdOf(keyframe) === activeTemplateId;
   const readChannel = (channel: AnimationChannel): CurveSegmentKeyframe[] =>
     (TRACK_CHANNELS as string[]).includes(channel)
       ? (track.channels?.[channel as TrackChannel] ?? [])
@@ -299,7 +300,7 @@ export const resolveChannelAnimationState = (
   const store = (channel.includes(':')
     ? (channel.endsWith(':path') ? track.maskPathChannels : track.maskChannels)
     : track.channels) as Record<string, { frame: number; templateId?: string }[]> | undefined;
-  const keyframes = (store?.[channel] ?? []).filter((k) => (k.templateId || 'Sequence') === templateId);
+  const keyframes = (store?.[channel] ?? []).filter((k) => sequenceIdOf(k) === templateId);
   if (keyframes.length === 0) return 'off';
   return keyframes.some((k) => k.frame === frame) ? 'keyed' : 'animated';
 };

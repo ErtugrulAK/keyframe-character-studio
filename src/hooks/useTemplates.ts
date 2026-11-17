@@ -11,6 +11,7 @@ import {
   normalizeMotionTemplates,
   normalizeSequenceDuration,
 } from '../utils/animation/motionTemplates';
+import { sequenceIdOf } from '../utils/animation/sequenceId';
 
 /** A template tab that is not on screen: its scene, kept until the tab is opened again. */
 export interface TemplateCanvas {
@@ -175,11 +176,11 @@ export const useTemplates = ({
         ): Record<string, T[]> =>
           Object.fromEntries(Object.entries(map ?? {}).map(([channel, keyframes]) => [
             channel,
-            keyframes.filter((keyframe) => (keyframe.templateId || 'Sequence') !== idToDelete),
+            keyframes.filter((keyframe) => sequenceIdOf(keyframe) !== idToDelete),
           ]));
         return {
           ...tr,
-          keyframes: (tr.keyframes || []).filter((k) => (k.templateId || 'Sequence') !== idToDelete),
+          keyframes: (tr.keyframes || []).filter((k) => sequenceIdOf(k) !== idToDelete),
           channels: filterMap(tr.channels) as Track['channels'],
           maskChannels: filterMap(tr.maskChannels),
           maskPathChannels: filterMap(tr.maskPathChannels),

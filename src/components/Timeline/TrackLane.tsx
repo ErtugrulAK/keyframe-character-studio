@@ -8,6 +8,7 @@ import { hasChannelDataForTemplate, resolveConnectorSegments } from '../../utils
 import { resolveLaneRows, type LaneContext } from './timelineLaneLayout';
 import { usePointerMenuPlacement } from '../../hooks/usePointerMenuPlacement';
 import { useCloseOnOutsideMouseDown } from '../../hooks/useCloseOnOutsideMouseDown';
+import { sequenceIdOf } from '../../utils/animation/sequenceId';
 
 interface TrackLaneProps {
   track: Track;
@@ -239,7 +240,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
   const resolvedChannels = resolveTrackChannels(track, basePose);
   const useCanonical = hasChannelDataForTemplate(track, activeTmpl);
   const groups = groupChannelKeyframesByFrame(resolvedChannels, activeTmpl);
-  const activeKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
+  const activeKfs = (track.keyframes || []).filter((k) => sequenceIdOf(k) === activeTmpl);
   const sortedKfs = [...activeKfs].sort((a, b) => a.frame - b.frame);
   const selectedKeyframeIdSet = new Set(selectedKeyframeIds);
   /** Client X of the press that is still in flight, to tell a click from a drag. */
@@ -298,7 +299,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
         : ch.includes(':')
           ? track.maskChannels?.[ch as LayerMaskChannel]
           : resolvedChannels[ch as TrackChannel];
-      for (const keyframe of source ?? []) if ((keyframe.templateId || 'Sequence') === activeTmpl) frames.add(keyframe.frame);
+      for (const keyframe of source ?? []) if (sequenceIdOf(keyframe) === activeTmpl) frames.add(keyframe.frame);
     }
     return [...frames].sort((a, b) => a - b);
   };
@@ -316,7 +317,7 @@ const TrackLaneView: React.FC<TrackLaneProps> = ({
         ? track.maskChannels?.[ch as LayerMaskChannel]
         : resolvedChannels[ch as TrackChannel];
     const chKfs = [...(source ?? [])]
-      .filter((keyframe) => (keyframe.templateId || 'Sequence') === activeTmpl)
+      .filter((keyframe) => sequenceIdOf(keyframe) === activeTmpl)
       .sort((a, b) => a.frame - b.frame) as (PropertyKeyframe | PathKeyframe)[];
     return (
       <div key={ch} className="ue-channel-lane" data-lane-channel={ch} onContextMenu={(e) => openLaneMenu(e, ch)} style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }}>

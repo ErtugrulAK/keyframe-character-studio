@@ -25,6 +25,7 @@
  */
 
 import type { Keyframe, PropertyKeyframe, TrackChannel, EasingType, Transform } from '../../types/animator';
+import { sequenceIdOf } from './sequenceId';
 
 const ANIMATED_CHANNELS = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'] as const;
 const MASK_CHANNELS = ['maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation'] as const;
@@ -51,7 +52,7 @@ const createEmptyChannels = (): Record<TrackChannel, PropertyKeyframe[]> => ({
  * (`evaluateTransform` filters by `keyframe.templateId || 'Sequence'`), so the
  * fallback below is decided with exactly the scope the evaluator will use.
  */
-const scopeOf = (keyframe: { templateId?: string }): string => keyframe.templateId || 'Sequence';
+const scopeOf = (keyframe: { templateId?: string }): string => sequenceIdOf(keyframe);
 
 /** The channel keys a legacy keyframe's own fields can carry. */
 type ConvertedChannel = (typeof ANIMATED_CHANNELS)[number] | (typeof MASK_CHANNELS)[number];

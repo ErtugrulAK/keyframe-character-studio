@@ -5,6 +5,7 @@ import { ANIMATABLE_CHANNELS, DISPLAY_CHANNELS, TRIM_PATH_CHANNELS } from './cha
 import type { TransitionChannelResult } from './motionTransitions';
 import { convertLegacyKeyframesToChannels, fillChannelsFromLegacyKeyframes } from './legacyKeyframeConversion';
 import { makeEmptyChannels } from './defaults';
+import { sequenceIdOf } from './sequenceId';
 
 /**
  * ONE canonical authored animation truth.
@@ -113,7 +114,7 @@ export const addPropertyKeyframeMutator = (
     const isMask = isLayerMaskChannel(channel);
     const channelMap = (isMask ? (t.maskChannels ?? {}) : (t.channels ?? makeEmptyChannels())) as Record<string, PropertyKeyframe[]>;
     const keyframes = channelMap[channel] ?? [];
-    const existing = keyframes.find((k) => k.frame === frame && (k.templateId || 'Sequence') === templateId);
+    const existing = keyframes.find((k) => k.frame === frame && sequenceIdOf(k) === templateId);
     const newKf: PropertyKeyframe = {
       id: existing?.id ?? generateId(`pkf_${channel}`),
       frame,
@@ -153,7 +154,7 @@ export const authorPropertyValueAtFrameMutator = (
   const track = tracks.find((candidate) => candidate.id === trackId);
   if (!track) return tracks;
   const channelMap = (isLayerMaskChannel(channel) ? track.maskChannels : track.channels) as Record<string, PropertyKeyframe[]> | undefined;
-  const scoped = (channelMap?.[channel] ?? []).filter((keyframe) => (keyframe.templateId || 'Sequence') === templateId);
+  const scoped = (channelMap?.[channel] ?? []).filter((keyframe) => sequenceIdOf(keyframe) === templateId);
   const exact = scoped.find((keyframe) => keyframe.frame === frame);
   if (exact) return updatePropertyKeyframeValueMutator(tracks, trackId, channel, exact.id, value);
   return addPropertyKeyframeMutator(tracks, trackId, channel, frame, value, scoped[0]?.easing ?? 'easeInOut', templateId);
@@ -207,7 +208,7 @@ const upsertPropertyKeyframe = (
   templateId: string,
   isMask: boolean,
 ): PropertyKeyframe[] => {
-  const existing = keyframes.find((k) => k.frame === frame && (k.templateId || 'Sequence') === templateId);
+  const existing = keyframes.find((k) => k.frame === frame && sequenceIdOf(k) === templateId);
   if (!existing) {
     return [...keyframes, {
       id: generateId(`pkf_${channel}`),
@@ -233,7 +234,7 @@ export const addMaskPathKeyframeMutator = (
 ): Track[] => tracks.map((track) => {
   if (track.id !== trackId) return track;
   const keyframes = track.maskPathChannels?.[channel] ?? [];
-  const existing = keyframes.find((keyframe) => keyframe.frame === frame && (keyframe.templateId || 'Sequence') === templateId);
+  const existing = keyframes.find((keyframe) => keyframe.frame === frame && sequenceIdOf(keyframe) === templateId);
   const nextKeyframe: PathKeyframe = {
     id: existing?.id ?? generateId(`pkf_${channel}`),
     frame,
@@ -264,7 +265,7 @@ export const clearMaskPathAnimationMutator = (
     ...track,
     maskPathChannels: {
       ...track.maskPathChannels,
-      [channel]: (track.maskPathChannels?.[channel] ?? []).filter((keyframe) => (keyframe.templateId || 'Sequence') !== templateId),
+      [channel]: (track.maskPathChannels?.[channel] ?? []).filter((keyframe) => sequenceIdOf(keyframe) !== templateId),
     },
   }
   : track);
@@ -382,9 +383,9 @@ export const applyTemporalHandlesToSegmentMutator = (
     const keys = channelMap[channel] ?? [];
     const from = keys.find((key) => key.id === fromKeyframeId);
     if (!from || from.easing === 'hold') return track;
-    const scope = from.templateId || 'Sequence';
+    const scope = sequenceIdOf(from);
     const inScope = keys
-      .filter((key) => (key.templateId || 'Sequence') === scope)
+      .filter((key) => sequenceIdOf(key) === scope)
       .sort((a, b) => a.frame - b.frame);
     const index = inScope.findIndex((key) => key.id === fromKeyframeId);
     const to = inScope[index + 1];
@@ -436,7 +437,7 @@ export const clearChannelAnimationMutator = (
     const isMask = isLayerMaskChannel(channel);
     const channelMap = (isMask ? (t.maskChannels ?? {}) : (t.channels ?? makeEmptyChannels())) as Record<string, PropertyKeyframe[]>;
     const keyframes = channelMap[channel] ?? [];
-    const updated = keyframes.filter((k) => (k.templateId || 'Sequence') !== templateId);
+    const updated = keyframes.filter((k) => sequenceIdOf(k) !== templateId);
     if (updated.length === keyframes.length) return t;
     return isMask
       ? { ...t, maskChannels: { ...t.maskChannels, [channel]: updated } }
@@ -466,7 +467,7 @@ interface LocatedKeyframe {
 const frameOf = (keyframe: { id: string; frame: number; templateId?: string }) => keyframe.frame;
 
 const inScope = (keyframe: { templateId?: string }, templateId: string) =>
-  (keyframe.templateId || 'Sequence') === templateId;
+  sequenceIdOf(keyframe) === templateId;
 
 /**
  * Where a keyframe id lives inside one track, or null. The legacy composite
@@ -837,7 +838,7 @@ export const applyTransitionChannelsMutator = (
       // 'none' — clear the active template's channel keyframes
       for (const ch of TRACK_CHANNELS) {
         channels[ch] = (channels[ch] || []).filter(
-          (k) => (k.templateId || 'Sequence') !== activeTemplateId
+          (k) => sequenceIdOf(k) !== activeTemplateId
         );
       }
       return { ...t, channels };
@@ -847,7 +848,7 @@ export const applyTransitionChannelsMutator = (
       // Remove active-template keyframes inside the transition window
       let list = (channels[ch] || []).filter(
         (k) =>
-          (k.templateId || 'Sequence') !== activeTemplateId ||
+          sequenceIdOf(k) !== activeTemplateId ||
           k.frame < transition.startFrame ||
           k.frame > transition.endFrame
       );

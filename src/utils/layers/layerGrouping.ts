@@ -23,6 +23,7 @@ import { applyEasing, deriveAutoBezierControlPoints, interpolateChannel, lerp, m
 import { evaluateTransform } from '../animation/evaluateTransform';
 import { generateId } from './idGenerator';
 import { partIndexOf, relationshipAncestorIds, relationshipParentId, selectionHasChainRelation } from './partBinding';
+import { sequenceIdOf } from '../animation/sequenceId';
 
 /**
  * Layer groups — an authoring surface over the parent-child transform KCS
@@ -216,7 +217,7 @@ export const resolveMarqueeSelection = (
  * (`evaluateTransform` filters by `keyframe.templateId || 'Sequence'`), so every
  * decision below is taken with exactly the scope the evaluator will use.
  */
-const keyframeScope = (keyframe: { templateId?: string }): string => keyframe.templateId || 'Sequence';
+const keyframeScope = (keyframe: { templateId?: string }): string => sequenceIdOf(keyframe);
 
 interface ChannelAffine {
   a: number;

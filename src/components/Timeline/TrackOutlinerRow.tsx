@@ -8,6 +8,7 @@ import { resolveAdjacentKeyframeFrame, resolveChannelAnimationState, resolveChan
 import { resolveAuthoredBasePose } from '../../utils/animation/channelKeyframeGroups';
 import { partIndexOf } from '../../utils/layers/partBinding';
 import { InlineRename } from '../Shared/InlineRename';
+import { sequenceIdOf } from '../../utils/animation/sequenceId';
 
 interface TrackOutlinerRowProps {
   track: Track;
@@ -186,7 +187,7 @@ const TrackOutlinerRowView: React.FC<TrackOutlinerRowProps> = ({
     const isPathChannel = ch.endsWith(':path');
     const activeTmpl = activeTemplateId || 'Sequence';
     const storeKeys = channelKeysFor(ch);
-    const chKfs = filterByTemplate ? storeKeys.filter((k) => (k.templateId || 'Sequence') === activeTmpl) : storeKeys;
+    const chKfs = filterByTemplate ? storeKeys.filter((k) => sequenceIdOf(k) === activeTmpl) : storeKeys;
     /*
      * The property's OWN endpoints, resolved from the same channel
      * projection the property's lane diamonds are painted from: the arrows can

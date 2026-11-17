@@ -55,6 +55,7 @@ import { rowOffsets, type RowWindowSegment } from '../../utils/editor/rowWindow'
 import { edgeScrollStep, laneContextOf, laneGroupHeight, laneKeyframePositions, laneKeyframes, type LaneContext } from './timelineLaneLayout';
 import { TimelineTimeField } from './TimelineTimeField';
 import './SequencerTimeline.css';
+import { sequenceIdOf } from '../../utils/animation/sequenceId';
 
 /**
  * Anything that already owns a pointer gesture may not begin a marquee: a
@@ -1133,7 +1134,7 @@ export const SequencerTimeline: React.FC = () => {
     const store = (channel.includes(':')
       ? (channel.endsWith(':path') ? track.maskPathChannels : track.maskChannels)
       : track.channels) as Record<string, { templateId?: string }[]> | undefined;
-    const keyCount = (store?.[channel] ?? []).filter((k) => (k.templateId || 'Sequence') === scope).length;
+    const keyCount = (store?.[channel] ?? []).filter((k) => sequenceIdOf(k) === scope).length;
     const partName = characterParts.find((candidate) => candidate.id === track.partId)?.name ?? track.name;
     const label = channel.includes(':')
       ? (() => {
@@ -1177,7 +1178,7 @@ export const SequencerTimeline: React.FC = () => {
               : (transform as unknown as Record<string, number>)[channel] ?? (channel === 'maskScale' ? 1 : 0);
     const inherited = insert && !channel.includes(':')
       ? (tracks.find((candidate) => candidate.id === trackId)?.channels?.[channel as TrackChannel] ?? [])
-        .filter((keyframe) => (keyframe.templateId || 'Sequence') === (activeTemplateId || 'Sequence') && keyframe.frame < frame)
+        .filter((keyframe) => sequenceIdOf(keyframe) === (activeTemplateId || 'Sequence') && keyframe.frame < frame)
         .sort((a, b) => b.frame - a.frame)[0]
       : undefined;
     addPropertyKeyframe(trackId, channel, frame, val, inherited && !inherited.bezierControlPoints && !inherited.bezierOut ? inherited.easing : undefined);

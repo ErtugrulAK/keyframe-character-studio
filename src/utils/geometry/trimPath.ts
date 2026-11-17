@@ -1,5 +1,6 @@
 import type { AnimationTrackData, BodyPartType, CharacterPart } from '../../types/animator';
 import { interpolateChannel } from '../animation/defaults';
+import { sequenceIdOf } from '../animation/sequenceId';
 
 interface ResolvedTrimPath {
   enabled: boolean;
@@ -74,7 +75,7 @@ export const evaluateTrimPath = (
   const base = resolveTrimPath(part);
   if (!track?.channels) return base;
   const filter = (channel: 'trimPathStart' | 'trimPathEnd' | 'trimPathOffset') =>
-    (track.channels[channel] || []).filter((kf) => (kf.templateId || 'Sequence') === templateId);
+    (track.channels[channel] || []).filter((kf) => sequenceIdOf(kf) === templateId);
 
   const startKfs = filter('trimPathStart');
   const endKfs = filter('trimPathEnd');

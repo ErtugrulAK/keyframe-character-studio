@@ -7,6 +7,7 @@ import { generateId } from '../../../../utils/layers/idGenerator';
 import { motionPathCandidates } from '../../../../utils/layers/motionPathCandidates';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { StyleCard } from './StyleCard';
+import { sequenceIdOf } from '../../../../utils/animation/sequenceId';
 
 interface MotionPathCardProps {
   part: CharacterPart;
@@ -38,7 +39,7 @@ export const MotionPathCard: React.FC<MotionPathCardProps> = ({ part, characterP
   const parts = new Map(characterParts.map((candidate) => [candidate.id, candidate] as const));
   const following = resolveMotionPathSource(part, parts);
   const track = tracks.find((candidate) => candidate.partId === part.id);
-  const keys = (track?.channels?.motionPathProgress ?? []).filter((key) => (key.templateId || 'Sequence') === template);
+  const keys = (track?.channels?.motionPathProgress ?? []).filter((key) => sequenceIdOf(key) === template);
   const progress = keys.length > 0 ? interpolateChannel(keys, currentFrame, link?.progress ?? 0) : (link?.progress ?? 0);
 
   const writeKeys = (next: (keys: PropertyKeyframe[]) => PropertyKeyframe[]) => {

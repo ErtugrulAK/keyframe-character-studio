@@ -25,6 +25,7 @@ import {
   Lock,
   MousePointerClick,
 } from 'lucide-react';
+import { sequenceIdOf } from '../../utils/animation/sequenceId';
 
 /** The Details tabs: what the layer looks like, what cuts it, how it relates and animates. */
 type DetailsTab = 'properties' | 'masks' | 'layer';
@@ -143,7 +144,7 @@ export const DetailsPanel: React.FC = () => {
     ? (() => {
       const scope = activeTemplateId || 'Sequence';
       const control = (channel: 'matteFeather' | 'matteStrength' | 'matteGradientAngle', shown: number) => {
-        const keys = (selectedTrack.channels?.[channel] ?? []).filter((key) => (key.templateId || 'Sequence') === scope);
+        const keys = (selectedTrack.channels?.[channel] ?? []).filter((key) => sequenceIdOf(key) === scope);
         const atFrame = keys.find((key) => key.frame === currentFrame);
         return {
           state: atFrame ? 'key' as const : keys.length > 0 ? 'animated' as const : 'off' as const,
@@ -225,8 +226,8 @@ export const DetailsPanel: React.FC = () => {
     const scope = activeTemplateId || 'Sequence';
     const track = tracks.find((t) => t.partId === selectedPartId);
     if (!track) return 0;
-    const channelKeys = Object.values(track.channels ?? {}).reduce((sum, keys) => sum + keys.filter((k) => (k.templateId || 'Sequence') === scope).length, 0);
-    return channelKeys + (track.keyframes ?? []).filter((k) => (k.templateId || 'Sequence') === scope).length;
+    const channelKeys = Object.values(track.channels ?? {}).reduce((sum, keys) => sum + keys.filter((k) => sequenceIdOf(k) === scope).length, 0);
+    return channelKeys + (track.keyframes ?? []).filter((k) => sequenceIdOf(k) === scope).length;
   })();
 
   const handleClearAnimation = () => {

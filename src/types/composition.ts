@@ -172,6 +172,8 @@ export interface SceneLayer {
   operatorToggle?: boolean;
   /** OGraf: a text the playout operator sets as a number and counts with +1 / -1 buttons (`utils/layers/operatorCounter`). */
   operatorCounter?: boolean;
+  /** OGraf: the text's clock effect waits on air until the playout operator presses Start (Pause and Reset too). */
+  operatorClock?: boolean;
   /** OGraf: the playout operator may give this image layer any picture, not only packaged ones (`utils/layers/operatorImage`). */
   operatorImageAny?: boolean;
   /** OGraf: this layer's value in each playout preset (`utils/layers/operatorPresets`). */

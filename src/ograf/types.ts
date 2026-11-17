@@ -106,6 +106,13 @@ export interface OGrafPublicNumberField {
   layerId: string;
 }
 
+/** A clock the playout operator starts, pauses and resets (customActions `clock:<id>:start|pause|reset`). */
+export interface OGrafPublicClockField {
+  id: string;
+  title: string;
+  layerId: string;
+}
+
 /** What one preset sets on one layer. */
 export interface OGrafPresetEntry {
   layerId: string;
@@ -257,5 +264,6 @@ export interface ValidatedOGrafScene {
   publicToggleFields: OGrafPublicToggleField[];
   publicNumberFields: OGrafPublicNumberField[];
   publicPresetField?: OGrafPublicPresetField;
+  publicClockFields: OGrafPublicClockField[];
   canCompile: boolean;
 }

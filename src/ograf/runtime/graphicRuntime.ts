@@ -88,6 +88,8 @@ export interface RuntimeLayer {
   visible?: boolean;
   /** Hidden by the operator's show/hide switch (runtime state only, never authored). */
   operatorHidden?: boolean;
+  /** The seconds an operator-run clock shows (runtime state only); absent = the timeline drives the clock. */
+  liveClockSeconds?: number;
   parentId?: string;
   booleanGroupId?: string;
   /** Follows a path layer's outline (`utils/geometry/motionPath`). */
@@ -207,7 +209,7 @@ export interface RuntimeActionResult {
 export interface GraphicRuntimeEnvironment {
   scene: RuntimeScene;
   /** `toggle`: the operator's show/hide switches; `number`: counter texts. Absent in a package written before them. */
-  bindings: { text: Record<string, RuntimeBinding>; image: Record<string, RuntimeBinding>; color: Record<string, RuntimeBinding>; toggle?: Record<string, RuntimeBinding>; number?: Record<string, RuntimeBinding>; preset?: RuntimePresetBinding };
+  bindings: { text: Record<string, RuntimeBinding>; image: Record<string, RuntimeBinding>; color: Record<string, RuntimeBinding>; toggle?: Record<string, RuntimeBinding>; number?: Record<string, RuntimeBinding>; preset?: RuntimePresetBinding; clock?: Record<string, RuntimeBinding> };
   imageReferences: Record<string, string>;
   fontReferences: Record<string, RuntimeFontFace | RuntimeFontFace[]>;
   /** The package module's own URL; packaged relative paths resolve against it. */
@@ -751,7 +753,12 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       if (layer.textEffect && (layer.textValue || layer.textEffect.kind === 'clock')) {
         const written = layer.textValue || '';
         // The letter case it shows (`utils/layers/textCase`), before the effect reveals it.
-        evaluated.displayedText = textEffects.resolveDisplayedText(layer.textCase === 'upper' ? written.toUpperCase() : written, layer.textEffect, frame, scene.fps);
+        // An operator-run clock shows its own elapsed time, through the same rule:
+        // the frame that many seconds after the clock's start.
+        const effectFrame = layer.textEffect.kind === 'clock' && typeof layer.liveClockSeconds === 'number'
+          ? layer.textEffect.startFrame + layer.liveClockSeconds * scene.fps
+          : frame;
+        evaluated.displayedText = textEffects.resolveDisplayedText(layer.textCase === 'upper' ? written.toUpperCase() : written, layer.textEffect, effectFrame, scene.fps);
       }
       // A keyed Track Matte feather / strength / gradient angle, as the editor
       // evaluates it (`evaluateTrackMatte`): the channel over the packaged value.
@@ -1170,6 +1177,11 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
     declare _schedule: ScheduledAction[];
     declare _svg: Element | null;
     declare _fitted: RuntimeScene | null;
+    /** Operator-run clocks: elapsed time banked while paused, and when the running stretch began (ms). */
+    declare _clocks: Record<string, { running: boolean; bankedMs: number; startedAt: number }>;
+    declare _clockTimer: ReturnType<typeof setInterval> | null;
+    /** Non-real-time: the scheduled time being drawn (ms); null = the wall clock. */
+    declare _clockNow: number | null;
 
     _cancel(): void {
       this._token += 1;
@@ -1195,6 +1207,44 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       this._schedule = [];
       this._svg = null;
       this._fitted = null;
+      this._clocks = {};
+      this._clockTimer = null;
+      this._clockNow = null;
+    }
+
+    /** Start / Pause / Reset of an operator-run clock at `now` (ms); an error result when the id names no clock. */
+    _clockAction(id: string, now: number): RuntimeActionResult | undefined {
+      const match = /^clock:(.+):(start|pause|reset)$/u.exec(id);
+      const field = match ? match[1] : '';
+      if (!match || !PUBLIC_BINDINGS.clock || !Object.prototype.hasOwnProperty.call(PUBLIC_BINDINGS.clock, field)) return { statusCode: 400, statusMessage: 'Unknown custom action: ' + id };
+      const clock = this._clocks[field] || (this._clocks[field] = { running: false, bankedMs: 0, startedAt: now });
+      if (match[2] === 'start' && !clock.running) {
+        clock.running = true;
+        clock.startedAt = now;
+      } else if (match[2] === 'pause' && clock.running) {
+        clock.bankedMs += Math.max(0, now - clock.startedAt);
+        clock.running = false;
+      } else if (match[2] === 'reset') {
+        clock.bankedMs = 0;
+        clock.startedAt = now;
+      }
+      return undefined;
+    }
+
+    /** Redraws a few times a second while a clock runs on air; stops when none does. */
+    _syncClockTimer(): void {
+      const running = this._clockNow === null && Object.keys(this._clocks).some((key) => this._clocks[key].running);
+      if (running && this._clockTimer === null && typeof setInterval === 'function') {
+        this._clockTimer = setInterval(() => this._render(), 200);
+      } else if (!running && this._clockTimer !== null) {
+        clearInterval(this._clockTimer);
+        this._clockTimer = null;
+      }
+    }
+
+    _resetClocks(): void {
+      this._clocks = {};
+      this._syncClockTimer();
     }
 
     /** Lays the scene out again (text boxes, auto size, follow, justify, repeater) for the current data and loaded fonts. */
@@ -1207,6 +1257,14 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
      * their own, written once; only the SVG is replaced per frame.
      */
     _render(): void {
+      // Operator-run clocks show their own time (stopped at their start until Start).
+      const now = this._clockNow === null ? Date.now() : this._clockNow;
+      const target = this._fitted || this._scene;
+      for (const field of Object.keys(PUBLIC_BINDINGS.clock || {})) {
+        const layer = target.layers.find((item) => item.id === PUBLIC_BINDINGS.clock![field].layerId);
+        const clock = this._clocks[field];
+        if (layer) layer.liveClockSeconds = clock ? (clock.bankedMs + (clock.running ? Math.max(0, now - clock.startedAt) : 0)) / 1000 : 0;
+      }
       const markup = renderScene(this._fitted || this._scene, this._currentFrame, this._stopped, false);
       if (!this._svg || this._svg.parentNode !== this) {
         this.innerHTML = '<style>' + fontStyles() + '</style>' + markup;
@@ -1305,6 +1363,8 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       this._scene = JSON.parse(JSON.stringify(SCENE));
       const error = this._applyData(params && params.data);
       if (error) return error;
+      this._clockNow = renderType === 'non-realtime' ? 0 : null;
+      this._resetClocks();
       this._loadData = params && params.data ? JSON.parse(JSON.stringify(params.data)) : undefined;
       this._schedule = [];
       this._currentFrame = 0;
@@ -1323,6 +1383,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
 
     async dispose(): Promise<RuntimeActionResult> {
       this._cancel();
+      this._resetClocks();
       this._scene = JSON.parse(JSON.stringify(SCENE));
       this._fitted = null;
       this._stopped = false;
@@ -1410,7 +1471,15 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
 
     /** A counter's +1 / -1 button (the manifest's customActions). */
     async customAction(params?: { id?: string }): Promise<RuntimeActionResult> {
-      const error = this._stepCounter(params && typeof params.id === 'string' ? params.id : '');
+      const id = params && typeof params.id === 'string' ? params.id : '';
+      if (id.startsWith('clock:')) {
+        const failed = this._clockAction(id, this._clockNow === null ? Date.now() : this._clockNow);
+        if (failed) return failed;
+        this._syncClockTimer();
+        this._render();
+        return { statusCode: 200 };
+      }
+      const error = this._stepCounter(id);
       if (error) return error;
       this._cancel();
       this._refit();
@@ -1439,6 +1508,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       this._cancel();
       this._scene = JSON.parse(JSON.stringify(SCENE));
       this._applyData(this._loadData);
+      this._clocks = {};
       const fps = this._scene.fps;
       const end = this._scene.totalFrames;
       let frame = 0;
@@ -1483,7 +1553,9 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
         } else if (entry.action.type === 'updateAction') {
           this._applyData(actionParams.data);
         } else if (entry.action.type === 'customAction') {
-          this._stepCounter(typeof (actionParams as { id?: unknown }).id === 'string' ? (actionParams as { id: string }).id : '');
+          const id = typeof (actionParams as { id?: unknown }).id === 'string' ? (actionParams as { id: string }).id : '';
+          if (id.startsWith('clock:')) this._clockAction(id, entry.timestamp);
+          else this._stepCounter(id);
         }
       }
       advance(time);
@@ -1491,6 +1563,7 @@ export function createGraphicRuntime(environment: GraphicRuntimeEnvironment) {
       this._currentFrame = frame;
       this._currentStep = step;
       this._stopped = stopped;
+      this._clockNow = time;
       this._render();
       return { statusCode: 200 };
     }

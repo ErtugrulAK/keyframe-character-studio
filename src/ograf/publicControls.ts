@@ -9,6 +9,7 @@ import type {
   OGrafPublicToggleField,
   OGrafPublicNumberField,
   OGrafPublicPresetField,
+  OGrafPublicClockField,
 } from './types';
 import { presetNames } from '../utils/layers/operatorPresets';
 import { counterUnavailableReason, counterValueOf } from '../utils/layers/operatorCounter';
@@ -20,6 +21,7 @@ export interface OGrafPublicControls {
   toggleFields: OGrafPublicToggleField[];
   numberFields: OGrafPublicNumberField[];
   presetField?: OGrafPublicPresetField;
+  clockFields: OGrafPublicClockField[];
 }
 
 function safeName(value: string): string {
@@ -79,6 +81,7 @@ export function resolveOGrafPublicControls(
   const colorFields: OGrafPublicColorField[] = [];
   const toggleFields: OGrafPublicToggleField[] = [];
   const numberFields: OGrafPublicNumberField[] = [];
+  const clockFields: OGrafPublicClockField[] = [];
   const packagedImageOptions = imageOptions(assets);
 
   for (const field of options.publicTextFields || []) {
@@ -105,6 +108,10 @@ export function resolveOGrafPublicControls(
       toggleFields.push({ id: uniqueId('show', layer, used), title: `Show ${layer.name || 'layer'}`, defaultValue: true, layerId: layer.id });
     }
     if (!isPublicLayer(layer, matteSourceIds)) continue;
+    // A clock the operator runs: its effect must be a stopwatch or countdown.
+    if (layer.operatorClock === true && layer.type === 'custom_text' && layer.textEffect?.kind === 'clock') {
+      clockFields.push({ id: uniqueId('clock', layer, used), title: layer.name || 'Clock', layerId: layer.id });
+    }
     // A counter text is a number field (with +1 / -1 buttons) instead of a text field.
     if (layer.operatorCounter === true && !counterUnavailableReason(layer) && !textFields.some((field) => field.layerId === layer.id)) {
       numberFields.push({ id: uniqueId('number', layer, used), title: layer.name || 'Number', defaultValue: counterValueOf(layer.textValue) ?? 0, layerId: layer.id });
@@ -186,5 +193,5 @@ export function resolveOGrafPublicControls(
     used.add(id);
     presetField = { id, title: 'Preset', names, values };
   }
-  return { textFields, imageFields, colorFields, toggleFields, numberFields, ...(presetField ? { presetField } : {}) };
+  return { textFields, imageFields, colorFields, toggleFields, numberFields, ...(presetField ? { presetField } : {}), clockFields };
 }

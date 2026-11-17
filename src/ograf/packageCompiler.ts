@@ -126,6 +126,7 @@ function generatedFiles(
     publicControls.toggleFields,
     publicControls.numberFields,
     publicControls.presetField,
+    publicControls.clockFields,
   );
   return [
     { path: `${graphicName}.ograf.json`, kind: 'manifest', status: 'generated', content: `${JSON.stringify(manifest, null, 2)}\n` },

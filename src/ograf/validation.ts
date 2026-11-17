@@ -811,6 +811,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
     publicColorFields: publicControls.colorFields,
     publicToggleFields: publicControls.toggleFields,
     publicNumberFields: publicControls.numberFields,
+    publicClockFields: publicControls.clockFields,
     ...(publicControls.presetField ? { publicPresetField: publicControls.presetField } : {}),
     canCompile: diagnostics.every((item) => item.severity !== 'ERROR'),
   };

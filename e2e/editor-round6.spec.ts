@@ -776,6 +776,31 @@ test('PLAYOUT: an image layer can take any picture from the playout, and says wh
   await expect(any).not.toBeChecked();
 });
 
+test('PLAYOUT: a stopwatch text can be run by the operator; a plain text says what it needs', async ({ page }) => {
+  // OGraf live controls, step 5: Start / Pause / Reset buttons on air.
+  const base = { type: 'custom_text', x: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' };
+  await seed(page, [
+    { ...base, id: 'c', name: 'Match clock', y: -100, textValue: '', textEffect: { kind: 'clock', mode: 'stopwatch', startFrame: 0, format: 'mm:ss' } },
+    { ...base, id: 't', name: 'Title', y: 100, textValue: 'Final' },
+  ]);
+  const open = async (id: string) => {
+    await page.locator(`[role="tree"] [data-layer-id="${id}"]`).click();
+    await openDetailsTab(page, 'Properties');
+    const expand = page.getByRole('button', { name: 'Expand PLAYOUT', exact: true });
+    if (await expand.count()) await expand.click();
+    return page.getByLabel('Operator starts and stops this clock', { exact: true });
+  };
+  await expect(await open('t')).toBeDisabled();
+  await expect(page.getByText('Needs a Stopwatch or Countdown (TEXT EFFECTS › ANIMATE TEXT).')).toBeVisible();
+
+  const clock = await open('c');
+  await clock.check();
+  await expect(page.getByText(/On air it waits at its start value until Start/)).toBeVisible();
+  expect((await savedLayers(page)).find((layer) => layer.id === 'c')!.operatorClock).toBe(true);
+  await page.keyboard.press('Control+z');
+  await expect(clock).not.toBeChecked();
+});
+
 test('PLAYOUT: a whole-number text can be a counter; other text says why not', async ({ page }) => {
   // OGraf live controls, step 2: a number field with +1 / -1 buttons in the playout.
   const textLayer = (id: string, name: string, textValue: string, y: number) => ({ id, name, type: 'custom_text', x: 0, y, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, textValue, fontSize: 72, fillColor: '#ffffff', strokeColor: '#000000', textOrigin: 'center' });

@@ -27,15 +27,18 @@ export const OperatorControlCard: React.FC<OperatorControlCardProps> = ({ part, 
   const toggleId = useId();
   const counterId = useId();
   const imageId = useId();
+  const clockId = useId();
   const isImage = part.type === 'custom_image';
   const imageAnyOn = isImage && part.operatorImageAny === true;
   const isText = part.type === 'custom_text';
   const counterBlocked = isText ? counterUnavailableReason(part) : undefined;
+  const hasClock = isText && part.textEffect?.kind === 'clock';
+  const clockOn = hasClock && part.operatorClock === true;
   const counterOn = part.operatorCounter === true && !counterBlocked;
   const matteSource = isActiveMatteSource(part, characterParts);
   const on = part.operatorToggle === true && !matteSource;
   return (
-    <StyleCard title="PLAYOUT" collapsible retainKey="operator-control" badge={[on ? 'Show/Hide' : '', counterOn ? '+1/-1' : '', imageAnyOn ? 'Any image' : ''].filter(Boolean).join(' · ') || undefined}>
+    <StyleCard title="PLAYOUT" collapsible retainKey="operator-control" badge={[on ? 'Show/Hide' : '', counterOn ? '+1/-1' : '', imageAnyOn ? 'Any image' : '', clockOn ? 'Clock' : ''].filter(Boolean).join(' · ') || undefined}>
       <div className="appearance-group-header">
         <label htmlFor={toggleId}>OPERATOR CAN SHOW / HIDE</label>
         <input
@@ -68,6 +71,25 @@ export const OperatorControlCard: React.FC<OperatorControlCardProps> = ({ part, 
           </div>
           {counterOn && <p className="operator-control-hint">Exported as the number "{part.name || 'Number'}" with "+1" and "-1" buttons.</p>}
           {counterBlocked && <p className="operator-control-hint">{counterBlocked}.</p>}
+          <div className="appearance-group-header">
+            <label htmlFor={clockId}>CLOCK RUN BY THE OPERATOR</label>
+            <input
+              id={clockId}
+              type="checkbox"
+              aria-label="Operator starts and stops this clock"
+              checked={clockOn}
+              disabled={!hasClock && part.operatorClock !== true}
+              title={hasClock ? 'On air the clock waits until the operator presses Start; Pause and Reset buttons too' : 'Give the text a Stopwatch or Countdown in ANIMATE TEXT first'}
+              onChange={(event) => onPartPropChange('operatorClock', event.target.checked && hasClock ? true : undefined)}
+            />
+          </div>
+          <p className="operator-control-hint">
+            {!hasClock
+              ? 'Needs a Stopwatch or Countdown (TEXT EFFECTS › ANIMATE TEXT).'
+              : clockOn
+                ? 'On air it waits at its start value until Start, with Pause and Reset buttons. The editor still runs it along the timeline.'
+                : 'Off: the clock runs along the timeline, as in the editor.'}
+          </p>
         </>
       )}
       {isImage && (
